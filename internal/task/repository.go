@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"sort"
+	"strings"
 
 	"github.com/google/uuid"
 
@@ -324,6 +326,77 @@ func updateTaskDetailState(ctx context.Context, store *sqlitestore.Store, detail
 	return err
 }
 
+type blockedActionAccumulator struct {
+	action         string
+	advice         string
+	taskIDs        map[string]struct{}
+	providers      map[string]struct{}
+	nextRetryAt    string
+	sampleTaskID   string
+	sampleProvider string
+}
+
+func summarizeBlockedActions(details []Detail) []BlockedAction {
+	if len(details) == 0 {
+		return nil
+	}
+	accumulators := make(map[string]*blockedActionAccumulator)
+	order := make([]string, 0)
+	for _, detail := range details {
+		ensureRuntimeState(&detail)
+		action := strings.TrimSpace(detail.Runtime.BlockedAction)
+		if action == "" {
+			continue
+		}
+		acc, ok := accumulators[action]
+		if !ok {
+			acc = &blockedActionAccumulator{
+				action:    action,
+				advice:    detail.Runtime.BlockedAdvice,
+				taskIDs:   make(map[string]struct{}),
+				providers: make(map[string]struct{}),
+			}
+			accumulators[action] = acc
+			order = append(order, action)
+		}
+		acc.taskIDs[detail.Task.ID] = struct{}{}
+		acc.providers[detail.Task.TargetProvider] = struct{}{}
+		if acc.advice == "" {
+			acc.advice = detail.Runtime.BlockedAdvice
+		}
+		if acc.sampleTaskID == "" {
+			acc.sampleTaskID = detail.Task.ID
+			acc.sampleProvider = detail.Task.TargetProvider
+		}
+		if detail.Runtime.NextRetryAt != "" && (acc.nextRetryAt == "" || detail.Runtime.NextRetryAt < acc.nextRetryAt) {
+			acc.nextRetryAt = detail.Runtime.NextRetryAt
+		}
+	}
+	items := make([]BlockedAction, 0, len(order))
+	for _, action := range order {
+		acc := accumulators[action]
+		items = append(items, BlockedAction{
+			Action:         acc.action,
+			Advice:         acc.advice,
+			TaskCount:      len(acc.taskIDs),
+			ProviderCount:  len(acc.providers),
+			NextRetryAt:    acc.nextRetryAt,
+			SampleTaskID:   acc.sampleTaskID,
+			SampleProvider: acc.sampleProvider,
+		})
+	}
+	sort.SliceStable(items, func(i, j int) bool {
+		if items[i].TaskCount != items[j].TaskCount {
+			return items[i].TaskCount > items[j].TaskCount
+		}
+		if items[i].ProviderCount != items[j].ProviderCount {
+			return items[i].ProviderCount > items[j].ProviderCount
+		}
+		return items[i].Action < items[j].Action
+	})
+	return items
+}
+
 func taskEvidenceSummary(ctx context.Context, store *sqlitestore.Store) (EvidenceSummary, error) {
 	var summary EvidenceSummary
 	if err := store.DB().QueryRowContext(ctx, `SELECT COUNT(1) FROM tasks`).Scan(&summary.TotalTasks); err != nil {
@@ -368,6 +441,19 @@ func taskEvidenceSummary(ctx context.Context, store *sqlitestore.Store) (Evidenc
 	if err := rows.Err(); err != nil {
 		return summary, err
 	}
+	details, err := listTasks(ctx, store)
+	if err != nil {
+		return summary, err
+	}
+	blockedDetails := make([]Detail, 0)
+	for _, detail := range details {
+		if detail.Task.State != StateBlocked {
+			continue
+		}
+		summary.BlockedTasks++
+		blockedDetails = append(blockedDetails, detail)
+	}
+	summary.BlockedActions = summarizeBlockedActions(blockedDetails)
 	results, err := recentTaskResults(ctx, store, 10)
 	if err != nil {
 		return summary, err
@@ -382,6 +468,10 @@ func taskEvidenceSummary(ctx context.Context, store *sqlitestore.Store) (Evidenc
 }
 
 func providerStatusSummary(ctx context.Context, store *sqlitestore.Store, providers []provider.Entry) ([]StatusSummary, error) {
+	allDetails, err := listTasks(ctx, store)
+	if err != nil {
+		return nil, err
+	}
 	items := make([]StatusSummary, 0, len(providers))
 	for _, entry := range providers {
 		item := StatusSummary{ProviderKey: entry.Meta.Key}
@@ -394,6 +484,14 @@ func providerStatusSummary(ctx context.Context, store *sqlitestore.Store, provid
 		if err := store.DB().QueryRowContext(ctx, `SELECT COUNT(1) FROM tasks WHERE target_provider = ? AND state IN ('completed', 'completed_with_errors')`, entry.Meta.Key).Scan(&item.CompletedCount); err != nil {
 			return nil, err
 		}
+		blockedDetails := make([]Detail, 0)
+		for _, detail := range allDetails {
+			if detail.Task.TargetProvider != entry.Meta.Key || detail.Task.State != StateBlocked {
+				continue
+			}
+			item.BlockedCount++
+			blockedDetails = append(blockedDetails, detail)
+		}
 		snapshot, ok, err := latestProviderStatusSnapshot(ctx, store, entry.Meta.Key)
 		if err != nil {
 			return nil, err
@@ -404,6 +502,11 @@ func providerStatusSummary(ctx context.Context, store *sqlitestore.Store, provid
 			item.LastTaskState = stringValue(snapshot.Summary["lastTaskState"])
 			item.LatestProbe = stringValue(snapshot.Summary["latestProbe"])
 		}
+		if item.SnapshotSummary == nil {
+			item.SnapshotSummary = map[string]interface{}{}
+		}
+		item.SnapshotSummary["blockedCount"] = item.BlockedCount
+		item.SnapshotSummary["blockedActions"] = summarizeBlockedActions(blockedDetails)
 		items = append(items, item)
 	}
 	return items, nil

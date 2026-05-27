@@ -44,13 +44,25 @@ type Detail struct {
 type EvidenceSummary struct {
 	TotalTasks         int             `json:"totalTasks"`
 	CompletedTasks     int             `json:"completedTasks"`
+	BlockedTasks       int             `json:"blockedTasks"`
 	FailedResultCount  int             `json:"failedResultCount"`
 	DoneResultCount    int             `json:"doneResultCount"`
 	SkippedResultCount int             `json:"skippedResultCount"`
 	PendingResultCount int             `json:"pendingResultCount"`
 	RiskHitCount       int             `json:"riskHitCount"`
+	BlockedActions     []BlockedAction `json:"blockedActions,omitempty"`
 	RecentResults      []Result        `json:"recentResults"`
 	RecentProbes       []ProviderProbe `json:"recentProbes"`
+}
+
+type BlockedAction struct {
+	Action         string `json:"action"`
+	Advice         string `json:"advice,omitempty"`
+	TaskCount      int    `json:"taskCount"`
+	ProviderCount  int    `json:"providerCount"`
+	NextRetryAt    string `json:"nextRetryAt,omitempty"`
+	SampleTaskID   string `json:"sampleTaskId,omitempty"`
+	SampleProvider string `json:"sampleProvider,omitempty"`
 }
 
 type StatusSummary struct {
@@ -58,6 +70,7 @@ type StatusSummary struct {
 	ProfileCount    int                    `json:"profileCount"`
 	TaskCount       int                    `json:"taskCount"`
 	CompletedCount  int                    `json:"completedCount"`
+	BlockedCount    int                    `json:"blockedCount"`
 	LastTaskState   string                 `json:"lastTaskState,omitempty"`
 	LatestProbe     string                 `json:"latestProbe,omitempty"`
 	LastObservedAt  string                 `json:"lastObservedAt,omitempty"`

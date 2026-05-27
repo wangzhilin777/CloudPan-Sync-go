@@ -644,23 +644,27 @@ function renderStatus() {
   const evidence = state.evidence || {
     totalTasks: 0,
     completedTasks: 0,
+    blockedTasks: 0,
     failedResultCount: 0,
     doneResultCount: 0,
     skippedResultCount: 0,
     pendingResultCount: 0,
     riskHitCount: 0,
+    blockedActions: [],
     recentResults: [],
     recentProbes: [],
   };
   $("#evidence-summary").innerHTML = `
     <div class="metric"><span>Total Tasks</span><strong>${evidence.totalTasks}</strong></div>
     <div class="metric"><span>Completed</span><strong>${evidence.completedTasks}</strong></div>
+    <div class="metric"><span>Blocked Tasks</span><strong>${evidence.blockedTasks}</strong></div>
     <div class="metric"><span>Done Results</span><strong>${evidence.doneResultCount}</strong></div>
     <div class="metric"><span>Skipped Results</span><strong>${evidence.skippedResultCount}</strong></div>
     <div class="metric"><span>Pending Manual</span><strong>${evidence.pendingResultCount}</strong></div>
     <div class="metric"><span>Failed Results</span><strong>${evidence.failedResultCount}</strong></div>
     <div class="metric"><span>Risk Hits</span><strong>${evidence.riskHitCount}</strong></div>
   `;
+  $("#blocked-actions-summary").innerHTML = renderBlockedActionsSummary(evidence.blockedActions || []);
 
   $("#status-table").innerHTML = `
     <table>
@@ -675,6 +679,8 @@ function renderStatus() {
           <th>Risk Mode</th>
           <th>Latest Probe</th>
           <th>Last Task State</th>
+          <th>Blocked</th>
+          <th>Main Action</th>
           <th>Snapshot Summary</th>
         </tr>
       </thead>
@@ -692,6 +698,8 @@ function renderStatus() {
                 <td>${stringifyValue(item.snapshotSummary?.riskProfile?.mode)}</td>
                 <td>${item.latestProbe || "-"}</td>
                 <td>${item.lastTaskState || "-"}</td>
+                <td>${stringifyValue(item.blockedCount, "0")}</td>
+                <td>${stringifyValue(item.snapshotSummary?.blockedActions?.[0]?.action, "-")}</td>
                 <td>
                   <div class="summary-block">
                     ${renderSnapshotSummary(item.snapshotSummary)}
@@ -713,16 +721,43 @@ function renderStatus() {
   $("#status-pending-tree").innerHTML = renderPendingTree(runtimePayload?.runtime?.pendingTree || runtimePayload?.pendingTree);
 }
 
+function renderBlockedActionsSummary(items) {
+  if (!Array.isArray(items) || !items.length) {
+    return `<div class="directory-empty">当前没有需要人工处理的 blocked 聚合项。</div>`;
+  }
+  return items
+    .map(
+      (item) => `
+        <div class="directory-row tree-node">
+          <div class="directory-row-header">
+            <strong>${escapeHTML(stringifyValue(item.action))}</strong>
+            <code>${escapeHTML(stringifyValue(item.sampleProvider, "-"))}</code>
+          </div>
+          <div class="directory-metrics">
+            <span class="pill">tasks ${stringifyValue(item.taskCount, "0")}</span>
+            <span class="pill">providers ${stringifyValue(item.providerCount, "0")}</span>
+            <span class="pill">next ${stringifyValue(item.nextRetryAt, "-")}</span>
+          </div>
+          <div class="muted">${escapeHTML(stringifyValue(item.advice, "-"))}</div>
+        </div>
+      `,
+    )
+    .join("");
+}
+
 function renderSnapshotSummary(summary) {
   if (!summary || typeof summary !== "object") {
     return "-";
   }
   const retrySummary = summary.retrySummary;
+  const blockedActions = Array.isArray(summary.blockedActions) ? summary.blockedActions : [];
   if (retrySummary && typeof retrySummary === "object") {
     return `
       <div><strong>lastTaskState</strong> <code>${escapeHTML(stringifyValue(summary.lastTaskState))}</code></div>
+      <div><strong>blockedCount</strong> <code>${escapeHTML(stringifyValue(summary.blockedCount, "0"))}</code></div>
       <div><strong>retryBlocked</strong> <code>${escapeHTML(stringifyValue(retrySummary.blockedReason, "-"))}</code></div>
       <div><strong>blockedAction</strong> <code>${escapeHTML(stringifyValue(retrySummary.blockedAction, "-"))}</code></div>
+      <div><strong>blockedTop</strong> <code>${escapeHTML(stringifyValue(blockedActions[0]?.action, "-"))}</code></div>
       <div><strong>nextRetryAt</strong> <code>${escapeHTML(stringifyValue(retrySummary.nextRetryAt, "-"))}</code></div>
       <div><strong>queueSize</strong> <code>${escapeHTML(stringifyValue(retrySummary.queueSize, "0"))}</code></div>
     `;

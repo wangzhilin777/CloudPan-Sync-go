@@ -310,8 +310,10 @@ $evidence | ConvertTo-Json -Depth 12
 
 - `totalTasks`
 - `completedTasks`
+- `blockedTasks`
 - `doneResultCount`
 - `failedResultCount`
+- `blockedActions`
 - `recentResults`
 - `recentProbes`
 
@@ -331,6 +333,7 @@ $status | ConvertTo-Json -Depth 12
 - `profileCount`
 - `taskCount`
 - `completedCount`
+- `blockedCount`
 - `latestProbe`
 - `lastTaskState`
 - `snapshotSummary`

@@ -134,6 +134,10 @@
   - `blockedAction`
   - `blockedAdvice`
   - `nextRetryAt`
+- 当前 evidence / status 聚合还会补充：
+  - `blockedTasks`
+  - `blockedActions`
+  - provider 维度的 `blockedCount`
 - 当前如果 `retryLimit` 已耗尽：
   - queue item 会标记为 `exhausted`
   - 手动 `retry` 会返回 `retry_blocked`

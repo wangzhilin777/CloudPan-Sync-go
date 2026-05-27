@@ -140,6 +140,10 @@
   - `blockedAction`
   - `blockedAdvice`
   - `nextRetryAt`
+- 当前状态矩阵聚合已支持：
+  - evidence 级 `blockedTasks`
+  - evidence/provider 级 `blockedActions`
+  - provider 级 `blockedCount`
 - 当前要避免误解：
   - 这表示“待补传结构已经可见，而且已具备 pending-only retry、`blocked` 运行态、retry-limit 阻断和最小自动补传闭环”
   - 不表示“后台补传队列调度已经全部完成”

@@ -247,6 +247,7 @@
   - 当前已接入单机 tick 版后台自动补传调度，可自动恢复冷却到期的 `blocked` 任务
   - 当前 `retryLimit` 已真正接入重试队列，支持累计次数、剩余次数与 exhausted 阻断
   - 当前 `blockedReason` 已补充统一的 `blockedAction / blockedAdvice`，便于状态矩阵直接给出处理建议
+  - 当前 `/api/evidence/runtime` 与 `/api/status/providers` 已补充 `blockedTasks / blockedActions` 聚合摘要，便于快速定位最需要人工处理的动作
 
 ### 6. Runtime Evidence / 状态矩阵
 

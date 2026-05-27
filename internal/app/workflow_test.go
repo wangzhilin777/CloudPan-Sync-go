@@ -168,8 +168,18 @@ func TestAppWorkflowMainline(t *testing.T) {
 	if got := int(evidenceData["totalTasks"].(float64)); got != 1 {
 		t.Fatalf("expected totalTasks=1, got %d", got)
 	}
+	if got := int(evidenceData["blockedTasks"].(float64)); got != 1 {
+		t.Fatalf("expected blockedTasks=1, got %d", got)
+	}
 	if got := int(evidenceData["pendingResultCount"].(float64)); got != 1 {
 		t.Fatalf("expected pendingResultCount=1, got %d", got)
+	}
+	blockedActions := evidenceData["blockedActions"].([]interface{})
+	if len(blockedActions) == 0 {
+		t.Fatal("expected blockedActions in evidence summary")
+	}
+	if got := blockedActions[0].(map[string]interface{})["action"].(string); got != "restore_local_source_file" {
+		t.Fatalf("expected blocked action restore_local_source_file, got %s", got)
 	}
 	if got := len(evidenceData["recentResults"].([]interface{})); got == 0 {
 		t.Fatal("expected recentResults to be populated")
@@ -239,6 +249,16 @@ func TestAppWorkflowMainline(t *testing.T) {
 		}
 		if got := summary["retrySummary"].(map[string]interface{})["blockedAction"].(string); got != "restore_local_source_file" {
 			t.Fatalf("expected status summary blockedAction restore_local_source_file, got %s", got)
+		}
+		if got := int(item["blockedCount"].(float64)); got != 1 {
+			t.Fatalf("expected provider blockedCount 1, got %d", got)
+		}
+		blockedActions, ok := summary["blockedActions"].([]interface{})
+		if !ok || len(blockedActions) == 0 {
+			t.Fatalf("expected status summary blockedActions, got %#v", summary["blockedActions"])
+		}
+		if got := blockedActions[0].(map[string]interface{})["action"].(string); got != "restore_local_source_file" {
+			t.Fatalf("expected status summary blockedActions[0] restore_local_source_file, got %s", got)
 		}
 		if got := len(summary["pendingTree"].([]interface{})); got == 0 {
 			t.Fatal("expected pendingTree in status summary")
