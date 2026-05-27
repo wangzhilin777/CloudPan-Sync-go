@@ -19,6 +19,7 @@ type CreateRequest struct {
 	TargetProvider  string                  `json:"targetProvider"`
 	TargetProfileID string                  `json:"targetProfileId"`
 	ThresholdMB     int                     `json:"thresholdMB"`
+	RiskMode        planner.RiskMode        `json:"riskMode"`
 	ConflictPolicy  provider.ConflictPolicy `json:"conflictPolicy"`
 	SelectedRoots   []string                `json:"selectedRoots"`
 	Entries         []planner.SourceEntry   `json:"entries"`
@@ -69,6 +70,7 @@ func (s *Service) Create(ctx context.Context, req CreateRequest) (Detail, error)
 		SourceProvider: req.SourceProvider,
 		TargetProvider: req.TargetProvider,
 		ThresholdMB:    req.ThresholdMB,
+		RiskMode:       req.RiskMode,
 		ConflictPolicy: req.ConflictPolicy,
 		SelectedRoots:  req.SelectedRoots,
 		Entries:        req.Entries,
@@ -171,6 +173,12 @@ func (s *Service) Run(ctx context.Context, id string) (Detail, bool, error) {
 		result.ConflictAction = conflictAction
 		result.Payload["strategy"] = uploadReq.Strategy
 		result.Payload["providerStatus"] = upload.Status
+		if item.Sequence > 0 {
+			result.Payload["sequence"] = item.Sequence
+		}
+		if riskProfile, ok := detail.Plan.Metadata["riskProfile"]; ok {
+			result.Payload["riskProfile"] = riskProfile
+		}
 		if conflictAction != "" {
 			result.Payload["conflictAction"] = conflictAction
 		}

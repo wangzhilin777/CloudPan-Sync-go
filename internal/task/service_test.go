@@ -48,6 +48,21 @@ func TestServiceCreateRunRetryTask(t *testing.T) {
 	if detail.Task.State != StateReady {
 		t.Fatalf("expected ready state, got %s", detail.Task.State)
 	}
+	if got := detail.Plan.Items[0].Path; got != "/a.bin" {
+		t.Fatalf("expected leaf-first item order to keep /a.bin first, got %s", got)
+	}
+	switch riskProfile := detail.Plan.Metadata["riskProfile"].(type) {
+	case planner.RiskProfile:
+		if riskProfile.Mode != planner.RiskModeBalanced {
+			t.Fatalf("expected default balanced risk mode, got %s", riskProfile.Mode)
+		}
+	case map[string]interface{}:
+		if mode, _ := riskProfile["mode"].(string); mode != string(planner.RiskModeBalanced) {
+			t.Fatalf("expected default balanced risk mode, got %v", riskProfile["mode"])
+		}
+	default:
+		t.Fatalf("expected riskProfile metadata, got %#v", detail.Plan.Metadata["riskProfile"])
+	}
 
 	running, ok, err := svc.Run(ctx, detail.Task.ID)
 	if err != nil {
@@ -58,6 +73,9 @@ func TestServiceCreateRunRetryTask(t *testing.T) {
 	}
 	if len(running.Results) != 2 {
 		t.Fatalf("expected 2 results, got %d", len(running.Results))
+	}
+	if sequence, _ := running.Results[0].Payload["sequence"].(int); sequence != 1 {
+		t.Fatalf("expected first result sequence=1, got %+v", running.Results[0].Payload["sequence"])
 	}
 	if running.Task.State != StateCompletedWithErrors {
 		t.Fatalf("expected completed_with_errors, got %s", running.Task.State)
@@ -174,6 +192,7 @@ func TestServiceRuntimeHandlesFallbackAndConflictDowngrade(t *testing.T) {
 		TargetProvider:  "runtime_fake",
 		TargetProfileID: profile.ID,
 		ThresholdMB:     0,
+		RiskMode:        planner.RiskModeFast,
 		ConflictPolicy:  provider.ConflictPolicyOverwriteExisting,
 		Entries: []planner.SourceEntry{
 			{Path: "/a.bin", Size: 1024, MD5: "abc", LocalPath: localFile},
@@ -204,6 +223,13 @@ func TestServiceRuntimeHandlesFallbackAndConflictDowngrade(t *testing.T) {
 	}
 	if value, _ := running.Results[0].Payload["fallbackUsed"].(bool); !value {
 		t.Fatalf("expected fallbackUsed payload, got %+v", running.Results[0].Payload)
+	}
+	riskProfile, ok := running.Results[0].Payload["riskProfile"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("expected result riskProfile payload, got %#v", running.Results[0].Payload["riskProfile"])
+	}
+	if mode, _ := riskProfile["mode"].(string); mode != string(planner.RiskModeFast) {
+		t.Fatalf("expected fast risk mode, got %v", riskProfile["mode"])
 	}
 }
 

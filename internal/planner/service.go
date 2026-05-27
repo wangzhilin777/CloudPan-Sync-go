@@ -2,6 +2,7 @@ package planner
 
 import (
 	"errors"
+	"sort"
 	"strings"
 
 	"cloudpan-sync-go/internal/provider"
@@ -28,6 +29,7 @@ type PreviewRequest struct {
 	SourceProvider string                  `json:"sourceProvider"`
 	TargetProvider string                  `json:"targetProvider"`
 	ThresholdMB    int                     `json:"thresholdMB"`
+	RiskMode       RiskMode                `json:"riskMode"`
 	ConflictPolicy provider.ConflictPolicy `json:"conflictPolicy"`
 	SelectedRoots  []string                `json:"selectedRoots"`
 	Entries        []SourceEntry           `json:"entries"`
@@ -44,19 +46,22 @@ func BuildPreview(registry *provider.Registry, req PreviewRequest) (Plan, error)
 	if conflictPolicy == "" {
 		conflictPolicy = string(provider.ConflictPolicyAutoRenameNew)
 	}
+	riskProfile := defaultRiskProfile(target.Meta.Key, req.RiskMode)
+	orderedEntries := orderEntriesLeafFirst(req.Entries)
 
-	items := make([]Item, 0, len(req.Entries))
+	items := make([]Item, 0, len(orderedEntries))
 	summary := map[string]int{
 		string(StrategyFastUpload):     0,
 		string(StrategyDownloadUpload): 0,
 		string(StrategyPendingManual):  0,
 	}
 
-	for _, entry := range req.Entries {
+	for idx, entry := range orderedEntries {
 		strategy := decideStrategy(target.Meta.FastUploadInputs, entry, thresholdBytes)
 		items = append(items, Item{
 			Path:           entry.Path,
 			Size:           entry.Size,
+			Sequence:       idx + 1,
 			Strategy:       strategy,
 			ConflictPolicy: conflictPolicy,
 		})
@@ -70,8 +75,10 @@ func BuildPreview(registry *provider.Registry, req PreviewRequest) (Plan, error)
 		Items:          items,
 		Summary:        summary,
 		Metadata: map[string]interface{}{
-			"selectedRoots": req.SelectedRoots,
-			"entryCount":    len(req.Entries),
+			"selectedRoots":  req.SelectedRoots,
+			"entryCount":     len(req.Entries),
+			"executionOrder": "leaf_first",
+			"riskProfile":    riskProfile,
 		},
 	}, nil
 }
@@ -119,4 +126,102 @@ func max(a, b int) int {
 		return a
 	}
 	return b
+}
+
+func orderEntriesLeafFirst(entries []SourceEntry) []SourceEntry {
+	ordered := append([]SourceEntry(nil), entries...)
+	sort.SliceStable(ordered, func(i, j int) bool {
+		leftDepth := pathDepth(ordered[i].Path)
+		rightDepth := pathDepth(ordered[j].Path)
+		if leftDepth != rightDepth {
+			return leftDepth > rightDepth
+		}
+		return ordered[i].Path < ordered[j].Path
+	})
+	return ordered
+}
+
+func pathDepth(path string) int {
+	trimmed := strings.Trim(path, "/\\ ")
+	if trimmed == "" {
+		return 0
+	}
+	depth := 1
+	for _, ch := range trimmed {
+		if ch == '/' || ch == '\\' {
+			depth++
+		}
+	}
+	return depth
+}
+
+func defaultRiskProfile(providerKey string, mode RiskMode) RiskProfile {
+	switch normalizeRiskMode(mode) {
+	case RiskModeSafe:
+		return RiskProfile{
+			Mode:                RiskModeSafe,
+			RequestIntervalMS:   1500,
+			PageSize:            100,
+			DirectoryIntervalMS: 2500,
+			CooldownSeconds:     30,
+			RetryLimit:          2,
+			RiskKeywords:        providerRiskKeywords(providerKey),
+		}
+	case RiskModeFast:
+		return RiskProfile{
+			Mode:                RiskModeFast,
+			RequestIntervalMS:   250,
+			PageSize:            1000,
+			DirectoryIntervalMS: 300,
+			CooldownSeconds:     5,
+			RetryLimit:          5,
+			RiskKeywords:        providerRiskKeywords(providerKey),
+		}
+	case RiskModeCustom:
+		return RiskProfile{
+			Mode:                RiskModeCustom,
+			RequestIntervalMS:   0,
+			PageSize:            0,
+			DirectoryIntervalMS: 0,
+			CooldownSeconds:     0,
+			RetryLimit:          0,
+			RiskKeywords:        providerRiskKeywords(providerKey),
+		}
+	default:
+		return RiskProfile{
+			Mode:                RiskModeBalanced,
+			RequestIntervalMS:   800,
+			PageSize:            300,
+			DirectoryIntervalMS: 1000,
+			CooldownSeconds:     15,
+			RetryLimit:          3,
+			RiskKeywords:        providerRiskKeywords(providerKey),
+		}
+	}
+}
+
+func normalizeRiskMode(mode RiskMode) RiskMode {
+	switch mode {
+	case RiskModeSafe, RiskModeFast, RiskModeCustom:
+		return mode
+	default:
+		return RiskModeBalanced
+	}
+}
+
+func providerRiskKeywords(providerKey string) []string {
+	switch providerKey {
+	case "aliyundrive_open", "123_open":
+		return []string{"429", "too_many_requests", "flow_limit"}
+	case "quark", "uc":
+		return []string{"risk_control", "captcha", "forbidden"}
+	case "xunlei", "pikpak":
+		return []string{"frequency_limit", "risk_detected", "forbidden"}
+	case "189cloud":
+		return []string{"rate_limit", "token_expired", "too_many_requests"}
+	case "baidu_netdisk":
+		return []string{"hit_risk_control", "captcha", "too_many_requests"}
+	default:
+		return []string{"rate_limit", "too_many_requests"}
+	}
 }
