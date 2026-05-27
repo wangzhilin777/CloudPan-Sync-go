@@ -5,6 +5,7 @@ const state = {
   tasks: [],
   preview: null,
   selectedTaskId: null,
+  focusedProfileId: null,
   evidence: null,
   statuses: [],
 };
@@ -345,6 +346,47 @@ function setSelectValueIfPresent(selector, value) {
   }
 }
 
+function setInputValueIfPresent(selector, value) {
+  const element = $(selector);
+  if (!element || value === undefined || value === null) {
+    return;
+  }
+  element.value = String(value);
+  element.dispatchEvent(new Event("change"));
+}
+
+function prefillWizardFromTask(detail) {
+  if (!detail || !detail.task || !detail.plan) {
+    return;
+  }
+  setSelectValueIfPresent("#plan-source-provider", detail.task.sourceProvider);
+  syncSourceProfiles();
+  setSelectValueIfPresent("#plan-source-profile", detail.sourceProfileId || "");
+  setSelectValueIfPresent("#plan-target-provider", detail.task.targetProvider);
+  syncTargetProfiles();
+  setSelectValueIfPresent("#plan-target-profile", detail.targetProfileId || "");
+  setSelectValueIfPresent("#plan-execution-mode", detail.plan.metadata?.executionMode || "leaf_first_lazy");
+  setSelectValueIfPresent("#plan-risk-mode", detail.plan.metadata?.riskProfile?.mode || "balanced");
+  setSelectValueIfPresent("#plan-conflict-policy", detail.conflictPolicy || "auto_rename_new");
+  setInputValueIfPresent("#plan-threshold", detail.plan.thresholdMB || 0);
+  $("#plan-risk-override").value = JSON.stringify(detail.plan.metadata?.riskOverride || null, null, 2);
+  $("#plan-selected-roots").value = JSON.stringify(detail.plan.metadata?.selectedRoots || ["/"], null, 2);
+  $("#plan-entries").value = JSON.stringify(detail.sourceEntries || [], null, 2);
+  syncExecutionModeHint();
+}
+
+function focusProfile(profileId) {
+  state.focusedProfileId = profileId || null;
+  renderProfiles();
+  if (!profileId) {
+    return;
+  }
+  requestAnimationFrame(() => {
+    const row = document.querySelector(`[data-profile-row="${profileId}"]`);
+    row?.scrollIntoView({ block: "center", behavior: "smooth" });
+  });
+}
+
 function renderTaskResolutionGuide(detail) {
   const metadata = detail?.plan?.metadata || {};
   const runtime = detail?.runtime || {};
@@ -372,7 +414,7 @@ function renderTaskResolutionGuide(detail) {
         "回到任务详情页，再执行 Resume 或 Retry。",
       ],
       buttons: [
-        { label: "打开授权面板", view: "providers", providerKey, profileId },
+        { label: "打开授权面板", view: "providers", providerKey, profileId, intent: "focus_profile" },
         { label: "打开状态矩阵", view: "status" },
       ],
     },
@@ -384,7 +426,7 @@ function renderTaskResolutionGuide(detail) {
         "补齐后返回任务详情页重新 Retry。",
       ],
       buttons: [
-        { label: "打开任务向导", view: "wizard", providerKey },
+        { label: "打开任务向导", view: "wizard", providerKey, intent: "prefill_wizard" },
         { label: "打开状态矩阵", view: "status" },
       ],
     },
@@ -419,7 +461,7 @@ function renderTaskResolutionGuide(detail) {
         "创建新任务后，用状态矩阵对比新的 blocked 分布是否收敛。",
       ],
       buttons: [
-        { label: "打开任务向导", view: "wizard", providerKey },
+        { label: "打开任务向导", view: "wizard", providerKey, intent: "prefill_wizard" },
         { label: "查看状态矩阵", view: "status" },
       ],
     },
@@ -427,7 +469,7 @@ function renderTaskResolutionGuide(detail) {
 
   const config = stepsByAction[action] || {
     title: "人工处理建议",
-    steps: [advice || "请根据 blocked 原因检查授权、源文件和 provider 返回状态。"] ,
+    steps: [advice || "请根据 blocked 原因检查授权、源文件和 provider 返回状态。"],
     buttons: [{ label: "打开状态矩阵", view: "status" }],
   };
 
@@ -450,6 +492,7 @@ function renderTaskResolutionGuide(detail) {
                 type="button"
                 class="ghost"
                 data-task-guide-view="${escapeHTML(button.view)}"
+                data-task-guide-intent="${escapeHTML(button.intent || "")}"
                 data-task-guide-provider="${escapeHTML(button.providerKey || "")}"
                 data-task-guide-profile="${escapeHTML(button.profileId || "")}"
               >${escapeHTML(button.label)}</button>
@@ -465,14 +508,24 @@ function wireTaskResolutionGuide(detail) {
   document.querySelectorAll("[data-task-guide-view]").forEach((button) => {
     button.addEventListener("click", () => {
       const view = button.dataset.taskGuideView;
+      const intent = button.dataset.taskGuideIntent;
       activateTab(view);
       if (view === "providers") {
         setSelectValueIfPresent("#profile-provider", button.dataset.taskGuideProvider);
+        if (intent === "focus_profile") {
+          focusProfile(button.dataset.taskGuideProfile);
+          showFlash("已定位到当前授权档案");
+        }
       }
       if (view === "wizard") {
-        setSelectValueIfPresent("#plan-target-provider", detail?.task?.targetProvider || button.dataset.taskGuideProvider);
-        setSelectValueIfPresent("#plan-target-profile", detail?.targetProfileId || button.dataset.taskGuideProfile);
-        setSelectValueIfPresent("#plan-source-provider", detail?.task?.sourceProvider);
+        if (intent === "prefill_wizard") {
+          prefillWizardFromTask(detail);
+          showFlash("已按当前任务预填任务向导参数");
+        } else {
+          setSelectValueIfPresent("#plan-target-provider", detail?.task?.targetProvider || button.dataset.taskGuideProvider);
+          setSelectValueIfPresent("#plan-target-profile", detail?.targetProfileId || button.dataset.taskGuideProfile);
+          setSelectValueIfPresent("#plan-source-provider", detail?.task?.sourceProvider);
+        }
       }
       if (view === "tasks") {
         state.selectedTaskId = detail?.task?.id || state.selectedTaskId;
@@ -557,7 +610,7 @@ function renderProfiles() {
         ${state.profiles
           .map(
             (profile) => `
-              <tr>
+              <tr class="${profile.id === state.focusedProfileId ? "active" : ""}" data-profile-row="${profile.id}">
                 <td>${profile.displayName}</td>
                 <td>${profile.providerKey}</td>
                 <td>${profile.authMode}</td>

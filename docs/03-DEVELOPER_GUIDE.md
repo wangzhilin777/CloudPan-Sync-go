@@ -139,6 +139,9 @@
   - `blockedActions`
   - provider 维度的 `blockedCount`
 - 当前任务详情页还会根据 `blockedAction` 生成“下一步处理”引导区，并提供跳转到授权面板、任务向导或状态矩阵的直达入口
+- 当前这些直达入口已支持：
+  - 自动定位当前授权档案
+  - 按当前任务预填任务向导里的 provider/profile/risk/entries 参数
 - 当前如果 `retryLimit` 已耗尽：
   - queue item 会标记为 `exhausted`
   - 手动 `retry` 会返回 `retry_blocked`

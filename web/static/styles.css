@@ -372,6 +372,10 @@ th {
   letter-spacing: 0.08em;
 }
 
+tr.active td {
+  background: rgba(15, 118, 110, 0.12);
+}
+
 .task-list {
   display: grid;
   gap: 12px;
