@@ -27,6 +27,13 @@ type RiskProfile struct {
 	RiskKeywords        []string `json:"riskKeywords,omitempty"`
 }
 
+type ExecutionMode string
+
+const (
+	ExecutionModeLeafFirstLazy ExecutionMode = "leaf_first_lazy"
+	ExecutionModePreScanFlat   ExecutionMode = "pre_scan_flat"
+)
+
 type Plan struct {
 	SourceProvider string                 `json:"sourceProvider"`
 	TargetProvider string                 `json:"targetProvider"`

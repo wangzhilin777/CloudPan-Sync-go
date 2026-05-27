@@ -47,17 +47,29 @@
 ## 当前任务执行模式怎么理解
 
 - 当前项目是多 provider 互传，不是定向同步到单个固定目标。
-- 执行模式后续会保留为任务级可选配置。
+- 执行模式已经作为任务级可选配置进入当前 API。
+- 当前已支持：
+  - `leaf_first_lazy`
+  - `pre_scan_flat`
 - 当前默认优先推荐的是：
-  - `leaf-first lazy scan`
+  - `leaf_first_lazy`
 - 这个模式的含义是：
   - 按顶层目录顺序逐棵子树推进
   - 每棵子树内部优先下探最深目录
   - 只扫描下一步真正需要传的目录，不预先拉完整目录树
+- `pre_scan_flat` 的含义是：
+  - 先把当前选择目录下的文件项按遍历顺序收集出来
+  - 再按收集顺序执行
+  - 适合目录较小、希望先看到完整分析结果的场景
 - 这适合：
   - 大目录
   - 风控敏感 provider
   - 需要边扫边传、边停边恢复的场景
+- 当前 planner / task 结果里还会直接带出：
+  - `executionMode`
+  - `recommendedExecutionMode`
+  - `recommendedExecutionModeReason`
+  - `executionOrder`
 
 ### 启动服务
 
@@ -118,6 +130,9 @@ go build ./...
 
 - `sourceProfileId`
   - 当任务要走按需扫描时，需要它来在运行阶段对 source provider 执行 `List`
+- `executionMode`
+  - 不传时默认按 `leaf_first_lazy`
+  - 传 `pre_scan_flat` 时会切换到预扫描平铺模式
 
 ## 当前额外可用的 Provider 调试接口
 
@@ -185,6 +200,6 @@ go build ./...
 - 为一个协议族接入真实登录校验
 - 为一个 provider 接入真实目录和元数据查询
 - 为一个 provider 接入真实 fast upload / 普通上传链路
-- 补执行模式的目录状态持久化、补传树和模式提示
+- 补执行模式的目录状态持久化、补传树和 UI 模式提示
 - 为控制台扩展异常场景和多 provider 的 UI smoke
 - 为 README 增加更完整的示例和联调说明

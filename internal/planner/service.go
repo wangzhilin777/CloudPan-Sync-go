@@ -9,6 +9,7 @@ import (
 )
 
 var ErrTargetProviderNotFound = errors.New("target_provider_not_found")
+var ErrInvalidExecutionMode = errors.New("invalid_execution_mode")
 
 type SourceEntry struct {
 	Path         string                 `json:"path"`
@@ -30,6 +31,7 @@ type PreviewRequest struct {
 	TargetProvider string                  `json:"targetProvider"`
 	ThresholdMB    int                     `json:"thresholdMB"`
 	RiskMode       RiskMode                `json:"riskMode"`
+	ExecutionMode  ExecutionMode           `json:"executionMode"`
 	ConflictPolicy provider.ConflictPolicy `json:"conflictPolicy"`
 	SelectedRoots  []string                `json:"selectedRoots"`
 	Entries        []SourceEntry           `json:"entries"`
@@ -46,8 +48,13 @@ func BuildPreview(registry *provider.Registry, req PreviewRequest) (Plan, error)
 	if conflictPolicy == "" {
 		conflictPolicy = string(provider.ConflictPolicyAutoRenameNew)
 	}
+	executionMode, err := normalizeExecutionMode(req.ExecutionMode)
+	if err != nil {
+		return Plan{}, err
+	}
 	riskProfile := defaultRiskProfile(target.Meta.Key, req.RiskMode)
-	orderedEntries := orderEntriesLeafFirst(req.Entries)
+	recommendedMode, recommendedReason := recommendExecutionMode(req, riskProfile)
+	orderedEntries := orderEntriesByMode(req.Entries, executionMode)
 
 	items := make([]Item, 0, len(orderedEntries))
 	summary := map[string]int{
@@ -75,10 +82,13 @@ func BuildPreview(registry *provider.Registry, req PreviewRequest) (Plan, error)
 		Items:          items,
 		Summary:        summary,
 		Metadata: map[string]interface{}{
-			"selectedRoots":  req.SelectedRoots,
-			"entryCount":     len(req.Entries),
-			"executionOrder": "leaf_first",
-			"riskProfile":    riskProfile,
+			"selectedRoots":                  req.SelectedRoots,
+			"entryCount":                     len(req.Entries),
+			"executionMode":                  executionMode,
+			"recommendedExecutionMode":       recommendedMode,
+			"recommendedExecutionModeReason": recommendedReason,
+			"executionOrder":                 executionOrderForMode(executionMode),
+			"riskProfile":                    riskProfile,
 		},
 	}, nil
 }
@@ -139,6 +149,24 @@ func orderEntriesLeafFirst(entries []SourceEntry) []SourceEntry {
 		return ordered[i].Path < ordered[j].Path
 	})
 	return ordered
+}
+
+func orderEntriesByMode(entries []SourceEntry, mode ExecutionMode) []SourceEntry {
+	switch mode {
+	case ExecutionModePreScanFlat:
+		return append([]SourceEntry(nil), entries...)
+	default:
+		return orderEntriesLeafFirst(entries)
+	}
+}
+
+func executionOrderForMode(mode ExecutionMode) string {
+	switch mode {
+	case ExecutionModePreScanFlat:
+		return "pre_scan_flat"
+	default:
+		return "leaf_first"
+	}
 }
 
 func pathDepth(path string) int {
@@ -207,6 +235,33 @@ func normalizeRiskMode(mode RiskMode) RiskMode {
 	default:
 		return RiskModeBalanced
 	}
+}
+
+func normalizeExecutionMode(mode ExecutionMode) (ExecutionMode, error) {
+	switch mode {
+	case "", ExecutionModeLeafFirstLazy:
+		return ExecutionModeLeafFirstLazy, nil
+	case ExecutionModePreScanFlat:
+		return ExecutionModePreScanFlat, nil
+	default:
+		return "", ErrInvalidExecutionMode
+	}
+}
+
+func recommendExecutionMode(req PreviewRequest, riskProfile RiskProfile) (ExecutionMode, string) {
+	if len(req.Entries) > 0 && len(req.Entries) <= 20 && len(req.SelectedRoots) <= 1 && riskProfile.Mode == RiskModeFast {
+		return ExecutionModePreScanFlat, "Known small input set with aggressive risk mode can finish analysis up front."
+	}
+	if len(req.Entries) > 0 && len(req.Entries) <= 20 && len(req.SelectedRoots) <= 1 {
+		return ExecutionModePreScanFlat, "Known small input set is suitable for up-front scan and simpler progress visibility."
+	}
+	if len(req.SelectedRoots) > 1 {
+		return ExecutionModeLeafFirstLazy, "Multiple top-level roots are safer to process subtree by subtree."
+	}
+	if len(req.Entries) == 0 {
+		return ExecutionModeLeafFirstLazy, "Unknown full tree size should default to on-demand leaf-first scanning."
+	}
+	return ExecutionModeLeafFirstLazy, "Leaf-first lazy scan is the preferred default for large or risk-sensitive transfers."
 }
 
 func providerRiskKeywords(providerKey string) []string {

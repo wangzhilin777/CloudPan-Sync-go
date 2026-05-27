@@ -1,6 +1,7 @@
 package planner
 
 import (
+	"errors"
 	"testing"
 
 	"cloudpan-sync-go/internal/provider"
@@ -66,6 +67,9 @@ func TestBuildPreviewOrdersLeafFirstAndAssignsSequence(t *testing.T) {
 	if got, _ := plan.Metadata["executionOrder"].(string); got != "leaf_first" {
 		t.Fatalf("expected executionOrder leaf_first, got %v", plan.Metadata["executionOrder"])
 	}
+	if got, _ := plan.Metadata["executionMode"].(ExecutionMode); got != ExecutionModeLeafFirstLazy {
+		t.Fatalf("expected default execution mode leaf_first_lazy, got %v", plan.Metadata["executionMode"])
+	}
 }
 
 func TestBuildPreviewIncludesRiskProfileDefaults(t *testing.T) {
@@ -92,5 +96,46 @@ func TestBuildPreviewIncludesRiskProfileDefaults(t *testing.T) {
 	}
 	if len(riskProfile.RiskKeywords) == 0 {
 		t.Fatal("expected provider risk keywords")
+	}
+}
+
+func TestBuildPreviewSupportsPreScanFlatMode(t *testing.T) {
+	registry := provider.NewRegistry(provider.DefaultCatalog()...)
+	plan, err := BuildPreview(registry, PreviewRequest{
+		SourceProvider: "guangya",
+		TargetProvider: "123_open",
+		ExecutionMode:  ExecutionModePreScanFlat,
+		Entries: []SourceEntry{
+			{Path: "/root.bin", Size: 10},
+			{Path: "/a/b/c.bin", Size: 10},
+			{Path: "/a/b.bin", Size: 10},
+		},
+	})
+	if err != nil {
+		t.Fatalf("BuildPreview() error = %v", err)
+	}
+	if got := plan.Items[0].Path; got != "/root.bin" {
+		t.Fatalf("expected pre-scan mode to preserve input order, got %s", got)
+	}
+	if got, _ := plan.Metadata["executionMode"].(ExecutionMode); got != ExecutionModePreScanFlat {
+		t.Fatalf("expected pre_scan_flat mode, got %v", plan.Metadata["executionMode"])
+	}
+	if got, _ := plan.Metadata["executionOrder"].(string); got != "pre_scan_flat" {
+		t.Fatalf("expected executionOrder pre_scan_flat, got %v", plan.Metadata["executionOrder"])
+	}
+}
+
+func TestBuildPreviewRejectsInvalidExecutionMode(t *testing.T) {
+	registry := provider.NewRegistry(provider.DefaultCatalog()...)
+	_, err := BuildPreview(registry, PreviewRequest{
+		SourceProvider: "guangya",
+		TargetProvider: "123_open",
+		ExecutionMode:  ExecutionMode("bad_mode"),
+	})
+	if err == nil {
+		t.Fatal("expected invalid execution mode error")
+	}
+	if !errors.Is(err, ErrInvalidExecutionMode) {
+		t.Fatalf("expected ErrInvalidExecutionMode, got %v", err)
 	}
 }

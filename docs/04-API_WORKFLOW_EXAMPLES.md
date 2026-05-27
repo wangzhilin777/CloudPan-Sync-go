@@ -105,6 +105,8 @@ $previewPayload = @{
   sourceProvider = "guangya"
   targetProvider = "123_open"
   thresholdMB    = 10
+  riskMode       = "balanced"
+  executionMode  = "leaf_first_lazy"
   conflictPolicy = "auto_rename_new"
   selectedRoots  = @("/demo")
   entries        = @(
@@ -136,8 +138,14 @@ $preview | ConvertTo-Json -Depth 10
 
 补充说明：
 
-- 预览计划目前既可用于“已知 entries 的预分析”，也会逐步承载“推荐执行模式”提示。
-- 当目录较大或 provider 风控敏感时，后续应优先推荐 `leaf-first lazy scan`。
+- 预览计划既可用于“已知 entries 的预分析”，也会返回当前执行模式和推荐模式提示。
+- 当前返回的 `metadata` 里建议重点看：
+  - `executionMode`
+  - `recommendedExecutionMode`
+  - `recommendedExecutionModeReason`
+  - `executionOrder`
+  - `riskProfile`
+- 当目录较大或 provider 风控敏感时，通常会优先推荐 `leaf_first_lazy`。
 
 ## 7. 创建任务
 
@@ -183,6 +191,7 @@ $lazyTaskPayload = @{
   thresholdMB     = 10
   conflictPolicy  = "auto_rename_new"
   riskMode        = "balanced"
+  executionMode   = "leaf_first_lazy"
   selectedRoots   = @("/1", "/2", "/3")
   entries         = @()
 } | ConvertTo-Json -Depth 8
@@ -202,6 +211,18 @@ $lazyTask | ConvertTo-Json -Depth 12
 - 任务创建时不预先扫完整棵目录树
 - 运行时按顶层目录顺序和叶子优先顺序按需列目录
 - 当前它是可选模式，但应作为大目录场景的默认优先推荐模式
+
+如果你希望显式使用预扫描模式，可以把 `executionMode` 改成：
+
+```powershell
+executionMode = "pre_scan_flat"
+```
+
+它更适合：
+
+- 目录较小
+- 希望先拿到完整扫描结果
+- 对“先扫再跑”的可见性更敏感的联调场景
 
 ## 8. 查询任务列表与详情
 
@@ -376,5 +397,9 @@ Invoke-RestMethod `
 - 这套 API 不兼容 Python 旧接口。
 - `targetProfileId` 只在创建任务时需要；预览计划不依赖它。
 - `sourceProfileId` 在按需扫描模式下是运行任务的必要字段。
+- `executionMode` 当前支持：
+  - `leaf_first_lazy`
+  - `pre_scan_flat`
+- 不传 `executionMode` 时，默认按 `leaf_first_lazy`。
 - `pending_manual_requires_confirmation` 目前仍代表需要后续真实 fallback 运行时补全。
 - 当前很多 provider 仍是协议占位实现，适合联调内核、字段口径和控制台闭环，不代表真实外部平台已经完全打通。

@@ -64,6 +64,9 @@ func TestServiceCreateRunRetryTask(t *testing.T) {
 	default:
 		t.Fatalf("expected riskProfile metadata, got %#v", detail.Plan.Metadata["riskProfile"])
 	}
+	if mode, _ := detail.Plan.Metadata["executionMode"].(planner.ExecutionMode); mode != planner.ExecutionModeLeafFirstLazy {
+		t.Fatalf("expected default execution mode leaf_first_lazy, got %v", detail.Plan.Metadata["executionMode"])
+	}
 
 	running, ok, err := svc.Run(ctx, detail.Task.ID)
 	if err != nil {
@@ -231,6 +234,9 @@ func TestServiceRuntimeHandlesFallbackAndConflictDowngrade(t *testing.T) {
 	}
 	if mode, _ := riskProfile["mode"].(string); mode != string(planner.RiskModeFast) {
 		t.Fatalf("expected fast risk mode, got %v", riskProfile["mode"])
+	}
+	if mode, _ := running.Results[0].Payload["executionMode"].(string); mode != string(planner.ExecutionModeLeafFirstLazy) {
+		t.Fatalf("expected result execution mode leaf_first_lazy, got %v", running.Results[0].Payload["executionMode"])
 	}
 }
 
@@ -512,6 +518,7 @@ func TestServiceRunLazilyScansLeafFirstByRootSubtree(t *testing.T) {
 	if got, _ := running.Plan.Metadata["scanMode"].(string); got != "lazy_leaf_first" {
 		t.Fatalf("expected lazy scan mode, got %v", running.Plan.Metadata["scanMode"])
 	}
+	assertExecutionModeValue(t, running.Plan.Metadata["executionMode"], planner.ExecutionModeLeafFirstLazy)
 	switch trace := running.Plan.Metadata["scanTrace"].(type) {
 	case []string:
 		if len(trace) != len(wantListOrder) {
@@ -523,6 +530,127 @@ func TestServiceRunLazilyScansLeafFirstByRootSubtree(t *testing.T) {
 		}
 	default:
 		t.Fatalf("expected scanTrace in metadata, got %#v", running.Plan.Metadata["scanTrace"])
+	}
+}
+
+func TestServiceRunSupportsPreScanFlatExecutionMode(t *testing.T) {
+	ctx := context.Background()
+	store, err := sqlitestore.New(ctx, filepath.Join(t.TempDir(), "pre-scan.db"))
+	if err != nil {
+		t.Fatalf("new store: %v", err)
+	}
+	defer func() { _ = store.Close() }()
+
+	sourceAdapter := &scriptedAdapter{
+		meta: provider.Provider{
+			Key:           "source_tree_flat",
+			DisplayName:   "Source Tree Flat",
+			ProtocolGroup: "fake",
+			AuthModes:     []string{"manual_token"},
+			Status:        "planned",
+		},
+		capability: provider.CapabilitySet{
+			SupportsAuthValidation: true,
+			SupportsList:           true,
+		},
+		listFunc: func(req provider.ListRequest) provider.ListResult {
+			switch req.Path {
+			case "/root":
+				return scriptedListResult(
+					fileItem("/root/a.bin", 10),
+					dirItem("/root/sub"),
+				)
+			case "/root/sub":
+				return scriptedListResult(
+					fileItem("/root/sub/b.bin", 20),
+					fileItem("/root/sub/c.bin", 30),
+				)
+			default:
+				return scriptedListResult()
+			}
+		},
+	}
+	targetUploads := make([]string, 0)
+	targetAdapter := &scriptedAdapter{
+		meta: provider.Provider{
+			Key:              "target_tree_flat",
+			DisplayName:      "Target Tree Flat",
+			ProtocolGroup:    "fake",
+			AuthModes:        []string{"manual_token"},
+			FastUploadInputs: []string{"md5", "size"},
+			FallbackModes:    []string{"download_upload"},
+			Status:           "planned",
+		},
+		capability: provider.CapabilitySet{
+			SupportsAuthValidation: true,
+			SupportsUpload:         true,
+		},
+		uploadFunc: func(req provider.UploadRequest) provider.UploadResult {
+			targetUploads = append(targetUploads, req.Path)
+			return provider.UploadResult{
+				OperationResult: provider.OperationResult{
+					OK:      true,
+					Status:  "ok",
+					Message: "uploaded",
+					Mode:    "scripted_upload",
+				},
+			}
+		},
+	}
+
+	registry := provider.NewRegistry(sourceAdapter, targetAdapter)
+	authSvc := auth.NewService(store, registry)
+	svc := NewService(store, registry, authSvc)
+	sourceProfile, err := authSvc.CreateProfile(ctx, auth.CreateProfileInput{
+		ProviderKey: "source_tree_flat",
+		AuthMode:    "manual_token",
+		DisplayName: "source",
+		Token:       "source-token",
+	})
+	if err != nil {
+		t.Fatalf("CreateProfile(source) error = %v", err)
+	}
+	targetProfile, err := authSvc.CreateProfile(ctx, auth.CreateProfileInput{
+		ProviderKey: "target_tree_flat",
+		AuthMode:    "manual_token",
+		DisplayName: "target",
+		Token:       "target-token",
+	})
+	if err != nil {
+		t.Fatalf("CreateProfile(target) error = %v", err)
+	}
+
+	detail, err := svc.Create(ctx, CreateRequest{
+		SourceProvider:  "source_tree_flat",
+		SourceProfileID: sourceProfile.ID,
+		TargetProvider:  "target_tree_flat",
+		TargetProfileID: targetProfile.ID,
+		ExecutionMode:   planner.ExecutionModePreScanFlat,
+		SelectedRoots:   []string{"/root"},
+	})
+	if err != nil {
+		t.Fatalf("Create() error = %v", err)
+	}
+
+	running, ok, err := svc.Run(ctx, detail.Task.ID)
+	if err != nil {
+		t.Fatalf("Run() error = %v", err)
+	}
+	if !ok {
+		t.Fatal("expected task to exist")
+	}
+	if got, _ := running.Plan.Metadata["scanMode"].(string); got != "pre_scan_flat" {
+		t.Fatalf("expected pre_scan_flat scan mode, got %v", running.Plan.Metadata["scanMode"])
+	}
+	assertExecutionModeValue(t, running.Plan.Metadata["executionMode"], planner.ExecutionModePreScanFlat)
+	wantUploads := []string{"/root/a.bin", "/root/sub/b.bin", "/root/sub/c.bin"}
+	if len(targetUploads) != len(wantUploads) {
+		t.Fatalf("expected %d uploads, got %d: %#v", len(wantUploads), len(targetUploads), targetUploads)
+	}
+	for i, want := range wantUploads {
+		if targetUploads[i] != want {
+			t.Fatalf("pre-scan upload order %d expected %s, got %s", i, want, targetUploads[i])
+		}
 	}
 }
 
@@ -610,4 +738,20 @@ func inferNameForTest(path string) string {
 		return path[index+1:]
 	}
 	return path
+}
+
+func assertExecutionModeValue(t *testing.T, raw interface{}, want planner.ExecutionMode) {
+	t.Helper()
+	switch value := raw.(type) {
+	case planner.ExecutionMode:
+		if value != want {
+			t.Fatalf("expected execution mode %s, got %s", want, value)
+		}
+	case string:
+		if value != string(want) {
+			t.Fatalf("expected execution mode %s, got %s", want, value)
+		}
+	default:
+		t.Fatalf("expected execution mode %s, got %#v", want, raw)
+	}
 }

@@ -22,6 +22,7 @@ type CreateRequest struct {
 	TargetProfileID string                  `json:"targetProfileId"`
 	ThresholdMB     int                     `json:"thresholdMB"`
 	RiskMode        planner.RiskMode        `json:"riskMode"`
+	ExecutionMode   planner.ExecutionMode   `json:"executionMode"`
 	ConflictPolicy  provider.ConflictPolicy `json:"conflictPolicy"`
 	SelectedRoots   []string                `json:"selectedRoots"`
 	Entries         []planner.SourceEntry   `json:"entries"`
@@ -74,6 +75,7 @@ func (s *Service) Create(ctx context.Context, req CreateRequest) (Detail, error)
 		TargetProvider: req.TargetProvider,
 		ThresholdMB:    req.ThresholdMB,
 		RiskMode:       req.RiskMode,
+		ExecutionMode:  req.ExecutionMode,
 		ConflictPolicy: req.ConflictPolicy,
 		SelectedRoots:  req.SelectedRoots,
 		Entries:        req.Entries,
@@ -179,6 +181,12 @@ func (s *Service) Run(ctx context.Context, id string) (Detail, bool, error) {
 		result.ConflictAction = conflictAction
 		result.Payload["strategy"] = uploadReq.Strategy
 		result.Payload["providerStatus"] = upload.Status
+		if executionMode, ok := detail.Plan.Metadata["executionMode"]; ok {
+			result.Payload["executionMode"] = executionMode
+		}
+		if recommendedMode, ok := detail.Plan.Metadata["recommendedExecutionMode"]; ok {
+			result.Payload["recommendedExecutionMode"] = recommendedMode
+		}
 		if item.Sequence > 0 {
 			result.Payload["sequence"] = item.Sequence
 		}
@@ -237,6 +245,10 @@ func (s *Service) materializeTaskEntriesIfNeeded(ctx context.Context, detail *De
 	if strings.TrimSpace(detail.SourceProfileID) == "" {
 		return fmt.Errorf("source_profile_required_for_lazy_scan")
 	}
+	executionMode, err := executionModeFromMetadata(detail.Plan.Metadata)
+	if err != nil {
+		return err
+	}
 	sourceProfile, sourceEntry, err := s.resolveSourceProfile(ctx, detail.Task.SourceProvider, detail.SourceProfileID)
 	if err != nil {
 		return err
@@ -250,7 +262,7 @@ func (s *Service) materializeTaskEntriesIfNeeded(ctx context.Context, detail *De
 		pageSize = 200
 	}
 
-	entries, trace, err := s.collectLeafFirstEntries(ctx, sourceEntry, sourceProfile, selectedRoots, pageSize)
+	entries, trace, err := s.collectEntriesByMode(ctx, executionMode, sourceEntry, sourceProfile, selectedRoots, pageSize)
 	if err != nil {
 		return err
 	}
@@ -259,6 +271,7 @@ func (s *Service) materializeTaskEntriesIfNeeded(ctx context.Context, detail *De
 		TargetProvider: detail.Task.TargetProvider,
 		ThresholdMB:    detail.Plan.ThresholdMB,
 		RiskMode:       planner.RiskMode(metadataStringFromRisk(riskProfile, "mode")),
+		ExecutionMode:  executionMode,
 		ConflictPolicy: provider.ConflictPolicy(detail.ConflictPolicy),
 		SelectedRoots:  selectedRoots,
 		Entries:        entries,
@@ -269,7 +282,7 @@ func (s *Service) materializeTaskEntriesIfNeeded(ctx context.Context, detail *De
 	if plan.Metadata == nil {
 		plan.Metadata = map[string]interface{}{}
 	}
-	plan.Metadata["scanMode"] = "lazy_leaf_first"
+	plan.Metadata["scanMode"] = scanModeForExecutionMode(executionMode)
 	plan.Metadata["scanTrace"] = trace
 
 	items := make([]Item, 0, len(plan.Items))
@@ -573,6 +586,68 @@ func (s *Service) collectLeafFirstEntries(ctx context.Context, source provider.E
 	return entries, trace, nil
 }
 
+func (s *Service) collectPreScannedEntries(ctx context.Context, source provider.Entry, profile provider.AuthProfile, roots []string, pageSize int) ([]planner.SourceEntry, []string, error) {
+	entries := make([]planner.SourceEntry, 0)
+	trace := make([]string, 0)
+
+	var walk func(string) error
+	walk = func(path string) error {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+		normalized := normalizeScanPath(path)
+		trace = append(trace, normalized)
+		list := source.Adapter.List(provider.ListRequest{
+			Profile:  profile,
+			Path:     normalized,
+			ParentID: "",
+			PageSize: pageSize,
+		})
+		if !list.OK {
+			return fmt.Errorf("%s", list.Status)
+		}
+		for _, raw := range list.Items {
+			childPath := normalizeScanPath(stringMapValue(raw, "path"))
+			if childPath == "" || childPath == "/" {
+				continue
+			}
+			if boolMapValue(raw, "isDir") {
+				if err := walk(childPath); err != nil {
+					return err
+				}
+				continue
+			}
+			entries = append(entries, planner.SourceEntry{
+				Path:      childPath,
+				Size:      int64Number(raw["size"]),
+				MD5:       firstString(raw, "md5", "etag"),
+				SHA1:      stringMapValue(raw, "sha1"),
+				GCID:      stringMapValue(raw, "gcid"),
+				ETag:      stringMapValue(raw, "etag"),
+				LocalPath: stringMapValue(raw, "localPath"),
+				Raw:       raw,
+			})
+		}
+		return nil
+	}
+
+	for _, root := range roots {
+		if err := walk(root); err != nil {
+			return nil, trace, err
+		}
+	}
+	return entries, trace, nil
+}
+
+func (s *Service) collectEntriesByMode(ctx context.Context, mode planner.ExecutionMode, source provider.Entry, profile provider.AuthProfile, roots []string, pageSize int) ([]planner.SourceEntry, []string, error) {
+	switch mode {
+	case planner.ExecutionModePreScanFlat:
+		return s.collectPreScannedEntries(ctx, source, profile, roots, pageSize)
+	default:
+		return s.collectLeafFirstEntries(ctx, source, profile, roots, pageSize)
+	}
+}
+
 func normalizeScanPath(path string) string {
 	trimmed := strings.TrimSpace(path)
 	if trimmed == "" {
@@ -628,6 +703,29 @@ func metadataStringFromRisk(values map[string]interface{}, key string) string {
 	}
 	value, _ := values[key].(string)
 	return value
+}
+
+func executionModeFromMetadata(values map[string]interface{}) (planner.ExecutionMode, error) {
+	if values == nil {
+		return planner.ExecutionModeLeafFirstLazy, nil
+	}
+	switch raw := values["executionMode"].(type) {
+	case planner.ExecutionMode:
+		return raw, nil
+	case string:
+		return planner.ExecutionMode(raw), nil
+	default:
+		return planner.ExecutionModeLeafFirstLazy, nil
+	}
+}
+
+func scanModeForExecutionMode(mode planner.ExecutionMode) string {
+	switch mode {
+	case planner.ExecutionModePreScanFlat:
+		return "pre_scan_flat"
+	default:
+		return "lazy_leaf_first"
+	}
 }
 
 func stringMapValue(values map[string]interface{}, key string) string {
@@ -692,13 +790,16 @@ func buildProviderProbe(detail Detail, profile provider.AuthProfile, results []R
 		ProfileID:   profile.ID,
 		Status:      string(detail.Task.State),
 		Payload: map[string]interface{}{
-			"taskId":          detail.Task.ID,
-			"taskState":       detail.Task.State,
-			"completionKind":  detail.Task.CompletionKind,
-			"doneCount":       doneCount,
-			"failedCount":     failedCount,
-			"resultCount":     len(results),
-			"targetProfileId": detail.TargetProfileID,
+			"taskId":                   detail.Task.ID,
+			"taskState":                detail.Task.State,
+			"completionKind":           detail.Task.CompletionKind,
+			"doneCount":                doneCount,
+			"failedCount":              failedCount,
+			"resultCount":              len(results),
+			"executionMode":            detail.Plan.Metadata["executionMode"],
+			"recommendedExecutionMode": detail.Plan.Metadata["recommendedExecutionMode"],
+			"scanMode":                 detail.Plan.Metadata["scanMode"],
+			"targetProfileId":          detail.TargetProfileID,
 		},
 		CreatedAt: createdAt,
 	}

@@ -118,6 +118,13 @@
   - 当前任务使用了哪种执行模式
   - 为什么推荐该模式
   - 当前模式的主要取舍是什么
+- 当前基线补充说明：
+  - planner 预览结果必须返回 `executionMode`
+  - planner 预览结果必须返回 `recommendedExecutionMode`
+  - planner 预览结果必须返回 `recommendedExecutionModeReason`
+  - planner 预览结果必须返回 `executionOrder`
+  - task runtime evidence / provider probe 也应透传当前执行模式和扫描模式
+  - `leaf_first_lazy` 应诚实表达为“按需扫描 + 子树内叶子优先”，不能误写成“预扫后排序”
 
 ### 增量与覆盖判定
 
@@ -230,6 +237,10 @@
   - 风控档位
   - provider 默认模板
   - 任务级节流参数
+- 当前已落地到基线的内容：
+  - `leaf_first_lazy` 与 `pre_scan_flat` 已作为正式执行模式进入 API 和任务元数据
+  - 计划元数据中已返回推荐模式与推荐原因
+  - 任务运行时已支持根据执行模式切换扫描方式
 
 ### Phase 3 - Provider 落地
 

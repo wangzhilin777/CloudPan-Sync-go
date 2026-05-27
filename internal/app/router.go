@@ -461,6 +461,8 @@ func handleServiceError(w http.ResponseWriter, err error) {
 	switch {
 	case errors.Is(err, planner.ErrTargetProviderNotFound):
 		writeError(w, http.StatusBadRequest, "target_provider_not_found", "Target provider was not found.")
+	case errors.Is(err, planner.ErrInvalidExecutionMode):
+		writeError(w, http.StatusBadRequest, "invalid_execution_mode", "Execution mode is not supported.")
 	case err != nil && err.Error() == "provider_not_found":
 		writeError(w, http.StatusBadRequest, "provider_not_found", "Provider was not found.")
 	case err != nil && err.Error() == "auth_mode_not_supported":
