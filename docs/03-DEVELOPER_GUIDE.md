@@ -11,6 +11,7 @@
 - 当前功能范围和进度：`docs/02-PROJECT_STATUS.md`
 - API 工作流示例：`docs/04-API_WORKFLOW_EXAMPLES.md`
 - Provider 接入指南：`docs/05-PROVIDER_INTEGRATION_GUIDE.md`
+- 真实联调记录模板：`docs/06-REAL_PROVIDER_SMOKE_TEMPLATE.md`
 - 前端资源说明：`web/README.md`
 
 ## 当前目录说明
