@@ -484,6 +484,31 @@ tr.active td {
   background: rgba(255, 255, 255, 0.56);
 }
 
+.retry-summary-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  margin-bottom: 10px;
+}
+
+.retry-card {
+  display: grid;
+  gap: 8px;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.retry-card strong {
+  font-size: 0.9rem;
+}
+
+.retry-card code {
+  font-family: "Cascadia Code", "Consolas", monospace;
+  font-size: 0.82rem;
+}
+
 .task-item {
   cursor: pointer;
   transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;

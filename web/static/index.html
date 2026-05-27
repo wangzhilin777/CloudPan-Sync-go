@@ -240,6 +240,28 @@
                 </div>
               </div>
               <div class="section-head compact-head">
+                <h3>重试队列</h3>
+                <span class="muted">按失败分类查看 retryable / blocked / exhausted 项</span>
+              </div>
+              <div class="filter-bar">
+                <input id="task-retry-filter-query" type="text" placeholder="筛选路径 / reason / provider status" />
+                <select id="task-retry-filter-class">
+                  <option value="">全部分类</option>
+                  <option value="pending_manual">pending_manual</option>
+                  <option value="rate_limited">rate_limited</option>
+                  <option value="auth_expired">auth_expired</option>
+                  <option value="local_file_missing">local_file_missing</option>
+                </select>
+                <select id="task-retry-filter-state">
+                  <option value="">全部状态</option>
+                  <option value="retryable">retryable</option>
+                  <option value="blocked">blocked</option>
+                  <option value="exhausted">exhausted</option>
+                </select>
+              </div>
+              <div id="task-retry-filter-summary" class="filter-summary muted">等待任务数据...</div>
+              <div id="task-retry-queue" class="directory-state-list"></div>
+              <div class="section-head compact-head">
                 <h3>下一步处理</h3>
                 <span class="muted">根据 blocked action 给出处理步骤</span>
               </div>
@@ -305,8 +327,28 @@
               <div id="status-runtime-checkpoints" class="directory-state-list"></div>
             </article>
             <article class="card">
-              <h2>最近结果</h2>
-              <div id="recent-results" class="table-wrap"></div>
+              <div class="section-head">
+                <h2>最近重试队列</h2>
+                <span class="muted">来自最近 probe / snapshot</span>
+              </div>
+              <div class="filter-bar">
+                <input id="status-retry-filter-query" type="text" placeholder="筛选路径 / reason / provider status" />
+                <select id="status-retry-filter-class">
+                  <option value="">全部分类</option>
+                  <option value="pending_manual">pending_manual</option>
+                  <option value="rate_limited">rate_limited</option>
+                  <option value="auth_expired">auth_expired</option>
+                  <option value="local_file_missing">local_file_missing</option>
+                </select>
+                <select id="status-retry-filter-state">
+                  <option value="">全部状态</option>
+                  <option value="retryable">retryable</option>
+                  <option value="blocked">blocked</option>
+                  <option value="exhausted">exhausted</option>
+                </select>
+              </div>
+              <div id="status-retry-filter-summary" class="filter-summary muted">等待状态数据...</div>
+              <div id="status-retry-queue" class="directory-state-list"></div>
             </article>
           </div>
           <div class="grid two">
@@ -314,6 +356,12 @@
               <h2>最近 Probe</h2>
               <div id="recent-probes" class="table-wrap"></div>
             </article>
+            <article class="card">
+              <h2>最近结果</h2>
+              <div id="recent-results" class="table-wrap"></div>
+            </article>
+          </div>
+          <div class="grid two">
             <article class="card">
               <div class="section-head">
                 <h2>最近目录状态</h2>
@@ -332,23 +380,23 @@
               <div id="status-directory-filter-summary" class="filter-summary muted">等待状态数据...</div>
               <div id="status-directory-states" class="directory-state-list"></div>
             </article>
+            <article class="card">
+              <div class="section-head">
+                <h2>最近待补传树</h2>
+                <span class="muted">pending_manual 聚合视图</span>
+              </div>
+              <div class="filter-bar">
+                <input id="status-pending-filter-query" type="text" placeholder="筛选路径 / 文件名" />
+                <input id="status-pending-filter-reason" type="text" placeholder="筛选 reason / provider status" />
+                <label class="toggle-chip">
+                  <input id="status-pending-filter-leaf-only" type="checkbox" />
+                  <span>仅叶子节点</span>
+                </label>
+              </div>
+              <div id="status-pending-filter-summary" class="filter-summary muted">等待状态数据...</div>
+              <div id="status-pending-tree" class="directory-state-list"></div>
+            </article>
           </div>
-          <article class="card">
-            <div class="section-head">
-              <h2>最近待补传树</h2>
-              <span class="muted">pending_manual 聚合视图</span>
-            </div>
-            <div class="filter-bar">
-              <input id="status-pending-filter-query" type="text" placeholder="筛选路径 / 文件名" />
-              <input id="status-pending-filter-reason" type="text" placeholder="筛选 reason / provider status" />
-              <label class="toggle-chip">
-                <input id="status-pending-filter-leaf-only" type="checkbox" />
-                <span>仅叶子节点</span>
-              </label>
-            </div>
-            <div id="status-pending-filter-summary" class="filter-summary muted">等待状态数据...</div>
-            <div id="status-pending-tree" class="directory-state-list"></div>
-          </article>
         </section>
       </main>
 

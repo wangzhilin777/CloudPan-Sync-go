@@ -131,6 +131,10 @@
   - `retryLimit`
   - `remainingCount`
   - `exhausted`
+- 当前控制台的任务详情页和状态页已经可以直接查看这些队列项，并支持：
+  - 按路径 / reason / provider status 收敛命中项
+  - 按 retry class 过滤
+  - 按 `retryable / blocked / exhausted` 过滤
 - 当前 `rate_limited` 项会生成 `eligibleAt`，冷却未到时 `retry` 会直接拒绝过早重试
 - 当前如果任务失败后只剩“冷却等待 / 人工确认 / 授权失效 / 本地文件缺失”这类项，任务会进入 `blocked`
 - 当前 runtime 会补充：

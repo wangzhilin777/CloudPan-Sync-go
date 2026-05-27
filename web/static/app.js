@@ -11,8 +11,10 @@ const state = {
   treeFilters: {
     taskDirectory: { query: "", status: "" },
     taskPending: { query: "", reason: "", leafOnly: false },
+    taskRetry: { query: "", retryClass: "", retryState: "" },
     statusDirectory: { query: "", status: "" },
     statusPending: { query: "", reason: "", leafOnly: false },
+    statusRetry: { query: "", retryClass: "", retryState: "" },
   },
 };
 
@@ -78,6 +80,30 @@ function normalizePendingTree(nodes) {
       reason: String(item.reason || ""),
       providerStatus: String(item.providerStatus || ""),
       children: normalizePendingTree(item.children),
+    }));
+}
+
+function normalizeRetryQueue(items) {
+  if (!Array.isArray(items)) {
+    return [];
+  }
+  return items
+    .filter((item) => item && typeof item === "object" && item.path)
+    .map((item) => ({
+      path: String(item.path || ""),
+      rootPath: String(item.rootPath || ""),
+      providerStatus: String(item.providerStatus || ""),
+      strategy: String(item.strategy || ""),
+      retryClass: String(item.retryClass || ""),
+      retryAction: String(item.retryAction || ""),
+      attemptCount: Number(item.attemptCount || 0),
+      retryLimit: Number(item.retryLimit || 0),
+      remainingCount: Number(item.remainingCount || 0),
+      eligibleAt: String(item.eligibleAt || ""),
+      retryable: Boolean(item.retryable),
+      blocked: Boolean(item.blocked),
+      exhausted: Boolean(item.exhausted),
+      reason: String(item.reason || ""),
     }));
 }
 
@@ -219,6 +245,99 @@ function renderTreeFilterSummary(result, label) {
     return `显示全部 ${result.visibleNodes} 个${label}。`;
   }
   return `当前显示 ${result.visibleNodes} / ${result.totalNodes} 个${label}。`;
+}
+
+function filterRetryQueue(items, filters = {}) {
+  const queue = normalizeRetryQueue(items);
+  const query = String(filters.query || "").trim().toLowerCase();
+  const retryClass = String(filters.retryClass || "").trim().toLowerCase();
+  const retryState = String(filters.retryState || "").trim().toLowerCase();
+  const filterActive = Boolean(query || retryClass || retryState);
+  const visible = queue.filter((item) => {
+    const matchesQuery = includesFilterText(
+      [item.path, item.rootPath, item.reason, item.providerStatus, item.retryAction, item.strategy],
+      query,
+    );
+    const matchesClass = includesFilterText([item.retryClass], retryClass);
+    const stateValue = item.exhausted ? "exhausted" : item.blocked ? "blocked" : item.retryable ? "retryable" : "queued";
+    const matchesState = includesFilterText([stateValue], retryState);
+    return matchesQuery && matchesClass && matchesState;
+  });
+  return {
+    items: visible,
+    totalItems: queue.length,
+    visibleItems: visible.length,
+    filterActive,
+  };
+}
+
+function renderRetryQueueSummary(result) {
+  if (!result.totalItems) {
+    return `<div class="directory-empty">当前没有需要后续重试的队列项。</div>`;
+  }
+  const retryable = result.items.filter((item) => item.retryable && !item.exhausted).length;
+  const blocked = result.items.filter((item) => item.blocked && !item.exhausted).length;
+  const exhausted = result.items.filter((item) => item.exhausted).length;
+  return `
+    <div class="retry-summary-grid">
+      <div class="retry-card">
+        <strong>当前显示</strong>
+        <span>${result.visibleItems} / ${result.totalItems}</span>
+      </div>
+      <div class="retry-card">
+        <strong>Retryable</strong>
+        <span>${retryable}</span>
+      </div>
+      <div class="retry-card">
+        <strong>Blocked</strong>
+        <span>${blocked}</span>
+      </div>
+      <div class="retry-card">
+        <strong>Exhausted</strong>
+        <span>${exhausted}</span>
+      </div>
+    </div>
+  `;
+}
+
+function renderRetryQueue(items, filters = {}) {
+  const result = filterRetryQueue(items, filters);
+  if (!result.totalItems) {
+    return {
+      html: `<div class="directory-empty">当前没有需要后续重试的队列项。</div>`,
+      summaryText: "当前没有重试队列项。",
+    };
+  }
+  const rows = result.items
+    .map((item) => {
+      const stateValue = item.exhausted ? "exhausted" : item.blocked ? "blocked" : item.retryable ? "retryable" : "queued";
+      return `
+        <div class="directory-row tree-node">
+          <div class="directory-row-header">
+            <strong>${escapeHTML(item.retryClass || "unknown")}</strong>
+            <code>${escapeHTML(item.path)}</code>
+          </div>
+          <div class="directory-metrics">
+            <span class="pill">${escapeHTML(stateValue)}</span>
+            ${item.retryAction ? `<span class="pill">${escapeHTML(item.retryAction)}</span>` : ""}
+            ${item.providerStatus ? `<span class="pill">${escapeHTML(item.providerStatus)}</span>` : ""}
+            ${item.strategy ? `<span class="pill">${escapeHTML(item.strategy)}</span>` : ""}
+          </div>
+          <div class="muted">attempt ${item.attemptCount} / limit ${item.retryLimit || 0} / remaining ${item.remainingCount}</div>
+          ${item.eligibleAt ? `<div class="muted">eligibleAt: <code>${escapeHTML(item.eligibleAt)}</code></div>` : ""}
+          ${item.rootPath ? `<div class="muted">root: <code>${escapeHTML(item.rootPath)}</code></div>` : ""}
+          ${item.reason ? `<div class="muted">reason: <code>${escapeHTML(item.reason)}</code></div>` : ""}
+        </div>
+      `;
+    })
+    .join("");
+  const summaryText = result.filterActive
+    ? `当前显示 ${result.visibleItems} / ${result.totalItems} 个重试队列项。`
+    : `显示全部 ${result.totalItems} 个重试队列项。`;
+  return {
+    html: `${renderRetryQueueSummary(result)}${rows || `<div class="directory-empty">筛选后没有命中的重试队列项。</div>`}`,
+    summaryText,
+  };
 }
 
 function renderRuntimeCheckpoint(runtime) {
@@ -401,6 +520,20 @@ function updateStatusTreePanels(runtimePayload) {
   });
   $("#status-directory-filter-summary").textContent = renderTreeFilterSummary(directoryResult, "目录节点");
   $("#status-pending-filter-summary").textContent = renderTreeFilterSummary(pendingResult, "待补传节点");
+}
+
+function updateTaskRetryQueue(detail) {
+  const runtime = detail?.runtime || detail?.plan?.metadata?.runtime || {};
+  const rendered = renderRetryQueue(runtime.retryQueue || [], state.treeFilters.taskRetry);
+  $("#task-retry-queue").innerHTML = rendered.html;
+  $("#task-retry-filter-summary").textContent = detail ? rendered.summaryText : "等待任务数据...";
+}
+
+function updateStatusRetryQueue(runtimePayload) {
+  const runtime = runtimePayload?.runtime || runtimePayload || {};
+  const rendered = renderRetryQueue(runtime.retryQueue || [], state.treeFilters.statusRetry);
+  $("#status-retry-queue").innerHTML = rendered.html;
+  $("#status-retry-filter-summary").textContent = rendered.summaryText;
 }
 
 function recentRuntimePayload() {
@@ -899,6 +1032,7 @@ function renderTasks() {
         <span>选择任务后显示</span>
       </div>
     `;
+    updateTaskRetryQueue(null);
     $("#task-resolution-guide").innerHTML = `<div class="directory-empty">选择任务后显示处理建议。</div>`;
     updateTaskTreePanels(null);
     $("#task-detail").textContent = "选择一条任务查看详情...";
@@ -951,6 +1085,7 @@ function renderSelectedTask() {
         <span>选择任务后显示</span>
       </div>
     `;
+    updateTaskRetryQueue(null);
     updateTaskTreePanels(null);
     $("#task-resolution-guide").innerHTML = `<div class="directory-empty">选择任务后显示处理建议。</div>`;
     $("#task-detail").textContent = "选择一条任务查看详情...";
@@ -998,6 +1133,7 @@ function renderSelectedTask() {
     </div>
   `;
   $("#task-runtime").innerHTML = renderRuntimeCheckpoint(runtime);
+  updateTaskRetryQueue(detail);
   $("#task-resolution-guide").innerHTML = renderTaskResolutionGuide(detail);
   updateTaskTreePanels(detail);
   $("#task-detail").textContent = detail ? formatJSON(detail) : "选择一条任务查看详情...";
@@ -1122,6 +1258,7 @@ function renderStatus() {
   $("#recent-probes").innerHTML = renderRecentProbesTable(evidence.recentProbes || []);
   const runtimePayload = recentRuntimePayload();
   $("#status-runtime-checkpoints").innerHTML = renderRuntimeCheckpoint(runtimePayload?.runtime || runtimePayload);
+  updateStatusRetryQueue(runtimePayload);
   updateStatusTreePanels(runtimePayload);
 }
 
@@ -1480,12 +1617,18 @@ function wireTreeFilters() {
   bindTextFilter("#task-pending-filter-query", "taskPending", "query", rerenderTask);
   bindTextFilter("#task-pending-filter-reason", "taskPending", "reason", rerenderTask);
   bindCheckboxFilter("#task-pending-filter-leaf-only", "taskPending", "leafOnly", rerenderTask);
+  bindTextFilter("#task-retry-filter-query", "taskRetry", "query", () => updateTaskRetryQueue(currentSelectedTaskDetail()));
+  bindTextFilter("#task-retry-filter-class", "taskRetry", "retryClass", () => updateTaskRetryQueue(currentSelectedTaskDetail()));
+  bindTextFilter("#task-retry-filter-state", "taskRetry", "retryState", () => updateTaskRetryQueue(currentSelectedTaskDetail()));
 
   bindTextFilter("#status-directory-filter-query", "statusDirectory", "query", rerenderStatus);
   bindTextFilter("#status-directory-filter-status", "statusDirectory", "status", rerenderStatus);
   bindTextFilter("#status-pending-filter-query", "statusPending", "query", rerenderStatus);
   bindTextFilter("#status-pending-filter-reason", "statusPending", "reason", rerenderStatus);
   bindCheckboxFilter("#status-pending-filter-leaf-only", "statusPending", "leafOnly", rerenderStatus);
+  bindTextFilter("#status-retry-filter-query", "statusRetry", "query", () => updateStatusRetryQueue(recentRuntimePayload()));
+  bindTextFilter("#status-retry-filter-class", "statusRetry", "retryClass", () => updateStatusRetryQueue(recentRuntimePayload()));
+  bindTextFilter("#status-retry-filter-state", "statusRetry", "retryState", () => updateStatusRetryQueue(recentRuntimePayload()));
 }
 
 async function init() {

@@ -31,7 +31,7 @@
 | 风控与频率策略 | 已支持 `safe / balanced / fast / custom` 基线、默认风险模板、任务级 `riskOverride`、风控命中证据 | 部分完成 | 已接入 planner / task metadata / runtime evidence / UI | 真实 provider 校准、更易用的表单化配置 |
 | Task Runtime | 创建、查询、运行、暂停、恢复、重试、结果落库 | 已完成 | 后续将挂接执行模型和风控策略 | 真实上传链路接入后补更细运行态 |
 | Runtime Evidence | 最近结果、最近探针、状态快照、状态矩阵 API | 已完成 | 无 | 真实联调样本沉淀 |
-| 控制台前端 | 登录、授权、任务向导、任务列表详情、状态矩阵/证据、执行模式可视化、目录状态展示、目录树/待补传树筛选与叶子视角 | 已完成 | 异常场景提示可继续增强 | 更产品化视觉与更细交互 |
+| 控制台前端 | 登录、授权、任务向导、任务列表详情、状态矩阵/证据、执行模式可视化、目录状态展示、目录树/待补传树筛选与叶子视角、重试队列分类视图 | 已完成 | 异常场景提示可继续增强 | 更产品化视觉与更细交互 |
 | 单元测试 | auth、planner、task、provider、workflow、web、UI smoke | 已完成 | 持续补样本 | 真实 provider 契约覆盖继续加深 |
 | Provider 真实实现 | `aliyundrive_open` 已接入真实 `ValidateAuth` 骨架 | 部分完成 | 目录链路 `List/Metadata/CreateDir` 正在推进 | 其余 provider 真实实现、上传链路、异常恢复 |
 | 真实联调验收 | 模板、流程、文档已具备 | 部分完成 | 首批真实样本沉淀中 | 每个协议族至少一条真实成功样本 |
@@ -213,6 +213,8 @@
   - 当前已经适合开发联调、演示和 smoke
   - 已经支持任务向导里直接选择 `riskMode` / `executionMode` 并展示推荐理由
   - 已经支持任务详情和状态页里直接查看目录状态与运行检查点
+  - 已经支持任务详情和状态页里直接查看 retryQueue 分类、attempt / retryLimit / remainingCount / eligibleAt
   - 已经支持在任务详情和状态页按路径 / 状态 / reason 筛选目录树与待补传树
+  - 已经支持按 retry class / retry state 筛选重试队列项
   - 已经支持把待补传树切到“仅叶子节点”视角
   - 不表示已经达到最终产品化 UI 形态
