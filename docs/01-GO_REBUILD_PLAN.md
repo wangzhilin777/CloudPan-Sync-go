@@ -156,6 +156,11 @@
   - 按目录层级聚合待补传项
   - 按叶子目录顺序执行补传
   - 为后续 UI 补传树预留数据结构
+- 当前文档解释约定：
+  - “待补传树”指运行后因 `pending_manual`、人工确认或类似原因暂未完成的文件树
+  - 首版先要求能在 runtime / evidence / status / UI 中看见这棵树
+  - 这不等同于“已经完成按补传树节点自动继续执行”
+  - 自动补传调度属于后续继续补齐的执行能力
 
 ## 风控与频率策略要求
 
@@ -254,6 +259,7 @@
   - runtime / provider probe / provider status 已可聚合 `skippedCount`
   - `riskOverride` 已支持任务级覆盖节流参数与风险关键词
   - runtime / result / provider probe / provider status 已可聚合 `riskHitCount` 与 `lastRiskStatus`
+  - runtime / provider probe / provider status 已可聚合 `pendingCount` 与 `pendingTree`
 
 ### Phase 3 - Provider 落地
 
@@ -314,6 +320,7 @@
   - 任务预览
   - 启动/暂停/恢复/重试
   - 状态矩阵与证据页展示
+  - 待补传树与目录树展示
 
 ## 明确不做
 

@@ -47,6 +47,7 @@ type EvidenceSummary struct {
 	FailedResultCount  int             `json:"failedResultCount"`
 	DoneResultCount    int             `json:"doneResultCount"`
 	SkippedResultCount int             `json:"skippedResultCount"`
+	PendingResultCount int             `json:"pendingResultCount"`
 	RiskHitCount       int             `json:"riskHitCount"`
 	RecentResults      []Result        `json:"recentResults"`
 	RecentProbes       []ProviderProbe `json:"recentProbes"`
@@ -169,14 +170,17 @@ func (s *Service) Run(ctx context.Context, id string) (Detail, bool, error) {
 	startIndex := len(results)
 	syncRuntimeCountsFromResults(&detail.Runtime, results)
 	syncRuntimeRiskEvidence(&detail.Runtime, detail.Plan.Metadata, results)
+	syncRuntimePendingTree(&detail.Runtime, detail.Plan.Metadata, results)
 
 	for i := startIndex; i < len(detail.Plan.Items); i++ {
 		item := detail.Plan.Items[i]
 		result := Result{
-			ID:        uuid.NewString(),
-			TaskID:    detail.Task.ID,
-			ItemID:    detail.Items[i].ID,
-			Payload:   map[string]interface{}{},
+			ID:     uuid.NewString(),
+			TaskID: detail.Task.ID,
+			ItemID: detail.Items[i].ID,
+			Payload: map[string]interface{}{
+				"path": item.Path,
+			},
 			CreatedAt: time.Now().UTC().Format(time.RFC3339),
 		}
 		updateRuntimeBeforeItem(&detail, item.Path, i)
@@ -198,6 +202,7 @@ func (s *Service) Run(ctx context.Context, id string) (Detail, bool, error) {
 			}
 			results = append(results, result)
 			syncRuntimeRiskEvidence(&detail.Runtime, detail.Plan.Metadata, results)
+			syncRuntimePendingTree(&detail.Runtime, detail.Plan.Metadata, results)
 			detail.Results = results
 			updateRuntimeAfterItem(&detail, item.Path, result)
 			detail.Task.UpdatedAt = time.Now().UTC().Format(time.RFC3339)
@@ -264,6 +269,7 @@ func (s *Service) Run(ctx context.Context, id string) (Detail, bool, error) {
 		}
 		results = append(results, result)
 		syncRuntimeRiskEvidence(&detail.Runtime, detail.Plan.Metadata, results)
+		syncRuntimePendingTree(&detail.Runtime, detail.Plan.Metadata, results)
 		detail.Results = results
 		updateRuntimeAfterItem(&detail, item.Path, result)
 		detail.Task.UpdatedAt = time.Now().UTC().Format(time.RFC3339)
@@ -306,6 +312,11 @@ type targetInspection struct {
 	Decision          string
 	Reason            string
 	TargetFingerprint map[string]interface{}
+}
+
+type pendingTreeBuilderNode struct {
+	node     PendingNode
+	children map[string]*pendingTreeBuilderNode
 }
 
 func (s *Service) inspectTargetState(entry provider.Entry, profile provider.AuthProfile, sourceEntries []planner.SourceEntry, path string, size int64) targetInspection {
@@ -960,6 +971,7 @@ func initializeRuntimeState(plan planner.Plan) RuntimeState {
 		DoneCount:       0,
 		SkippedCount:    0,
 		FailedCount:     0,
+		PendingCount:    0,
 		RiskHitCount:    0,
 		NextSequence:    1,
 		DirectoryStates: directoryStates,
@@ -976,7 +988,9 @@ func ensureRuntimeState(detail *Detail) {
 		detail.Runtime.DoneCount == 0 &&
 		detail.Runtime.SkippedCount == 0 &&
 		detail.Runtime.FailedCount == 0 &&
+		detail.Runtime.PendingCount == 0 &&
 		detail.Runtime.RiskHitCount == 0 &&
+		len(detail.Runtime.PendingTree) == 0 &&
 		len(detail.Runtime.DirectoryStates) == 0 {
 		detail.Runtime = initializeRuntimeState(detail.Plan)
 	}
@@ -1041,9 +1055,11 @@ func syncRuntimeCountsFromResults(runtime *RuntimeState, results []Result) {
 	runtime.DoneCount = 0
 	runtime.SkippedCount = 0
 	runtime.FailedCount = 0
+	runtime.PendingCount = 0
 	runtime.RiskHitCount = 0
 	runtime.LastRiskStatus = ""
 	runtime.RiskHits = nil
+	runtime.PendingTree = nil
 	lastCompleted := ""
 	for _, result := range results {
 		switch result.Status {
@@ -1056,6 +1072,9 @@ func syncRuntimeCountsFromResults(runtime *RuntimeState, results []Result) {
 		}
 		if path, _ := result.Payload["path"].(string); path != "" {
 			lastCompleted = path
+		}
+		if isPendingRelayResult(result) {
+			runtime.PendingCount++
 		}
 		if riskHit, ok := riskHitFromPayload(result.Payload); ok {
 			runtime.RiskHitCount++
@@ -1421,6 +1440,203 @@ func riskHitFromPayload(payload map[string]interface{}) (RiskHit, bool) {
 	}
 }
 
+func syncRuntimePendingTree(runtime *RuntimeState, metadata map[string]interface{}, results []Result) {
+	if runtime == nil {
+		return
+	}
+	runtime.PendingCount = 0
+	runtime.PendingTree = buildPendingTree(metadata, results)
+	runtime.PendingCount = countPendingNodes(runtime.PendingTree)
+}
+
+func buildPendingTree(metadata map[string]interface{}, results []Result) []PendingNode {
+	pendingResults := make([]Result, 0)
+	for _, result := range results {
+		if isPendingRelayResult(result) {
+			pendingResults = append(pendingResults, result)
+		}
+	}
+	if len(pendingResults) == 0 {
+		return nil
+	}
+
+	roots := metadataStringSlice(metadata, "selectedRoots")
+	rootBuilders := make(map[string]*pendingTreeBuilderNode)
+	rootOrder := make([]string, 0)
+
+	ensureNode := func(parent *pendingTreeBuilderNode, path, name, nodeType, rootPath string) *pendingTreeBuilderNode {
+		if parent.children == nil {
+			parent.children = make(map[string]*pendingTreeBuilderNode)
+		}
+		if existing, ok := parent.children[path]; ok {
+			existing.node.ItemCount++
+			return existing
+		}
+		item := &pendingTreeBuilderNode{
+			node: PendingNode{
+				Path:      path,
+				Name:      name,
+				NodeType:  nodeType,
+				Status:    "pending_manual",
+				RootPath:  rootPath,
+				ItemCount: 1,
+			},
+			children: make(map[string]*pendingTreeBuilderNode),
+		}
+		parent.children[path] = item
+		return item
+	}
+
+	for _, result := range pendingResults {
+		path := normalizeScanPath(stringValue(result.Payload["path"]))
+		if path == "/" {
+			continue
+		}
+		rootPath := matchRootPath(path, roots)
+		rootKey := normalizeScanPath(rootPath)
+		rootBuilder, ok := rootBuilders[rootKey]
+		if !ok {
+			rootBuilder = &pendingTreeBuilderNode{
+				node: PendingNode{
+					Path:      rootKey,
+					Name:      inferPendingNodeName(rootKey),
+					NodeType:  "root",
+					Status:    "pending_manual",
+					RootPath:  rootKey,
+					ItemCount: 0,
+				},
+				children: make(map[string]*pendingTreeBuilderNode),
+			}
+			rootBuilders[rootKey] = rootBuilder
+			rootOrder = append(rootOrder, rootKey)
+		}
+		rootBuilder.node.ItemCount++
+
+		current := rootBuilder
+		directoryParts := pendingDirectoryParts(rootKey, path)
+		for _, dirPath := range directoryParts {
+			current = ensureNode(current, dirPath, inferPendingNodeName(dirPath), "directory", rootKey)
+		}
+
+		fileNode := ensureNode(current, path, inferPendingNodeName(path), "file", rootKey)
+		fileNode.node.ItemCount = 1
+		fileNode.node.Reason = firstNonEmpty(stringValue(result.Payload["syncDecisionReason"]), result.Message)
+		fileNode.node.ProviderStatus = stringValue(result.Payload["providerStatus"])
+	}
+
+	tree := make([]PendingNode, 0, len(rootOrder))
+	for _, rootKey := range rootOrder {
+		tree = append(tree, finalizePendingNode(rootBuilders[rootKey]))
+	}
+	return tree
+}
+
+func finalizePendingNode(node *pendingTreeBuilderNode) PendingNode {
+	if node == nil {
+		return PendingNode{}
+	}
+	if len(node.children) == 0 {
+		node.node.Children = nil
+		return node.node
+	}
+	keys := make([]string, 0, len(node.children))
+	for key := range node.children {
+		keys = append(keys, key)
+	}
+	sortStringsByDepth(keys)
+	children := make([]PendingNode, 0, len(keys))
+	for _, key := range keys {
+		children = append(children, finalizePendingNode(node.children[key]))
+	}
+	node.node.Children = children
+	return node.node
+}
+
+func sortStringsByDepth(values []string) {
+	for i := 0; i < len(values); i++ {
+		for j := i + 1; j < len(values); j++ {
+			if pendingNodeLess(values[j], values[i]) {
+				values[i], values[j] = values[j], values[i]
+			}
+		}
+	}
+}
+
+func pendingNodeLess(left, right string) bool {
+	leftDepth := pendingPathDepth(left)
+	rightDepth := pendingPathDepth(right)
+	if leftDepth != rightDepth {
+		return leftDepth < rightDepth
+	}
+	return left < right
+}
+
+func pendingPathDepth(path string) int {
+	normalized := normalizeScanPath(path)
+	if normalized == "/" {
+		return 0
+	}
+	depth := 0
+	for _, ch := range normalized {
+		if ch == '/' {
+			depth++
+		}
+	}
+	return depth
+}
+
+func pendingDirectoryParts(rootPath, filePath string) []string {
+	rootPath = normalizeScanPath(rootPath)
+	filePath = normalizeScanPath(filePath)
+	parent := parentDirectory(filePath)
+	if parent == "/" || parent == rootPath {
+		return nil
+	}
+	parts := make([]string, 0)
+	current := parent
+	for current != "/" && current != rootPath && current != "." {
+		parts = append(parts, current)
+		current = parentDirectory(current)
+	}
+	for i, j := 0, len(parts)-1; i < j; i, j = i+1, j-1 {
+		parts[i], parts[j] = parts[j], parts[i]
+	}
+	return parts
+}
+
+func inferPendingNodeName(path string) string {
+	normalized := normalizeScanPath(path)
+	if normalized == "/" {
+		return "/"
+	}
+	index := strings.LastIndex(normalized, "/")
+	if index < 0 || index >= len(normalized)-1 {
+		return normalized
+	}
+	return normalized[index+1:]
+}
+
+func isPendingRelayResult(result Result) bool {
+	if result.Status != "failed" {
+		return false
+	}
+	if stringValue(result.Payload["providerStatus"]) == "pending_manual_requires_confirmation" {
+		return true
+	}
+	return stringValue(result.Payload["strategy"]) == string(planner.StrategyPendingManual)
+}
+
+func countPendingNodes(nodes []PendingNode) int {
+	count := 0
+	for _, node := range nodes {
+		if node.NodeType == "file" {
+			count++
+		}
+		count += countPendingNodes(node.Children)
+	}
+	return count
+}
+
 func buildProviderProbe(detail Detail, profile provider.AuthProfile, results []Result, createdAt string) ProviderProbe {
 	doneCount := 0
 	skippedCount := 0
@@ -1455,6 +1671,8 @@ func buildProviderProbe(detail Detail, profile provider.AuthProfile, results []R
 			"riskProfile":                    detail.Plan.Metadata["riskProfile"],
 			"riskOverride":                   detail.Plan.Metadata["riskOverride"],
 			"runtime":                        detail.Runtime,
+			"pendingCount":                   detail.Runtime.PendingCount,
+			"pendingTree":                    detail.Runtime.PendingTree,
 			"riskHitCount":                   detail.Runtime.RiskHitCount,
 			"lastRiskStatus":                 detail.Runtime.LastRiskStatus,
 			"currentRoot":                    detail.Runtime.CurrentRoot,

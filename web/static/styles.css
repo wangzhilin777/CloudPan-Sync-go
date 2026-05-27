@@ -405,6 +405,18 @@ th {
   background: rgba(255, 253, 247, 0.92);
 }
 
+.tree-node {
+  gap: 10px;
+}
+
+.directory-children {
+  display: grid;
+  gap: 10px;
+  margin-left: 18px;
+  padding-left: 14px;
+  border-left: 2px solid rgba(15, 118, 110, 0.12);
+}
+
 .directory-row-header {
   display: flex;
   justify-content: space-between;

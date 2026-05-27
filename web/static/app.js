@@ -55,6 +55,86 @@ function normalizeDirectoryStates(states) {
     }));
 }
 
+function normalizePendingTree(nodes) {
+  if (!Array.isArray(nodes)) {
+    return [];
+  }
+  return nodes
+    .filter((item) => item && typeof item === "object" && item.path)
+    .map((item) => ({
+      path: String(item.path || ""),
+      name: String(item.name || item.path || ""),
+      nodeType: String(item.nodeType || "directory"),
+      status: String(item.status || "pending_manual"),
+      rootPath: String(item.rootPath || ""),
+      itemCount: Number(item.itemCount || 0),
+      reason: String(item.reason || ""),
+      providerStatus: String(item.providerStatus || ""),
+      children: normalizePendingTree(item.children),
+    }));
+}
+
+function inferDisplayName(path) {
+  if (!path || path === "/") {
+    return "/";
+  }
+  const normalized = String(path).replaceAll("\\", "/");
+  const index = normalized.lastIndexOf("/");
+  if (index >= 0 && index < normalized.length - 1) {
+    return normalized.slice(index + 1);
+  }
+  return normalized;
+}
+
+function buildDirectoryStateTree(states) {
+  const normalized = normalizeDirectoryStates(states);
+  if (!normalized.length) {
+    return [];
+  }
+
+  const nodes = new Map();
+  const rootOrder = [];
+
+  normalized.forEach((item) => {
+    nodes.set(item.path, {
+      path: item.path,
+      name: inferDisplayName(item.path),
+      nodeType: item.path === (item.rootPath || item.path) ? "root" : "directory",
+      status: item.status,
+      rootPath: item.rootPath || item.path,
+      itemCount: item.totalItems,
+      processedItems: item.processedItems,
+      doneItems: item.doneItems,
+      skippedItems: item.skippedItems,
+      failedItems: item.failedItems,
+      lastItemPath: item.lastItemPath,
+      children: [],
+    });
+  });
+
+  normalized.forEach((item) => {
+    const current = nodes.get(item.path);
+    if (!current) {
+      return;
+    }
+    const parentPath = String(item.path).replaceAll("\\", "/").split("/").slice(0, -1).join("/") || "/";
+    const rootPath = item.rootPath || item.path;
+    if (item.path === rootPath || !nodes.has(parentPath) || parentPath === item.path) {
+      rootOrder.push(item.path);
+      return;
+    }
+    nodes.get(parentPath).children.push(current);
+  });
+
+  const sortNodes = (items) => {
+    items.sort((left, right) => left.path.localeCompare(right.path));
+    items.forEach((item) => sortNodes(item.children));
+    return items;
+  };
+
+  return sortNodes(rootOrder.map((path) => nodes.get(path)).filter(Boolean));
+}
+
 function renderRuntimeCheckpoint(runtime) {
   if (!runtime || typeof runtime !== "object") {
     return `
@@ -96,51 +176,80 @@ function renderRuntimeCheckpoint(runtime) {
   `;
 }
 
+function renderTreeNodes(nodes, options = {}) {
+  const {
+    mode = "directory",
+    emptyMessage = "暂无数据。",
+  } = options;
+  const normalized = mode === "pending" ? normalizePendingTree(nodes) : buildDirectoryStateTree(nodes);
+  if (!normalized.length) {
+    return `<div class="directory-empty">${escapeHTML(emptyMessage)}</div>`;
+  }
+
+  const renderNode = (node) => {
+    const metrics =
+      mode === "pending"
+        ? `
+            <div class="directory-metrics">
+              <span class="pill">${escapeHTML(node.nodeType)}</span>
+              <span class="pill">pending ${node.itemCount}</span>
+              ${node.providerStatus ? `<span class="pill">${escapeHTML(node.providerStatus)}</span>` : ""}
+            </div>
+            ${
+              node.reason
+                ? `<div class="muted">reason: <code>${escapeHTML(node.reason)}</code></div>`
+                : ""
+            }
+          `
+        : `
+            <div class="directory-metrics">
+              <span class="pill">${escapeHTML(node.status)}</span>
+              <span class="pill">processed ${node.processedItems}/${node.itemCount}</span>
+              <span class="pill">done ${node.doneItems}</span>
+              <span class="pill">skipped ${node.skippedItems}</span>
+              <span class="pill">failed ${node.failedItems}</span>
+            </div>
+            <div class="muted">last item: <code>${escapeHTML(stringifyValue(node.lastItemPath, "-"))}</code></div>
+          `;
+
+    const children = node.children.length
+      ? `<div class="directory-children">${node.children.map((child) => renderNode(child)).join("")}</div>`
+      : "";
+
+    return `
+      <div class="directory-row tree-node">
+        <div class="directory-row-header">
+          <strong>${escapeHTML(node.name || node.path)}</strong>
+          <code>${escapeHTML(node.path)}</code>
+        </div>
+        ${metrics}
+        ${children}
+      </div>
+    `;
+  };
+
+  return normalized
+    .map(
+      (root) => `
+        <section class="directory-group">
+          <h4>Root <code>${escapeHTML(root.rootPath || root.path)}</code></h4>
+          ${renderNode(root)}
+        </section>
+      `,
+    )
+    .join("");
+}
+
 function renderDirectoryStates(states) {
   const normalized = normalizeDirectoryStates(states);
   if (!normalized.length) {
     return `<div class="directory-empty">暂无目录状态。</div>`;
   }
+  return renderTreeNodes(states, { mode: "directory", emptyMessage: "暂无目录状态。" });
+}
 
-  const grouped = new Map();
-  normalized.forEach((item) => {
-    const key = item.rootPath || "/";
-    if (!grouped.has(key)) {
-      grouped.set(key, []);
-    }
-    grouped.get(key).push(item);
-  });
-
-  return Array.from(grouped.entries())
-    .map(([rootPath, items]) => {
-      const rows = items
-        .sort((left, right) => left.path.localeCompare(right.path))
-        .map(
-          (item) => `
-            <div class="directory-row">
-              <div class="directory-row-header">
-                <code>${escapeHTML(item.path)}</code>
-                <span class="pill">${escapeHTML(item.status)}</span>
-              </div>
-              <div class="directory-metrics">
-                <span class="pill">processed ${item.processedItems}/${item.totalItems}</span>
-                <span class="pill">done ${item.doneItems}</span>
-                <span class="pill">skipped ${item.skippedItems}</span>
-                <span class="pill">failed ${item.failedItems}</span>
-              </div>
-              <div class="muted">last item: <code>${escapeHTML(stringifyValue(item.lastItemPath, "-"))}</code></div>
-            </div>
-          `,
-        )
-        .join("");
-      return `
-        <section class="directory-group">
-          <h4>Root <code>${escapeHTML(rootPath)}</code></h4>
-          ${rows}
-        </section>
-      `;
-    })
-    .join("");
+function renderPendingTree(nodes) {
+  return renderTreeNodes(nodes, { mode: "pending", emptyMessage: "暂无待补传项。" });
 }
 
 function recentRuntimePayload() {
@@ -369,6 +478,7 @@ function renderTasks() {
       </div>
     `;
     $("#task-directory-states").innerHTML = `<div class="directory-empty">暂无目录状态。</div>`;
+    $("#task-pending-tree").innerHTML = `<div class="directory-empty">暂无待补传项。</div>`;
     $("#task-detail").textContent = "选择一条任务查看详情...";
     return;
   }
@@ -419,6 +529,7 @@ function renderSelectedTask() {
       </div>
     `;
     $("#task-directory-states").innerHTML = `<div class="directory-empty">暂无目录状态。</div>`;
+    $("#task-pending-tree").innerHTML = `<div class="directory-empty">暂无待补传项。</div>`;
     $("#task-detail").textContent = "选择一条任务查看详情...";
     return;
   }
@@ -448,6 +559,7 @@ function renderSelectedTask() {
   `;
   $("#task-runtime").innerHTML = renderRuntimeCheckpoint(runtime);
   $("#task-directory-states").innerHTML = renderDirectoryStates(runtime.directoryStates);
+  $("#task-pending-tree").innerHTML = renderPendingTree(runtime.pendingTree);
   $("#task-detail").textContent = detail ? formatJSON(detail) : "选择一条任务查看详情...";
 }
 
@@ -499,6 +611,7 @@ function renderStatus() {
     failedResultCount: 0,
     doneResultCount: 0,
     skippedResultCount: 0,
+    pendingResultCount: 0,
     riskHitCount: 0,
     recentResults: [],
     recentProbes: [],
@@ -508,6 +621,7 @@ function renderStatus() {
     <div class="metric"><span>Completed</span><strong>${evidence.completedTasks}</strong></div>
     <div class="metric"><span>Done Results</span><strong>${evidence.doneResultCount}</strong></div>
     <div class="metric"><span>Skipped Results</span><strong>${evidence.skippedResultCount}</strong></div>
+    <div class="metric"><span>Pending Manual</span><strong>${evidence.pendingResultCount}</strong></div>
     <div class="metric"><span>Failed Results</span><strong>${evidence.failedResultCount}</strong></div>
     <div class="metric"><span>Risk Hits</span><strong>${evidence.riskHitCount}</strong></div>
   `;
@@ -560,6 +674,7 @@ function renderStatus() {
   const runtimePayload = recentRuntimePayload();
   $("#status-runtime-checkpoints").innerHTML = renderRuntimeCheckpoint(runtimePayload?.runtime || runtimePayload);
   $("#status-directory-states").innerHTML = renderDirectoryStates(runtimePayload?.runtime?.directoryStates || runtimePayload?.directoryStates);
+  $("#status-pending-tree").innerHTML = renderPendingTree(runtimePayload?.runtime?.pendingTree || runtimePayload?.pendingTree);
 }
 
 function renderSnapshotSummary(summary) {

@@ -27,7 +27,7 @@
 | Provider 调试接口 | `list`、`metadata`、`create_dir`、`fast_check` 已暴露为 API | 已完成 | 联调口径补强 | 后续可增加上传调试入口 |
 | Auth Profile | CRUD、校验、脱敏持久化、按 provider 映射 | 已完成 | 真实 provider 字段口径补充 | 更多真实鉴权模式 |
 | Planner | 预览计划、策略判定、阈值判断、冲突降级、执行模式推荐、风控档位元数据 | 已完成 | 结合真实 provider 与增量规则继续校准 | 更细推荐规则与真实联调校准 |
-| 同步执行模型 | 已支持 `leaf_first_lazy`、`pre_scan_flat`、按需扫描骨架、fallback、目录状态持久化、断点继续当前子树、目标端 metadata 预检查、`create / overwrite / skip` 判定闭环 | 部分完成 | 任务级执行模式和 runtime checkpoint 已接入 planner / task / evidence | 补传树执行、更完整目录树展示 |
+| 同步执行模型 | 已支持 `leaf_first_lazy`、`pre_scan_flat`、按需扫描骨架、fallback、目录状态持久化、断点继续当前子树、目标端 metadata 预检查、`create / overwrite / skip` 判定闭环、待补传树聚合 | 部分完成 | 任务级执行模式、runtime checkpoint、待补传树与目录树展示已接入 planner / task / evidence / UI | 按补传树执行、更完整目录树交互 |
 | 风控与频率策略 | 已支持 `safe / balanced / fast / custom` 基线、默认风险模板、任务级 `riskOverride`、风控命中证据 | 部分完成 | 已接入 planner / task metadata / runtime evidence / UI | 真实 provider 校准、更易用的表单化配置 |
 | Task Runtime | 创建、查询、运行、暂停、恢复、重试、结果落库 | 已完成 | 后续将挂接执行模型和风控策略 | 真实上传链路接入后补更细运行态 |
 | Runtime Evidence | 最近结果、最近探针、状态快照、状态矩阵 API | 已完成 | 无 | 真实联调样本沉淀 |
@@ -115,6 +115,19 @@
   - `retryLimit`
   - `riskKeywords`
 
+### 2.4 当前待补传树语义
+
+- 当前 `pending_manual` 不再只体现在单条结果里。
+- 当前已支持把这类结果聚合成待补传树，并写入：
+  - `runtime.pendingTree`
+  - `runtime.pendingCount`
+  - `recent probe payload`
+  - `provider status snapshot summary`
+- 当前任务详情页和状态页都可以直接展示这棵树。
+- 当前要避免误解：
+  - 这表示“待补传结构已经可见”
+  - 不表示“补传队列调度已经全部完成”
+
 ### 3. 直接调试 provider 能力
 
 - 当前已经有下面这些辅助接口，适合开发和联调：
@@ -166,7 +179,8 @@
   - 已经支持作为正式 `executionMode` 参与 API 和任务运行
   - 已经支持目录状态持久化和带部分结果的继续执行
   - 已经支持配合目标端 metadata 做 `create / overwrite / skip` 运行时判定
-  - 不表示补传树、完整目录树 UI、异步运行中暂停已经全部完成
+  - 已经支持待补传树聚合和目录树展示
+  - 不表示按补传树自动继续执行、复杂目录树交互、异步运行中暂停已经全部完成
 - “有 rate_limited 场景” 当前表示：
   - 已有测试语义、任务级参数覆盖和风险命中证据
   - 不表示风控策略层已经完全做成最终形态

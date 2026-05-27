@@ -240,6 +240,11 @@
                 <span class="muted">当前子树进度与恢复点</span>
               </div>
               <div id="task-directory-states" class="directory-state-list"></div>
+              <div class="section-head compact-head">
+                <h3>待补传树</h3>
+                <span class="muted">按 root / 子目录聚合 pending_manual 项</span>
+              </div>
+              <div id="task-pending-tree" class="directory-state-list"></div>
               <pre id="task-detail" class="result-box">选择一条任务查看详情...</pre>
             </article>
           </div>
@@ -285,6 +290,13 @@
               <div id="status-directory-states" class="directory-state-list"></div>
             </article>
           </div>
+          <article class="card">
+            <div class="section-head">
+              <h2>最近待补传树</h2>
+              <span class="muted">pending_manual 聚合视图</span>
+            </div>
+            <div id="status-pending-tree" class="directory-state-list"></div>
+          </article>
         </section>
       </main>
 

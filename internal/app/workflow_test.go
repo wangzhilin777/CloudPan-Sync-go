@@ -158,6 +158,9 @@ func TestAppWorkflowMainline(t *testing.T) {
 	if got := int(evidenceData["totalTasks"].(float64)); got != 1 {
 		t.Fatalf("expected totalTasks=1, got %d", got)
 	}
+	if got := int(evidenceData["pendingResultCount"].(float64)); got != 1 {
+		t.Fatalf("expected pendingResultCount=1, got %d", got)
+	}
 	if got := len(evidenceData["recentResults"].([]interface{})); got == 0 {
 		t.Fatal("expected recentResults to be populated")
 	}
@@ -170,6 +173,12 @@ func TestAppWorkflowMainline(t *testing.T) {
 	}
 	if got := int(recentProbePayload["riskProfile"].(map[string]interface{})["requestIntervalMs"].(float64)); got != 1111 {
 		t.Fatalf("expected probe risk requestIntervalMs 1111, got %d", got)
+	}
+	if got := int(recentProbePayload["pendingCount"].(float64)); got != 1 {
+		t.Fatalf("expected probe pendingCount 1, got %d", got)
+	}
+	if got := len(recentProbePayload["pendingTree"].([]interface{})); got == 0 {
+		t.Fatal("expected pendingTree in recent probe payload")
 	}
 	if _, ok := recentProbePayload["runtime"].(map[string]interface{}); !ok {
 		t.Fatalf("expected runtime payload in recent probe, got %#v", recentProbePayload["runtime"])
@@ -196,6 +205,12 @@ func TestAppWorkflowMainline(t *testing.T) {
 		}
 		if got := int(summary["riskProfile"].(map[string]interface{})["directoryIntervalMs"].(float64)); got != 2222 {
 			t.Fatalf("expected status summary risk directoryIntervalMs 2222, got %d", got)
+		}
+		if got := int(summary["pendingCount"].(float64)); got != 1 {
+			t.Fatalf("expected status summary pendingCount 1, got %d", got)
+		}
+		if got := len(summary["pendingTree"].([]interface{})); got == 0 {
+			t.Fatal("expected pendingTree in status summary")
 		}
 		if _, ok := summary["runtime"].(map[string]interface{}); !ok {
 			t.Fatalf("expected runtime summary in status snapshot, got %#v", summary["runtime"])

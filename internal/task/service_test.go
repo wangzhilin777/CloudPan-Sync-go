@@ -367,6 +367,29 @@ func TestServiceRuntimeHandlesPendingManualAuthExpiredRateLimitAndMissingLocalFi
 	if running.Runtime.LastRiskStatus != "rate_limited" {
 		t.Fatalf("expected last risk status rate_limited, got %s", running.Runtime.LastRiskStatus)
 	}
+	if running.Runtime.PendingCount != 1 {
+		t.Fatalf("expected runtime pending count 1, got %d", running.Runtime.PendingCount)
+	}
+	if len(running.Runtime.PendingTree) != 1 {
+		t.Fatalf("expected 1 pending root node, got %d", len(running.Runtime.PendingTree))
+	}
+	pendingRoot := running.Runtime.PendingTree[0]
+	if pendingRoot.Path != "/" {
+		t.Fatalf("expected pending root path /, got %s", pendingRoot.Path)
+	}
+	if pendingRoot.ItemCount != 1 {
+		t.Fatalf("expected pending root item count 1, got %d", pendingRoot.ItemCount)
+	}
+	if len(pendingRoot.Children) != 1 {
+		t.Fatalf("expected pending root children len 1, got %d", len(pendingRoot.Children))
+	}
+	pendingFile := pendingRoot.Children[0]
+	if pendingFile.Path != "/pending.bin" {
+		t.Fatalf("expected pending file /pending.bin, got %s", pendingFile.Path)
+	}
+	if pendingFile.ProviderStatus != "pending_manual_requires_confirmation" {
+		t.Fatalf("expected pending file provider status pending_manual_requires_confirmation, got %s", pendingFile.ProviderStatus)
+	}
 	rateIndex := -1
 	for idx, item := range running.Plan.Items {
 		if item.Path == "/rate.bin" {
@@ -388,6 +411,131 @@ func TestServiceRuntimeHandlesPendingManualAuthExpiredRateLimitAndMissingLocalFi
 		}
 	default:
 		t.Fatalf("expected riskHit payload on /rate.bin, got %#v", running.Results[rateIndex].Payload["riskHit"])
+	}
+
+	evidence, err := svc.RuntimeEvidence(ctx)
+	if err != nil {
+		t.Fatalf("RuntimeEvidence() error = %v", err)
+	}
+	if evidence.PendingResultCount != 1 {
+		t.Fatalf("expected pending result count 1, got %d", evidence.PendingResultCount)
+	}
+}
+
+func TestServiceRuntimeBuildsPendingRelayTreeByRootAndDirectory(t *testing.T) {
+	ctx := context.Background()
+	store, err := sqlitestore.New(ctx, filepath.Join(t.TempDir(), "pending-tree.db"))
+	if err != nil {
+		t.Fatalf("new store: %v", err)
+	}
+	defer func() { _ = store.Close() }()
+
+	adapter := &scriptedAdapter{
+		meta: provider.Provider{
+			Key:              "pending_tree_target",
+			DisplayName:      "Pending Tree Target",
+			ProtocolGroup:    "fake",
+			AuthModes:        []string{"manual_token"},
+			FastUploadInputs: []string{"md5", "size"},
+			FallbackModes:    []string{"download_upload"},
+			Status:           "planned",
+		},
+		capability: provider.CapabilitySet{
+			SupportsAuthValidation: true,
+			SupportsUpload:         true,
+		},
+		uploadFunc: func(req provider.UploadRequest) provider.UploadResult {
+			if strings.HasPrefix(req.Path, "/1/") || strings.HasPrefix(req.Path, "/2/") {
+				return provider.UploadResult{
+					OperationResult: provider.OperationResult{
+						Status:  "pending_manual_requires_confirmation",
+						Message: "pending manual",
+						Mode:    "fake_pending",
+					},
+				}
+			}
+			return provider.UploadResult{
+				OperationResult: provider.OperationResult{
+					OK:      true,
+					Status:  "ok",
+					Message: "ok",
+					Mode:    "fake_ok",
+				},
+			}
+		},
+	}
+
+	registry := provider.NewRegistry(adapter)
+	authSvc := auth.NewService(store, registry)
+	svc := NewService(store, registry, authSvc)
+	profile, err := authSvc.CreateProfile(ctx, auth.CreateProfileInput{
+		ProviderKey: "pending_tree_target",
+		AuthMode:    "manual_token",
+		DisplayName: "pending tree target",
+		Token:       "token-1",
+	})
+	if err != nil {
+		t.Fatalf("CreateProfile() error = %v", err)
+	}
+
+	detail, err := svc.Create(ctx, CreateRequest{
+		SourceProvider:  "guangya",
+		TargetProvider:  "pending_tree_target",
+		TargetProfileID: profile.ID,
+		ThresholdMB:     1,
+		SelectedRoots:   []string{"/1", "/2"},
+		Entries: []planner.SourceEntry{
+			{Path: "/1/11/111/a.bin", Size: 10 * 1024 * 1024},
+			{Path: "/1/11/112/b.bin", Size: 11 * 1024 * 1024},
+			{Path: "/2/22/c.bin", Size: 12 * 1024 * 1024},
+		},
+	})
+	if err != nil {
+		t.Fatalf("Create() error = %v", err)
+	}
+
+	running, ok, err := svc.Run(ctx, detail.Task.ID)
+	if err != nil {
+		t.Fatalf("Run() error = %v", err)
+	}
+	if !ok {
+		t.Fatal("expected task to exist")
+	}
+	if running.Runtime.PendingCount != 3 {
+		t.Fatalf("expected runtime pending count 3, got %d", running.Runtime.PendingCount)
+	}
+	if len(running.Runtime.PendingTree) != 2 {
+		t.Fatalf("expected 2 pending root nodes, got %d", len(running.Runtime.PendingTree))
+	}
+	firstRoot := running.Runtime.PendingTree[0]
+	if firstRoot.Path != "/1" {
+		t.Fatalf("expected first pending root /1, got %s", firstRoot.Path)
+	}
+	if firstRoot.ItemCount != 2 {
+		t.Fatalf("expected root /1 item count 2, got %d", firstRoot.ItemCount)
+	}
+	if len(firstRoot.Children) != 1 || firstRoot.Children[0].Path != "/1/11" {
+		t.Fatalf("expected root /1 to have child /1/11, got %#v", firstRoot.Children)
+	}
+	level2 := firstRoot.Children[0]
+	if len(level2.Children) != 2 {
+		t.Fatalf("expected /1/11 children len 2, got %d", len(level2.Children))
+	}
+	if level2.Children[0].Path != "/1/11/111" || level2.Children[1].Path != "/1/11/112" {
+		t.Fatalf("expected leaf directories /1/11/111 and /1/11/112, got %#v", level2.Children)
+	}
+	if len(level2.Children[0].Children) != 1 || level2.Children[0].Children[0].Path != "/1/11/111/a.bin" {
+		t.Fatalf("expected pending file under /1/11/111, got %#v", level2.Children[0].Children)
+	}
+	secondRoot := running.Runtime.PendingTree[1]
+	if secondRoot.Path != "/2" {
+		t.Fatalf("expected second pending root /2, got %s", secondRoot.Path)
+	}
+	if len(secondRoot.Children) != 1 || secondRoot.Children[0].Path != "/2/22" {
+		t.Fatalf("expected root /2 child /2/22, got %#v", secondRoot.Children)
+	}
+	if len(secondRoot.Children[0].Children) != 1 || secondRoot.Children[0].Children[0].Path != "/2/22/c.bin" {
+		t.Fatalf("expected pending file /2/22/c.bin, got %#v", secondRoot.Children[0].Children)
 	}
 }
 

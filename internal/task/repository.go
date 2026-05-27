@@ -299,19 +299,25 @@ func taskEvidenceSummary(ctx context.Context, store *sqlitestore.Store) (Evidenc
 	if err := store.DB().QueryRowContext(ctx, `SELECT COUNT(1) FROM task_results WHERE status = 'skipped'`).Scan(&summary.SkippedResultCount); err != nil {
 		return summary, err
 	}
-	rows, err := store.DB().QueryContext(ctx, `SELECT payload_json FROM task_results WHERE payload_json IS NOT NULL AND payload_json != ''`)
+	rows, err := store.DB().QueryContext(ctx, `SELECT status, payload_json FROM task_results WHERE payload_json IS NOT NULL AND payload_json != ''`)
 	if err != nil {
 		return summary, err
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var payloadJSON string
-		if err := rows.Scan(&payloadJSON); err != nil {
+		var (
+			status      string
+			payloadJSON string
+		)
+		if err := rows.Scan(&status, &payloadJSON); err != nil {
 			return summary, err
 		}
 		payload := map[string]interface{}{}
 		if err := json.Unmarshal([]byte(payloadJSON), &payload); err != nil {
 			return summary, err
+		}
+		if isPendingRelayResult(Result{Status: status, Payload: payload}) {
+			summary.PendingResultCount++
 		}
 		if _, ok := riskHitFromPayload(payload); ok {
 			summary.RiskHitCount++
@@ -476,6 +482,8 @@ func buildProviderStatusSnapshot(ctx context.Context, store *sqlitestore.Store, 
 			"doneCount":                      detail.Runtime.DoneCount,
 			"skippedCount":                   detail.Runtime.SkippedCount,
 			"failedCount":                    detail.Runtime.FailedCount,
+			"pendingCount":                   detail.Runtime.PendingCount,
+			"pendingTree":                    detail.Runtime.PendingTree,
 			"riskHitCount":                   detail.Runtime.RiskHitCount,
 			"lastRiskStatus":                 detail.Runtime.LastRiskStatus,
 			"currentRoot":                    detail.Runtime.CurrentRoot,
