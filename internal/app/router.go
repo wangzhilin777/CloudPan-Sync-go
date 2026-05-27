@@ -47,6 +47,20 @@ type providerFastCheckRequest struct {
 	GCID      string `json:"gcid"`
 }
 
+type providerUploadRequest struct {
+	ProfileID      string `json:"profileId"`
+	Path           string `json:"path"`
+	ParentID       string `json:"parentId"`
+	Name           string `json:"name"`
+	Size           int64  `json:"size"`
+	LocalPath      string `json:"localPath"`
+	ConflictPolicy string `json:"conflictPolicy"`
+	Strategy       string `json:"strategy"`
+	MD5            string `json:"md5"`
+	SHA1           string `json:"sha1"`
+	GCID           string `json:"gcid"`
+}
+
 func (a *App) routes() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", a.handleIndex)
@@ -224,6 +238,35 @@ func (a *App) handleProviderByKey(w http.ResponseWriter, r *http.Request) {
 			MD5:      req.MD5,
 			SHA1:     req.SHA1,
 			GCID:     req.GCID,
+		})
+		if !result.OK {
+			handleServiceError(w, errors.New(result.Status))
+			return
+		}
+		writeOK(w, http.StatusOK, result)
+	case len(parts) == 2 && parts[1] == "upload" && r.Method == http.MethodPost:
+		var req providerUploadRequest
+		if err := decodeJSON(r, &req); err != nil {
+			writeError(w, http.StatusBadRequest, "invalid_json", "Invalid JSON payload.")
+			return
+		}
+		profile, err := a.resolveProviderProfile(r.Context(), req.ProfileID)
+		if err != nil {
+			handleServiceError(w, err)
+			return
+		}
+		result := item.Adapter.Upload(provider.UploadRequest{
+			Profile:        profile,
+			Path:           req.Path,
+			ParentID:       req.ParentID,
+			Name:           req.Name,
+			Size:           req.Size,
+			LocalPath:      req.LocalPath,
+			ConflictPolicy: provider.ConflictPolicy(req.ConflictPolicy),
+			Strategy:       req.Strategy,
+			MD5:            req.MD5,
+			SHA1:           req.SHA1,
+			GCID:           req.GCID,
 		})
 		if !result.OK {
 			handleServiceError(w, errors.New(result.Status))

@@ -101,6 +101,7 @@
     - `CreateDir`
     - `FastUploadCheck`
     - `Upload`
+    - 多分片 `Upload`
   - 当前会访问：
     - `POST /v2/user/get`
     - `POST /v2/drive/get_default_drive`
@@ -288,6 +289,10 @@
   - 秒传失败回退
   - 断点续传
   - 限流恢复
+- 当前 `aliyundrive_open` 已补到：
+  - 快传命中
+  - 秒传失败回退
+  - 多分片上传
 
 ## 当前错误语义约束
 

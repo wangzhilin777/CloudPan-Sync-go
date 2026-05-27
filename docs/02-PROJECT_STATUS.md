@@ -95,6 +95,7 @@
     - `CreateDir`
     - `FastUploadCheck`
     - `Upload`
+    - 多分片 `Upload`
   - 真实外部平台 SDK / HTTP 联网细节仍未全面接入
 
 ### 2.1 Provider 辅助调试接口
@@ -104,6 +105,7 @@
   - `POST /api/providers/{key}/metadata`
   - `POST /api/providers/{key}/create_dir`
   - `POST /api/providers/{key}/fast_check`
+  - `POST /api/providers/{key}/upload`
 - 当前状态：
   - 这些接口已经可以直接拿来验证 provider 适配器行为
   - 对联调和排查字段口径很有帮助

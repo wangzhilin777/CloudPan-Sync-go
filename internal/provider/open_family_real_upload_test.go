@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -105,7 +106,7 @@ func TestOpenFamilyAdapterRapidUploadsAliyunFile(t *testing.T) {
 		t.Fatalf("expected rapidUpload flag, got %+v", result.Payload)
 	}
 	if len(*uploaded) != 0 {
-		t.Fatalf("expected no binary upload body for rapid upload, got %q", string(*uploaded))
+		t.Fatalf("expected no binary upload body for rapid upload, got %#v", *uploaded)
 	}
 }
 
@@ -150,18 +151,87 @@ func TestOpenFamilyAdapterUploadsAliyunFileByBinary(t *testing.T) {
 	if !result.OK {
 		t.Fatalf("expected binary upload success, got %+v", result)
 	}
-	if got := string(*uploaded); got != "hello-aliyun-upload" {
+	if len(*uploaded) != 1 {
+		t.Fatalf("expected one upload part, got %#v", *uploaded)
+	}
+	if got := string((*uploaded)[0]); got != "hello-aliyun-upload" {
 		t.Fatalf("expected uploaded body hello-aliyun-upload, got %q", got)
 	}
 	if stringMapValue(result.Payload, "fileId") != "file-uploaded" {
 		t.Fatalf("expected file-uploaded result, got %+v", result.Payload)
 	}
+	if got := int64MapValue(result.Payload, "partCount"); got != 1 {
+		t.Fatalf("expected partCount 1, got %+v", result.Payload)
+	}
 }
 
-func newAliyunOpenUploadTestServer(t *testing.T) (*httptest.Server, *[]byte) {
+func TestOpenFamilyAdapterUploadsAliyunFileByMultipart(t *testing.T) {
+	server, uploaded := newAliyunOpenUploadTestServer(t)
+	t.Cleanup(server.Close)
+
+	originalClient := providerHTTPClient
+	providerHTTPClient = server.Client()
+	t.Cleanup(func() { providerHTTPClient = originalClient })
+
+	registry := NewRegistry(DefaultCatalog()...)
+	entry, ok := registry.Get("aliyundrive_open")
+	if !ok {
+		t.Fatal("expected aliyundrive_open entry")
+	}
+	profile := AuthProfile{
+		ProviderKey: "aliyundrive_open",
+		Token:       "token-live",
+		Extra: map[string]string{
+			"domainId":    "bj1",
+			"driveId":     "drive-1",
+			"apiEndpoint": server.URL,
+		},
+	}
+
+	tmpDir := t.TempDir()
+	localPath := filepath.Join(tmpDir, "multipart.bin")
+	content := []byte("abcdefghijklmnopqrstuvwxyz")
+	if err := os.WriteFile(localPath, content, 0o600); err != nil {
+		t.Fatalf("write local file: %v", err)
+	}
+
+	originalSize := aliyunOpenDefaultPartSize
+	aliyunOpenDefaultPartSize = 10
+	t.Cleanup(func() { aliyunOpenDefaultPartSize = originalSize })
+
+	result := entry.Adapter.Upload(UploadRequest{
+		Profile:        profile,
+		Path:           "/docs/multipart.bin",
+		Name:           "multipart.bin",
+		Size:           int64(len(content)),
+		LocalPath:      localPath,
+		ConflictPolicy: ConflictPolicyAutoRenameNew,
+		Strategy:       "download_upload",
+	})
+	if !result.OK {
+		t.Fatalf("expected multipart upload success, got %+v", result)
+	}
+	if len(*uploaded) != 3 {
+		t.Fatalf("expected 3 upload parts, got %#v", *uploaded)
+	}
+	if got := string((*uploaded)[0]); got != "abcdefghi" {
+		t.Fatalf("unexpected first part: %q", got)
+	}
+	if got := string((*uploaded)[1]); got != "jklmnopqr" {
+		t.Fatalf("unexpected second part: %q", got)
+	}
+	if got := string((*uploaded)[2]); got != "stuvwxyz" {
+		t.Fatalf("unexpected third part: %q", got)
+	}
+	if got := int64MapValue(result.Payload, "partCount"); got != 3 {
+		t.Fatalf("expected partCount 3, got %+v", result.Payload)
+	}
+}
+
+func newAliyunOpenUploadTestServer(t *testing.T) (*httptest.Server, *[][]byte) {
 	t.Helper()
 
-	uploaded := []byte{}
+	uploaded := make([][]byte, 0)
 	mustDecode := func(r *http.Request) map[string]interface{} {
 		t.Helper()
 		var payload map[string]interface{}
@@ -173,13 +243,14 @@ func newAliyunOpenUploadTestServer(t *testing.T) (*httptest.Server, *[]byte) {
 
 	var baseURL string
 	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodPut && r.URL.Path == "/upload/part/1" {
+		if r.Method == http.MethodPut && strings.HasPrefix(r.URL.Path, "/upload/part/") {
 			body, err := ioReadAll(r)
 			if err != nil {
 				t.Fatalf("read upload body: %v", err)
 			}
-			uploaded = body
-			w.Header().Set("ETag", "\"etag-upload-1\"")
+			uploaded = append(uploaded, body)
+			partID := strings.TrimPrefix(r.URL.Path, "/upload/part/")
+			w.Header().Set("ETag", "\"etag-upload-"+partID+"\"")
 			w.WriteHeader(http.StatusOK)
 			return
 		}
@@ -253,12 +324,7 @@ func newAliyunOpenUploadTestServer(t *testing.T) (*httptest.Server, *[]byte) {
 				"parent_file_id": stringMapValue(payload, "parent_file_id"),
 				"upload_id":      "upload-1",
 				"rapid_upload":   false,
-				"part_info_list": []map[string]interface{}{
-					{
-						"part_number": 1,
-						"upload_url":  baseURL + "/upload/part/1",
-					},
-				},
+				"part_info_list": buildUploadPartInfoForTest(baseURL, partInfoMapSlice(payload, "part_info_list")),
 			})
 		case "/v2/file/complete":
 			payload := mustDecode(r)
@@ -267,7 +333,7 @@ func newAliyunOpenUploadTestServer(t *testing.T) (*httptest.Server, *[]byte) {
 				"type":              "file",
 				"file_id":           stringMapValue(payload, "file_id"),
 				"parent_file_id":    "dir-docs",
-				"size":              len(uploaded),
+				"size":              totalUploadedLength(uploaded),
 				"content_hash_name": "sha1",
 				"content_hash":      "sha1-uploaded",
 				"status":            "available",
@@ -279,6 +345,32 @@ func newAliyunOpenUploadTestServer(t *testing.T) (*httptest.Server, *[]byte) {
 	baseURL = server.URL
 
 	return server, &uploaded
+}
+
+func buildUploadPartInfoForTest(baseURL string, requested []map[string]interface{}) []map[string]interface{} {
+	if len(requested) == 0 {
+		requested = []map[string]interface{}{{"part_number": 1}}
+	}
+	items := make([]map[string]interface{}, 0, len(requested))
+	for idx, item := range requested {
+		partNumber := int64MapValue(item, "part_number")
+		if partNumber <= 0 {
+			partNumber = int64(idx + 1)
+		}
+		items = append(items, map[string]interface{}{
+			"part_number": partNumber,
+			"upload_url":  baseURL + "/upload/part/" + stringMapValue(map[string]interface{}{"n": partNumber}, "n"),
+		})
+	}
+	return items
+}
+
+func totalUploadedLength(parts [][]byte) int {
+	total := 0
+	for _, part := range parts {
+		total += len(part)
+	}
+	return total
 }
 
 func ioReadAll(r *http.Request) ([]byte, error) {

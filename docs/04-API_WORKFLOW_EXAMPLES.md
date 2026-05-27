@@ -413,6 +413,28 @@ Invoke-RestMethod `
   -Body $fastCheckPayload | ConvertTo-Json -Depth 12
 ```
 
+```powershell
+$uploadPayload = @{
+  profileId      = $profileId
+  path           = "/demo/a.bin"
+  parentId       = ""
+  name           = "a.bin"
+  size           = 2048
+  localPath      = "C:\\temp\\a.bin"
+  conflictPolicy = "auto_rename_new"
+  strategy       = "download_upload"
+  md5            = "md5-a"
+  sha1           = ""
+  gcid           = ""
+} | ConvertTo-Json -Depth 8
+
+Invoke-RestMethod `
+  -Method Post `
+  -Uri "$base/api/providers/123_open/upload" `
+  -ContentType "application/json" `
+  -Body $uploadPayload | ConvertTo-Json -Depth 12
+```
+
 ## 13. 常见注意点
 
 - 这套 API 不兼容 Python 旧接口。

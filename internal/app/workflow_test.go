@@ -289,6 +289,50 @@ func TestAppWorkflowMainline(t *testing.T) {
 	}
 }
 
+func TestAppProviderUploadEndpoint(t *testing.T) {
+	ctx := context.Background()
+	application := mustNewTestApp(t, ctx)
+	handler := application.routes()
+
+	profileResp := invokeJSON(t, handler, http.MethodPost, "/api/auth/profiles", map[string]interface{}{
+		"providerKey": "123_open",
+		"authMode":    "manual_token",
+		"displayName": "Upload 123",
+		"token":       "token-upload",
+		"extra":       map[string]interface{}{},
+	})
+	profileID := profileResp.Data.(map[string]interface{})["id"].(string)
+	if profileID == "" {
+		t.Fatal("expected profile id")
+	}
+
+	localFile := filepath.Join(t.TempDir(), "provider-upload.bin")
+	if err := os.WriteFile(localFile, []byte("provider-upload"), 0o644); err != nil {
+		t.Fatalf("WriteFile() error = %v", err)
+	}
+
+	uploadResp := invokeJSON(t, handler, http.MethodPost, "/api/providers/123_open/upload", map[string]interface{}{
+		"profileId":      profileID,
+		"path":           "/demo/provider-upload.bin",
+		"name":           "provider-upload.bin",
+		"size":           15,
+		"localPath":      localFile,
+		"conflictPolicy": "auto_rename_new",
+		"strategy":       "download_upload",
+		"md5":            "md5-upload",
+	})
+	if !uploadResp.OK {
+		t.Fatal("expected provider upload response ok")
+	}
+	data := uploadResp.Data.(map[string]interface{})
+	if got := data["status"].(string); got != "ok" {
+		t.Fatalf("expected provider upload status ok, got %s", got)
+	}
+	if got := data["mode"].(string); got != "open_family_placeholder" {
+		t.Fatalf("expected provider upload mode open_family_placeholder, got %s", got)
+	}
+}
+
 func TestAppRetryBlockedReturnsStructuredError(t *testing.T) {
 	ctx := context.Background()
 	application := mustNewTestApp(t, ctx)

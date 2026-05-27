@@ -24,7 +24,7 @@
 | 项目骨架 | Go 服务、配置、日志、路由、静态资源、SQLite migration | 已完成 | 无 | 无 |
 | 统一 API | 登录、provider 列表、能力查询、auth profile、plans、tasks、evidence、status | 已完成 | 无 | 后续仅按真实联调补细节 |
 | Provider 注册表 | 10 家 provider 已注册，能力声明统一 | 已完成 | 无 | 后续逐家替换真实实现 |
-| Provider 调试接口 | `list`、`metadata`、`create_dir`、`fast_check` 已暴露为 API | 已完成 | 联调口径补强 | 后续可增加上传调试入口 |
+| Provider 调试接口 | `list`、`metadata`、`create_dir`、`fast_check`、`upload` 已暴露为 API | 已完成 | 联调口径补强 | 后续可继续补更细上传观测字段 |
 | Auth Profile | CRUD、校验、脱敏持久化、按 provider 映射 | 已完成 | 真实 provider 字段口径补充 | 更多真实鉴权模式 |
 | Planner | 预览计划、策略判定、阈值判断、冲突降级、执行模式推荐、风控档位元数据 | 已完成 | 结合真实 provider 与增量规则继续校准 | 更细推荐规则与真实联调校准 |
 | 同步执行模型 | 已支持 `leaf_first_lazy`、`pre_scan_flat`、按需扫描骨架、fallback、目录状态持久化、断点继续当前子树、目标端 metadata 预检查、`create / overwrite / skip` 判定闭环、待补传树聚合、待补传子集重试、失败重试队列分类、`blocked` 运行态、最小自动补传调度、`retryLimit` 次数耗尽阻断、`fast_upload` 预检后直回退 | 部分完成 | 任务级执行模式、runtime checkpoint、待补传树与目录树展示已接入 planner / task / evidence / UI，`retry` 已支持 pending-only 重建，并识别 rate-limit cooldown、retry limit 与自动恢复 | 更完整目录树交互、更细后台补传策略 |
@@ -33,7 +33,7 @@
 | Runtime Evidence | 最近结果、最近探针、状态快照、状态矩阵 API | 已完成 | 无 | 真实联调样本沉淀 |
 | 控制台前端 | 登录、授权、任务向导、任务列表详情、状态矩阵/证据、执行模式可视化、目录状态展示、目录树/待补传树筛选与叶子视角、重试队列分类视图 | 已完成 | 异常场景提示可继续增强 | 更产品化视觉与更细交互 |
 | 单元测试 | auth、planner、task、provider、workflow、web、UI smoke | 已完成 | 持续补样本 | 真实 provider 契约覆盖继续加深 |
-| Provider 真实实现 | `aliyundrive_open` 已接入真实 `ValidateAuth + List + Metadata + CreateDir + FastUploadCheck + Upload` 最小主链路 | 部分完成 | 下一步优先补更完整分片/断点语义与更多 provider | 其余 provider 真实实现、上传链路、异常恢复 |
+| Provider 真实实现 | `aliyundrive_open` 已接入真实 `ValidateAuth + List + Metadata + CreateDir + FastUploadCheck + Upload`，并支持多分片上传 | 部分完成 | 下一步优先补更完整断点/恢复语义与更多 provider | 其余 provider 真实实现、上传链路、异常恢复 |
 | 真实联调验收 | 模板、流程、文档已具备 | 部分完成 | 首批真实样本沉淀中 | 每个协议族至少一条真实成功样本 |
 
 ## 当前已经能直接演示的能力
@@ -160,7 +160,7 @@
 
 | Provider | 协议族 | 当前状态 | 说明 |
 | --- | --- | --- | --- |
-| `aliyundrive_open` | `aliyun_123_open` | 部分真实 | 已接入真实 `ValidateAuth`，并已落地 `List / Metadata / CreateDir / FastUploadCheck / Upload` 最小主链路 |
+| `aliyundrive_open` | `aliyun_123_open` | 部分真实 | 已接入真实 `ValidateAuth`，并已落地 `List / Metadata / CreateDir / FastUploadCheck / Upload / 多分片上传` 主链路 |
 | `123_open` | `aliyun_123_open` | 占位可运行 | 统一接口已接通，真实实现待补 |
 | `xunlei` | `xunlei_pikpak` | 占位可运行 | 适合当前内核联调 |
 | `pikpak` | `xunlei_pikpak` | 占位可运行 | 适合当前内核联调 |

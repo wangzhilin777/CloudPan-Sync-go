@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"math"
 	"net/http"
 	"net/url"
 	"os"
@@ -21,6 +22,8 @@ type aliyunOpenSession struct {
 	Token        string
 	ProviderKey  string
 }
+
+var aliyunOpenDefaultPartSize int64 = 16 * 1024 * 1024
 
 func NewOpenFamilyAdapter(meta Provider, capability CapabilitySet, requireDomainDrive bool) Adapter {
 	return OpenFamilyAdapter{
@@ -367,12 +370,8 @@ func (a OpenFamilyAdapter) uploadAliyunOpen(req UploadRequest) UploadResult {
 		createBody["content_hash_name"] = "sha1"
 	}
 
-	partInfoList := []map[string]interface{}{{"part_number": 1}}
-	if req.Strategy != "fast_upload" {
-		createBody["part_info_list"] = partInfoList
-	} else {
-		createBody["part_info_list"] = partInfoList
-	}
+	partInfoList := buildAliyunOpenPartInfoList(req.Size, aliyunOpenDefaultPartSize)
+	createBody["part_info_list"] = partInfoList
 
 	statusCode, payload, createErr := postProviderJSON(context.Background(), session.BaseEndpoint+"/adrive/v1.0/openFile/create", session.Token, createBody)
 	if createErr != nil {
@@ -463,40 +462,14 @@ func (a OpenFamilyAdapter) uploadAliyunOpen(req UploadRequest) UploadResult {
 			},
 		}
 	}
-	uploadURL := firstNonEmptyString(partItems[0], "upload_url", "internal_upload_url")
-	if uploadURL == "" {
+	partPayloads, putHeaders, uploadPartsErr := a.uploadAliyunOpenParts(partItems, content)
+	if uploadPartsErr != nil {
 		return UploadResult{
 			OperationResult: OperationResult{
 				Status:  "provider_request_failed",
-				Message: "Aliyun Open upload part is missing upload_url.",
+				Message: fmt.Sprintf("Aliyun Open upload part request failed: %v", uploadPartsErr),
 				Mode:    "open_family_real_upload",
-				Payload: payload,
-			},
-		}
-	}
-
-	putStatus, putHeaders, putErr := putProviderBytes(context.Background(), uploadURL, content, map[string]string{
-		"Content-Length": strconv.FormatInt(int64(len(content)), 10),
-	})
-	if putErr != nil {
-		return UploadResult{
-			OperationResult: OperationResult{
-				Status:  "provider_request_failed",
-				Message: fmt.Sprintf("Aliyun Open upload part request failed: %v", putErr),
-				Mode:    "open_family_real_upload",
-				Payload: payload,
-			},
-		}
-	}
-	if putStatus < 200 || putStatus >= 300 {
-		return UploadResult{
-			OperationResult: OperationResult{
-				Status:  "provider_request_failed",
-				Message: fmt.Sprintf("Aliyun Open upload part returned HTTP %d.", putStatus),
-				Mode:    "open_family_real_upload",
-				Payload: mergePayloads(payload, map[string]interface{}{
-					"upload.http_status": putStatus,
-				}),
+				Payload: mergePayloads(payload, partPayloads),
 			},
 		}
 	}
@@ -545,6 +518,7 @@ func (a OpenFamilyAdapter) uploadAliyunOpen(req UploadRequest) UploadResult {
 	}
 	resultPayload["uploadId"] = uploadID
 	resultPayload["rapidUpload"] = false
+	resultPayload["partCount"] = len(partItems)
 	return UploadResult{
 		OperationResult: OperationResult{
 			OK:      true,
@@ -555,6 +529,86 @@ func (a OpenFamilyAdapter) uploadAliyunOpen(req UploadRequest) UploadResult {
 		},
 		ConflictAction: "none",
 	}
+}
+
+func (a OpenFamilyAdapter) uploadAliyunOpenParts(partItems []map[string]interface{}, content []byte) (map[string]interface{}, http.Header, error) {
+	headers := http.Header{}
+	partPayloads := map[string]interface{}{
+		"upload.partCount": len(partItems),
+	}
+	if len(partItems) == 0 {
+		return partPayloads, headers, nil
+	}
+	ranges := splitAliyunOpenContentRanges(len(content), len(partItems))
+	for idx, item := range partItems {
+		uploadURL := firstNonEmptyString(item, "upload_url", "internal_upload_url")
+		if uploadURL == "" {
+			return partPayloads, headers, fmt.Errorf("part %d missing upload_url", idx+1)
+		}
+		start := ranges[idx][0]
+		end := ranges[idx][1]
+		chunk := content[start:end]
+		putStatus, putHeaders, putErr := putProviderBytes(context.Background(), uploadURL, chunk, map[string]string{
+			"Content-Length": strconv.FormatInt(int64(len(chunk)), 10),
+		})
+		if putErr != nil {
+			return partPayloads, headers, putErr
+		}
+		if putStatus < 200 || putStatus >= 300 {
+			partPayloads[fmt.Sprintf("upload.part.%d.http_status", idx+1)] = putStatus
+			return partPayloads, putHeaders, fmt.Errorf("part %d returned HTTP %d", idx+1, putStatus)
+		}
+		if etag := strings.TrimSpace(putHeaders.Get("ETag")); etag != "" {
+			partPayloads[fmt.Sprintf("upload.part.%d.etag", idx+1)] = strings.Trim(etag, "\"")
+		}
+		if idx == len(partItems)-1 {
+			headers = putHeaders
+		}
+	}
+	return partPayloads, headers, nil
+}
+
+func buildAliyunOpenPartInfoList(size int64, partSize int64) []map[string]interface{} {
+	if partSize <= 0 {
+		partSize = aliyunOpenDefaultPartSize
+	}
+	count := 1
+	if size > 0 {
+		count = int(math.Ceil(float64(size) / float64(partSize)))
+		if count < 1 {
+			count = 1
+		}
+	}
+	items := make([]map[string]interface{}, 0, count)
+	for i := 1; i <= count; i++ {
+		items = append(items, map[string]interface{}{
+			"part_number": i,
+		})
+	}
+	return items
+}
+
+func splitAliyunOpenContentRanges(totalSize int, partCount int) [][2]int {
+	if partCount <= 1 || totalSize <= 0 {
+		return [][2]int{{0, totalSize}}
+	}
+	ranges := make([][2]int, 0, partCount)
+	base := totalSize / partCount
+	remainder := totalSize % partCount
+	offset := 0
+	for idx := 0; idx < partCount; idx++ {
+		chunkSize := base
+		if idx < remainder {
+			chunkSize++
+		}
+		next := offset + chunkSize
+		ranges = append(ranges, [2]int{offset, next})
+		offset = next
+	}
+	if len(ranges) == 0 {
+		return [][2]int{{0, totalSize}}
+	}
+	return ranges
 }
 
 func (a OpenFamilyAdapter) listAliyunOpen(req ListRequest) ListResult {
