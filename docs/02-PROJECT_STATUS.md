@@ -89,7 +89,10 @@
 - 当前状态：
   - 协议族和能力面已经统一
   - 各 provider 具备可执行占位行为，能参与 API、planner、task、evidence 全链路
-  - `aliyundrive_open` 已开始接入真实 `ValidateAuth` 远程校验骨架
+  - `aliyundrive_open` 已接入真实 `ValidateAuth`，并已落地最小目录链路：
+    - `List`
+    - `Metadata`
+    - `CreateDir`
   - 真实外部平台 SDK / HTTP 联网细节仍未全面接入
 
 ### 2.1 Provider 辅助调试接口
@@ -329,7 +332,7 @@
   - API 主工作流联调回归
   - Runtime 关键场景测试覆盖
   - 控制台浏览器级 UI smoke 回归
-  - `aliyundrive_open` 真实 `ValidateAuth` 骨架
+  - `aliyundrive_open` 真实 `ValidateAuth + List + Metadata + CreateDir` 最小目录链路
 
 ## 当前仍未完成的部分
 

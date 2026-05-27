@@ -94,10 +94,17 @@
   - `md5`
   - `size`
 - 当前落地进度：
-  - `aliyundrive_open` 的 `ValidateAuth` 已开始走真实远程校验骨架
+  - `aliyundrive_open` 的 `ValidateAuth` 已走真实远程校验
+  - 当前最小目录链路也已接通：
+    - `List`
+    - `Metadata`
+    - `CreateDir`
   - 当前会访问：
     - `POST /v2/user/get`
     - `POST /v2/drive/get_default_drive`
+    - `POST /adrive/v1.0/openFile/list`
+    - `POST /adrive/v1.0/openFile/get`
+    - `POST /adrive/v1.0/openFile/create`
   - `123_open` 当前仍保留占位校验语义
 
 ### 2. Share Family
