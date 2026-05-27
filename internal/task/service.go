@@ -256,6 +256,9 @@ func (s *Service) Run(ctx context.Context, id string) (Detail, bool, error) {
 		result.ConflictAction = conflictAction
 		result.Payload["strategy"] = uploadReq.Strategy
 		result.Payload["providerStatus"] = upload.Status
+		if len(upload.Payload) > 0 {
+			result.Payload["upload"] = copyPayloadMap(upload.Payload)
+		}
 		if fastCheckPayload != nil {
 			result.Payload["fastCheck"] = fastCheckPayload
 		}
@@ -302,7 +305,7 @@ func (s *Service) Run(ctx context.Context, id string) (Detail, bool, error) {
 
 	failed := detail.Runtime.FailedCount
 	detail.Task.State = StateCompleted
-	detail.Task.CompletionKind = CompletionKindProbeOnly
+	detail.Task.CompletionKind = completionKindFromResults(results)
 	detail.Runtime.ExecutionState = "completed"
 	if failed > 0 {
 		if detail.Runtime.BlockedReason != "" {
@@ -819,6 +822,40 @@ func supportsFallback(modes []string, expected string) bool {
 		}
 	}
 	return false
+}
+
+func completionKindFromResults(results []Result) CompletionKind {
+	if len(results) == 0 {
+		return CompletionKindProbeOnly
+	}
+	hasSuccess := false
+	for _, item := range results {
+		if item.Status != "done" {
+			continue
+		}
+		hasSuccess = true
+		if strategy := stringValue(item.Payload["strategy"]); strategy != "" && strategy != string(planner.StrategyPendingManual) {
+			return CompletionKindRealTransfer
+		}
+		if providerStatus := stringValue(item.Payload["providerStatus"]); providerStatus == "ok" {
+			return CompletionKindRealTransfer
+		}
+	}
+	if hasSuccess {
+		return CompletionKindCandidateOnly
+	}
+	return CompletionKindProbeOnly
+}
+
+func copyPayloadMap(values map[string]interface{}) map[string]interface{} {
+	if len(values) == 0 {
+		return nil
+	}
+	out := make(map[string]interface{}, len(values))
+	for key, value := range values {
+		out[key] = value
+	}
+	return out
 }
 
 func localFileExists(path string) bool {

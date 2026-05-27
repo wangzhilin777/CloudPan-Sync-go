@@ -232,6 +232,11 @@
   - runtime evidence 聚合
   - provider status snapshot 聚合
   - 任务运行结果透传执行模式、推荐模式、扫描方式、风险档位等元数据
+  - task result 中透传 provider 上传证据：
+    - `upload`
+    - `uploadId`
+    - `partCount`
+    - `rapidUpload`
   - task payload 中持久化 runtime / directory states / resume checkpoint
 - 已覆盖的关键运行场景：
   - `fast_upload`
@@ -246,6 +251,11 @@
 - 当前状态：
   - API 主工作流已完整打通
   - 运行时更偏“可验证内核 + 可扩展占位实现”，而非真实大规模传输引擎
+  - 当前 `completionKind` 已不再一律写成 `probe_only`
+  - 当前会按结果语义区分：
+    - `real_transfer`
+    - `candidate_only`
+    - `probe_only`
   - 当前已支持把 `pending_manual` 类结果聚合成待补传树，并回写到 runtime / probe / provider status
   - 当前已支持在 `Retry` 时自动缩小到待补传子集，并按新 plan 继续执行
   - 当前已支持把失败结果分类成重试队列，并区分：

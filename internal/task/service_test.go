@@ -190,6 +190,10 @@ func TestServiceRuntimeHandlesFallbackAndConflictDowngrade(t *testing.T) {
 					Status:  "ok",
 					Message: "fallback upload ok",
 					Mode:    "fake_binary",
+					Payload: map[string]interface{}{
+						"uploadId":  "upload-test-1",
+						"partCount": 1,
+					},
 				},
 			}
 		},
@@ -238,6 +242,9 @@ func TestServiceRuntimeHandlesFallbackAndConflictDowngrade(t *testing.T) {
 	if running.Task.State != StateCompleted {
 		t.Fatalf("expected completed, got %s", running.Task.State)
 	}
+	if running.Task.CompletionKind != CompletionKindRealTransfer {
+		t.Fatalf("expected completion kind real_transfer, got %s", running.Task.CompletionKind)
+	}
 	if len(running.Results) != 1 {
 		t.Fatalf("expected one result, got %d", len(running.Results))
 	}
@@ -259,6 +266,13 @@ func TestServiceRuntimeHandlesFallbackAndConflictDowngrade(t *testing.T) {
 	}
 	if status, _ := fastCheck["status"].(string); status != "ok" {
 		t.Fatalf("expected fastCheck status ok, got %#v", fastCheck)
+	}
+	uploadPayload, ok := running.Results[0].Payload["upload"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("expected upload payload, got %#v", running.Results[0].Payload["upload"])
+	}
+	if got := uploadPayload["uploadId"].(string); got != "upload-test-1" {
+		t.Fatalf("expected uploadId upload-test-1, got %#v", uploadPayload)
 	}
 	riskProfile, ok := running.Results[0].Payload["riskProfile"].(map[string]interface{})
 	if !ok {
