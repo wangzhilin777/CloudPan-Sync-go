@@ -49,6 +49,7 @@ function normalizeDirectoryStates(states) {
       totalItems: Number(item.totalItems || 0),
       processedItems: Number(item.processedItems || 0),
       doneItems: Number(item.doneItems || 0),
+      skippedItems: Number(item.skippedItems || 0),
       failedItems: Number(item.failedItems || 0),
       lastItemPath: String(item.lastItemPath || ""),
     }));
@@ -86,7 +87,11 @@ function renderRuntimeCheckpoint(runtime) {
     </div>
     <div class="insight-card checkpoint-card">
       <strong>结果计数</strong>
-      <span>done ${stringifyValue(runtime.doneCount, "0")} / failed ${stringifyValue(runtime.failedCount, "0")}</span>
+      <span>done ${stringifyValue(runtime.doneCount, "0")} / skipped ${stringifyValue(runtime.skippedCount, "0")} / failed ${stringifyValue(runtime.failedCount, "0")}</span>
+    </div>
+    <div class="insight-card checkpoint-card">
+      <strong>风控命中</strong>
+      <span>${stringifyValue(runtime.riskHitCount, "0")} / last ${stringifyValue(runtime.lastRiskStatus, "-")}</span>
     </div>
   `;
 }
@@ -120,6 +125,7 @@ function renderDirectoryStates(states) {
               <div class="directory-metrics">
                 <span class="pill">processed ${item.processedItems}/${item.totalItems}</span>
                 <span class="pill">done ${item.doneItems}</span>
+                <span class="pill">skipped ${item.skippedItems}</span>
                 <span class="pill">failed ${item.failedItems}</span>
               </div>
               <div class="muted">last item: <code>${escapeHTML(stringifyValue(item.lastItemPath, "-"))}</code></div>
@@ -435,6 +441,10 @@ function renderSelectedTask() {
       <strong>扫描方式</strong>
       <span>${stringifyValue(metadata.scanMode, "尚未运行或无需扫描")}</span>
     </div>
+    <div class="insight-card">
+      <strong>风险节流</strong>
+      <span>${stringifyValue(metadata.riskProfile?.requestIntervalMs, "0")}ms / dir ${stringifyValue(metadata.riskProfile?.directoryIntervalMs, "0")}ms / retry ${stringifyValue(metadata.riskProfile?.retryLimit, "0")}</span>
+    </div>
   `;
   $("#task-runtime").innerHTML = renderRuntimeCheckpoint(runtime);
   $("#task-directory-states").innerHTML = renderDirectoryStates(runtime.directoryStates);
@@ -474,6 +484,10 @@ function renderPreview() {
       <strong>风险档位</strong>
       <span>${stringifyValue(metadata.riskProfile?.mode, "balanced")}</span>
     </div>
+    <div class="insight-card">
+      <strong>风险节流</strong>
+      <span>${stringifyValue(metadata.riskProfile?.requestIntervalMs, "0")}ms / dir ${stringifyValue(metadata.riskProfile?.directoryIntervalMs, "0")}ms / retry ${stringifyValue(metadata.riskProfile?.retryLimit, "0")}</span>
+    </div>
   `;
   $("#plan-preview").textContent = formatJSON(state.preview);
 }
@@ -484,6 +498,8 @@ function renderStatus() {
     completedTasks: 0,
     failedResultCount: 0,
     doneResultCount: 0,
+    skippedResultCount: 0,
+    riskHitCount: 0,
     recentResults: [],
     recentProbes: [],
   };
@@ -491,7 +507,9 @@ function renderStatus() {
     <div class="metric"><span>Total Tasks</span><strong>${evidence.totalTasks}</strong></div>
     <div class="metric"><span>Completed</span><strong>${evidence.completedTasks}</strong></div>
     <div class="metric"><span>Done Results</span><strong>${evidence.doneResultCount}</strong></div>
+    <div class="metric"><span>Skipped Results</span><strong>${evidence.skippedResultCount}</strong></div>
     <div class="metric"><span>Failed Results</span><strong>${evidence.failedResultCount}</strong></div>
+    <div class="metric"><span>Risk Hits</span><strong>${evidence.riskHitCount}</strong></div>
   `;
 
   $("#status-table").innerHTML = `
@@ -504,6 +522,7 @@ function renderStatus() {
           <th>Completed</th>
           <th>Execution Mode</th>
           <th>Scan Mode</th>
+          <th>Risk Mode</th>
           <th>Latest Probe</th>
           <th>Last Task State</th>
           <th>Snapshot Summary</th>
@@ -520,6 +539,7 @@ function renderStatus() {
                 <td>${item.completedCount}</td>
                 <td>${stringifyValue(item.snapshotSummary?.executionMode)}</td>
                 <td>${stringifyValue(item.snapshotSummary?.scanMode)}</td>
+                <td>${stringifyValue(item.snapshotSummary?.riskProfile?.mode)}</td>
                 <td>${item.latestProbe || "-"}</td>
                 <td>${item.lastTaskState || "-"}</td>
                 <td>
@@ -547,7 +567,7 @@ function renderSnapshotSummary(summary) {
     return "-";
   }
   return Object.entries(summary)
-    .map(([key, value]) => `<div><strong>${key}</strong> <code>${String(value)}</code></div>`)
+    .map(([key, value]) => `<div><strong>${key}</strong> <code>${escapeHTML(stringifyValue(value))}</code></div>`)
     .join("");
 }
 
@@ -564,6 +584,7 @@ function renderRecentResultsTable(items) {
           <th>Execution Mode</th>
           <th>Recommended</th>
           <th>Message</th>
+          <th>Risk Hit</th>
           <th>Conflict</th>
           <th>Created</th>
         </tr>
@@ -578,6 +599,7 @@ function renderRecentResultsTable(items) {
                 <td>${stringifyValue(item.payload?.executionMode)}</td>
                 <td>${stringifyValue(item.payload?.recommendedExecutionMode)}</td>
                 <td>${item.message || "-"}</td>
+                <td>${stringifyValue(item.payload?.riskHit?.keyword || item.payload?.riskHit?.status)}</td>
                 <td>${item.conflictAction || "-"}</td>
                 <td>${item.createdAt || "-"}</td>
               </tr>
@@ -602,6 +624,7 @@ function renderRecentProbesTable(items) {
           <th>Profile</th>
           <th>Execution Mode</th>
           <th>Scan Mode</th>
+          <th>Risk Hit</th>
           <th>Payload</th>
           <th>Created</th>
         </tr>
@@ -616,6 +639,7 @@ function renderRecentProbesTable(items) {
                 <td>${item.profileId || "-"}</td>
                 <td>${stringifyValue(item.payload?.executionMode)}</td>
                 <td>${stringifyValue(item.payload?.scanMode)}</td>
+                <td>${stringifyValue(item.payload?.lastRiskStatus || item.payload?.riskHitCount)}</td>
                 <td><code>${JSON.stringify(item.payload || {})}</code></td>
                 <td>${item.createdAt || "-"}</td>
               </tr>
@@ -743,6 +767,7 @@ function buildPlanPayload() {
     targetProfileId: $("#plan-target-profile").value,
     thresholdMB: Number($("#plan-threshold").value || "0"),
     riskMode: $("#plan-risk-mode").value,
+    riskOverride: parseJSONInput($("#plan-risk-override").value, null),
     executionMode: $("#plan-execution-mode").value,
     conflictPolicy: $("#plan-conflict-policy").value,
     selectedRoots: parseJSONInput($("#plan-selected-roots").value, []),
@@ -761,6 +786,7 @@ function wirePlanner() {
           targetProvider: payload.targetProvider,
           thresholdMB: payload.thresholdMB,
           riskMode: payload.riskMode,
+          riskOverride: payload.riskOverride,
           executionMode: payload.executionMode,
           conflictPolicy: payload.conflictPolicy,
           selectedRoots: payload.selectedRoots,

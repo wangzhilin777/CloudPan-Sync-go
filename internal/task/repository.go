@@ -299,6 +299,27 @@ func taskEvidenceSummary(ctx context.Context, store *sqlitestore.Store) (Evidenc
 	if err := store.DB().QueryRowContext(ctx, `SELECT COUNT(1) FROM task_results WHERE status = 'skipped'`).Scan(&summary.SkippedResultCount); err != nil {
 		return summary, err
 	}
+	rows, err := store.DB().QueryContext(ctx, `SELECT payload_json FROM task_results WHERE payload_json IS NOT NULL AND payload_json != ''`)
+	if err != nil {
+		return summary, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var payloadJSON string
+		if err := rows.Scan(&payloadJSON); err != nil {
+			return summary, err
+		}
+		payload := map[string]interface{}{}
+		if err := json.Unmarshal([]byte(payloadJSON), &payload); err != nil {
+			return summary, err
+		}
+		if _, ok := riskHitFromPayload(payload); ok {
+			summary.RiskHitCount++
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return summary, err
+	}
 	results, err := recentTaskResults(ctx, store, 10)
 	if err != nil {
 		return summary, err
@@ -449,10 +470,14 @@ func buildProviderStatusSnapshot(ctx context.Context, store *sqlitestore.Store, 
 			"recommendedExecutionMode":       detail.Plan.Metadata["recommendedExecutionMode"],
 			"recommendedExecutionModeReason": detail.Plan.Metadata["recommendedExecutionModeReason"],
 			"scanMode":                       detail.Plan.Metadata["scanMode"],
+			"riskProfile":                    detail.Plan.Metadata["riskProfile"],
+			"riskOverride":                   detail.Plan.Metadata["riskOverride"],
 			"runtime":                        detail.Runtime,
 			"doneCount":                      detail.Runtime.DoneCount,
 			"skippedCount":                   detail.Runtime.SkippedCount,
 			"failedCount":                    detail.Runtime.FailedCount,
+			"riskHitCount":                   detail.Runtime.RiskHitCount,
+			"lastRiskStatus":                 detail.Runtime.LastRiskStatus,
 			"currentRoot":                    detail.Runtime.CurrentRoot,
 			"currentDirectory":               detail.Runtime.CurrentDirectory,
 			"lastCompletedPath":              detail.Runtime.LastCompletedPath,

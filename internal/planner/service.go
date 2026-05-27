@@ -31,6 +31,7 @@ type PreviewRequest struct {
 	TargetProvider string                  `json:"targetProvider"`
 	ThresholdMB    int                     `json:"thresholdMB"`
 	RiskMode       RiskMode                `json:"riskMode"`
+	RiskOverride   *RiskProfileOverride    `json:"riskOverride,omitempty"`
 	ExecutionMode  ExecutionMode           `json:"executionMode"`
 	ConflictPolicy provider.ConflictPolicy `json:"conflictPolicy"`
 	SelectedRoots  []string                `json:"selectedRoots"`
@@ -52,7 +53,7 @@ func BuildPreview(registry *provider.Registry, req PreviewRequest) (Plan, error)
 	if err != nil {
 		return Plan{}, err
 	}
-	riskProfile := defaultRiskProfile(target.Meta.Key, req.RiskMode)
+	riskProfile := applyRiskProfileOverride(defaultRiskProfile(target.Meta.Key, req.RiskMode), req.RiskOverride)
 	recommendedMode, recommendedReason := recommendExecutionMode(req, riskProfile)
 	orderedEntries := orderEntriesByMode(req.Entries, executionMode)
 
@@ -89,6 +90,7 @@ func BuildPreview(registry *provider.Registry, req PreviewRequest) (Plan, error)
 			"recommendedExecutionModeReason": recommendedReason,
 			"executionOrder":                 executionOrderForMode(executionMode),
 			"riskProfile":                    riskProfile,
+			"riskOverride":                   req.RiskOverride,
 		},
 	}, nil
 }
@@ -235,6 +237,31 @@ func normalizeRiskMode(mode RiskMode) RiskMode {
 	default:
 		return RiskModeBalanced
 	}
+}
+
+func applyRiskProfileOverride(base RiskProfile, override *RiskProfileOverride) RiskProfile {
+	if override == nil {
+		return base
+	}
+	if override.RequestIntervalMS != nil && *override.RequestIntervalMS >= 0 {
+		base.RequestIntervalMS = *override.RequestIntervalMS
+	}
+	if override.PageSize != nil && *override.PageSize >= 0 {
+		base.PageSize = *override.PageSize
+	}
+	if override.DirectoryIntervalMS != nil && *override.DirectoryIntervalMS >= 0 {
+		base.DirectoryIntervalMS = *override.DirectoryIntervalMS
+	}
+	if override.CooldownSeconds != nil && *override.CooldownSeconds >= 0 {
+		base.CooldownSeconds = *override.CooldownSeconds
+	}
+	if override.RetryLimit != nil && *override.RetryLimit >= 0 {
+		base.RetryLimit = *override.RetryLimit
+	}
+	if len(override.RiskKeywords) > 0 {
+		base.RiskKeywords = append([]string(nil), override.RiskKeywords...)
+	}
+	return base
 }
 
 func normalizeExecutionMode(mode ExecutionMode) (ExecutionMode, error) {

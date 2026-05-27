@@ -47,6 +47,7 @@ CloudPan Sync 的 Go 重构版工作区。
 - 任务创建、运行、暂停、恢复、重试
 - 叶子目录优先的按需扫描执行骨架
 - 目标端 metadata 预检查后的 `create / overwrite / skip` 判定闭环
+- 任务级风控参数覆盖与风控命中证据
 - runtime evidence 与 provider 状态矩阵
 - 控制台页面：
   - 登录
@@ -102,12 +103,14 @@ CloudPan Sync 的 Go 重构版工作区。
 - 当前控制台任务向导已经支持：
   - 选择 `executionMode`
   - 选择 `riskMode`
+  - 通过 JSON 覆盖 `requestIntervalMs / pageSize / directoryIntervalMs / cooldownSeconds / retryLimit / riskKeywords`
   - 查看推荐模式与推荐原因
   - 在任务详情、状态矩阵、最近结果、最近 probe 中查看执行模式证据
 - 当前控制台也已经支持：
   - 查看运行检查点
   - 查看目录状态清单
   - 查看当前根目录 / 当前目录 / 上次完成路径
+  - 查看跳过数、失败数、风控命中数、最近风险状态
 - 当前还会继续补强的主要是：
   - 更细粒度的目录树交互展示
   - 真正异步 worker 下的运行中暂停

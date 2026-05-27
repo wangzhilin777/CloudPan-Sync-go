@@ -147,6 +147,10 @@
                   </select>
                 </label>
                 <label>
+                  <span>Risk Override(JSON)</span>
+                  <textarea id="plan-risk-override" rows="4" placeholder='例如：{"requestIntervalMs":1200,"directoryIntervalMs":2000,"retryLimit":2,"riskKeywords":["rate_limit","captcha"]}'></textarea>
+                </label>
+                <label>
                   <span>Execution Mode</span>
                   <select id="plan-execution-mode" name="executionMode">
                     <option value="leaf_first_lazy">leaf_first_lazy</option>

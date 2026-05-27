@@ -101,6 +101,27 @@
   - 跳过未变化
   - 源端删除只记录，不默认删除目标端
 
+## 当前风控参数怎么理解
+
+- 当前 `riskMode` 仍然保留：
+  - `safe`
+  - `balanced`
+  - `fast`
+  - `custom`
+- 但现在不只是“选一个档位名”。
+- 当前任务还可以额外传 `riskOverride`，覆盖：
+  - `requestIntervalMs`
+  - `pageSize`
+  - `directoryIntervalMs`
+  - `cooldownSeconds`
+  - `retryLimit`
+  - `riskKeywords`
+- 当前 planner 会把最终生效的风险配置写进 `metadata.riskProfile`。
+- 当前 runtime 如果命中风险关键词，还会在结果和运行时证据里写回：
+  - `riskHit`
+  - `riskHitCount`
+  - `lastRiskStatus`
+
 ### 启动服务
 
 ```powershell
@@ -173,6 +194,8 @@ go build ./...
   - 当任务要走按需扫描时，需要它来在运行阶段对 source provider 执行 `List`
 - `riskMode`
   - 当前控制台任务向导已支持直接选择
+- `riskOverride`
+  - 当前控制台任务向导已支持通过 JSON 输入覆盖节流参数和风险关键词
 - `executionMode`
   - 不传时默认按 `leaf_first_lazy`
   - 传 `pre_scan_flat` 时会切换到预扫描平铺模式

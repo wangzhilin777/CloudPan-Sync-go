@@ -252,6 +252,8 @@
   - 任务运行时已支持根据执行模式切换扫描方式
   - 任务运行时已接入目标端 metadata 预检查与 `create / overwrite / skip` 判定
   - runtime / provider probe / provider status 已可聚合 `skippedCount`
+  - `riskOverride` 已支持任务级覆盖节流参数与风险关键词
+  - runtime / result / provider probe / provider status 已可聚合 `riskHitCount` 与 `lastRiskStatus`
 
 ### Phase 3 - Provider 落地
 

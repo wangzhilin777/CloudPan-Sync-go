@@ -68,8 +68,20 @@ type RuntimeState struct {
 	DoneCount         int              `json:"doneCount"`
 	SkippedCount      int              `json:"skippedCount"`
 	FailedCount       int              `json:"failedCount"`
+	RiskHitCount      int              `json:"riskHitCount"`
+	LastRiskStatus    string           `json:"lastRiskStatus,omitempty"`
+	RiskHits          []RiskHit        `json:"riskHits,omitempty"`
 	NextSequence      int              `json:"nextSequence"`
 	DirectoryStates   []DirectoryState `json:"directoryStates,omitempty"`
+}
+
+type RiskHit struct {
+	Status      string `json:"status"`
+	Keyword     string `json:"keyword,omitempty"`
+	ItemPath    string `json:"itemPath,omitempty"`
+	Stage       string `json:"stage,omitempty"`
+	Message     string `json:"message,omitempty"`
+	TriggeredAt string `json:"triggeredAt,omitempty"`
 }
 
 type Item struct {

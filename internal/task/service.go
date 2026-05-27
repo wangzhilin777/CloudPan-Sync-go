@@ -16,16 +16,17 @@ import (
 )
 
 type CreateRequest struct {
-	SourceProvider  string                  `json:"sourceProvider"`
-	SourceProfileID string                  `json:"sourceProfileId"`
-	TargetProvider  string                  `json:"targetProvider"`
-	TargetProfileID string                  `json:"targetProfileId"`
-	ThresholdMB     int                     `json:"thresholdMB"`
-	RiskMode        planner.RiskMode        `json:"riskMode"`
-	ExecutionMode   planner.ExecutionMode   `json:"executionMode"`
-	ConflictPolicy  provider.ConflictPolicy `json:"conflictPolicy"`
-	SelectedRoots   []string                `json:"selectedRoots"`
-	Entries         []planner.SourceEntry   `json:"entries"`
+	SourceProvider  string                       `json:"sourceProvider"`
+	SourceProfileID string                       `json:"sourceProfileId"`
+	TargetProvider  string                       `json:"targetProvider"`
+	TargetProfileID string                       `json:"targetProfileId"`
+	ThresholdMB     int                          `json:"thresholdMB"`
+	RiskMode        planner.RiskMode             `json:"riskMode"`
+	RiskOverride    *planner.RiskProfileOverride `json:"riskOverride,omitempty"`
+	ExecutionMode   planner.ExecutionMode        `json:"executionMode"`
+	ConflictPolicy  provider.ConflictPolicy      `json:"conflictPolicy"`
+	SelectedRoots   []string                     `json:"selectedRoots"`
+	Entries         []planner.SourceEntry        `json:"entries"`
 }
 
 type Detail struct {
@@ -46,6 +47,7 @@ type EvidenceSummary struct {
 	FailedResultCount  int             `json:"failedResultCount"`
 	DoneResultCount    int             `json:"doneResultCount"`
 	SkippedResultCount int             `json:"skippedResultCount"`
+	RiskHitCount       int             `json:"riskHitCount"`
 	RecentResults      []Result        `json:"recentResults"`
 	RecentProbes       []ProviderProbe `json:"recentProbes"`
 }
@@ -77,6 +79,7 @@ func (s *Service) Create(ctx context.Context, req CreateRequest) (Detail, error)
 		TargetProvider: req.TargetProvider,
 		ThresholdMB:    req.ThresholdMB,
 		RiskMode:       req.RiskMode,
+		RiskOverride:   req.RiskOverride,
 		ExecutionMode:  req.ExecutionMode,
 		ConflictPolicy: req.ConflictPolicy,
 		SelectedRoots:  req.SelectedRoots,
@@ -165,6 +168,7 @@ func (s *Service) Run(ctx context.Context, id string) (Detail, bool, error) {
 	results := append([]Result(nil), detail.Results...)
 	startIndex := len(results)
 	syncRuntimeCountsFromResults(&detail.Runtime, results)
+	syncRuntimeRiskEvidence(&detail.Runtime, detail.Plan.Metadata, results)
 
 	for i := startIndex; i < len(detail.Plan.Items); i++ {
 		item := detail.Plan.Items[i]
@@ -193,6 +197,7 @@ func (s *Service) Run(ctx context.Context, id string) (Detail, bool, error) {
 				result.Payload["targetFingerprint"] = targetState.TargetFingerprint
 			}
 			results = append(results, result)
+			syncRuntimeRiskEvidence(&detail.Runtime, detail.Plan.Metadata, results)
 			detail.Results = results
 			updateRuntimeAfterItem(&detail, item.Path, result)
 			detail.Task.UpdatedAt = time.Now().UTC().Format(time.RFC3339)
@@ -258,6 +263,7 @@ func (s *Service) Run(ctx context.Context, id string) (Detail, bool, error) {
 			result.Status = "failed"
 		}
 		results = append(results, result)
+		syncRuntimeRiskEvidence(&detail.Runtime, detail.Plan.Metadata, results)
 		detail.Results = results
 		updateRuntimeAfterItem(&detail, item.Path, result)
 		detail.Task.UpdatedAt = time.Now().UTC().Format(time.RFC3339)
@@ -370,6 +376,7 @@ func (s *Service) materializeTaskEntriesIfNeeded(ctx context.Context, detail *De
 		TargetProvider: detail.Task.TargetProvider,
 		ThresholdMB:    detail.Plan.ThresholdMB,
 		RiskMode:       planner.RiskMode(metadataStringFromRisk(riskProfile, "mode")),
+		RiskOverride:   riskOverrideFromMetadata(detail.Plan.Metadata),
 		ExecutionMode:  executionMode,
 		ConflictPolicy: provider.ConflictPolicy(detail.ConflictPolicy),
 		SelectedRoots:  selectedRoots,
@@ -820,6 +827,47 @@ func metadataStringFromRisk(values map[string]interface{}, key string) string {
 	return value
 }
 
+func riskOverrideFromMetadata(values map[string]interface{}) *planner.RiskProfileOverride {
+	if values == nil {
+		return nil
+	}
+	raw, ok := values["riskOverride"]
+	if !ok || raw == nil {
+		return nil
+	}
+	switch typed := raw.(type) {
+	case *planner.RiskProfileOverride:
+		return typed
+	case planner.RiskProfileOverride:
+		override := typed
+		return &override
+	case map[string]interface{}:
+		override := planner.RiskProfileOverride{}
+		if value, ok := intPointerFromRaw(typed["requestIntervalMs"]); ok {
+			override.RequestIntervalMS = value
+		}
+		if value, ok := intPointerFromRaw(typed["pageSize"]); ok {
+			override.PageSize = value
+		}
+		if value, ok := intPointerFromRaw(typed["directoryIntervalMs"]); ok {
+			override.DirectoryIntervalMS = value
+		}
+		if value, ok := intPointerFromRaw(typed["cooldownSeconds"]); ok {
+			override.CooldownSeconds = value
+		}
+		if value, ok := intPointerFromRaw(typed["retryLimit"]); ok {
+			override.RetryLimit = value
+		}
+		override.RiskKeywords = metadataStringSlice(map[string]interface{}{"keywords": typed["riskKeywords"]}, "keywords")
+		if override.RequestIntervalMS == nil && override.PageSize == nil && override.DirectoryIntervalMS == nil && override.CooldownSeconds == nil && override.RetryLimit == nil && len(override.RiskKeywords) == 0 {
+			return nil
+		}
+		return &override
+	default:
+		return nil
+	}
+}
+
 func executionModeFromMetadata(values map[string]interface{}) (planner.ExecutionMode, error) {
 	if values == nil {
 		return planner.ExecutionModeLeafFirstLazy, nil
@@ -888,6 +936,22 @@ func int64Number(raw interface{}) int64 {
 	}
 }
 
+func intPointerFromRaw(raw interface{}) (*int, bool) {
+	switch value := raw.(type) {
+	case int:
+		v := value
+		return &v, true
+	case int64:
+		v := int(value)
+		return &v, true
+	case float64:
+		v := int(value)
+		return &v, true
+	default:
+		return nil, false
+	}
+}
+
 func initializeRuntimeState(plan planner.Plan) RuntimeState {
 	directoryStates := collectDirectoryStates(plan)
 	return RuntimeState{
@@ -896,6 +960,7 @@ func initializeRuntimeState(plan planner.Plan) RuntimeState {
 		DoneCount:       0,
 		SkippedCount:    0,
 		FailedCount:     0,
+		RiskHitCount:    0,
 		NextSequence:    1,
 		DirectoryStates: directoryStates,
 	}
@@ -905,7 +970,14 @@ func ensureRuntimeState(detail *Detail) {
 	if detail == nil {
 		return
 	}
-	if len(detail.Runtime.DirectoryStates) == 0 {
+	if detail.Runtime.ExecutionState == "" &&
+		detail.Runtime.NextSequence == 0 &&
+		detail.Runtime.ProcessedCount == 0 &&
+		detail.Runtime.DoneCount == 0 &&
+		detail.Runtime.SkippedCount == 0 &&
+		detail.Runtime.FailedCount == 0 &&
+		detail.Runtime.RiskHitCount == 0 &&
+		len(detail.Runtime.DirectoryStates) == 0 {
 		detail.Runtime = initializeRuntimeState(detail.Plan)
 	}
 	if detail.Runtime.ExecutionState == "" {
@@ -969,6 +1041,9 @@ func syncRuntimeCountsFromResults(runtime *RuntimeState, results []Result) {
 	runtime.DoneCount = 0
 	runtime.SkippedCount = 0
 	runtime.FailedCount = 0
+	runtime.RiskHitCount = 0
+	runtime.LastRiskStatus = ""
+	runtime.RiskHits = nil
 	lastCompleted := ""
 	for _, result := range results {
 		switch result.Status {
@@ -981,6 +1056,11 @@ func syncRuntimeCountsFromResults(runtime *RuntimeState, results []Result) {
 		}
 		if path, _ := result.Payload["path"].(string); path != "" {
 			lastCompleted = path
+		}
+		if riskHit, ok := riskHitFromPayload(result.Payload); ok {
+			runtime.RiskHitCount++
+			runtime.LastRiskStatus = riskHit.Status
+			runtime.RiskHits = append(runtime.RiskHits, riskHit)
 		}
 	}
 	runtime.LastCompletedPath = lastCompleted
@@ -1207,6 +1287,140 @@ func firstNonEmpty(values ...string) string {
 	return ""
 }
 
+func applyRiskEvidence(runtime *RuntimeState, metadata map[string]interface{}, path string, result Result) {
+	if runtime == nil || result.Payload == nil {
+		return
+	}
+	riskProfile := riskProfileFromRaw(result.Payload["riskProfile"])
+	if len(riskProfile.RiskKeywords) == 0 {
+		riskProfile = riskProfileFromMetadata(metadata)
+	}
+	riskHit, ok := detectRiskHit(riskProfile, result, path)
+	if !ok {
+		return
+	}
+	result.Payload["riskHit"] = riskHit
+	runtime.RiskHitCount++
+	runtime.LastRiskStatus = riskHit.Status
+	runtime.RiskHits = append(runtime.RiskHits, riskHit)
+}
+
+func syncRuntimeRiskEvidence(runtime *RuntimeState, metadata map[string]interface{}, results []Result) {
+	if runtime == nil {
+		return
+	}
+	runtime.RiskHitCount = 0
+	runtime.LastRiskStatus = ""
+	runtime.RiskHits = nil
+	riskProfile := riskProfileFromMetadata(metadata)
+	for idx := range results {
+		if results[idx].Payload == nil {
+			results[idx].Payload = map[string]interface{}{}
+		}
+		riskHit, ok := riskHitFromPayload(results[idx].Payload)
+		if !ok {
+			riskHit, ok = detectRiskHit(riskProfile, results[idx], stringValue(results[idx].Payload["path"]))
+			if ok {
+				results[idx].Payload["riskHit"] = riskHit
+			}
+		}
+		if !ok {
+			continue
+		}
+		runtime.RiskHitCount++
+		runtime.LastRiskStatus = riskHit.Status
+		runtime.RiskHits = append(runtime.RiskHits, riskHit)
+	}
+}
+
+func riskProfileFromMetadata(metadata map[string]interface{}) planner.RiskProfile {
+	if metadata == nil {
+		return planner.RiskProfile{}
+	}
+	return riskProfileFromRaw(metadata["riskProfile"])
+}
+
+func riskProfileFromRaw(raw interface{}) planner.RiskProfile {
+	switch typed := raw.(type) {
+	case planner.RiskProfile:
+		return typed
+	case map[string]interface{}:
+		return planner.RiskProfile{
+			Mode:                planner.RiskMode(stringValue(typed["mode"])),
+			RequestIntervalMS:   intNumber(typed["requestIntervalMs"]),
+			PageSize:            intNumber(typed["pageSize"]),
+			DirectoryIntervalMS: intNumber(typed["directoryIntervalMs"]),
+			CooldownSeconds:     intNumber(typed["cooldownSeconds"]),
+			RetryLimit:          intNumber(typed["retryLimit"]),
+			RiskKeywords:        metadataStringSlice(map[string]interface{}{"keywords": typed["riskKeywords"]}, "keywords"),
+		}
+	default:
+		return planner.RiskProfile{}
+	}
+}
+
+func detectRiskHit(riskProfile planner.RiskProfile, result Result, path string) (RiskHit, bool) {
+	providerStatus := strings.ToLower(strings.TrimSpace(stringValue(result.Payload["providerStatus"])))
+	message := strings.ToLower(strings.TrimSpace(result.Message))
+	if providerStatus == "" && message == "" {
+		return RiskHit{}, false
+	}
+	for _, keyword := range riskProfile.RiskKeywords {
+		normalizedKeyword := strings.ToLower(strings.TrimSpace(keyword))
+		if normalizedKeyword == "" {
+			continue
+		}
+		if strings.Contains(providerStatus, normalizedKeyword) || strings.Contains(normalizedKeyword, providerStatus) || strings.Contains(message, normalizedKeyword) {
+			return RiskHit{
+				Status:      providerStatus,
+				Keyword:     keyword,
+				ItemPath:    path,
+				Stage:       "upload",
+				Message:     result.Message,
+				TriggeredAt: result.CreatedAt,
+			}, true
+		}
+	}
+	for _, keyword := range []string{"rate_limit", "rate_limited", "too_many_requests", "captcha", "risk_control", "frequency_limit", "flow_limit", "forbidden"} {
+		if strings.Contains(providerStatus, keyword) || strings.Contains(message, keyword) {
+			return RiskHit{
+				Status:      providerStatus,
+				Keyword:     keyword,
+				ItemPath:    path,
+				Stage:       "upload",
+				Message:     result.Message,
+				TriggeredAt: result.CreatedAt,
+			}, true
+		}
+	}
+	return RiskHit{}, false
+}
+
+func riskHitFromPayload(payload map[string]interface{}) (RiskHit, bool) {
+	if payload == nil {
+		return RiskHit{}, false
+	}
+	raw, ok := payload["riskHit"]
+	if !ok || raw == nil {
+		return RiskHit{}, false
+	}
+	switch typed := raw.(type) {
+	case RiskHit:
+		return typed, true
+	case map[string]interface{}:
+		return RiskHit{
+			Status:      stringValue(typed["status"]),
+			Keyword:     stringValue(typed["keyword"]),
+			ItemPath:    stringValue(typed["itemPath"]),
+			Stage:       stringValue(typed["stage"]),
+			Message:     stringValue(typed["message"]),
+			TriggeredAt: stringValue(typed["triggeredAt"]),
+		}, true
+	default:
+		return RiskHit{}, false
+	}
+}
+
 func buildProviderProbe(detail Detail, profile provider.AuthProfile, results []Result, createdAt string) ProviderProbe {
 	doneCount := 0
 	skippedCount := 0
@@ -1238,7 +1452,11 @@ func buildProviderProbe(detail Detail, profile provider.AuthProfile, results []R
 			"recommendedExecutionMode":       detail.Plan.Metadata["recommendedExecutionMode"],
 			"recommendedExecutionModeReason": detail.Plan.Metadata["recommendedExecutionModeReason"],
 			"scanMode":                       detail.Plan.Metadata["scanMode"],
+			"riskProfile":                    detail.Plan.Metadata["riskProfile"],
+			"riskOverride":                   detail.Plan.Metadata["riskOverride"],
 			"runtime":                        detail.Runtime,
+			"riskHitCount":                   detail.Runtime.RiskHitCount,
+			"lastRiskStatus":                 detail.Runtime.LastRiskStatus,
 			"currentRoot":                    detail.Runtime.CurrentRoot,
 			"currentDirectory":               detail.Runtime.CurrentDirectory,
 			"lastCompletedPath":              detail.Runtime.LastCompletedPath,

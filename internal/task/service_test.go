@@ -302,6 +302,11 @@ func TestServiceRuntimeHandlesPendingManualAuthExpiredRateLimitAndMissingLocalFi
 		TargetProvider:  "runtime_errors",
 		TargetProfileID: profile.ID,
 		ThresholdMB:     1,
+		RiskOverride: &planner.RiskProfileOverride{
+			RequestIntervalMS: intPtrTask(1400),
+			RetryLimit:        intPtrTask(1),
+			RiskKeywords:      []string{"rate_limited"},
+		},
 		Entries: []planner.SourceEntry{
 			{Path: "/pending.bin", Size: 10 * 1024 * 1024},
 			{Path: "/auth.bin", Size: 1024, MD5: "abc", LocalPath: filepath.Join(t.TempDir(), "auth.bin")},
@@ -311,6 +316,13 @@ func TestServiceRuntimeHandlesPendingManualAuthExpiredRateLimitAndMissingLocalFi
 	})
 	if err != nil {
 		t.Fatalf("Create() error = %v", err)
+	}
+	createdRiskProfile, ok := detail.Plan.Metadata["riskProfile"].(planner.RiskProfile)
+	if !ok {
+		t.Fatalf("expected planner.RiskProfile in create metadata, got %#v", detail.Plan.Metadata["riskProfile"])
+	}
+	if len(createdRiskProfile.RiskKeywords) != 1 || createdRiskProfile.RiskKeywords[0] != "rate_limited" {
+		t.Fatalf("expected override risk keywords at create time, got %#v", createdRiskProfile.RiskKeywords)
 	}
 
 	running, ok, err := svc.Run(ctx, detail.Task.ID)
@@ -349,6 +361,34 @@ func TestServiceRuntimeHandlesPendingManualAuthExpiredRateLimitAndMissingLocalFi
 	assertResultStatus("/auth.bin", "failed", "auth_expired")
 	assertResultStatus("/rate.bin", "failed", "rate_limited")
 	assertResultStatus("/missing.bin", "failed", "local_file_missing")
+	if running.Runtime.RiskHitCount != 1 {
+		t.Fatalf("expected runtime risk hit count 1, got %d", running.Runtime.RiskHitCount)
+	}
+	if running.Runtime.LastRiskStatus != "rate_limited" {
+		t.Fatalf("expected last risk status rate_limited, got %s", running.Runtime.LastRiskStatus)
+	}
+	rateIndex := -1
+	for idx, item := range running.Plan.Items {
+		if item.Path == "/rate.bin" {
+			rateIndex = idx
+			break
+		}
+	}
+	if rateIndex < 0 {
+		t.Fatal("expected /rate.bin in plan items")
+	}
+	switch riskHit := running.Results[rateIndex].Payload["riskHit"].(type) {
+	case RiskHit:
+		if riskHit.Keyword != "rate_limited" {
+			t.Fatalf("expected riskHit keyword rate_limited, got %v", riskHit.Keyword)
+		}
+	case map[string]interface{}:
+		if keyword, _ := riskHit["keyword"].(string); keyword != "rate_limited" {
+			t.Fatalf("expected riskHit keyword rate_limited, got %v", riskHit["keyword"])
+		}
+	default:
+		t.Fatalf("expected riskHit payload on /rate.bin, got %#v", running.Results[rateIndex].Payload["riskHit"])
+	}
 }
 
 func TestServiceRunSkipsAlreadySyncedTargetFile(t *testing.T) {
@@ -1149,4 +1189,8 @@ func assertExecutionModeValue(t *testing.T, raw interface{}, want planner.Execut
 	default:
 		t.Fatalf("expected execution mode %s, got %#v", want, raw)
 	}
+}
+
+func intPtrTask(value int) *int {
+	return &value
 }

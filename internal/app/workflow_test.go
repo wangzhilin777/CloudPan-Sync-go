@@ -54,6 +54,12 @@ func TestAppWorkflowMainline(t *testing.T) {
 		"targetProvider": "guangya",
 		"thresholdMB":    1,
 		"riskMode":       "fast",
+		"riskOverride": map[string]interface{}{
+			"requestIntervalMs":   1111,
+			"directoryIntervalMs": 2222,
+			"retryLimit":          2,
+			"riskKeywords":        []string{"rate_limited"},
+		},
 		"executionMode":  "pre_scan_flat",
 		"conflictPolicy": "overwrite_existing",
 		"selectedRoots":  []string{"/demo"},
@@ -78,6 +84,10 @@ func TestAppWorkflowMainline(t *testing.T) {
 	if got := metadata["recommendedExecutionModeReason"].(string); got == "" {
 		t.Fatal("expected recommendedExecutionModeReason in preview metadata")
 	}
+	riskProfile := metadata["riskProfile"].(map[string]interface{})
+	if got := int(riskProfile["requestIntervalMs"].(float64)); got != 1111 {
+		t.Fatalf("expected preview risk requestIntervalMs 1111, got %d", got)
+	}
 
 	localFile := filepath.Join(t.TempDir(), "existing.bin")
 	if err := os.WriteFile(localFile, []byte("workflow"), 0o644); err != nil {
@@ -90,9 +100,15 @@ func TestAppWorkflowMainline(t *testing.T) {
 		"targetProfileId": profileID,
 		"thresholdMB":     1,
 		"riskMode":        "fast",
-		"executionMode":   "pre_scan_flat",
-		"conflictPolicy":  "overwrite_existing",
-		"selectedRoots":   []string{"/demo"},
+		"riskOverride": map[string]interface{}{
+			"requestIntervalMs":   1111,
+			"directoryIntervalMs": 2222,
+			"retryLimit":          2,
+			"riskKeywords":        []string{"rate_limited"},
+		},
+		"executionMode":  "pre_scan_flat",
+		"conflictPolicy": "overwrite_existing",
+		"selectedRoots":  []string{"/demo"},
 		"entries": []map[string]interface{}{
 			{"path": "/demo/a.bin", "size": 2048, "md5": "md5-a", "localPath": localFile},
 			{"path": "/demo/missing.bin", "size": 512},
@@ -107,6 +123,10 @@ func TestAppWorkflowMainline(t *testing.T) {
 	createdMetadata := taskData["plan"].(map[string]interface{})["metadata"].(map[string]interface{})
 	if got := createdMetadata["executionMode"].(string); got != "pre_scan_flat" {
 		t.Fatalf("expected task executionMode pre_scan_flat, got %s", got)
+	}
+	createdRiskProfile := createdMetadata["riskProfile"].(map[string]interface{})
+	if got := int(createdRiskProfile["directoryIntervalMs"].(float64)); got != 2222 {
+		t.Fatalf("expected task risk directoryIntervalMs 2222, got %d", got)
 	}
 
 	pauseResp := invokeJSON(t, handler, http.MethodPost, "/api/tasks/"+taskID+"/pause", nil)
@@ -148,6 +168,9 @@ func TestAppWorkflowMainline(t *testing.T) {
 	if got := recentProbePayload["executionMode"].(string); got != "pre_scan_flat" {
 		t.Fatalf("expected probe executionMode pre_scan_flat, got %s", got)
 	}
+	if got := int(recentProbePayload["riskProfile"].(map[string]interface{})["requestIntervalMs"].(float64)); got != 1111 {
+		t.Fatalf("expected probe risk requestIntervalMs 1111, got %d", got)
+	}
 	if _, ok := recentProbePayload["runtime"].(map[string]interface{}); !ok {
 		t.Fatalf("expected runtime payload in recent probe, got %#v", recentProbePayload["runtime"])
 	}
@@ -170,6 +193,9 @@ func TestAppWorkflowMainline(t *testing.T) {
 		summary := item["snapshotSummary"].(map[string]interface{})
 		if got := summary["executionMode"].(string); got != "pre_scan_flat" {
 			t.Fatalf("expected status summary executionMode pre_scan_flat, got %s", got)
+		}
+		if got := int(summary["riskProfile"].(map[string]interface{})["directoryIntervalMs"].(float64)); got != 2222 {
+			t.Fatalf("expected status summary risk directoryIntervalMs 2222, got %d", got)
 		}
 		if _, ok := summary["runtime"].(map[string]interface{}); !ok {
 			t.Fatalf("expected runtime summary in status snapshot, got %#v", summary["runtime"])

@@ -99,6 +99,50 @@ func TestBuildPreviewIncludesRiskProfileDefaults(t *testing.T) {
 	}
 }
 
+func TestBuildPreviewAppliesRiskOverride(t *testing.T) {
+	registry := provider.NewRegistry(provider.DefaultCatalog()...)
+	plan, err := BuildPreview(registry, PreviewRequest{
+		SourceProvider: "guangya",
+		TargetProvider: "189cloud",
+		RiskMode:       RiskModeBalanced,
+		RiskOverride: &RiskProfileOverride{
+			RequestIntervalMS:   intPtr(1200),
+			PageSize:            intPtr(88),
+			DirectoryIntervalMS: intPtr(2200),
+			CooldownSeconds:     intPtr(45),
+			RetryLimit:          intPtr(1),
+			RiskKeywords:        []string{"rate_limited", "captcha"},
+		},
+		Entries: []SourceEntry{{Path: "/a.bin", Size: 10}},
+	})
+	if err != nil {
+		t.Fatalf("BuildPreview() error = %v", err)
+	}
+
+	riskProfile, ok := plan.Metadata["riskProfile"].(RiskProfile)
+	if !ok {
+		t.Fatalf("expected riskProfile metadata, got %#v", plan.Metadata["riskProfile"])
+	}
+	if riskProfile.RequestIntervalMS != 1200 {
+		t.Fatalf("expected requestIntervalMs 1200, got %d", riskProfile.RequestIntervalMS)
+	}
+	if riskProfile.PageSize != 88 {
+		t.Fatalf("expected pageSize 88, got %d", riskProfile.PageSize)
+	}
+	if riskProfile.DirectoryIntervalMS != 2200 {
+		t.Fatalf("expected directoryIntervalMs 2200, got %d", riskProfile.DirectoryIntervalMS)
+	}
+	if riskProfile.CooldownSeconds != 45 {
+		t.Fatalf("expected cooldownSeconds 45, got %d", riskProfile.CooldownSeconds)
+	}
+	if riskProfile.RetryLimit != 1 {
+		t.Fatalf("expected retryLimit 1, got %d", riskProfile.RetryLimit)
+	}
+	if len(riskProfile.RiskKeywords) != 2 || riskProfile.RiskKeywords[0] != "rate_limited" {
+		t.Fatalf("expected override risk keywords, got %#v", riskProfile.RiskKeywords)
+	}
+}
+
 func TestBuildPreviewSupportsPreScanFlatMode(t *testing.T) {
 	registry := provider.NewRegistry(provider.DefaultCatalog()...)
 	plan, err := BuildPreview(registry, PreviewRequest{
@@ -138,4 +182,8 @@ func TestBuildPreviewRejectsInvalidExecutionMode(t *testing.T) {
 	if !errors.Is(err, ErrInvalidExecutionMode) {
 		t.Fatalf("expected ErrInvalidExecutionMode, got %v", err)
 	}
+}
+
+func intPtr(value int) *int {
+	return &value
 }

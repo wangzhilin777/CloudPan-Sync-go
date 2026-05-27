@@ -28,7 +28,7 @@
 | Auth Profile | CRUD、校验、脱敏持久化、按 provider 映射 | 已完成 | 真实 provider 字段口径补充 | 更多真实鉴权模式 |
 | Planner | 预览计划、策略判定、阈值判断、冲突降级、执行模式推荐、风控档位元数据 | 已完成 | 结合真实 provider 与增量规则继续校准 | 更细推荐规则与真实联调校准 |
 | 同步执行模型 | 已支持 `leaf_first_lazy`、`pre_scan_flat`、按需扫描骨架、fallback、目录状态持久化、断点继续当前子树、目标端 metadata 预检查、`create / overwrite / skip` 判定闭环 | 部分完成 | 任务级执行模式和 runtime checkpoint 已接入 planner / task / evidence | 补传树执行、更完整目录树展示 |
-| 风控与频率策略 | 已支持 `safe / balanced / fast / custom` 基线和默认风险模板 | 部分完成 | 已接入 planner / task metadata | 任务级节流参数、风控命中证据、真实 provider 校准 |
+| 风控与频率策略 | 已支持 `safe / balanced / fast / custom` 基线、默认风险模板、任务级 `riskOverride`、风控命中证据 | 部分完成 | 已接入 planner / task metadata / runtime evidence / UI | 真实 provider 校准、更易用的表单化配置 |
 | Task Runtime | 创建、查询、运行、暂停、恢复、重试、结果落库 | 已完成 | 后续将挂接执行模型和风控策略 | 真实上传链路接入后补更细运行态 |
 | Runtime Evidence | 最近结果、最近探针、状态快照、状态矩阵 API | 已完成 | 无 | 真实联调样本沉淀 |
 | 控制台前端 | 登录、授权、任务向导、任务列表详情、状态矩阵/证据、执行模式可视化、目录状态展示 | 已完成 | 异常场景提示可继续增强 | 更产品化视觉与更细交互 |
@@ -99,6 +99,22 @@
   - `status == exists`
   - `entry.exists == true`
 
+### 2.3 当前风控配置语义
+
+- 当前风控不再只有档位名。
+- 当前已支持：
+  - 选择 `riskMode`
+  - 按任务传 `riskOverride`
+  - 让 planner 产出最终生效的 `riskProfile`
+  - 在 runtime / result / probe / snapshot 中记录 `riskHit`
+- 当前可覆盖的参数包括：
+  - `requestIntervalMs`
+  - `pageSize`
+  - `directoryIntervalMs`
+  - `cooldownSeconds`
+  - `retryLimit`
+  - `riskKeywords`
+
 ### 3. 直接调试 provider 能力
 
 - 当前已经有下面这些辅助接口，适合开发和联调：
@@ -152,7 +168,7 @@
   - 已经支持配合目标端 metadata 做 `create / overwrite / skip` 运行时判定
   - 不表示补传树、完整目录树 UI、异步运行中暂停已经全部完成
 - “有 rate_limited 场景” 当前表示：
-  - 已有测试语义和占位运行结果
+  - 已有测试语义、任务级参数覆盖和风险命中证据
   - 不表示风控策略层已经完全做成最终形态
 - “可以运行任务” 当前表示：
   - 任务内核、状态机、结果写库、证据聚合都已经可用

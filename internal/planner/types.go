@@ -27,6 +27,15 @@ type RiskProfile struct {
 	RiskKeywords        []string `json:"riskKeywords,omitempty"`
 }
 
+type RiskProfileOverride struct {
+	RequestIntervalMS   *int     `json:"requestIntervalMs,omitempty"`
+	PageSize            *int     `json:"pageSize,omitempty"`
+	DirectoryIntervalMS *int     `json:"directoryIntervalMs,omitempty"`
+	CooldownSeconds     *int     `json:"cooldownSeconds,omitempty"`
+	RetryLimit          *int     `json:"retryLimit,omitempty"`
+	RiskKeywords        []string `json:"riskKeywords,omitempty"`
+}
+
 type ExecutionMode string
 
 const (
