@@ -89,6 +89,8 @@ go build ./...
   - `internal/app/workflow_test.go`
 - 首页与静态资源验证：
   - `internal/app/web_test.go`
+- 控制台 UI smoke：
+  - `internal/app/ui_smoke_test.go`
 - planner 策略测试：
   - `internal/planner/service_test.go`
 - auth 档案测试：
@@ -108,6 +110,19 @@ go build ./...
   - planner 统一决策入口
   - task runtime + evidence 聚合
   - 控制台只消费 Go API 的边界
+
+## UI smoke 说明
+
+- 浏览器级主流程 smoke 已纳入 `go test ./...`。
+- 测试依赖本机存在 Chrome 或 Edge，可通过环境变量 `CHROMEDP_EXEC_PATH` 指定浏览器路径。
+- 当前覆盖的主流程：
+  - 登录
+  - 授权档案创建
+  - 授权档案校验
+  - 任务预览
+  - 任务创建
+  - 启动 / 暂停 / 恢复 / 重试
+  - 状态矩阵与运行证据展示
 
 ## 最适合继续推进的任务
 

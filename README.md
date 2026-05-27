@@ -58,3 +58,9 @@ go run ./cmd/cloudpan-sync
 go test ./...
 go build ./...
 ```
+
+## 回归说明
+
+- API 主工作流、runtime 场景、provider 契约测试已经在仓库内。
+- 控制台主流程也已加入浏览器级 UI smoke 回归。
+- UI smoke 依赖本机 Chrome 或 Edge；如需手工指定浏览器，可设置环境变量 `CHROMEDP_EXEC_PATH`。
