@@ -287,6 +287,8 @@ Invoke-RestMethod `
   - `metadata.retryPendingOnly` 会标记为 `true`
 - 当前如果失败项是 `rate_limited`，还会检查冷却时间：
   - 未到 `eligibleAt` 时，`retry` 会返回 `retry_cooldown_active`
+- 当前如果失败项已经被 `retryLimit` 耗尽，或仍属于硬阻塞项：
+  - `retry` 会返回 `retry_blocked`
 - 当前如果任务执行后只剩阻塞型重试项，任务状态会直接落为 `blocked`：
   - `runtime.blockedReason` 用于说明阻塞原因
   - `runtime.nextRetryAt` 用于说明最早自动恢复时间
@@ -418,5 +420,6 @@ Invoke-RestMethod `
 - `pending_manual_requires_confirmation` 目前仍代表需要后续真实 fallback 运行时补全。
 - 当任务详情里出现 `metadata.retryPendingOnly=true` 时，表示这次重试已经缩成待补传子集。
 - 当 runtime / probe / snapshot 中出现 `retryQueue` 时，表示当前任务已经具备失败分类后的重试队列证据。
+- 当 `retryQueue` item 出现 `attemptCount / retryLimit / remainingCount / exhausted` 时，表示当前任务已经具备累计重试次数证据。
 - 当任务状态为 `blocked` 且 `runtime.nextRetryAt` 已到时，单机 tick 调度器会尝试自动恢复仅受冷却影响的任务。
 - 当前很多 provider 仍是协议占位实现，适合联调内核、字段口径和控制台闭环，不代表真实外部平台已经完全打通。

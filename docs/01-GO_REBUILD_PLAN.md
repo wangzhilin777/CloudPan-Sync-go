@@ -178,6 +178,8 @@
   - 冷却时间
   - 重试次数
   - 风控关键词
+- 当前实现口径补充：
+  - `retryLimit` 已接入 retry queue 的累计次数、剩余次数与 exhausted 阻断语义
 - 同时支持：
   - provider 默认模板
   - 任务级覆盖

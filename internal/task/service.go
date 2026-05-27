@@ -536,9 +536,12 @@ func (s *Service) buildRetryDetail(detail Detail) (Detail, error) {
 	detail.Task.State = StateReady
 	detail.Task.CompletionKind = ""
 	detail.Task.UpdatedAt = time.Now().UTC().Format(time.RFC3339)
-	retryEntries, retryPaths, retryMode, retryBlockedUntil := selectRetryEntries(detail)
+	retryEntries, retryPaths, retryMode, retryBlockedUntil, retryBlockedReason := selectRetryEntries(detail)
 	if retryBlockedUntil != "" {
 		return Detail{}, fmt.Errorf("retry_cooldown_active:%s", retryBlockedUntil)
+	}
+	if retryBlockedReason != "" {
+		return Detail{}, fmt.Errorf("retry_blocked:%s", retryBlockedReason)
 	}
 	if len(retryEntries) > 0 {
 		executionMode, err := executionModeFromMetadata(detail.Plan.Metadata)
@@ -547,6 +550,7 @@ func (s *Service) buildRetryDetail(detail Detail) (Detail, error) {
 		}
 		selectedRoots := retrySelectedRoots(metadataStringSlice(detail.Plan.Metadata, "selectedRoots"), retryPaths)
 		riskProfile := riskProfileFromMetadata(detail.Plan.Metadata)
+		retryAttempts := incrementRetryAttempts(detail.Plan.Metadata, retryPaths)
 		plan, err := planner.BuildPreview(s.registry, planner.PreviewRequest{
 			SourceProvider: detail.Task.SourceProvider,
 			TargetProvider: detail.Task.TargetProvider,
@@ -572,6 +576,7 @@ func (s *Service) buildRetryDetail(detail Detail) (Detail, error) {
 		plan.Metadata["retryPendingPaths"] = retryPaths
 		plan.Metadata["retrySourceResultCount"] = len(detail.Results)
 		plan.Metadata["retrySourceTaskState"] = string(previousState)
+		plan.Metadata["retryAttempts"] = retryAttempts
 		delete(plan.Metadata, "retrySummary")
 		detail.Plan = plan
 		detail.SourceEntries = retryEntries
@@ -581,6 +586,7 @@ func (s *Service) buildRetryDetail(detail Detail) (Detail, error) {
 		delete(detail.Plan.Metadata, "retryPendingPaths")
 		delete(detail.Plan.Metadata, "retrySourceResultCount")
 		delete(detail.Plan.Metadata, "retrySourceTaskState")
+		delete(detail.Plan.Metadata, "retryAttempts")
 		delete(detail.Plan.Metadata, "retrySummary")
 	}
 	detail.Runtime = initializeRuntimeState(detail.Plan)
@@ -1431,6 +1437,13 @@ func firstNonEmpty(values ...string) string {
 	return ""
 }
 
+func maxInt(left, right int) int {
+	if left > right {
+		return left
+	}
+	return right
+}
+
 func applyRiskEvidence(runtime *RuntimeState, metadata map[string]interface{}, path string, result Result) {
 	if runtime == nil || result.Payload == nil {
 		return
@@ -1477,10 +1490,44 @@ func pendingRetryEntries(detail Detail) ([]planner.SourceEntry, []string) {
 	return filtered, pendingPaths
 }
 
-func selectRetryEntries(detail Detail) ([]planner.SourceEntry, []string, string, string) {
+func retryAttemptsFromMetadata(values map[string]interface{}) map[string]int {
+	attempts := make(map[string]int)
+	if values == nil {
+		return attempts
+	}
+	raw, ok := values["retryAttempts"]
+	if !ok || raw == nil {
+		return attempts
+	}
+	switch typed := raw.(type) {
+	case map[string]int:
+		for path, count := range typed {
+			attempts[normalizeScanPath(path)] = count
+		}
+	case map[string]interface{}:
+		for path, count := range typed {
+			attempts[normalizeScanPath(path)] = intNumber(count)
+		}
+	}
+	return attempts
+}
+
+func incrementRetryAttempts(values map[string]interface{}, retryPaths []string) map[string]int {
+	attempts := retryAttemptsFromMetadata(values)
+	for _, path := range retryPaths {
+		normalized := normalizeScanPath(path)
+		if normalized == "" || normalized == "/" {
+			continue
+		}
+		attempts[normalized] = attempts[normalized] + 1
+	}
+	return attempts
+}
+
+func selectRetryEntries(detail Detail) ([]planner.SourceEntry, []string, string, string, string) {
 	pendingEntries, pendingPaths := pendingRetryEntries(detail)
 	if len(pendingEntries) > 0 {
-		return pendingEntries, pendingPaths, "pending_only", ""
+		return pendingEntries, pendingPaths, "pending_only", "", ""
 	}
 
 	eligiblePaths := make([]string, 0)
@@ -1514,7 +1561,14 @@ func selectRetryEntries(detail Detail) ([]planner.SourceEntry, []string, string,
 		eligiblePaths = append(eligiblePaths, item.Path)
 	}
 	if len(eligiblePaths) == 0 {
-		return nil, nil, "", blockedUntil
+		if blockedUntil != "" {
+			return nil, nil, "", blockedUntil, ""
+		}
+		summary := summarizeRetryQueue(detail.Runtime.RetryQueue)
+		if summary.ShouldBlock {
+			return nil, nil, "", "", summary.BlockedReason
+		}
+		return nil, nil, "", "", ""
 	}
 	filtered := make([]planner.SourceEntry, 0, len(eligiblePaths))
 	for _, path := range eligiblePaths {
@@ -1528,7 +1582,7 @@ func selectRetryEntries(detail Detail) ([]planner.SourceEntry, []string, string,
 			Size: sizeByPath[normalized],
 		})
 	}
-	return filtered, eligiblePaths, "retry_queue", ""
+	return filtered, eligiblePaths, "retry_queue", "", ""
 }
 
 func pendingRetryPaths(results []Result) []string {
@@ -1778,8 +1832,13 @@ func summarizeRetryQueue(queue []RetryQueueItem) retryQueueSummary {
 	pendingManualCount := 0
 	authExpiredCount := 0
 	localMissingCount := 0
+	exhaustedCount := 0
 	now := time.Now().UTC()
 	for _, item := range queue {
+		if item.Exhausted {
+			exhaustedCount++
+			continue
+		}
 		switch item.RetryClass {
 		case "pending_manual":
 			pendingManualCount++
@@ -1809,6 +1868,11 @@ func summarizeRetryQueue(queue []RetryQueueItem) retryQueueSummary {
 	}
 	if immediateRetry > 0 {
 		summary.CanAutoRetry = pendingManualCount == 0 && authExpiredCount == 0 && localMissingCount == 0
+		return summary
+	}
+	if exhaustedCount > 0 {
+		summary.ShouldBlock = true
+		summary.BlockedReason = "retry_queue_retry_limit_exhausted"
 		return summary
 	}
 	if authExpiredCount > 0 {
@@ -1862,7 +1926,10 @@ func buildRetryQueue(metadata map[string]interface{}, results []Result) []RetryQ
 	}
 	queue := make([]RetryQueueItem, 0)
 	selectedRoots := metadataStringSlice(metadata, "selectedRoots")
-	cooldownSeconds := riskProfileFromMetadata(metadata).CooldownSeconds
+	riskProfile := riskProfileFromMetadata(metadata)
+	cooldownSeconds := riskProfile.CooldownSeconds
+	retryLimit := riskProfile.RetryLimit
+	retryAttempts := retryAttemptsFromMetadata(metadata)
 	for _, result := range results {
 		if result.Status != "failed" {
 			continue
@@ -1878,6 +1945,11 @@ func buildRetryQueue(metadata map[string]interface{}, results []Result) []RetryQ
 			ProviderStatus: status,
 			Strategy:       stringValue(result.Payload["strategy"]),
 			Reason:         firstNonEmpty(stringValue(result.Payload["syncDecisionReason"]), result.Message),
+			AttemptCount:   retryAttempts[path],
+			RetryLimit:     retryLimit,
+		}
+		if retryLimit > 0 {
+			item.RemainingCount = maxInt(0, retryLimit-item.AttemptCount)
 		}
 		switch status {
 		case "pending_manual_requires_confirmation":
@@ -1905,6 +1977,13 @@ func buildRetryQueue(metadata map[string]interface{}, results []Result) []RetryQ
 			item.RetryClass = "retry_failed"
 			item.RetryAction = "retry_now"
 			item.Retryable = true
+		}
+		if retryLimit > 0 && item.AttemptCount >= retryLimit {
+			item.Retryable = false
+			item.Blocked = true
+			item.Exhausted = true
+			item.RetryAction = "manual_intervention_required"
+			item.Reason = firstNonEmpty(item.Reason, "Retry limit exhausted.")
 		}
 		queue = append(queue, item)
 	}

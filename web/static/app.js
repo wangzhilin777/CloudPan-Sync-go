@@ -177,6 +177,14 @@ function renderRuntimeCheckpoint(runtime) {
       <strong>重试队列</strong>
       <span>retryable ${stringifyValue(runtime.retryableCount, "0")} / blocked ${stringifyValue(runtime.blockedRetryCount, "0")}</span>
     </div>
+    <div class="insight-card checkpoint-card">
+      <strong>阻塞原因</strong>
+      <span>${stringifyValue(runtime.blockedReason, "-")}</span>
+    </div>
+    <div class="insight-card checkpoint-card">
+      <strong>下次自动补传</strong>
+      <span>${stringifyValue(runtime.nextRetryAt, "-")}</span>
+    </div>
   `;
 }
 
@@ -567,6 +575,10 @@ function renderSelectedTask() {
     <div class="insight-card">
       <strong>重试模式</strong>
       <span>${stringifyValue(metadata.retryMode, "default")}</span>
+    </div>
+    <div class="insight-card">
+      <strong>重试摘要</strong>
+      <span>${stringifyValue(metadata.retrySummary?.blockedReason || (metadata.retrySummary?.shouldBlock ? "blocked" : "ready"), "-")}</span>
     </div>
   `;
   $("#task-runtime").innerHTML = renderRuntimeCheckpoint(runtime);

@@ -257,6 +257,44 @@ func TestAppWorkflowMainline(t *testing.T) {
 	}
 }
 
+func TestAppRetryBlockedReturnsStructuredError(t *testing.T) {
+	ctx := context.Background()
+	application := mustNewTestApp(t, ctx)
+	handler := application.routes()
+
+	profileResp := invokeJSON(t, handler, http.MethodPost, "/api/auth/profiles", map[string]interface{}{
+		"providerKey": "guangya",
+		"authMode":    "manual_token",
+		"displayName": "Retry Blocked Guangya",
+		"token":       "token-retry-blocked",
+	})
+	profileID := profileResp.Data.(map[string]interface{})["id"].(string)
+
+	taskResp := invokeJSON(t, handler, http.MethodPost, "/api/tasks", map[string]interface{}{
+		"sourceProvider":  "baidu_netdisk",
+		"targetProvider":  "guangya",
+		"targetProfileId": profileID,
+		"thresholdMB":     1,
+		"entries": []map[string]interface{}{
+			{"path": "/only-missing.bin", "size": 512},
+		},
+	})
+	taskID := taskResp.Data.(map[string]interface{})["task"].(map[string]interface{})["id"].(string)
+
+	runResp := invokeJSON(t, handler, http.MethodPost, "/api/tasks/"+taskID+"/run", nil)
+	if got := runResp.Data.(map[string]interface{})["task"].(map[string]interface{})["state"].(string); got != "blocked" {
+		t.Fatalf("expected blocked, got %s", got)
+	}
+
+	errorResp, status := invokeJSONError(t, handler, http.MethodPost, "/api/tasks/"+taskID+"/retry", nil)
+	if status != http.StatusBadRequest {
+		t.Fatalf("expected bad request, got %d", status)
+	}
+	if errorResp.Error == nil || errorResp.Error.Code != "retry_blocked" {
+		t.Fatalf("expected retry_blocked error, got %#v", errorResp.Error)
+	}
+}
+
 func mustNewTestApp(t *testing.T, ctx context.Context) *App {
 	t.Helper()
 
@@ -307,4 +345,33 @@ func invokeJSON(t *testing.T, handler http.Handler, method string, path string, 
 		t.Fatalf("expected success for %s %s, got status=%d body=%s", method, path, rec.Code, rec.Body.String())
 	}
 	return envelope
+}
+
+func invokeJSONError(t *testing.T, handler http.Handler, method string, path string, body interface{}) (Envelope, int) {
+	t.Helper()
+
+	var reader io.Reader
+	if body != nil {
+		payload, err := json.Marshal(body)
+		if err != nil {
+			t.Fatalf("Marshal() error = %v", err)
+		}
+		reader = bytes.NewReader(payload)
+	}
+
+	req := httptest.NewRequest(method, path, reader)
+	if body != nil {
+		req.Header.Set("Content-Type", "application/json")
+	}
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	var envelope Envelope
+	if err := json.Unmarshal(rec.Body.Bytes(), &envelope); err != nil {
+		t.Fatalf("Unmarshal() error = %v body=%s", err, rec.Body.String())
+	}
+	if rec.Code < 400 {
+		t.Fatalf("expected error for %s %s, got status=%d body=%s", method, path, rec.Code, rec.Body.String())
+	}
+	return envelope, rec.Code
 }

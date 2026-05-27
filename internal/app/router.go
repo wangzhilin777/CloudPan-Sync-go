@@ -499,6 +499,8 @@ func handleServiceError(w http.ResponseWriter, err error) {
 		writeError(w, http.StatusBadRequest, "pending_manual_requires_confirmation", "Pending-manual items cannot run until fallback runtime is implemented.")
 	case err != nil && strings.HasPrefix(err.Error(), "retry_cooldown_active:"):
 		writeError(w, http.StatusBadRequest, "retry_cooldown_active", "Retry queue is still cooling down for a rate-limited item.")
+	case err != nil && strings.HasPrefix(err.Error(), "retry_blocked:"):
+		writeError(w, http.StatusBadRequest, "retry_blocked", "Retry queue is blocked and still requires manual intervention.")
 	default:
 		handleError(w, err)
 	}

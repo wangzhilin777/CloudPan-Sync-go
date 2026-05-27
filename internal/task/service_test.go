@@ -930,6 +930,213 @@ func TestServiceRecoverBlockedTasksRetriesEligibleCooldownQueue(t *testing.T) {
 	}
 }
 
+func TestServiceRetryBlockedForLocalFileMissingDoesNotResetTask(t *testing.T) {
+	ctx := context.Background()
+	store, err := sqlitestore.New(ctx, filepath.Join(t.TempDir(), "retry-blocked-local.db"))
+	if err != nil {
+		t.Fatalf("new store: %v", err)
+	}
+	defer func() { _ = store.Close() }()
+
+	adapter := &scriptedAdapter{
+		meta: provider.Provider{
+			Key:              "retry_blocked_local_target",
+			DisplayName:      "Retry Blocked Local Target",
+			ProtocolGroup:    "fake",
+			AuthModes:        []string{"manual_token"},
+			FastUploadInputs: []string{"md5", "size"},
+			FallbackModes:    []string{"download_upload"},
+			Status:           "planned",
+		},
+		capability: provider.CapabilitySet{
+			SupportsAuthValidation: true,
+			SupportsUpload:         true,
+		},
+		uploadFunc: func(req provider.UploadRequest) provider.UploadResult {
+			return provider.UploadResult{
+				OperationResult: provider.OperationResult{
+					Status:  "local_file_missing",
+					Message: "local file missing",
+					Mode:    "fake_missing",
+				},
+			}
+		},
+	}
+
+	registry := provider.NewRegistry(adapter)
+	authSvc := auth.NewService(store, registry)
+	svc := NewService(store, registry, authSvc)
+	profile, err := authSvc.CreateProfile(ctx, auth.CreateProfileInput{
+		ProviderKey: "retry_blocked_local_target",
+		AuthMode:    "manual_token",
+		DisplayName: "retry blocked local target",
+		Token:       "token-1",
+	})
+	if err != nil {
+		t.Fatalf("CreateProfile() error = %v", err)
+	}
+
+	created, err := svc.Create(ctx, CreateRequest{
+		SourceProvider:  "guangya",
+		TargetProvider:  "retry_blocked_local_target",
+		TargetProfileID: profile.ID,
+		Entries: []planner.SourceEntry{
+			{Path: "/missing.bin", Size: 1024, MD5: "abc", LocalPath: filepath.Join(t.TempDir(), "missing.bin")},
+		},
+	})
+	if err != nil {
+		t.Fatalf("Create() error = %v", err)
+	}
+
+	running, ok, err := svc.Run(ctx, created.Task.ID)
+	if err != nil || !ok {
+		t.Fatalf("Run() error=%v ok=%v", err, ok)
+	}
+	if running.Task.State != StateBlocked {
+		t.Fatalf("expected blocked, got %s", running.Task.State)
+	}
+	if _, ok, err := svc.Retry(ctx, created.Task.ID); err == nil || !ok {
+		t.Fatalf("expected retry_blocked error with task present, ok=%v err=%v", ok, err)
+	} else if !strings.HasPrefix(err.Error(), "retry_blocked:retry_queue_requires_local_file_restore") {
+		t.Fatalf("expected retry_queue_requires_local_file_restore, got %v", err)
+	}
+	after, ok, err := svc.Get(ctx, created.Task.ID)
+	if err != nil || !ok {
+		t.Fatalf("Get() after retry error=%v ok=%v", err, ok)
+	}
+	if after.Task.State != StateBlocked {
+		t.Fatalf("expected task to remain blocked, got %s", after.Task.State)
+	}
+	if len(after.Results) != 1 || after.Results[0].Status != "failed" {
+		t.Fatalf("expected failed result to remain, got %#v", after.Results)
+	}
+}
+
+func TestServiceRetryQueueMarksExhaustedAfterRetryLimit(t *testing.T) {
+	ctx := context.Background()
+	store, err := sqlitestore.New(ctx, filepath.Join(t.TempDir(), "retry-limit.db"))
+	if err != nil {
+		t.Fatalf("new store: %v", err)
+	}
+	defer func() { _ = store.Close() }()
+
+	uploadCalls := 0
+	adapter := &scriptedAdapter{
+		meta: provider.Provider{
+			Key:              "retry_limit_target",
+			DisplayName:      "Retry Limit Target",
+			ProtocolGroup:    "fake",
+			AuthModes:        []string{"manual_token"},
+			FastUploadInputs: []string{"md5", "size"},
+			FallbackModes:    []string{"download_upload"},
+			Status:           "planned",
+		},
+		capability: provider.CapabilitySet{
+			SupportsAuthValidation: true,
+			SupportsUpload:         true,
+		},
+		uploadFunc: func(req provider.UploadRequest) provider.UploadResult {
+			uploadCalls++
+			return provider.UploadResult{
+				OperationResult: provider.OperationResult{
+					Status:  "remote_error",
+					Message: "remote error",
+					Mode:    "fake_remote_error",
+				},
+			}
+		},
+	}
+
+	registry := provider.NewRegistry(adapter)
+	authSvc := auth.NewService(store, registry)
+	svc := NewService(store, registry, authSvc)
+	profile, err := authSvc.CreateProfile(ctx, auth.CreateProfileInput{
+		ProviderKey: "retry_limit_target",
+		AuthMode:    "manual_token",
+		DisplayName: "retry limit target",
+		Token:       "token-1",
+	})
+	if err != nil {
+		t.Fatalf("CreateProfile() error = %v", err)
+	}
+
+	created, err := svc.Create(ctx, CreateRequest{
+		SourceProvider:  "guangya",
+		TargetProvider:  "retry_limit_target",
+		TargetProfileID: profile.ID,
+		RiskOverride: &planner.RiskProfileOverride{
+			RetryLimit: intPtrTask(1),
+		},
+		Entries: []planner.SourceEntry{
+			{Path: "/fail.bin", Size: 1024, MD5: "abc"},
+		},
+	})
+	if err != nil {
+		t.Fatalf("Create() error = %v", err)
+	}
+
+	firstRun, ok, err := svc.Run(ctx, created.Task.ID)
+	if err != nil || !ok {
+		t.Fatalf("Run() first error=%v ok=%v", err, ok)
+	}
+	if firstRun.Task.State != StateCompletedWithErrors {
+		t.Fatalf("expected completed_with_errors on first run, got %s", firstRun.Task.State)
+	}
+	if len(firstRun.Runtime.RetryQueue) != 1 {
+		t.Fatalf("expected retry queue len 1, got %d", len(firstRun.Runtime.RetryQueue))
+	}
+	if firstRun.Runtime.RetryQueue[0].AttemptCount != 0 {
+		t.Fatalf("expected attempt count 0 before retry, got %d", firstRun.Runtime.RetryQueue[0].AttemptCount)
+	}
+	if firstRun.Runtime.RetryQueue[0].RemainingCount != 1 {
+		t.Fatalf("expected remaining count 1 before retry, got %d", firstRun.Runtime.RetryQueue[0].RemainingCount)
+	}
+
+	retried, ok, err := svc.Retry(ctx, created.Task.ID)
+	if err != nil || !ok {
+		t.Fatalf("Retry() error=%v ok=%v", err, ok)
+	}
+	attempts := retryAttemptsFromMetadata(retried.Plan.Metadata)
+	if attempts["/fail.bin"] != 1 {
+		t.Fatalf("expected retryAttempts for /fail.bin to be 1, got %#v", attempts)
+	}
+
+	secondRun, ok, err := svc.Run(ctx, created.Task.ID)
+	if err != nil || !ok {
+		t.Fatalf("Run() second error=%v ok=%v", err, ok)
+	}
+	if secondRun.Task.State != StateBlocked {
+		t.Fatalf("expected blocked after retry limit exhausted, got %s", secondRun.Task.State)
+	}
+	if secondRun.Runtime.BlockedReason != "retry_queue_retry_limit_exhausted" {
+		t.Fatalf("expected retry limit blocked reason, got %s", secondRun.Runtime.BlockedReason)
+	}
+	if len(secondRun.Runtime.RetryQueue) != 1 {
+		t.Fatalf("expected retry queue len 1, got %d", len(secondRun.Runtime.RetryQueue))
+	}
+	item := secondRun.Runtime.RetryQueue[0]
+	if !item.Exhausted {
+		t.Fatal("expected retry queue item exhausted")
+	}
+	if item.AttemptCount != 1 {
+		t.Fatalf("expected attempt count 1 after retry, got %d", item.AttemptCount)
+	}
+	if item.RemainingCount != 0 {
+		t.Fatalf("expected remaining count 0 after retry, got %d", item.RemainingCount)
+	}
+	if item.Retryable {
+		t.Fatal("expected exhausted item not retryable")
+	}
+	if _, ok, err := svc.Retry(ctx, created.Task.ID); err == nil || !ok {
+		t.Fatalf("expected retry_blocked after retry limit exhausted, ok=%v err=%v", ok, err)
+	} else if !strings.HasPrefix(err.Error(), "retry_blocked:retry_queue_retry_limit_exhausted") {
+		t.Fatalf("expected retry limit exhausted error, got %v", err)
+	}
+	if uploadCalls != 2 {
+		t.Fatalf("expected exactly 2 upload attempts, got %d", uploadCalls)
+	}
+}
+
 func TestServiceRunSkipsAlreadySyncedTargetFile(t *testing.T) {
 	ctx := context.Background()
 	store, err := sqlitestore.New(ctx, filepath.Join(t.TempDir(), "runtime-skip.db"))

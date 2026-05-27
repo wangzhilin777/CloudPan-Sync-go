@@ -129,6 +129,7 @@ CloudPan Sync 的 Go 重构版工作区。
   - `rate_limited` -> 冷却后可重试
   - `auth_expired` -> 需要先刷新授权
   - `local_file_missing` -> 需要先补回本地文件
+  - `retryLimit` 耗尽 -> 进入明确阻断，不再继续自动/手动重试
 - 这意味着当前已经接通：
   - 待补传项聚合
   - 待补传树展示
@@ -137,6 +138,7 @@ CloudPan Sync 的 Go 重构版工作区。
   - `rate_limited` 的冷却阻断
   - `blocked` 运行态与 `blockedReason / nextRetryAt` 证据
   - 单机 tick 版后台自动补传调度
+  - `retryLimit` 的累计次数、剩余次数与 exhausted 阻断
 - 当前还没有接通的是：
   - 更复杂的补传批量选择与筛选
   - 更精细的后台补传策略编排

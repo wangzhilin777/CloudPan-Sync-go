@@ -240,10 +240,12 @@
     - `rate_limited`
     - `auth_expired`
     - `local_file_missing`
+    - `retry_limit_exhausted`
   - 当前 `rate_limited` 会按冷却时间阻断过早重试
   - 当前任务在“只有冷却 / 人工确认 / 授权失效 / 本地文件缺失”时会进入 `blocked`
   - 当前 runtime / probe / status 已回写 `blockedReason` 与 `nextRetryAt`
   - 当前已接入单机 tick 版后台自动补传调度，可自动恢复冷却到期的 `blocked` 任务
+  - 当前 `retryLimit` 已真正接入重试队列，支持累计次数、剩余次数与 exhausted 阻断
 
 ### 6. Runtime Evidence / 状态矩阵
 

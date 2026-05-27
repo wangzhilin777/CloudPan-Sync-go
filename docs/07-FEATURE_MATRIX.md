@@ -27,7 +27,7 @@
 | Provider 调试接口 | `list`、`metadata`、`create_dir`、`fast_check` 已暴露为 API | 已完成 | 联调口径补强 | 后续可增加上传调试入口 |
 | Auth Profile | CRUD、校验、脱敏持久化、按 provider 映射 | 已完成 | 真实 provider 字段口径补充 | 更多真实鉴权模式 |
 | Planner | 预览计划、策略判定、阈值判断、冲突降级、执行模式推荐、风控档位元数据 | 已完成 | 结合真实 provider 与增量规则继续校准 | 更细推荐规则与真实联调校准 |
-| 同步执行模型 | 已支持 `leaf_first_lazy`、`pre_scan_flat`、按需扫描骨架、fallback、目录状态持久化、断点继续当前子树、目标端 metadata 预检查、`create / overwrite / skip` 判定闭环、待补传树聚合、待补传子集重试、失败重试队列分类、`blocked` 运行态、最小自动补传调度 | 部分完成 | 任务级执行模式、runtime checkpoint、待补传树与目录树展示已接入 planner / task / evidence / UI，`retry` 已支持 pending-only 重建，并识别 rate-limit cooldown 与自动恢复 | 更完整目录树交互、更细后台补传策略 |
+| 同步执行模型 | 已支持 `leaf_first_lazy`、`pre_scan_flat`、按需扫描骨架、fallback、目录状态持久化、断点继续当前子树、目标端 metadata 预检查、`create / overwrite / skip` 判定闭环、待补传树聚合、待补传子集重试、失败重试队列分类、`blocked` 运行态、最小自动补传调度、`retryLimit` 次数耗尽阻断 | 部分完成 | 任务级执行模式、runtime checkpoint、待补传树与目录树展示已接入 planner / task / evidence / UI，`retry` 已支持 pending-only 重建，并识别 rate-limit cooldown、retry limit 与自动恢复 | 更完整目录树交互、更细后台补传策略 |
 | 风控与频率策略 | 已支持 `safe / balanced / fast / custom` 基线、默认风险模板、任务级 `riskOverride`、风控命中证据 | 部分完成 | 已接入 planner / task metadata / runtime evidence / UI | 真实 provider 校准、更易用的表单化配置 |
 | Task Runtime | 创建、查询、运行、暂停、恢复、重试、结果落库 | 已完成 | 后续将挂接执行模型和风控策略 | 真实上传链路接入后补更细运行态 |
 | Runtime Evidence | 最近结果、最近探针、状态快照、状态矩阵 API | 已完成 | 无 | 真实联调样本沉淀 |
@@ -130,8 +130,13 @@
   - `rate_limited`
   - `auth_expired`
   - `local_file_missing`
+- 当前 `retryQueue` item 已支持：
+  - `attemptCount`
+  - `retryLimit`
+  - `remainingCount`
+  - `exhausted`
 - 当前要避免误解：
-  - 这表示“待补传结构已经可见，而且已具备 pending-only retry、`blocked` 运行态和最小自动补传闭环”
+  - 这表示“待补传结构已经可见，而且已具备 pending-only retry、`blocked` 运行态、retry-limit 阻断和最小自动补传闭环”
   - 不表示“后台补传队列调度已经全部完成”
 
 ### 3. 直接调试 provider 能力

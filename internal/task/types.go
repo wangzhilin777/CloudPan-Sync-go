@@ -110,9 +110,13 @@ type RetryQueueItem struct {
 	Strategy       string `json:"strategy,omitempty"`
 	RetryClass     string `json:"retryClass"`
 	RetryAction    string `json:"retryAction"`
+	AttemptCount   int    `json:"attemptCount"`
+	RetryLimit     int    `json:"retryLimit,omitempty"`
+	RemainingCount int    `json:"remainingCount"`
 	EligibleAt     string `json:"eligibleAt,omitempty"`
 	Retryable      bool   `json:"retryable"`
 	Blocked        bool   `json:"blocked"`
+	Exhausted      bool   `json:"exhausted"`
 	Reason         string `json:"reason,omitempty"`
 }
 
