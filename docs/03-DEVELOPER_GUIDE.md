@@ -44,6 +44,21 @@
 - 直接调用 API 或 provider 调试接口做联调
 - 在现有内核上继续补真实 provider 能力
 
+## 当前任务执行模式怎么理解
+
+- 当前项目是多 provider 互传，不是定向同步到单个固定目标。
+- 执行模式后续会保留为任务级可选配置。
+- 当前默认优先推荐的是：
+  - `leaf-first lazy scan`
+- 这个模式的含义是：
+  - 按顶层目录顺序逐棵子树推进
+  - 每棵子树内部优先下探最深目录
+  - 只扫描下一步真正需要传的目录，不预先拉完整目录树
+- 这适合：
+  - 大目录
+  - 风控敏感 provider
+  - 需要边扫边传、边停边恢复的场景
+
 ### 启动服务
 
 ```powershell
@@ -76,6 +91,12 @@ go build ./...
 7. 运行 / 暂停 / 恢复 / 重试任务
 8. 查看任务结果、运行证据、provider 状态矩阵
 
+如果任务走按需扫描模式，还需要注意：
+
+- 创建任务时可以只给 `selectedRoots`
+- 运行任务时需要 `sourceProfileId`
+- 运行时才会按当前需要逐段列目录
+
 ## 当前 API 范围
 
 - `POST /api/session/login`
@@ -92,6 +113,11 @@ go build ./...
 - `POST /api/tasks/{id}/retry`
 - `GET /api/evidence/runtime`
 - `GET /api/status/providers`
+
+创建任务时当前新增一个重要字段：
+
+- `sourceProfileId`
+  - 当任务要走按需扫描时，需要它来在运行阶段对 source provider 执行 `List`
 
 ## 当前额外可用的 Provider 调试接口
 
@@ -159,5 +185,6 @@ go build ./...
 - 为一个协议族接入真实登录校验
 - 为一个 provider 接入真实目录和元数据查询
 - 为一个 provider 接入真实 fast upload / 普通上传链路
+- 补执行模式的目录状态持久化、补传树和模式提示
 - 为控制台扩展异常场景和多 provider 的 UI smoke
 - 为 README 增加更完整的示例和联调说明

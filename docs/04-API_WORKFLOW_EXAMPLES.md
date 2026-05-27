@@ -5,6 +5,7 @@
 - 本文档基于当前 Go 重构版实际 API 编写。
 - 示例以本地默认地址 `http://127.0.0.1:8080` 为准。
 - 示例优先使用 PowerShell，方便 Windows 环境直接联调。
+- 当前项目是互传模型，不是定向到单个固定目标端。
 - 当前返回结构统一为：
 
 ```json
@@ -133,6 +134,11 @@ $preview | ConvertTo-Json -Depth 10
 - 小文件且有指纹时，会看到 `fast_upload`
 - 超过阈值或条件不足时，会看到 `download_upload` 或 `pending_manual`
 
+补充说明：
+
+- 预览计划目前既可用于“已知 entries 的预分析”，也会逐步承载“推荐执行模式”提示。
+- 当目录较大或 provider 风控敏感时，后续应优先推荐 `leaf-first lazy scan`。
+
 ## 7. 创建任务
 
 ```powershell
@@ -161,6 +167,41 @@ $taskDetail = Invoke-RestMethod `
 $taskId = $taskDetail.data.task.id
 $taskDetail | ConvertTo-Json -Depth 12
 ```
+
+## 7.1 可选：按需扫描模式创建任务
+
+当你不想预先把整个目录树的 `entries` 都收集出来时，可以只提交 `selectedRoots`，并额外提供 `sourceProfileId`。
+
+```powershell
+$sourceProfileId = "source-profile-id"
+
+$lazyTaskPayload = @{
+  sourceProvider  = "guangya"
+  sourceProfileId = $sourceProfileId
+  targetProvider  = "123_open"
+  targetProfileId = $profileId
+  thresholdMB     = 10
+  conflictPolicy  = "auto_rename_new"
+  riskMode        = "balanced"
+  selectedRoots   = @("/1", "/2", "/3")
+  entries         = @()
+} | ConvertTo-Json -Depth 8
+
+$lazyTask = Invoke-RestMethod `
+  -Method Post `
+  -Uri "$base/api/tasks" `
+  -ContentType "application/json" `
+  -Body $lazyTaskPayload
+
+$lazyTaskId = $lazyTask.data.task.id
+$lazyTask | ConvertTo-Json -Depth 12
+```
+
+这个模式的含义是：
+
+- 任务创建时不预先扫完整棵目录树
+- 运行时按顶层目录顺序和叶子优先顺序按需列目录
+- 当前它是可选模式，但应作为大目录场景的默认优先推荐模式
 
 ## 8. 查询任务列表与详情
 
@@ -334,5 +375,6 @@ Invoke-RestMethod `
 
 - 这套 API 不兼容 Python 旧接口。
 - `targetProfileId` 只在创建任务时需要；预览计划不依赖它。
+- `sourceProfileId` 在按需扫描模式下是运行任务的必要字段。
 - `pending_manual_requires_confirmation` 目前仍代表需要后续真实 fallback 运行时补全。
 - 当前很多 provider 仍是协议占位实现，适合联调内核、字段口径和控制台闭环，不代表真实外部平台已经完全打通。
