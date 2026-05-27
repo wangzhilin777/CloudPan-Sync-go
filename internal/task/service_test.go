@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"cloudpan-sync-go/internal/auth"
 	"cloudpan-sync-go/internal/planner"
@@ -81,8 +82,8 @@ func TestServiceCreateRunRetryTask(t *testing.T) {
 	if sequence, _ := running.Results[0].Payload["sequence"].(int); sequence != 1 {
 		t.Fatalf("expected first result sequence=1, got %+v", running.Results[0].Payload["sequence"])
 	}
-	if running.Task.State != StateCompletedWithErrors {
-		t.Fatalf("expected completed_with_errors, got %s", running.Task.State)
+	if running.Task.State != StateBlocked {
+		t.Fatalf("expected blocked, got %s", running.Task.State)
 	}
 	evidence, err := svc.RuntimeEvidence(ctx)
 	if err != nil {
@@ -341,8 +342,8 @@ func TestServiceRuntimeHandlesPendingManualAuthExpiredRateLimitAndMissingLocalFi
 	if !ok {
 		t.Fatal("expected task to exist")
 	}
-	if running.Task.State != StateCompletedWithErrors {
-		t.Fatalf("expected completed_with_errors, got %s", running.Task.State)
+	if running.Task.State != StateBlocked {
+		t.Fatalf("expected blocked, got %s", running.Task.State)
 	}
 	if len(running.Results) != 4 {
 		t.Fatalf("expected 4 results, got %d", len(running.Results))
@@ -795,6 +796,137 @@ func TestServiceRetryQueueHonorsCooldownForRateLimitedItems(t *testing.T) {
 		t.Fatalf("expected retry cooldown error with task present, ok=%v err=%v", ok, err)
 	} else if !strings.HasPrefix(err.Error(), "retry_cooldown_active:") {
 		t.Fatalf("expected retry_cooldown_active error, got %v", err)
+	}
+	if running.Task.State != StateBlocked {
+		t.Fatalf("expected blocked state for cooldown-only retry queue, got %s", running.Task.State)
+	}
+	if running.Runtime.BlockedReason != "retry_queue_waiting_for_cooldown" {
+		t.Fatalf("expected cooldown blocked reason, got %s", running.Runtime.BlockedReason)
+	}
+	if running.Runtime.NextRetryAt == "" {
+		t.Fatal("expected nextRetryAt on blocked runtime")
+	}
+}
+
+func TestServiceRecoverBlockedTasksRetriesEligibleCooldownQueue(t *testing.T) {
+	ctx := context.Background()
+	store, err := sqlitestore.New(ctx, filepath.Join(t.TempDir(), "recover-blocked.db"))
+	if err != nil {
+		t.Fatalf("new store: %v", err)
+	}
+	defer func() { _ = store.Close() }()
+
+	uploadCalls := 0
+	adapter := &scriptedAdapter{
+		meta: provider.Provider{
+			Key:              "recover_blocked_target",
+			DisplayName:      "Recover Blocked Target",
+			ProtocolGroup:    "fake",
+			AuthModes:        []string{"manual_token"},
+			FastUploadInputs: []string{"md5", "size"},
+			FallbackModes:    []string{"download_upload"},
+			Status:           "planned",
+		},
+		capability: provider.CapabilitySet{
+			SupportsAuthValidation: true,
+			SupportsUpload:         true,
+		},
+		uploadFunc: func(req provider.UploadRequest) provider.UploadResult {
+			uploadCalls++
+			if uploadCalls == 1 {
+				return provider.UploadResult{
+					OperationResult: provider.OperationResult{
+						Status:  "rate_limited",
+						Message: "rate limited",
+						Mode:    "fake_rate",
+					},
+				}
+			}
+			return provider.UploadResult{
+				OperationResult: provider.OperationResult{
+					OK:      true,
+					Status:  "ok",
+					Message: "recovered",
+					Mode:    "fake_ok",
+				},
+			}
+		},
+	}
+
+	registry := provider.NewRegistry(adapter)
+	authSvc := auth.NewService(store, registry)
+	svc := NewService(store, registry, authSvc)
+	profile, err := authSvc.CreateProfile(ctx, auth.CreateProfileInput{
+		ProviderKey: "recover_blocked_target",
+		AuthMode:    "manual_token",
+		DisplayName: "recover blocked target",
+		Token:       "token-1",
+	})
+	if err != nil {
+		t.Fatalf("CreateProfile() error = %v", err)
+	}
+
+	created, err := svc.Create(ctx, CreateRequest{
+		SourceProvider:  "guangya",
+		TargetProvider:  "recover_blocked_target",
+		TargetProfileID: profile.ID,
+		ThresholdMB:     1,
+		RiskOverride: &planner.RiskProfileOverride{
+			CooldownSeconds: intPtrTask(3600),
+		},
+		Entries: []planner.SourceEntry{
+			{Path: "/rate.bin", Size: 1024, MD5: "abc"},
+		},
+	})
+	if err != nil {
+		t.Fatalf("Create() error = %v", err)
+	}
+
+	running, ok, err := svc.Run(ctx, created.Task.ID)
+	if err != nil {
+		t.Fatalf("Run() error = %v", err)
+	}
+	if !ok {
+		t.Fatal("expected task to exist")
+	}
+	if running.Task.State != StateBlocked {
+		t.Fatalf("expected blocked after first run, got %s", running.Task.State)
+	}
+
+	blocked, ok, err := svc.Get(ctx, created.Task.ID)
+	if err != nil || !ok {
+		t.Fatalf("Get() blocked task error=%v ok=%v", err, ok)
+	}
+	blocked.Results[0].CreatedAt = time.Now().Add(-2 * time.Hour).UTC().Format(time.RFC3339)
+	syncRuntimeRetryQueue(&blocked.Runtime, blocked.Plan.Metadata, blocked.Results)
+	applyRetryQueueSummary(&blocked.Runtime, blocked.Plan.Metadata)
+	blocked.Task.UpdatedAt = time.Now().UTC().Format(time.RFC3339)
+	if err := replaceTaskDetailAndResults(ctx, store, blocked); err != nil {
+		t.Fatalf("replaceTaskDetailAndResults() error = %v", err)
+	}
+
+	recovered, err := svc.RecoverBlockedTasks(ctx)
+	if err != nil {
+		t.Fatalf("RecoverBlockedTasks() error = %v", err)
+	}
+	if recovered != 1 {
+		t.Fatalf("expected recovered count 1, got %d", recovered)
+	}
+	finalDetail, ok, err := svc.Get(ctx, created.Task.ID)
+	if err != nil || !ok {
+		t.Fatalf("Get() final task error=%v ok=%v", err, ok)
+	}
+	if finalDetail.Task.State != StateCompleted {
+		t.Fatalf("expected completed after auto recovery, got %s", finalDetail.Task.State)
+	}
+	if finalDetail.Runtime.BlockedReason != "" {
+		t.Fatalf("expected blocked reason cleared after recovery, got %s", finalDetail.Runtime.BlockedReason)
+	}
+	if len(finalDetail.Results) != 1 || finalDetail.Results[0].Status != "done" {
+		t.Fatalf("expected recovered done result, got %#v", finalDetail.Results)
+	}
+	if uploadCalls != 2 {
+		t.Fatalf("expected 2 upload attempts total, got %d", uploadCalls)
 	}
 }
 

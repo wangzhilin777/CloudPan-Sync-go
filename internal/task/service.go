@@ -172,6 +172,7 @@ func (s *Service) Run(ctx context.Context, id string) (Detail, bool, error) {
 	syncRuntimeRiskEvidence(&detail.Runtime, detail.Plan.Metadata, results)
 	syncRuntimePendingTree(&detail.Runtime, detail.Plan.Metadata, results)
 	syncRuntimeRetryQueue(&detail.Runtime, detail.Plan.Metadata, results)
+	applyRetryQueueSummary(&detail.Runtime, detail.Plan.Metadata)
 
 	for i := startIndex; i < len(detail.Plan.Items); i++ {
 		item := detail.Plan.Items[i]
@@ -205,6 +206,7 @@ func (s *Service) Run(ctx context.Context, id string) (Detail, bool, error) {
 			syncRuntimeRiskEvidence(&detail.Runtime, detail.Plan.Metadata, results)
 			syncRuntimePendingTree(&detail.Runtime, detail.Plan.Metadata, results)
 			syncRuntimeRetryQueue(&detail.Runtime, detail.Plan.Metadata, results)
+			applyRetryQueueSummary(&detail.Runtime, detail.Plan.Metadata)
 			detail.Results = results
 			updateRuntimeAfterItem(&detail, item.Path, result)
 			detail.Task.UpdatedAt = time.Now().UTC().Format(time.RFC3339)
@@ -273,6 +275,7 @@ func (s *Service) Run(ctx context.Context, id string) (Detail, bool, error) {
 		syncRuntimeRiskEvidence(&detail.Runtime, detail.Plan.Metadata, results)
 		syncRuntimePendingTree(&detail.Runtime, detail.Plan.Metadata, results)
 		syncRuntimeRetryQueue(&detail.Runtime, detail.Plan.Metadata, results)
+		applyRetryQueueSummary(&detail.Runtime, detail.Plan.Metadata)
 		detail.Results = results
 		updateRuntimeAfterItem(&detail, item.Path, result)
 		detail.Task.UpdatedAt = time.Now().UTC().Format(time.RFC3339)
@@ -284,10 +287,15 @@ func (s *Service) Run(ctx context.Context, id string) (Detail, bool, error) {
 	failed := detail.Runtime.FailedCount
 	detail.Task.State = StateCompleted
 	detail.Task.CompletionKind = CompletionKindProbeOnly
-	if failed > 0 {
-		detail.Task.State = StateCompletedWithErrors
-	}
 	detail.Runtime.ExecutionState = "completed"
+	if failed > 0 {
+		if detail.Runtime.BlockedReason != "" {
+			detail.Task.State = StateBlocked
+			detail.Runtime.ExecutionState = "blocked"
+		} else {
+			detail.Task.State = StateCompletedWithErrors
+		}
+	}
 	detail.Runtime.CurrentItemPath = ""
 	detail.Runtime.CurrentDirectory = ""
 	detail.Runtime.CurrentRoot = ""
@@ -315,6 +323,13 @@ type targetInspection struct {
 	Decision          string
 	Reason            string
 	TargetFingerprint map[string]interface{}
+}
+
+type retryQueueSummary struct {
+	ShouldBlock   bool
+	BlockedReason string
+	NextRetryAt   string
+	CanAutoRetry  bool
 }
 
 type pendingTreeBuilderNode struct {
@@ -557,6 +572,7 @@ func (s *Service) buildRetryDetail(detail Detail) (Detail, error) {
 		plan.Metadata["retryPendingPaths"] = retryPaths
 		plan.Metadata["retrySourceResultCount"] = len(detail.Results)
 		plan.Metadata["retrySourceTaskState"] = string(previousState)
+		delete(plan.Metadata, "retrySummary")
 		detail.Plan = plan
 		detail.SourceEntries = retryEntries
 		detail.Items = buildTaskItems(detail.Task.ID, plan)
@@ -565,6 +581,7 @@ func (s *Service) buildRetryDetail(detail Detail) (Detail, error) {
 		delete(detail.Plan.Metadata, "retryPendingPaths")
 		delete(detail.Plan.Metadata, "retrySourceResultCount")
 		delete(detail.Plan.Metadata, "retrySourceTaskState")
+		delete(detail.Plan.Metadata, "retrySummary")
 	}
 	detail.Runtime = initializeRuntimeState(detail.Plan)
 	detail.Results = []Result{}
@@ -577,6 +594,39 @@ func (s *Service) RuntimeEvidence(ctx context.Context) (EvidenceSummary, error) 
 
 func (s *Service) ProviderStatuses(ctx context.Context) ([]StatusSummary, error) {
 	return providerStatusSummary(ctx, s.store, s.registry.List())
+}
+
+func (s *Service) RecoverBlockedTasks(ctx context.Context) (int, error) {
+	items, err := s.List(ctx)
+	if err != nil {
+		return 0, err
+	}
+	recovered := 0
+	for _, detail := range items {
+		if detail.Task.State != StateBlocked {
+			continue
+		}
+		syncRuntimeRetryQueue(&detail.Runtime, detail.Plan.Metadata, detail.Results)
+		applyRetryQueueSummary(&detail.Runtime, detail.Plan.Metadata)
+		if !runtimeCanAutoRetry(detail.Runtime) {
+			continue
+		}
+		retried, err := s.buildRetryDetail(detail)
+		if err != nil {
+			if strings.HasPrefix(err.Error(), "retry_cooldown_active:") {
+				continue
+			}
+			return recovered, err
+		}
+		if err := rebuildTaskForRetry(ctx, s.store, retried); err != nil {
+			return recovered, err
+		}
+		if _, _, err := s.Run(ctx, detail.Task.ID); err != nil {
+			return recovered, err
+		}
+		recovered++
+	}
+	return recovered, nil
 }
 
 func (s *Service) transitionState(ctx context.Context, id string, allowed []State, target State) (Detail, bool, error) {
@@ -601,6 +651,8 @@ func (s *Service) transitionState(ctx context.Context, id string, allowed []Stat
 	case StatePaused:
 		detail.Runtime.ExecutionState = "paused"
 	case StateReady:
+		detail.Runtime.BlockedReason = ""
+		detail.Runtime.NextRetryAt = ""
 		if len(detail.Results) > 0 {
 			detail.Runtime.ExecutionState = "ready_to_resume"
 		} else {
@@ -1126,6 +1178,8 @@ func syncRuntimeCountsFromResults(runtime *RuntimeState, results []Result) {
 	runtime.PendingCount = 0
 	runtime.RiskHitCount = 0
 	runtime.LastRiskStatus = ""
+	runtime.BlockedReason = ""
+	runtime.NextRetryAt = ""
 	runtime.RiskHits = nil
 	runtime.PendingTree = nil
 	runtime.RetryQueue = nil
@@ -1685,6 +1739,121 @@ func syncRuntimeRetryQueue(runtime *RuntimeState, metadata map[string]interface{
 			runtime.BlockedRetryCount++
 		}
 	}
+}
+
+func applyRetryQueueSummary(runtime *RuntimeState, metadata map[string]interface{}) {
+	if runtime == nil {
+		return
+	}
+	summary := summarizeRetryQueue(runtime.RetryQueue)
+	runtime.BlockedReason = ""
+	runtime.NextRetryAt = ""
+	if summary.ShouldBlock {
+		runtime.BlockedReason = summary.BlockedReason
+		runtime.NextRetryAt = summary.NextRetryAt
+	}
+	if metadata == nil {
+		return
+	}
+	if !summary.ShouldBlock && len(runtime.RetryQueue) == 0 {
+		delete(metadata, "retrySummary")
+		return
+	}
+	metadata["retrySummary"] = map[string]interface{}{
+		"shouldBlock":   summary.ShouldBlock,
+		"blockedReason": summary.BlockedReason,
+		"nextRetryAt":   summary.NextRetryAt,
+		"canAutoRetry":  summary.CanAutoRetry,
+		"queueSize":     len(runtime.RetryQueue),
+	}
+}
+
+func summarizeRetryQueue(queue []RetryQueueItem) retryQueueSummary {
+	summary := retryQueueSummary{}
+	if len(queue) == 0 {
+		return summary
+	}
+	immediateRetry := 0
+	cooldownCount := 0
+	pendingManualCount := 0
+	authExpiredCount := 0
+	localMissingCount := 0
+	now := time.Now().UTC()
+	for _, item := range queue {
+		switch item.RetryClass {
+		case "pending_manual":
+			pendingManualCount++
+		case "auth_expired":
+			authExpiredCount++
+		case "local_file_missing":
+			localMissingCount++
+		case "rate_limited":
+			if item.EligibleAt != "" {
+				eligibleAt, err := time.Parse(time.RFC3339, item.EligibleAt)
+				if err == nil && now.Before(eligibleAt) {
+					cooldownCount++
+					if summary.NextRetryAt == "" || eligibleAt.UTC().Format(time.RFC3339) < summary.NextRetryAt {
+						summary.NextRetryAt = eligibleAt.UTC().Format(time.RFC3339)
+					}
+					continue
+				}
+			}
+			if item.Retryable {
+				immediateRetry++
+			}
+		default:
+			if item.Retryable {
+				immediateRetry++
+			}
+		}
+	}
+	if immediateRetry > 0 {
+		summary.CanAutoRetry = pendingManualCount == 0 && authExpiredCount == 0 && localMissingCount == 0
+		return summary
+	}
+	if authExpiredCount > 0 {
+		summary.ShouldBlock = true
+		summary.BlockedReason = "retry_queue_requires_auth_refresh"
+		return summary
+	}
+	if localMissingCount > 0 {
+		summary.ShouldBlock = true
+		summary.BlockedReason = "retry_queue_requires_local_file_restore"
+		return summary
+	}
+	if cooldownCount > 0 {
+		summary.ShouldBlock = true
+		summary.BlockedReason = "retry_queue_waiting_for_cooldown"
+		summary.CanAutoRetry = pendingManualCount == 0
+		return summary
+	}
+	if pendingManualCount > 0 {
+		summary.ShouldBlock = true
+		summary.BlockedReason = "retry_queue_pending_manual_confirmation"
+		return summary
+	}
+	return summary
+}
+
+func runtimeCanAutoRetry(runtime RuntimeState) bool {
+	summary := summarizeRetryQueue(runtime.RetryQueue)
+	if !summary.ShouldBlock {
+		return summary.CanAutoRetry && len(runtime.RetryQueue) > 0
+	}
+	if summary.BlockedReason != "retry_queue_waiting_for_cooldown" {
+		return false
+	}
+	if strings.TrimSpace(summary.NextRetryAt) == "" {
+		return false
+	}
+	nextRetryAt, err := time.Parse(time.RFC3339, summary.NextRetryAt)
+	if err != nil {
+		return false
+	}
+	if time.Now().UTC().Before(nextRetryAt) {
+		return false
+	}
+	return summary.CanAutoRetry
 }
 
 func buildRetryQueue(metadata map[string]interface{}, results []Result) []RetryQueueItem {

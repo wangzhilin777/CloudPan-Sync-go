@@ -123,12 +123,18 @@
   - `auth_expired`
   - `local_file_missing`
 - 当前 `rate_limited` 项会生成 `eligibleAt`，冷却未到时 `retry` 会直接拒绝过早重试
+- 当前如果任务失败后只剩“冷却等待 / 人工确认 / 授权失效 / 本地文件缺失”这类项，任务会进入 `blocked`
+- 当前 runtime 会补充：
+  - `blockedReason`
+  - `nextRetryAt`
+- 当前应用内已接入单机 tick 版自动补传调度：
+  - 只会自动恢复冷却到期、且不存在人工确认/授权/本地文件硬阻塞的任务
 - 当前控制台任务详情页也会直接显示：
   - 当前是否处于 `pending_only` 重试范围
   - 当前重试队列里的 `retryable / blocked` 计数
 - 当前还没有做到：
-  - 后台自动补传调度
   - 在 UI 里对待补传树做更复杂的筛选和批量操作
+  - 更细粒度的后台补传策略编排
 
 ## 当前风控参数怎么理解
 

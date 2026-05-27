@@ -4,6 +4,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"time"
 )
 
 type Config struct {
@@ -14,6 +15,7 @@ type Config struct {
 	DBPath        string
 	AdminPassword string
 	LogLevel      slog.Level
+	AutoRetryTick time.Duration
 }
 
 func MustLoadConfig() Config {
@@ -26,6 +28,7 @@ func MustLoadConfig() Config {
 		DBPath:        envOrDefault("CLOUDPAN_DB_PATH", filepath.Join(dataDir, "cloudpan-sync.db")),
 		AdminPassword: envOrDefault("CLOUDPAN_ADMIN_PASSWORD", "admin"),
 		LogLevel:      parseLogLevel(envOrDefault("CLOUDPAN_LOG_LEVEL", "info")),
+		AutoRetryTick: parseDurationOrDefault("CLOUDPAN_AUTO_RETRY_TICK", 3*time.Second),
 	}
 }
 
@@ -47,4 +50,19 @@ func parseLogLevel(value string) slog.Level {
 	default:
 		return slog.LevelInfo
 	}
+}
+
+func parseDurationOrDefault(key string, fallback time.Duration) time.Duration {
+	value := os.Getenv(key)
+	if value == "" {
+		return fallback
+	}
+	duration, err := time.ParseDuration(value)
+	if err != nil {
+		return fallback
+	}
+	if duration < 0 {
+		return fallback
+	}
+	return duration
 }

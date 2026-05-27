@@ -73,6 +73,12 @@ func New(ctx context.Context, cfg Config) (*App, error) {
 
 func (a *App) Run(ctx context.Context) error {
 	errCh := make(chan error, 1)
+	runCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	if a.cfg.AutoRetryTick > 0 {
+		go a.runAutoRetryScheduler(runCtx)
+	}
 
 	go func() {
 		a.logger.Info("http server starting", "addr", a.cfg.Addr, "db_path", a.cfg.DBPath)
@@ -84,7 +90,7 @@ func (a *App) Run(ctx context.Context) error {
 	}()
 
 	select {
-	case <-ctx.Done():
+	case <-runCtx.Done():
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 		_ = a.server.Shutdown(shutdownCtx)
@@ -96,6 +102,30 @@ func (a *App) Run(ctx context.Context) error {
 		}
 		return closeErr
 	}
+}
+
+func (a *App) runAutoRetryScheduler(ctx context.Context) {
+	ticker := time.NewTicker(a.cfg.AutoRetryTick)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			recovered, err := a.recoverBlockedTasks(ctx)
+			if err != nil {
+				a.logger.Warn("auto retry tick failed", "error", err)
+				continue
+			}
+			if recovered > 0 {
+				a.logger.Info("auto retry recovered blocked tasks", "count", recovered)
+			}
+		}
+	}
+}
+
+func (a *App) recoverBlockedTasks(ctx context.Context) (int, error) {
+	return a.tasks.RecoverBlockedTasks(ctx)
 }
 
 func (a *App) loggingMiddleware(next http.Handler) http.Handler {

@@ -141,8 +141,8 @@ func TestAppWorkflowMainline(t *testing.T) {
 
 	runResp := invokeJSON(t, handler, http.MethodPost, "/api/tasks/"+taskID+"/run", nil)
 	runData := runResp.Data.(map[string]interface{})
-	if got := runData["task"].(map[string]interface{})["state"].(string); got != "completed_with_errors" {
-		t.Fatalf("expected completed_with_errors, got %s", got)
+	if got := runData["task"].(map[string]interface{})["state"].(string); got != "blocked" {
+		t.Fatalf("expected blocked, got %s", got)
 	}
 	results := runData["results"].([]interface{})
 	if len(results) != 3 {
@@ -151,6 +151,10 @@ func TestAppWorkflowMainline(t *testing.T) {
 	firstResultPayload := results[0].(map[string]interface{})["payload"].(map[string]interface{})
 	if got := firstResultPayload["executionMode"].(string); got != "pre_scan_flat" {
 		t.Fatalf("expected result executionMode pre_scan_flat, got %s", got)
+	}
+	runtimeData := runData["runtime"].(map[string]interface{})
+	if got := runtimeData["blockedReason"].(string); got != "retry_queue_requires_local_file_restore" {
+		t.Fatalf("expected blockedReason retry_queue_requires_local_file_restore, got %s", got)
 	}
 
 	evidenceResp := invokeJSON(t, handler, http.MethodGet, "/api/evidence/runtime", nil)
@@ -182,6 +186,9 @@ func TestAppWorkflowMainline(t *testing.T) {
 	}
 	if got := int(recentProbePayload["blockedRetryCount"].(float64)); got != 1 {
 		t.Fatalf("expected probe blockedRetryCount 1, got %d", got)
+	}
+	if got := recentProbePayload["taskState"].(string); got != "blocked" {
+		t.Fatalf("expected probe taskState blocked, got %s", got)
 	}
 	if got := len(recentProbePayload["pendingTree"].([]interface{})); got == 0 {
 		t.Fatal("expected pendingTree in recent probe payload")
@@ -217,6 +224,9 @@ func TestAppWorkflowMainline(t *testing.T) {
 		}
 		if got := int(summary["retryableCount"].(float64)); got != 1 {
 			t.Fatalf("expected status summary retryableCount 1, got %d", got)
+		}
+		if got := summary["runtime"].(map[string]interface{})["blockedReason"].(string); got != "retry_queue_requires_local_file_restore" {
+			t.Fatalf("expected status summary blockedReason retry_queue_requires_local_file_restore, got %s", got)
 		}
 		if got := len(summary["pendingTree"].([]interface{})); got == 0 {
 			t.Fatal("expected pendingTree in status summary")
