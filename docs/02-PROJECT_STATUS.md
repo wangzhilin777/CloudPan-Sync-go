@@ -6,6 +6,12 @@
 - 面向项目维护者、协作者和新接手同学，说明“这个项目要做什么、已经做到哪里、接下来还差什么”。
 - 如果把当前仓库单独分享出去，建议先看本文档，再看计划文档和代码目录。
 
+## 建议和哪些文档一起看
+
+- 如果你想先看“做到了哪一步”，配合阅读：`docs/07-FEATURE_MATRIX.md`
+- 如果你想马上启动项目，配合阅读：`docs/03-DEVELOPER_GUIDE.md`
+- 如果你想按 API 实际调试，配合阅读：`docs/04-API_WORKFLOW_EXAMPLES.md`
+
 ## 项目定位
 
 - 这是 CloudPan Sync 的 Go 重构版，不再沿用 Python 单体结构。
@@ -15,6 +21,11 @@
   - 提供 auth / planner / task / runtime evidence 主链路
   - 提供一个轻量控制台用于联调和演示
 - 当前仓库已经不是“只有骨架”，而是已经具备完整主流程闭环；但 provider 真实联网实现仍以协议占位和行为模拟为主。
+
+## 当前一句话状态
+
+- 当前已经完成“统一内核 + 控制台 + 测试回归”的主体建设。
+- 当前开发重心已经从“搭框架”切换到“逐家 provider 落真实链路”。
 
 ## 当前功能范围
 
@@ -58,6 +69,18 @@
   - 各 provider 具备可执行占位行为，能参与 API、planner、task、evidence 全链路
   - `aliyundrive_open` 已开始接入真实 `ValidateAuth` 远程校验骨架
   - 真实外部平台 SDK / HTTP 联网细节仍未全面接入
+
+### 2.1 Provider 辅助调试接口
+
+- 已完成：
+  - `POST /api/providers/{key}/list`
+  - `POST /api/providers/{key}/metadata`
+  - `POST /api/providers/{key}/create_dir`
+  - `POST /api/providers/{key}/fast_check`
+- 当前状态：
+  - 这些接口已经可以直接拿来验证 provider 适配器行为
+  - 对联调和排查字段口径很有帮助
+  - 其中真实联网深度仍取决于具体 provider 的落地进度
 
 ### 3. Auth Profile 授权档案
 
@@ -141,6 +164,7 @@
 
 - 已完成：
   - 重构计划基线文档
+  - 项目状态、上手说明、API 示例、Provider 接入、真实联调模板等配套文档
   - Go 项目骨架
   - SQLite migration 与仓储基础
   - Provider 抽象与 10 家 provider 注册
@@ -150,6 +174,7 @@
   - API 主工作流联调回归
   - Runtime 关键场景测试覆盖
   - 控制台浏览器级 UI smoke 回归
+  - `aliyundrive_open` 真实 `ValidateAuth` 骨架
 
 ## 当前仍未完成的部分
 
@@ -184,15 +209,25 @@
 - 但后续仍建议继续补：
   - 按模板逐步沉淀真实 provider 样本记录
 
+## 当前最清晰的完成度判断
+
+- 如果按“工程能否独立运行、独立测试、独立演示”来判断：
+  - 已经完成
+- 如果按“10 家 provider 是否都已经真实联网可用”来判断：
+  - 还没有完成
+- 如果按“是否已经进入真实联调阶段”来判断：
+  - 已经进入，而且 `aliyundrive_open` 是当前优先推进样本
+
 ## 推荐阅读顺序
 
 1. `README.md`
 2. `docs/02-PROJECT_STATUS.md`
-3. `docs/01-GO_REBUILD_PLAN.md`
-4. `internal/app`
-5. `internal/provider`
-6. `internal/auth` / `internal/planner` / `internal/task`
-7. `web/static`
+3. `docs/07-FEATURE_MATRIX.md`
+4. `docs/01-GO_REBUILD_PLAN.md`
+5. `internal/app`
+6. `internal/provider`
+7. `internal/auth` / `internal/planner` / `internal/task`
+8. `web/static`
 
 ## 下一阶段建议
 

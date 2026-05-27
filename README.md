@@ -25,6 +25,18 @@ CloudPan Sync 的 Go 重构版工作区。
 - API 工作流示例：`docs/04-API_WORKFLOW_EXAMPLES.md`
 - Provider 接入指南：`docs/05-PROVIDER_INTEGRATION_GUIDE.md`
 - 真实联调记录模板：`docs/06-REAL_PROVIDER_SMOKE_TEMPLATE.md`
+- 功能清单与完成度矩阵：`docs/07-FEATURE_MATRIX.md`
+
+## 推荐阅读顺序
+
+如果这是第一次接手这个仓库，建议按下面顺序看：
+
+1. `docs/02-PROJECT_STATUS.md`
+2. `docs/07-FEATURE_MATRIX.md`
+3. `docs/03-DEVELOPER_GUIDE.md`
+4. `docs/04-API_WORKFLOW_EXAMPLES.md`
+5. `docs/05-PROVIDER_INTEGRATION_GUIDE.md`
+6. `docs/01-GO_REBUILD_PLAN.md`
 
 ## 当前已完成的核心能力
 
@@ -39,12 +51,22 @@ CloudPan Sync 的 Go 重构版工作区。
   - 任务向导
   - 任务列表详情
   - 状态矩阵 / 证据
+- Provider 辅助调试接口：
+  - `POST /api/providers/{key}/list`
+  - `POST /api/providers/{key}/metadata`
+  - `POST /api/providers/{key}/create_dir`
+  - `POST /api/providers/{key}/fast_check`
 
 ## 当前仍在继续的部分
 
 - provider 真实接口落地仍未全部完成
 - UI smoke 异常场景和多 provider 样本还可继续补强
 - 每个协议族至少一条真实成功样本仍待补齐
+
+## 用一句话理解当前阶段
+
+- 当前仓库已经可以独立启动、独立测试、独立演示主流程。
+- 当前最主要的未完成项，不是“项目框架没搭完”，而是“各 provider 的真实联网能力还在逐家替换占位实现”。
 
 ## 快速启动
 

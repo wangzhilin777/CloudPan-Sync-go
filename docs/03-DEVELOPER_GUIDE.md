@@ -9,6 +9,7 @@
 
 - 项目目标和重构边界：`docs/01-GO_REBUILD_PLAN.md`
 - 当前功能范围和进度：`docs/02-PROJECT_STATUS.md`
+- 功能清单与完成度矩阵：`docs/07-FEATURE_MATRIX.md`
 - API 工作流示例：`docs/04-API_WORKFLOW_EXAMPLES.md`
 - Provider 接入指南：`docs/05-PROVIDER_INTEGRATION_GUIDE.md`
 - 真实联调记录模板：`docs/06-REAL_PROVIDER_SMOKE_TEMPLATE.md`
@@ -36,6 +37,12 @@
   - 计划文档、状态文档、上手文档
 
 ## 当前可以直接做的事
+
+在当前仓库里，可以把工作拆成三类：
+
+- 直接启动和演示现有主流程
+- 直接调用 API 或 provider 调试接口做联调
+- 在现有内核上继续补真实 provider 能力
 
 ### 启动服务
 
@@ -86,6 +93,17 @@ go build ./...
 - `GET /api/evidence/runtime`
 - `GET /api/status/providers`
 
+## 当前额外可用的 Provider 调试接口
+
+这些接口不属于普通业务主流程，但很适合开发阶段直接验证 provider 适配器：
+
+- `POST /api/providers/{key}/list`
+- `POST /api/providers/{key}/metadata`
+- `POST /api/providers/{key}/create_dir`
+- `POST /api/providers/{key}/fast_check`
+
+建议直接参考：`docs/04-API_WORKFLOW_EXAMPLES.md`
+
 ## 测试入口参考
 
 - API 主工作流回归：
@@ -113,6 +131,15 @@ go build ./...
   - planner 统一决策入口
   - task runtime + evidence 聚合
   - 控制台只消费 Go API 的边界
+
+## 如果你想快速判断现在做到哪里
+
+- 看“宏观完成度”：
+  - `docs/02-PROJECT_STATUS.md`
+- 看“逐模块功能和未完成项”：
+  - `docs/07-FEATURE_MATRIX.md`
+- 看“怎么自己跑一遍”：
+  - 本文档 + `docs/04-API_WORKFLOW_EXAMPLES.md`
 
 ## UI smoke 说明
 
