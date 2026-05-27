@@ -5,6 +5,7 @@
 - 本文档是 Go 重构版 CloudPan Sync 的唯一实施基线，用于后续开发、验收与里程碑推进。
 - 项目从 Python 单体迁移到 Go，采用轻量前后端分离、SQLite、单机队列 Worker。
 - Go 版不兼容 Python 旧 API，但保留核心业务语义：provider 能力模型、授权档案、规划器、任务执行、运行证据与状态聚合。
+- Go 版除了 provider 统一抽象，也必须继承原始项目中重要的通用执行能力：叶子目录优先、增量/覆盖判定、补传执行、风控与频率策略。
 
 ## 重构边界
 
@@ -70,6 +71,65 @@
   - `probe_only`
   - `candidate_only`
   - `live_failed`
+- `risk_mode`
+  - `safe`
+  - `balanced`
+  - `fast`
+  - `custom`
+
+## 执行模型要求
+
+### 叶子目录优先
+
+- Go 版必须保留原项目的“最底层目录优先”执行思想。
+- 对大目录默认推荐：
+  - 先向下扫描
+  - 找到最底层目录
+  - 立即执行该最底层目录
+  - 目录之间按节流间隔继续推进
+- 这样做的目的包括：
+  - 降低风控压力
+  - 控制内存占用
+  - 让任务更容易中断恢复
+  - 让目录级日志和证据更清晰
+
+### 增量与覆盖判定
+
+- Go 版必须内建明确的增量同步语义：
+  - 新文件：上传
+  - 已存在但大小 / mtime / 指纹变化：覆盖或按策略降级
+  - 已同步且未变化：跳过
+  - 源端已删除：默认记录，不默认删除目标端
+- 这套判定应作为 planner + task runtime 的通用能力，而不是绑定单个 provider。
+
+### 补传执行
+
+- Go 版必须支持补传语义，而不仅是单次任务运行。
+- 首版至少要具备：
+  - 待补传项标记
+  - 按目录层级聚合待补传项
+  - 按叶子目录顺序执行补传
+  - 为后续 UI 补传树预留数据结构
+
+## 风控与频率策略要求
+
+- Go 版必须提供通用、可配置的风控与频率策略层，而不是把节流常量散落在 provider 或 task 代码里。
+- 首版固定支持：
+  - `safe`
+  - `balanced`
+  - `fast`
+  - `custom`
+- 策略层至少要能承载：
+  - 请求间隔
+  - 页面大小
+  - 目录间隔
+  - 冷却时间
+  - 重试次数
+  - 风控关键词
+- 同时支持：
+  - provider 默认模板
+  - 任务级覆盖
+  - 后续 UI 配置入口
 
 ## API 设计
 
@@ -127,6 +187,14 @@
 - 实现 `Provider` 接口与能力声明
 - 实现 `AuthProfile / AuthValidation / TransferPlan / Task / TaskItem / TaskResult / ProviderStatus`
 - 实现 auth profile CRUD、planner、task queue、runtime evidence 聚合、status matrix 聚合
+- 建立执行模型内核：
+  - 叶子目录优先
+  - 增量 / 覆盖 / 跳过判定
+  - 补传项建模
+- 建立风控策略内核：
+  - 风控档位
+  - provider 默认模板
+  - 任务级节流参数
 
 ### Phase 3 - Provider 落地
 
@@ -149,6 +217,13 @@
 - 每个协议族至少打通一条真实成功样本
 - Python 仓库转为参考资料来源
 
+### Phase 6 - 执行模型与风控收口
+
+- 把真实 provider 能力接入到统一执行模型
+- 打通叶子目录优先、补传执行、目录间隔控制
+- 打通按 provider 默认模板和任务自定义模板运行
+- 让运行证据里能看见执行策略和风控命中情况
+
 ## 测试与验收标准
 
 - 单元测试覆盖：
@@ -156,6 +231,10 @@
   - planner 策略与阈值判断
   - conflict policy 降级规则
   - deepest-first 顺序
+  - 叶子目录执行顺序
+  - 增量 / 覆盖 / 跳过判定
+  - 补传项聚合与重试
+  - 风控档位到具体节流参数的映射
   - auth profile 脱敏与持久化
   - task 状态机
 - Provider 契约测试覆盖每家 provider 的核心接口
@@ -166,6 +245,8 @@
   - `pending_manual`
   - `auth expired`
   - `rate limit`
+  - `leaf-first execution`
+  - `retry queue / pending relay`
   - `local file missing`
 - UI smoke 覆盖：
   - 登录
