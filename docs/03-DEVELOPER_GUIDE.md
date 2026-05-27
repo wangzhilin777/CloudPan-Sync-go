@@ -149,6 +149,9 @@
   - `blockedActions`
   - provider 维度的 `blockedCount`
 - 当前任务详情页还会根据 `blockedAction` 生成“下一步处理”引导区，并提供跳转到授权面板、任务向导或状态矩阵的直达入口
+- 当前这些任务详情引导按钮还支持：
+  - 直接把当前任务的 retry queue 收敛到对应 blocked action
+  - 直接把当前任务的待补传树收敛到对应 root/path
 - 当前状态页的 `blockedActions` 聚合摘要也已经支持：
   - 一键打开这一类阻塞动作的样本任务
   - 一键把最近重试队列收敛到当前阻塞动作

@@ -598,6 +598,48 @@ function focusRetryClass(scope, retryClass, retryState) {
   showFlash("已收敛到最近同类重试队列");
 }
 
+function focusTaskRetryByBlockedAction(action) {
+  const preset = blockedActionFilterPreset(action);
+  state.treeFilters.taskRetry.retryClass = preset.retryClass;
+  state.treeFilters.taskRetry.retryState = preset.retryState;
+  setFilterControlValue("#task-retry-filter-class", preset.retryClass);
+  setFilterControlValue("#task-retry-filter-state", preset.retryState);
+  updateTaskRetryQueue(currentSelectedTaskDetail());
+  showFlash("已按当前 blocked action 收敛任务重试队列");
+}
+
+function firstPendingFocusPath(detail) {
+  const runtime = detail?.runtime || detail?.plan?.metadata?.runtime || {};
+  if (Array.isArray(runtime.retryQueue) && runtime.retryQueue.length) {
+    const candidate = runtime.retryQueue.find((item) => item.rootPath || item.path);
+    if (candidate) {
+      return candidate.rootPath || candidate.path;
+    }
+  }
+  if (Array.isArray(runtime.pendingTree) && runtime.pendingTree.length) {
+    return runtime.pendingTree[0].rootPath || runtime.pendingTree[0].path;
+  }
+  if (detail?.plan?.metadata?.retryPendingPaths?.length) {
+    return detail.plan.metadata.retryPendingPaths[0];
+  }
+  if (detail?.plan?.metadata?.selectedRoots?.length) {
+    return detail.plan.metadata.selectedRoots[0];
+  }
+  return "";
+}
+
+function focusTaskPendingByDetail(detail) {
+  const path = firstPendingFocusPath(detail);
+  if (!path) {
+    showFlash("当前任务没有可定位的待补传路径", true);
+    return;
+  }
+  state.treeFilters.taskPending.query = path;
+  setFilterControlValue("#task-pending-filter-query", path);
+  updateTaskTreePanels(detail || currentSelectedTaskDetail());
+  showFlash("已按当前任务定位待补传树");
+}
+
 function blockedActionFilterPreset(action) {
   switch (action) {
     case "refresh_auth_profile":
@@ -892,6 +934,7 @@ function renderTaskResolutionGuide(detail) {
       ],
       buttons: [
         { label: "打开授权面板", view: "providers", providerKey, profileId, intent: "focus_profile" },
+        { label: "只看授权失效队列", view: "tasks", intent: "focus_task_retry" },
         { label: "打开状态矩阵", view: "status" },
       ],
     },
@@ -903,6 +946,8 @@ function renderTaskResolutionGuide(detail) {
         "补齐后返回任务详情页重新 Retry。",
       ],
       buttons: [
+        { label: "定位待补传树", view: "tasks", intent: "focus_task_pending" },
+        { label: "只看本地缺失队列", view: "tasks", intent: "focus_task_retry" },
         { label: "打开任务向导", view: "wizard", providerKey, intent: "prefill_wizard" },
         { label: "打开状态矩阵", view: "status" },
       ],
@@ -915,6 +960,7 @@ function renderTaskResolutionGuide(detail) {
         "如果想确认整体阻塞分布，可切到状态矩阵查看 blocked 聚合看板。",
       ],
       buttons: [
+        { label: "只看冷却队列", view: "tasks", intent: "focus_task_retry" },
         { label: "查看状态矩阵", view: "status" },
       ],
     },
@@ -926,6 +972,8 @@ function renderTaskResolutionGuide(detail) {
         "确认后再回到任务详情执行 Retry。",
       ],
       buttons: [
+        { label: "定位待补传树", view: "tasks", intent: "focus_task_pending" },
+        { label: "只看待确认队列", view: "tasks", intent: "focus_task_retry" },
         { label: "查看状态矩阵", view: "status" },
         { label: "留在任务详情", view: "tasks" },
       ],
@@ -938,6 +986,7 @@ function renderTaskResolutionGuide(detail) {
         "创建新任务后，用状态矩阵对比新的 blocked 分布是否收敛。",
       ],
       buttons: [
+        { label: "只看 exhausted 队列", view: "tasks", intent: "focus_task_retry" },
         { label: "打开任务向导", view: "wizard", providerKey, intent: "prefill_wizard" },
         { label: "查看状态矩阵", view: "status" },
       ],
@@ -994,6 +1043,17 @@ function wireTaskResolutionGuide(detail) {
           showFlash("已定位到当前授权档案");
         }
       }
+      if (view === "tasks") {
+        state.selectedTaskId = detail?.task?.id || state.selectedTaskId;
+        renderTasks();
+        renderSelectedTask();
+        if (intent === "focus_task_retry") {
+          focusTaskRetryByBlockedAction(detail?.runtime?.blockedAction || detail?.plan?.metadata?.retrySummary?.blockedAction || "");
+        }
+        if (intent === "focus_task_pending") {
+          focusTaskPendingByDetail(detail);
+        }
+      }
       if (view === "wizard") {
         if (intent === "prefill_wizard") {
           prefillWizardFromTask(detail);
@@ -1003,11 +1063,6 @@ function wireTaskResolutionGuide(detail) {
           setSelectValueIfPresent("#plan-target-profile", detail?.targetProfileId || button.dataset.taskGuideProfile);
           setSelectValueIfPresent("#plan-source-provider", detail?.task?.sourceProvider);
         }
-      }
-      if (view === "tasks") {
-        state.selectedTaskId = detail?.task?.id || state.selectedTaskId;
-        renderTasks();
-        renderSelectedTask();
       }
     });
   });
