@@ -9,6 +9,7 @@
 
 - 项目目标和重构边界：`docs/01-GO_REBUILD_PLAN.md`
 - 当前功能范围和进度：`docs/02-PROJECT_STATUS.md`
+- API 工作流示例：`docs/04-API_WORKFLOW_EXAMPLES.md`
 - 前端资源说明：`web/README.md`
 
 ## 当前目录说明
@@ -129,5 +130,5 @@ go build ./...
 - 为一个协议族接入真实登录校验
 - 为一个 provider 接入真实目录和元数据查询
 - 为一个 provider 接入真实 fast upload / 普通上传链路
-- 为控制台补浏览器级 smoke 自动化
+- 为控制台扩展异常场景和多 provider 的 UI smoke
 - 为 README 增加更完整的示例和联调说明

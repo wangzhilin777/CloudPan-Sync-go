@@ -1,0 +1,338 @@
+# CloudPan Sync Go API 工作流示例
+
+## 适用范围
+
+- 本文档基于当前 Go 重构版实际 API 编写。
+- 示例以本地默认地址 `http://127.0.0.1:8080` 为准。
+- 示例优先使用 PowerShell，方便 Windows 环境直接联调。
+- 当前返回结构统一为：
+
+```json
+{
+  "ok": true,
+  "data": {},
+  "error": null
+}
+```
+
+## 启动服务
+
+```powershell
+go run ./cmd/cloudpan-sync
+```
+
+## 0. 准备基础变量
+
+```powershell
+$base = "http://127.0.0.1:8080"
+```
+
+## 1. 登录控制台会话
+
+```powershell
+$login = Invoke-RestMethod `
+  -Method Post `
+  -Uri "$base/api/session/login" `
+  -ContentType "application/json" `
+  -Body '{"password":"admin"}'
+
+$login | ConvertTo-Json -Depth 8
+```
+
+## 2. 查看 Provider 列表
+
+```powershell
+$providers = Invoke-RestMethod `
+  -Method Get `
+  -Uri "$base/api/providers"
+
+$providers.data.items | Select-Object meta
+```
+
+## 3. 查看单个 Provider 能力
+
+```powershell
+$capability = Invoke-RestMethod `
+  -Method Get `
+  -Uri "$base/api/providers/123_open/capabilities"
+
+$capability | ConvertTo-Json -Depth 8
+```
+
+## 4. 创建授权档案
+
+下面示例使用 `123_open` 的 `manual_token` 模式，便于快速跑通主流程。
+
+```powershell
+$profilePayload = @{
+  providerKey = "123_open"
+  authMode    = "manual_token"
+  displayName = "123 Open Demo"
+  token       = "token-demo"
+  extra       = @{}
+} | ConvertTo-Json -Depth 8
+
+$profile = Invoke-RestMethod `
+  -Method Post `
+  -Uri "$base/api/auth/profiles" `
+  -ContentType "application/json" `
+  -Body $profilePayload
+
+$profileId = $profile.data.id
+$profile | ConvertTo-Json -Depth 8
+```
+
+## 5. 校验授权档案
+
+```powershell
+$validation = Invoke-RestMethod `
+  -Method Post `
+  -Uri "$base/api/auth/profiles/$profileId/validate"
+
+$validation | ConvertTo-Json -Depth 8
+```
+
+预期可以看到类似：
+
+- `ok: true`
+- `data.status: verified`
+
+## 6. 预览传输计划
+
+```powershell
+$previewPayload = @{
+  sourceProvider = "guangya"
+  targetProvider = "123_open"
+  thresholdMB    = 10
+  conflictPolicy = "auto_rename_new"
+  selectedRoots  = @("/demo")
+  entries        = @(
+    @{
+      path = "/demo/a.bin"
+      size = 2048
+      md5  = "md5-a"
+    },
+    @{
+      path = "/demo/large.bin"
+      size = 20971520
+    }
+  )
+} | ConvertTo-Json -Depth 8
+
+$preview = Invoke-RestMethod `
+  -Method Post `
+  -Uri "$base/api/plans/preview" `
+  -ContentType "application/json" `
+  -Body $previewPayload
+
+$preview | ConvertTo-Json -Depth 10
+```
+
+常见预期：
+
+- 小文件且有指纹时，会看到 `fast_upload`
+- 超过阈值或条件不足时，会看到 `download_upload` 或 `pending_manual`
+
+## 7. 创建任务
+
+```powershell
+$taskPayload = @{
+  sourceProvider  = "guangya"
+  targetProvider  = "123_open"
+  targetProfileId = $profileId
+  thresholdMB     = 10
+  conflictPolicy  = "auto_rename_new"
+  selectedRoots   = @("/demo")
+  entries         = @(
+    @{
+      path = "/demo/a.bin"
+      size = 2048
+      md5  = "md5-a"
+    }
+  )
+} | ConvertTo-Json -Depth 8
+
+$taskDetail = Invoke-RestMethod `
+  -Method Post `
+  -Uri "$base/api/tasks" `
+  -ContentType "application/json" `
+  -Body $taskPayload
+
+$taskId = $taskDetail.data.task.id
+$taskDetail | ConvertTo-Json -Depth 12
+```
+
+## 8. 查询任务列表与详情
+
+```powershell
+$tasks = Invoke-RestMethod `
+  -Method Get `
+  -Uri "$base/api/tasks"
+
+$tasks | ConvertTo-Json -Depth 12
+```
+
+```powershell
+$task = Invoke-RestMethod `
+  -Method Get `
+  -Uri "$base/api/tasks/$taskId"
+
+$task | ConvertTo-Json -Depth 12
+```
+
+## 9. 暂停 / 恢复 / 运行 / 重试任务
+
+### 暂停
+
+```powershell
+Invoke-RestMethod `
+  -Method Post `
+  -Uri "$base/api/tasks/$taskId/pause" | ConvertTo-Json -Depth 12
+```
+
+### 恢复
+
+```powershell
+Invoke-RestMethod `
+  -Method Post `
+  -Uri "$base/api/tasks/$taskId/resume" | ConvertTo-Json -Depth 12
+```
+
+### 运行
+
+```powershell
+$runResult = Invoke-RestMethod `
+  -Method Post `
+  -Uri "$base/api/tasks/$taskId/run"
+
+$runResult | ConvertTo-Json -Depth 12
+```
+
+### 重试
+
+```powershell
+Invoke-RestMethod `
+  -Method Post `
+  -Uri "$base/api/tasks/$taskId/retry" | ConvertTo-Json -Depth 12
+```
+
+## 10. 查看运行证据
+
+```powershell
+$evidence = Invoke-RestMethod `
+  -Method Get `
+  -Uri "$base/api/evidence/runtime"
+
+$evidence | ConvertTo-Json -Depth 12
+```
+
+重点字段：
+
+- `totalTasks`
+- `completedTasks`
+- `doneResultCount`
+- `failedResultCount`
+- `recentResults`
+- `recentProbes`
+
+## 11. 查看 Provider 状态矩阵
+
+```powershell
+$status = Invoke-RestMethod `
+  -Method Get `
+  -Uri "$base/api/status/providers"
+
+$status | ConvertTo-Json -Depth 12
+```
+
+重点字段：
+
+- `providerKey`
+- `profileCount`
+- `taskCount`
+- `completedCount`
+- `latestProbe`
+- `lastTaskState`
+- `snapshotSummary`
+
+## 12. 可选：直接调用 Provider 辅助接口
+
+这些接口适合在真实 provider 接入时做链路排查，不是普通控制台主流程的必经步骤。
+
+### List
+
+```powershell
+$listPayload = @{
+  profileId = $profileId
+  path      = "/"
+  parentId  = ""
+  pageSize  = 100
+} | ConvertTo-Json -Depth 8
+
+Invoke-RestMethod `
+  -Method Post `
+  -Uri "$base/api/providers/123_open/list" `
+  -ContentType "application/json" `
+  -Body $listPayload | ConvertTo-Json -Depth 12
+```
+
+### Metadata
+
+```powershell
+$metadataPayload = @{
+  profileId = $profileId
+  path      = "/demo/a.bin"
+  fileId    = "demo-file-id"
+  parentId  = "demo-parent-id"
+} | ConvertTo-Json -Depth 8
+
+Invoke-RestMethod `
+  -Method Post `
+  -Uri "$base/api/providers/123_open/metadata" `
+  -ContentType "application/json" `
+  -Body $metadataPayload | ConvertTo-Json -Depth 12
+```
+
+### Create Dir
+
+```powershell
+$dirPayload = @{
+  profileId = $profileId
+  parentId  = "demo-parent-id"
+  dirName   = "new-folder"
+} | ConvertTo-Json -Depth 8
+
+Invoke-RestMethod `
+  -Method Post `
+  -Uri "$base/api/providers/123_open/create_dir" `
+  -ContentType "application/json" `
+  -Body $dirPayload | ConvertTo-Json -Depth 12
+```
+
+### Fast Upload Check
+
+```powershell
+$fastCheckPayload = @{
+  profileId = $profileId
+  path      = "/demo/a.bin"
+  parentId  = "demo-parent-id"
+  name      = "a.bin"
+  size      = 2048
+  md5       = "md5-a"
+  sha1      = ""
+  gcid      = ""
+} | ConvertTo-Json -Depth 8
+
+Invoke-RestMethod `
+  -Method Post `
+  -Uri "$base/api/providers/123_open/fast_check" `
+  -ContentType "application/json" `
+  -Body $fastCheckPayload | ConvertTo-Json -Depth 12
+```
+
+## 13. 常见注意点
+
+- 这套 API 不兼容 Python 旧接口。
+- `targetProfileId` 只在创建任务时需要；预览计划不依赖它。
+- `pending_manual_requires_confirmation` 目前仍代表需要后续真实 fallback 运行时补全。
+- 当前很多 provider 仍是协议占位实现，适合联调内核、字段口径和控制台闭环，不代表真实外部平台已经完全打通。

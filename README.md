@@ -22,6 +22,7 @@ CloudPan Sync 的 Go 重构版工作区。
 - 重构实施计划：`docs/01-GO_REBUILD_PLAN.md`
 - 当前功能与进度：`docs/02-PROJECT_STATUS.md`
 - 开发与上手说明：`docs/03-DEVELOPER_GUIDE.md`
+- API 工作流示例：`docs/04-API_WORKFLOW_EXAMPLES.md`
 
 ## 当前已完成的核心能力
 
@@ -40,7 +41,7 @@ CloudPan Sync 的 Go 重构版工作区。
 ## 当前仍在继续的部分
 
 - provider 真实接口落地仍未全部完成
-- 浏览器级 UI smoke 自动化还需继续补强
+- UI smoke 异常场景和多 provider 样本还可继续补强
 - 每个协议族至少一条真实成功样本仍待补齐
 
 ## 快速启动
