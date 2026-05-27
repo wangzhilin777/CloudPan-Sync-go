@@ -221,8 +221,17 @@ func TestAppWorkflowMainline(t *testing.T) {
 	}
 
 	retryResp := invokeJSON(t, handler, http.MethodPost, "/api/tasks/"+taskID+"/retry", nil)
-	if got := retryResp.Data.(map[string]interface{})["task"].(map[string]interface{})["state"].(string); got != "ready" {
+	retryData := retryResp.Data.(map[string]interface{})
+	if got := retryData["task"].(map[string]interface{})["state"].(string); got != "ready" {
 		t.Fatalf("expected ready after retry, got %s", got)
+	}
+	retriedPlan := retryData["plan"].(map[string]interface{})
+	if got := len(retriedPlan["items"].([]interface{})); got != 1 {
+		t.Fatalf("expected retry to keep only 1 pending item, got %d", got)
+	}
+	retryMetadata := retriedPlan["metadata"].(map[string]interface{})
+	if retryPendingOnly, _ := retryMetadata["retryPendingOnly"].(bool); !retryPendingOnly {
+		t.Fatalf("expected retryPendingOnly metadata true, got %#v", retryMetadata["retryPendingOnly"])
 	}
 }
 

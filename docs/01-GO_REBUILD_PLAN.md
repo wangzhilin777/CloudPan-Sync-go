@@ -159,7 +159,8 @@
 - 当前文档解释约定：
   - “待补传树”指运行后因 `pending_manual`、人工确认或类似原因暂未完成的文件树
   - 首版先要求能在 runtime / evidence / status / UI 中看见这棵树
-  - 这不等同于“已经完成按补传树节点自动继续执行”
+  - 当前已支持在 `Retry` 时自动缩小到待补传子集继续执行
+  - 这不等同于“已经完成后台自动补传调度”
   - 自动补传调度属于后续继续补齐的执行能力
 
 ## 风控与频率策略要求
@@ -260,6 +261,7 @@
   - `riskOverride` 已支持任务级覆盖节流参数与风险关键词
   - runtime / result / provider probe / provider status 已可聚合 `riskHitCount` 与 `lastRiskStatus`
   - runtime / provider probe / provider status 已可聚合 `pendingCount` 与 `pendingTree`
+  - `Retry` 已支持把任务自动缩小到待补传子集再继续执行
 
 ### Phase 3 - Provider 落地
 

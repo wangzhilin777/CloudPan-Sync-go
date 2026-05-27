@@ -124,6 +124,15 @@ func TestServiceCreateRunRetryTask(t *testing.T) {
 	if !ok || retried.Task.State != StateReady {
 		t.Fatalf("expected retry to reset state, ok=%v state=%s", ok, retried.Task.State)
 	}
+	if len(retried.Plan.Items) != 1 || retried.Plan.Items[0].Path != "/b.bin" {
+		t.Fatalf("expected retry to narrow plan to pending item /b.bin, got %#v", retried.Plan.Items)
+	}
+	if len(retried.SourceEntries) != 1 || retried.SourceEntries[0].Path != "/b.bin" {
+		t.Fatalf("expected retry to narrow source entries to /b.bin, got %#v", retried.SourceEntries)
+	}
+	if retryPendingOnly, _ := retried.Plan.Metadata["retryPendingOnly"].(bool); !retryPendingOnly {
+		t.Fatalf("expected retryPendingOnly metadata true, got %#v", retried.Plan.Metadata["retryPendingOnly"])
+	}
 }
 
 func TestServiceRuntimeHandlesFallbackAndConflictDowngrade(t *testing.T) {
@@ -536,6 +545,159 @@ func TestServiceRuntimeBuildsPendingRelayTreeByRootAndDirectory(t *testing.T) {
 	}
 	if len(secondRoot.Children[0].Children) != 1 || secondRoot.Children[0].Children[0].Path != "/2/22/c.bin" {
 		t.Fatalf("expected pending file /2/22/c.bin, got %#v", secondRoot.Children[0].Children)
+	}
+}
+
+func TestServiceRetryNarrowsToPendingRelayEntriesAndReplaysOnlyPendingItems(t *testing.T) {
+	ctx := context.Background()
+	store, err := sqlitestore.New(ctx, filepath.Join(t.TempDir(), "retry-pending.db"))
+	if err != nil {
+		t.Fatalf("new store: %v", err)
+	}
+	defer func() { _ = store.Close() }()
+
+	attempts := make(map[string]int)
+	uploadCalls := make([]string, 0)
+	adapter := &scriptedAdapter{
+		meta: provider.Provider{
+			Key:              "retry_pending_target",
+			DisplayName:      "Retry Pending Target",
+			ProtocolGroup:    "fake",
+			AuthModes:        []string{"manual_token"},
+			FastUploadInputs: []string{"md5", "size"},
+			FallbackModes:    []string{"download_upload"},
+			Status:           "planned",
+		},
+		capability: provider.CapabilitySet{
+			SupportsAuthValidation: true,
+			SupportsUpload:         true,
+		},
+		uploadFunc: func(req provider.UploadRequest) provider.UploadResult {
+			uploadCalls = append(uploadCalls, req.Path)
+			attempts[req.Path]++
+			switch req.Path {
+			case "/pending.bin":
+				if attempts[req.Path] == 1 {
+					return provider.UploadResult{
+						OperationResult: provider.OperationResult{
+							Status:  "pending_manual_requires_confirmation",
+							Message: "pending manual",
+							Mode:    "fake_pending",
+						},
+					}
+				}
+				return provider.UploadResult{
+					OperationResult: provider.OperationResult{
+						OK:      true,
+						Status:  "ok",
+						Message: "manual confirmed",
+						Mode:    "fake_ok",
+					},
+				}
+			case "/done.bin":
+				return provider.UploadResult{
+					OperationResult: provider.OperationResult{
+						OK:      true,
+						Status:  "ok",
+						Message: "done",
+						Mode:    "fake_ok",
+					},
+				}
+			default:
+				return provider.UploadResult{
+					OperationResult: provider.OperationResult{
+						Status:  "auth_expired",
+						Message: "auth expired",
+						Mode:    "fake_auth",
+					},
+				}
+			}
+		},
+	}
+
+	registry := provider.NewRegistry(adapter)
+	authSvc := auth.NewService(store, registry)
+	svc := NewService(store, registry, authSvc)
+	profile, err := authSvc.CreateProfile(ctx, auth.CreateProfileInput{
+		ProviderKey: "retry_pending_target",
+		AuthMode:    "manual_token",
+		DisplayName: "retry pending target",
+		Token:       "token-1",
+	})
+	if err != nil {
+		t.Fatalf("CreateProfile() error = %v", err)
+	}
+
+	detail, err := svc.Create(ctx, CreateRequest{
+		SourceProvider:  "guangya",
+		TargetProvider:  "retry_pending_target",
+		TargetProfileID: profile.ID,
+		ThresholdMB:     1,
+		Entries: []planner.SourceEntry{
+			{Path: "/pending.bin", Size: 10 * 1024 * 1024},
+			{Path: "/done.bin", Size: 1024, MD5: "abc"},
+			{Path: "/auth.bin", Size: 512, LocalPath: filepath.Join(t.TempDir(), "auth.bin")},
+		},
+	})
+	if err != nil {
+		t.Fatalf("Create() error = %v", err)
+	}
+
+	firstRun, ok, err := svc.Run(ctx, detail.Task.ID)
+	if err != nil {
+		t.Fatalf("Run() error = %v", err)
+	}
+	if !ok {
+		t.Fatal("expected task to exist")
+	}
+	if len(firstRun.Results) != 3 {
+		t.Fatalf("expected 3 results on first run, got %d", len(firstRun.Results))
+	}
+	if firstRun.Runtime.PendingCount != 1 {
+		t.Fatalf("expected first run pending count 1, got %d", firstRun.Runtime.PendingCount)
+	}
+
+	retried, ok, err := svc.Retry(ctx, detail.Task.ID)
+	if err != nil {
+		t.Fatalf("Retry() error = %v", err)
+	}
+	if !ok {
+		t.Fatal("expected retried task to exist")
+	}
+	if len(retried.Results) != 0 {
+		t.Fatalf("expected retry to clear old results, got %d", len(retried.Results))
+	}
+	if len(retried.Plan.Items) != 1 || retried.Plan.Items[0].Path != "/pending.bin" {
+		t.Fatalf("expected retried plan to keep only /pending.bin, got %#v", retried.Plan.Items)
+	}
+	if len(retried.SourceEntries) != 1 || retried.SourceEntries[0].Path != "/pending.bin" {
+		t.Fatalf("expected retried entries to keep only /pending.bin, got %#v", retried.SourceEntries)
+	}
+	if retryPendingOnly, _ := retried.Plan.Metadata["retryPendingOnly"].(bool); !retryPendingOnly {
+		t.Fatalf("expected retryPendingOnly metadata true, got %#v", retried.Plan.Metadata["retryPendingOnly"])
+	}
+
+	secondRun, ok, err := svc.Run(ctx, detail.Task.ID)
+	if err != nil {
+		t.Fatalf("Run() after retry error = %v", err)
+	}
+	if !ok {
+		t.Fatal("expected retried run task to exist")
+	}
+	if secondRun.Task.State != StateCompleted {
+		t.Fatalf("expected completed after pending-only retry, got %s", secondRun.Task.State)
+	}
+	if len(secondRun.Results) != 1 || secondRun.Results[0].Payload["path"] != "/pending.bin" {
+		t.Fatalf("expected second run to replay only /pending.bin, got %#v", secondRun.Results)
+	}
+	if secondRun.Runtime.PendingCount != 0 {
+		t.Fatalf("expected pending count 0 after successful pending retry, got %d", secondRun.Runtime.PendingCount)
+	}
+	if len(uploadCalls) != 3 {
+		t.Fatalf("expected 3 upload calls total, got %d: %#v", len(uploadCalls), uploadCalls)
+	}
+	if uploadCalls[2] != "/pending.bin" {
+		t.Fatalf("expected last upload call /pending.bin, got %s", uploadCalls[2])
 	}
 }
 

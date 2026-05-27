@@ -556,6 +556,10 @@ function renderSelectedTask() {
       <strong>风险节流</strong>
       <span>${stringifyValue(metadata.riskProfile?.requestIntervalMs, "0")}ms / dir ${stringifyValue(metadata.riskProfile?.directoryIntervalMs, "0")}ms / retry ${stringifyValue(metadata.riskProfile?.retryLimit, "0")}</span>
     </div>
+    <div class="insight-card">
+      <strong>重试范围</strong>
+      <span>${metadata.retryPendingOnly ? `pending_only (${Array.isArray(metadata.retryPendingPaths) ? metadata.retryPendingPaths.length : 0} items)` : "full_task"}</span>
+    </div>
   `;
   $("#task-runtime").innerHTML = renderRuntimeCheckpoint(runtime);
   $("#task-directory-states").innerHTML = renderDirectoryStates(runtime.directoryStates);

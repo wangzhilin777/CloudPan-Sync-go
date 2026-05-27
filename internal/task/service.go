@@ -433,18 +433,14 @@ func (s *Service) Retry(ctx context.Context, id string) (Detail, bool, error) {
 	if err != nil || !ok {
 		return Detail{}, ok, err
 	}
-	detail.Task.State = StateReady
-	detail.Task.CompletionKind = ""
-	detail.Task.UpdatedAt = time.Now().UTC().Format(time.RFC3339)
-	detail.Runtime = initializeRuntimeState(detail.Plan)
-	detail.Results = []Result{}
-	if err := resetTaskResults(ctx, s.store, detail.Task); err != nil {
+	retried, err := s.buildRetryDetail(detail)
+	if err != nil {
 		return Detail{}, true, err
 	}
-	if err := updateTaskDetailState(ctx, s.store, detail); err != nil {
+	if err := rebuildTaskForRetry(ctx, s.store, retried); err != nil {
 		return Detail{}, true, err
 	}
-	return detail, true, nil
+	return retried, true, nil
 }
 
 func lookupMD5(entries []planner.SourceEntry, path string) string {
@@ -486,6 +482,19 @@ func lookupLocalPath(entries []planner.SourceEntry, path string) string {
 	return ""
 }
 
+func buildTaskItems(taskID string, plan planner.Plan) []Item {
+	items := make([]Item, 0, len(plan.Items))
+	for _, planItem := range plan.Items {
+		items = append(items, Item{
+			ID:     uuid.NewString(),
+			TaskID: taskID,
+			Path:   planItem.Path,
+			Size:   planItem.Size,
+		})
+	}
+	return items
+}
+
 func inferUploadName(path string) string {
 	if path == "" || path == "/" {
 		return "upload.bin"
@@ -501,6 +510,54 @@ func inferUploadName(path string) string {
 		return path[lastSlash+1:]
 	}
 	return path
+}
+
+func (s *Service) buildRetryDetail(detail Detail) (Detail, error) {
+	previousState := detail.Task.State
+	detail.Task.State = StateReady
+	detail.Task.CompletionKind = ""
+	detail.Task.UpdatedAt = time.Now().UTC().Format(time.RFC3339)
+	retryEntries, retryPaths := pendingRetryEntries(detail)
+	if len(retryEntries) > 0 {
+		executionMode, err := executionModeFromMetadata(detail.Plan.Metadata)
+		if err != nil {
+			return Detail{}, err
+		}
+		selectedRoots := retrySelectedRoots(metadataStringSlice(detail.Plan.Metadata, "selectedRoots"), retryPaths)
+		riskProfile := riskProfileFromMetadata(detail.Plan.Metadata)
+		plan, err := planner.BuildPreview(s.registry, planner.PreviewRequest{
+			SourceProvider: detail.Task.SourceProvider,
+			TargetProvider: detail.Task.TargetProvider,
+			ThresholdMB:    detail.Plan.ThresholdMB,
+			RiskMode:       riskProfile.Mode,
+			RiskOverride:   riskOverrideFromMetadata(detail.Plan.Metadata),
+			ExecutionMode:  executionMode,
+			ConflictPolicy: provider.ConflictPolicy(detail.ConflictPolicy),
+			SelectedRoots:  selectedRoots,
+			Entries:        retryEntries,
+		})
+		if err != nil {
+			return Detail{}, err
+		}
+		if plan.Metadata == nil {
+			plan.Metadata = map[string]interface{}{}
+		}
+		plan.Metadata["retryPendingOnly"] = true
+		plan.Metadata["retryPendingPaths"] = retryPaths
+		plan.Metadata["retrySourceResultCount"] = len(detail.Results)
+		plan.Metadata["retrySourceTaskState"] = string(previousState)
+		detail.Plan = plan
+		detail.SourceEntries = retryEntries
+		detail.Items = buildTaskItems(detail.Task.ID, plan)
+	} else if detail.Plan.Metadata != nil {
+		delete(detail.Plan.Metadata, "retryPendingOnly")
+		delete(detail.Plan.Metadata, "retryPendingPaths")
+		delete(detail.Plan.Metadata, "retrySourceResultCount")
+		delete(detail.Plan.Metadata, "retrySourceTaskState")
+	}
+	detail.Runtime = initializeRuntimeState(detail.Plan)
+	detail.Results = []Result{}
+	return detail, nil
 }
 
 func (s *Service) RuntimeEvidence(ctx context.Context) (EvidenceSummary, error) {
@@ -1322,6 +1379,102 @@ func applyRiskEvidence(runtime *RuntimeState, metadata map[string]interface{}, p
 	runtime.RiskHitCount++
 	runtime.LastRiskStatus = riskHit.Status
 	runtime.RiskHits = append(runtime.RiskHits, riskHit)
+}
+
+func pendingRetryEntries(detail Detail) ([]planner.SourceEntry, []string) {
+	pendingPaths := pendingRetryPaths(detail.Results)
+	if len(pendingPaths) == 0 {
+		return nil, nil
+	}
+	entryByPath := make(map[string]planner.SourceEntry, len(detail.SourceEntries))
+	for _, entry := range detail.SourceEntries {
+		entryByPath[normalizeScanPath(entry.Path)] = entry
+	}
+	sizeByPath := make(map[string]int64, len(detail.Plan.Items))
+	for _, item := range detail.Plan.Items {
+		sizeByPath[normalizeScanPath(item.Path)] = item.Size
+	}
+	filtered := make([]planner.SourceEntry, 0, len(pendingPaths))
+	for _, path := range pendingPaths {
+		normalized := normalizeScanPath(path)
+		if entry, ok := entryByPath[normalized]; ok {
+			filtered = append(filtered, entry)
+			continue
+		}
+		filtered = append(filtered, planner.SourceEntry{
+			Path: normalized,
+			Size: sizeByPath[normalized],
+		})
+	}
+	return filtered, pendingPaths
+}
+
+func pendingRetryPaths(results []Result) []string {
+	seen := make(map[string]struct{})
+	paths := make([]string, 0)
+	for _, result := range results {
+		if !isPendingRelayResult(result) {
+			continue
+		}
+		path := normalizeScanPath(stringValue(result.Payload["path"]))
+		if path == "" || path == "/" {
+			continue
+		}
+		if _, ok := seen[path]; ok {
+			continue
+		}
+		seen[path] = struct{}{}
+		paths = append(paths, path)
+	}
+	return paths
+}
+
+func retrySelectedRoots(existingRoots []string, retryPaths []string) []string {
+	selected := make([]string, 0)
+	seen := make(map[string]struct{})
+	appendRoot := func(root string) {
+		root = normalizeScanPath(root)
+		if root == "" {
+			return
+		}
+		if _, ok := seen[root]; ok {
+			return
+		}
+		seen[root] = struct{}{}
+		selected = append(selected, root)
+	}
+	for _, root := range existingRoots {
+		for _, path := range retryPaths {
+			if isUnderRoot(path, root) {
+				appendRoot(root)
+				break
+			}
+		}
+	}
+	for _, path := range retryPaths {
+		matched := ""
+		for _, root := range existingRoots {
+			if isUnderRoot(path, root) {
+				matched = root
+				break
+			}
+		}
+		if matched != "" {
+			appendRoot(matched)
+			continue
+		}
+		appendRoot(parentDirectory(path))
+	}
+	return selected
+}
+
+func isUnderRoot(path, root string) bool {
+	path = normalizeScanPath(path)
+	root = normalizeScanPath(root)
+	if root == "/" {
+		return true
+	}
+	return path == root || strings.HasPrefix(path, root+"/")
 }
 
 func syncRuntimeRiskEvidence(runtime *RuntimeState, metadata map[string]interface{}, results []Result) {

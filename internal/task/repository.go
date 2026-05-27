@@ -176,6 +176,48 @@ VALUES (?, ?, ?, ?, ?, ?, ?)`,
 	return tx.Commit()
 }
 
+func rebuildTaskForRetry(ctx context.Context, store *sqlitestore.Store, detail Detail) error {
+	tx, err := store.DB().BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	payloadJSON, err := json.Marshal(taskPayload{
+		SourceProfileID: detail.SourceProfileID,
+		TargetProfileID: detail.TargetProfileID,
+		ConflictPolicy:  detail.ConflictPolicy,
+		Plan:            detail.Plan,
+		Runtime:         detail.Runtime,
+		Entries:         detail.SourceEntries,
+	})
+	if err != nil {
+		return err
+	}
+
+	if _, err := tx.ExecContext(ctx, `UPDATE tasks SET state = ?, completion_kind = ?, payload_json = ?, updated_at = ? WHERE id = ?`,
+		detail.Task.State, detail.Task.CompletionKind, string(payloadJSON), detail.Task.UpdatedAt, detail.Task.ID,
+	); err != nil {
+		return err
+	}
+	if _, err := tx.ExecContext(ctx, `DELETE FROM task_items WHERE task_id = ?`, detail.Task.ID); err != nil {
+		return err
+	}
+	for i, item := range detail.Items {
+		if _, err := tx.ExecContext(ctx, `
+INSERT INTO task_items(id, task_id, path, size, strategy, payload_json, created_at)
+VALUES (?, ?, ?, ?, ?, ?, ?)`,
+			item.ID, item.TaskID, item.Path, item.Size, detail.Plan.Items[i].Strategy, `{}`, detail.Task.CreatedAt,
+		); err != nil {
+			return err
+		}
+	}
+	if _, err := tx.ExecContext(ctx, `DELETE FROM task_results WHERE task_id = ?`, detail.Task.ID); err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
 func replaceTaskDetailAndResults(ctx context.Context, store *sqlitestore.Store, detail Detail) error {
 	tx, err := store.DB().BeginTx(ctx, nil)
 	if err != nil {

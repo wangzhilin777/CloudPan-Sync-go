@@ -278,6 +278,15 @@ Invoke-RestMethod `
   -Uri "$base/api/tasks/$taskId/retry" | ConvertTo-Json -Depth 12
 ```
 
+当前补充语义：
+
+- 如果任务里存在 `pending_manual` 形成的待补传项，`retry` 不再是整任务原样重跑。
+- 当前会优先把任务缩小成“待补传子集”：
+  - 只保留待补传文件对应的 `plan/items`
+  - 只保留待补传文件对应的 `entries`
+  - `metadata.retryPendingOnly` 会标记为 `true`
+- 如果当前没有待补传项，`retry` 仍按普通整任务重置语义处理。
+
 ## 10. 查看运行证据
 
 ```powershell
@@ -402,4 +411,5 @@ Invoke-RestMethod `
   - `pre_scan_flat`
 - 不传 `executionMode` 时，默认按 `leaf_first_lazy`。
 - `pending_manual_requires_confirmation` 目前仍代表需要后续真实 fallback 运行时补全。
+- 当任务详情里出现 `metadata.retryPendingOnly=true` 时，表示这次重试已经缩成待补传子集。
 - 当前很多 provider 仍是协议占位实现，适合联调内核、字段口径和控制台闭环，不代表真实外部平台已经完全打通。
