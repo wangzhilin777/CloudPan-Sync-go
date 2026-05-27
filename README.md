@@ -46,6 +46,7 @@ CloudPan Sync 的 Go 重构版工作区。
 - 任务预览规划
 - 任务创建、运行、暂停、恢复、重试
 - 叶子目录优先的按需扫描执行骨架
+- 目标端 metadata 预检查后的 `create / overwrite / skip` 判定闭环
 - runtime evidence 与 provider 状态矩阵
 - 控制台页面：
   - 登录
@@ -87,6 +88,17 @@ CloudPan Sync 的 Go 重构版工作区。
   - 当前使用的 `executionMode`
   - 推荐模式 `recommendedExecutionMode`
   - 推荐原因 `recommendedExecutionModeReason`
+- 当前 `leaf_first_lazy` 只是默认优先推荐，不是强制模式：
+  - 用户仍可显式切换到 `pre_scan_flat`
+  - API 也允许任务级显式传入 `executionMode`
+- 当前同步判定语义已经明确为：
+  - 目标端不存在：`create`
+  - 目标端存在但指纹变化：`overwrite`
+  - 目标端已存在且指纹一致：`skip`
+- 当前首版对“已存在”的判断是保守口径：
+  - provider `Metadata` 需要显式返回 `status=exists`
+  - 或 `entry.exists=true`
+  - 否则会按“目标不存在或元数据不可用”处理，避免占位 provider 误判全量跳过
 - 当前控制台任务向导已经支持：
   - 选择 `executionMode`
   - 选择 `riskMode`
@@ -99,6 +111,7 @@ CloudPan Sync 的 Go 重构版工作区。
 - 当前还会继续补强的主要是：
   - 更细粒度的目录树交互展示
   - 真正异步 worker 下的运行中暂停
+  - 源端删除记录与补传树执行模型
 
 ## 快速启动
 

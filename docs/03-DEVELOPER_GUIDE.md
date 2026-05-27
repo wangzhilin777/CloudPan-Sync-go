@@ -57,6 +57,10 @@
   - 按顶层目录顺序逐棵子树推进
   - 每棵子树内部优先下探最深目录
   - 只扫描下一步真正需要传的目录，不预先拉完整目录树
+- 这个模式的推荐语义是：
+  - 默认优先推荐
+  - 但不是强制
+  - 用户和 API 都可以显式改成 `pre_scan_flat`
 - `pre_scan_flat` 的含义是：
   - 先把当前选择目录下的文件项按遍历顺序收集出来
   - 再按收集顺序执行
@@ -69,11 +73,33 @@
   - `executionMode`
   - `recommendedExecutionMode`
   - `recommendedExecutionModeReason`
+  - `syncDecision`
   - `executionOrder`
   - `runtime`
   - `currentRoot`
   - `currentDirectory`
   - `lastCompletedPath`
+
+## 当前增量 / 覆盖 / 跳过规则怎么理解
+
+- 当前任务在真正上传前，会先对目标端做一次 `Metadata` 预检查。
+- 当前运行时会得出三种判定：
+  - `create`
+    - 目标端还没有这个文件，或当前无法确认其存在
+  - `overwrite`
+    - 目标端已有同路径文件，但大小或指纹已变化
+  - `skip`
+    - 目标端已有同路径文件，且和源端指纹一致
+- 当前首版采用保守存在判定：
+  - `MetadataResult.Status == "exists"`
+  - 或 `MetadataResult.Entry.exists == true`
+- 如果 provider 只返回普通 `ok`，不会直接认定为“已存在”。
+- 这是为了兼容当前仓库里仍存在的占位 provider，避免把所有文件误判成“已同步”。
+- 当前默认同步语义仍然是：
+  - 新增
+  - 覆盖
+  - 跳过未变化
+  - 源端删除只记录，不默认删除目标端
 
 ### 启动服务
 
@@ -115,6 +141,7 @@ go build ./...
 - 当前任务 payload 已持久化：
   - 目录状态
   - 已处理数量
+  - 已跳过数量
   - 当前根目录 / 当前目录
   - 上次完成路径
 - 如果任务已经带有部分结果，再次运行时会从未完成项继续，而不是整任务从头重跑

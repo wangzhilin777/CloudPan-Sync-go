@@ -351,6 +351,221 @@ func TestServiceRuntimeHandlesPendingManualAuthExpiredRateLimitAndMissingLocalFi
 	assertResultStatus("/missing.bin", "failed", "local_file_missing")
 }
 
+func TestServiceRunSkipsAlreadySyncedTargetFile(t *testing.T) {
+	ctx := context.Background()
+	store, err := sqlitestore.New(ctx, filepath.Join(t.TempDir(), "runtime-skip.db"))
+	if err != nil {
+		t.Fatalf("new store: %v", err)
+	}
+	defer func() { _ = store.Close() }()
+
+	uploadCalls := 0
+	adapter := &scriptedAdapter{
+		meta: provider.Provider{
+			Key:              "runtime_skip",
+			DisplayName:      "Runtime Skip",
+			ProtocolGroup:    "fake",
+			AuthModes:        []string{"manual_token"},
+			FastUploadInputs: []string{"md5", "size"},
+			FallbackModes:    []string{"download_upload"},
+			Status:           "planned",
+		},
+		capability: provider.CapabilitySet{
+			SupportsAuthValidation: true,
+			SupportsMetadata:       true,
+			SupportsUpload:         true,
+		},
+		metadataFunc: func(req provider.MetadataRequest) provider.MetadataResult {
+			return provider.MetadataResult{
+				OperationResult: provider.OperationResult{
+					OK:      true,
+					Status:  "exists",
+					Message: "exists",
+					Mode:    "scripted_metadata",
+				},
+				Entry: map[string]interface{}{
+					"exists": true,
+					"path":   req.Path,
+					"size":   int64(1024),
+					"md5":    "abc",
+				},
+			}
+		},
+		uploadFunc: func(req provider.UploadRequest) provider.UploadResult {
+			uploadCalls++
+			return provider.UploadResult{
+				OperationResult: provider.OperationResult{
+					OK:      true,
+					Status:  "ok",
+					Message: "uploaded",
+					Mode:    "scripted_upload",
+				},
+			}
+		},
+	}
+
+	registry := provider.NewRegistry(adapter)
+	authSvc := auth.NewService(store, registry)
+	svc := NewService(store, registry, authSvc)
+	profile, err := authSvc.CreateProfile(ctx, auth.CreateProfileInput{
+		ProviderKey: "runtime_skip",
+		AuthMode:    "manual_token",
+		DisplayName: "runtime skip",
+		Token:       "token-1",
+	})
+	if err != nil {
+		t.Fatalf("CreateProfile() error = %v", err)
+	}
+
+	detail, err := svc.Create(ctx, CreateRequest{
+		SourceProvider:  "guangya",
+		TargetProvider:  "runtime_skip",
+		TargetProfileID: profile.ID,
+		ThresholdMB:     10,
+		Entries: []planner.SourceEntry{
+			{Path: "/same.bin", Size: 1024, MD5: "abc"},
+		},
+	})
+	if err != nil {
+		t.Fatalf("Create() error = %v", err)
+	}
+
+	running, ok, err := svc.Run(ctx, detail.Task.ID)
+	if err != nil {
+		t.Fatalf("Run() error = %v", err)
+	}
+	if !ok {
+		t.Fatal("expected task to exist")
+	}
+	if uploadCalls != 0 {
+		t.Fatalf("expected upload not to be called, got %d", uploadCalls)
+	}
+	if got := len(running.Results); got != 1 {
+		t.Fatalf("expected 1 result, got %d", got)
+	}
+	if got := running.Results[0].Status; got != "skipped" {
+		t.Fatalf("expected skipped result, got %s", got)
+	}
+	if got, _ := running.Results[0].Payload["syncDecision"].(string); got != "skip" {
+		t.Fatalf("expected syncDecision skip, got %v", running.Results[0].Payload["syncDecision"])
+	}
+	if running.Runtime.SkippedCount != 1 {
+		t.Fatalf("expected runtime skipped count 1, got %d", running.Runtime.SkippedCount)
+	}
+	dirIndex := findDirectoryState(running.Runtime.DirectoryStates, "/")
+	if dirIndex >= 0 && running.Runtime.DirectoryStates[dirIndex].SkippedItems != 1 {
+		t.Fatalf("expected root directory skipped count 1, got %d", running.Runtime.DirectoryStates[dirIndex].SkippedItems)
+	}
+
+	evidence, err := svc.RuntimeEvidence(ctx)
+	if err != nil {
+		t.Fatalf("RuntimeEvidence() error = %v", err)
+	}
+	if evidence.SkippedResultCount != 1 {
+		t.Fatalf("expected skipped result count 1, got %d", evidence.SkippedResultCount)
+	}
+}
+
+func TestServiceRunUploadsWhenTargetFingerprintDiffers(t *testing.T) {
+	ctx := context.Background()
+	store, err := sqlitestore.New(ctx, filepath.Join(t.TempDir(), "runtime-overwrite.db"))
+	if err != nil {
+		t.Fatalf("new store: %v", err)
+	}
+	defer func() { _ = store.Close() }()
+
+	uploadCalls := 0
+	adapter := &scriptedAdapter{
+		meta: provider.Provider{
+			Key:              "runtime_overwrite",
+			DisplayName:      "Runtime Overwrite",
+			ProtocolGroup:    "fake",
+			AuthModes:        []string{"manual_token"},
+			FastUploadInputs: []string{"md5", "size"},
+			FallbackModes:    []string{"download_upload"},
+			Status:           "planned",
+		},
+		capability: provider.CapabilitySet{
+			SupportsAuthValidation: true,
+			SupportsMetadata:       true,
+			SupportsUpload:         true,
+		},
+		metadataFunc: func(req provider.MetadataRequest) provider.MetadataResult {
+			return provider.MetadataResult{
+				OperationResult: provider.OperationResult{
+					OK:      true,
+					Status:  "exists",
+					Message: "exists",
+					Mode:    "scripted_metadata",
+				},
+				Entry: map[string]interface{}{
+					"exists": true,
+					"path":   req.Path,
+					"size":   int64(1024),
+					"md5":    "different-md5",
+				},
+			}
+		},
+		uploadFunc: func(req provider.UploadRequest) provider.UploadResult {
+			uploadCalls++
+			return provider.UploadResult{
+				OperationResult: provider.OperationResult{
+					OK:      true,
+					Status:  "ok",
+					Message: "uploaded",
+					Mode:    "scripted_upload",
+				},
+			}
+		},
+	}
+
+	registry := provider.NewRegistry(adapter)
+	authSvc := auth.NewService(store, registry)
+	svc := NewService(store, registry, authSvc)
+	profile, err := authSvc.CreateProfile(ctx, auth.CreateProfileInput{
+		ProviderKey: "runtime_overwrite",
+		AuthMode:    "manual_token",
+		DisplayName: "runtime overwrite",
+		Token:       "token-1",
+	})
+	if err != nil {
+		t.Fatalf("CreateProfile() error = %v", err)
+	}
+
+	detail, err := svc.Create(ctx, CreateRequest{
+		SourceProvider:  "guangya",
+		TargetProvider:  "runtime_overwrite",
+		TargetProfileID: profile.ID,
+		ThresholdMB:     10,
+		Entries: []planner.SourceEntry{
+			{Path: "/changed.bin", Size: 1024, MD5: "abc"},
+		},
+	})
+	if err != nil {
+		t.Fatalf("Create() error = %v", err)
+	}
+
+	running, ok, err := svc.Run(ctx, detail.Task.ID)
+	if err != nil {
+		t.Fatalf("Run() error = %v", err)
+	}
+	if !ok {
+		t.Fatal("expected task to exist")
+	}
+	if uploadCalls != 1 {
+		t.Fatalf("expected upload to be called once, got %d", uploadCalls)
+	}
+	if got, _ := running.Results[0].Payload["syncDecision"].(string); got != "overwrite" {
+		t.Fatalf("expected syncDecision overwrite, got %v", running.Results[0].Payload["syncDecision"])
+	}
+	if got := running.Results[0].Status; got != "done" {
+		t.Fatalf("expected done result, got %s", got)
+	}
+	if got := running.Runtime.SkippedCount; got != 0 {
+		t.Fatalf("expected skipped count 0, got %d", got)
+	}
+}
+
 func TestServiceRunLazilyScansLeafFirstByRootSubtree(t *testing.T) {
 	ctx := context.Background()
 	store, err := sqlitestore.New(ctx, filepath.Join(t.TempDir(), "lazy-scan.db"))
@@ -831,11 +1046,12 @@ func TestServiceRunSupportsPreScanFlatExecutionMode(t *testing.T) {
 }
 
 type scriptedAdapter struct {
-	meta       provider.Provider
-	capability provider.CapabilitySet
-	listFunc   func(req provider.ListRequest) provider.ListResult
-	uploadFunc func(req provider.UploadRequest) provider.UploadResult
-	listCalls  []string
+	meta         provider.Provider
+	capability   provider.CapabilitySet
+	listFunc     func(req provider.ListRequest) provider.ListResult
+	metadataFunc func(req provider.MetadataRequest) provider.MetadataResult
+	uploadFunc   func(req provider.UploadRequest) provider.UploadResult
+	listCalls    []string
 }
 
 func (a *scriptedAdapter) Meta() provider.Provider {
@@ -859,6 +1075,9 @@ func (a *scriptedAdapter) List(req provider.ListRequest) provider.ListResult {
 }
 
 func (a *scriptedAdapter) Metadata(req provider.MetadataRequest) provider.MetadataResult {
+	if a.metadataFunc != nil {
+		return a.metadataFunc(req)
+	}
 	return provider.MetadataResult{OperationResult: provider.OperationResult{OK: true, Status: "ok", Message: "ok", Mode: "scripted"}}
 }
 

@@ -53,6 +53,7 @@ type DirectoryState struct {
 	TotalItems     int    `json:"totalItems"`
 	ProcessedItems int    `json:"processedItems"`
 	DoneItems      int    `json:"doneItems"`
+	SkippedItems   int    `json:"skippedItems"`
 	FailedItems    int    `json:"failedItems"`
 	LastItemPath   string `json:"lastItemPath,omitempty"`
 }
@@ -65,6 +66,7 @@ type RuntimeState struct {
 	LastCompletedPath string           `json:"lastCompletedPath,omitempty"`
 	ProcessedCount    int              `json:"processedCount"`
 	DoneCount         int              `json:"doneCount"`
+	SkippedCount      int              `json:"skippedCount"`
 	FailedCount       int              `json:"failedCount"`
 	NextSequence      int              `json:"nextSequence"`
 	DirectoryStates   []DirectoryState `json:"directoryStates,omitempty"`

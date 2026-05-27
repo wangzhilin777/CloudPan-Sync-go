@@ -29,6 +29,22 @@
 - 当前开发重心已经从“搭框架”切换到“逐家 provider 落真实链路”。
 - 同时也要补回原始项目中不可丢失的两类通用能力：执行模型与风控策略。
 
+## 先用业务语言理解当前规则
+
+- 当前项目不是“扫完再统一上传”的单一模型，而是允许任务级选择执行模式。
+- `leaf_first_lazy` 是当前默认优先推荐模式，但不是强制模式。
+- 它的真实含义是：
+  - 多个顶层目录按勾选顺序逐棵推进
+  - 每棵子树内部优先下探更深目录
+  - 只拉当前下一步需要传的目录列表，不预扫整个树
+- `pre_scan_flat` 仍然保留，适合目录较小、需要先拿完整扫描结果的场景。
+- 当前增量同步语义也已经固定下来：
+  - 目标不存在：创建上传
+  - 目标存在但指纹变化：覆盖上传或按冲突策略降级
+  - 目标已同步且指纹一致：跳过
+  - 源端删除：默认只记录，不默认删除目标端
+- 也就是说，当前 Go 版保留的是“互传内核 + 可选模式 + 推荐提示”，不是把所有任务都硬绑到一种执行方式。
+
 ## 当前功能范围
 
 ### 1. 后端应用基础
@@ -122,6 +138,8 @@
   - `executionMode` 任务级配置能力
   - `leaf_first_lazy` 与 `pre_scan_flat` 两种模式的 planner / task 联动
   - 推荐模式与推荐原因返回
+  - 目标端 metadata 预检查
+  - `create / overwrite / skip` 运行时判定闭环
   - 目录状态与运行时恢复点持久化
   - 带部分结果的任务继续当前子树而不是整任务重跑
 - 当前状态：
@@ -136,14 +154,27 @@
     - 当前任务执行模式
     - 推荐执行模式
     - 推荐原因
+    - 当前同步判定
     - 当前扫描方式
     - 当前根目录 / 当前目录 / 上次完成路径
-    - 目录级状态、完成数、失败数
+    - 目录级状态、完成数、跳过数、失败数
   - 但原始项目要求的这些通用能力还未完整落地：
-    - 增量 / 覆盖 / 跳过判定闭环
     - 补传项建模与按目录顺序执行
     - 真正异步 worker 下的运行中暂停 / 恢复
   - 这部分已经明确纳入 Go 版后续主线，不再视为可选增强
+
+### 4.3 当前增量判定口径
+
+- 当前 runtime 在真正调用上传前，会先看目标端 `Metadata`。
+- 首版为了避免占位 provider 误报“已存在”，当前采用保守存在判定：
+  - `MetadataResult.Status == "exists"`
+  - 或 `MetadataResult.Entry.exists == true`
+- 如果只是返回通用 `ok`，不会直接视为目标已存在。
+- 当前这样设计的原因是：
+  - 仓库里仍有不少 provider 是占位实现
+  - 这些实现常常能返回一个“占位 metadata”
+  - 但并不代表真实目标端已经有这个文件
+- 所以当前宁可保守走 `create`，也不允许误把全部文件跳过。
 
 ### 4.2 风控与频率策略
 
@@ -175,6 +206,8 @@
   - `fast_upload`
   - `hash_miss -> download_upload fallback`
   - `overwrite_existing -> auto_rename_new downgrade`
+  - `target_already_synced -> skip`
+  - `target_changed -> overwrite`
   - `pending_manual_requires_confirmation`
   - `auth_expired`
   - `rate_limited`
@@ -201,6 +234,9 @@
   - `recommendedExecutionMode`
   - `scanMode`
   - `runtime`
+  - `doneCount`
+  - `skippedCount`
+  - `failedCount`
   - `currentRoot`
   - `currentDirectory`
   - `lastCompletedPath`

@@ -138,6 +138,15 @@
   - 新增
   - 覆盖
 - 源端删除不默认删除目标端真实文件；如果后续支持真实删除，必须显式作为单独配置项，并默认关闭。
+- 当前首版运行时收口口径补充：
+  - 会先调用目标 provider 的 `Metadata`
+  - 若目标明确存在且指纹一致，则运行时直接 `skip`
+  - 若目标明确存在但指纹变化，则运行时进入 `overwrite`
+  - 若目标不存在、元数据不可用、或 provider 尚未明确返回存在语义，则按 `create` 处理
+- 当前“目标明确存在”的判定是保守模式：
+  - `MetadataResult.Status == "exists"`
+  - 或 `MetadataResult.Entry.exists == true`
+  - 这样可以避免占位 provider 因为返回通用 `ok` 而把全部文件误判为已同步
 
 ### 补传执行
 
@@ -241,6 +250,8 @@
   - `leaf_first_lazy` 与 `pre_scan_flat` 已作为正式执行模式进入 API 和任务元数据
   - 计划元数据中已返回推荐模式与推荐原因
   - 任务运行时已支持根据执行模式切换扫描方式
+  - 任务运行时已接入目标端 metadata 预检查与 `create / overwrite / skip` 判定
+  - runtime / provider probe / provider status 已可聚合 `skippedCount`
 
 ### Phase 3 - Provider 落地
 

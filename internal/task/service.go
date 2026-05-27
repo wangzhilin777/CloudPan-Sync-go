@@ -41,12 +41,13 @@ type Detail struct {
 }
 
 type EvidenceSummary struct {
-	TotalTasks        int             `json:"totalTasks"`
-	CompletedTasks    int             `json:"completedTasks"`
-	FailedResultCount int             `json:"failedResultCount"`
-	DoneResultCount   int             `json:"doneResultCount"`
-	RecentResults     []Result        `json:"recentResults"`
-	RecentProbes      []ProviderProbe `json:"recentProbes"`
+	TotalTasks         int             `json:"totalTasks"`
+	CompletedTasks     int             `json:"completedTasks"`
+	FailedResultCount  int             `json:"failedResultCount"`
+	DoneResultCount    int             `json:"doneResultCount"`
+	SkippedResultCount int             `json:"skippedResultCount"`
+	RecentResults      []Result        `json:"recentResults"`
+	RecentProbes       []ProviderProbe `json:"recentProbes"`
 }
 
 type StatusSummary struct {
@@ -176,6 +177,38 @@ func (s *Service) Run(ctx context.Context, id string) (Detail, bool, error) {
 		}
 		updateRuntimeBeforeItem(&detail, item.Path, i)
 		localPath := lookupLocalPath(detail.SourceEntries, item.Path)
+		targetState := s.inspectTargetState(entry, providerProfile, detail.SourceEntries, item.Path, item.Size)
+		result.Payload["targetState"] = targetState
+		switch targetState.Decision {
+		case "skip":
+			result.Mode = "runtime_skip"
+			result.Message = "Target already has a matching file; skip upload."
+			result.Status = "skipped"
+			result.Payload["providerStatus"] = "target_already_synced"
+			result.Payload["syncDecision"] = "skip"
+			if targetState.Reason != "" {
+				result.Payload["syncDecisionReason"] = targetState.Reason
+			}
+			if targetState.TargetFingerprint != nil {
+				result.Payload["targetFingerprint"] = targetState.TargetFingerprint
+			}
+			results = append(results, result)
+			detail.Results = results
+			updateRuntimeAfterItem(&detail, item.Path, result)
+			detail.Task.UpdatedAt = time.Now().UTC().Format(time.RFC3339)
+			if err := replaceTaskDetailAndResults(ctx, s.store, detail); err != nil {
+				return Detail{}, true, err
+			}
+			continue
+		case "overwrite", "create":
+			result.Payload["syncDecision"] = targetState.Decision
+			if targetState.Reason != "" {
+				result.Payload["syncDecisionReason"] = targetState.Reason
+			}
+			if targetState.TargetFingerprint != nil {
+				result.Payload["targetFingerprint"] = targetState.TargetFingerprint
+			}
+		}
 		conflictPolicy, conflictAction := resolveConflictPolicy(entry.Meta, provider.ConflictPolicy(detail.ConflictPolicy))
 		uploadReq := provider.UploadRequest{
 			Profile:        providerProfile,
@@ -261,6 +294,43 @@ func (s *Service) Run(ctx context.Context, id string) (Detail, bool, error) {
 		return Detail{}, true, err
 	}
 	return detail, true, nil
+}
+
+type targetInspection struct {
+	Decision          string
+	Reason            string
+	TargetFingerprint map[string]interface{}
+}
+
+func (s *Service) inspectTargetState(entry provider.Entry, profile provider.AuthProfile, sourceEntries []planner.SourceEntry, path string, size int64) targetInspection {
+	if !entry.Capability.SupportsMetadata {
+		return targetInspection{Decision: "create", Reason: "target_metadata_unsupported"}
+	}
+	metadata := entry.Adapter.Metadata(provider.MetadataRequest{
+		Profile: profile,
+		Path:    path,
+	})
+	if !metadata.OK {
+		return targetInspection{Decision: "create", Reason: "target_missing_or_metadata_unavailable"}
+	}
+	if !targetEntryExists(metadata) {
+		return targetInspection{Decision: "create", Reason: "target_missing_or_metadata_unavailable"}
+	}
+
+	sourceFingerprint := sourceFingerprintForPath(sourceEntries, path, size)
+	targetFingerprint := fingerprintFromMetadata(metadata.Entry)
+	if fingerprintsMatch(sourceFingerprint, targetFingerprint) {
+		return targetInspection{
+			Decision:          "skip",
+			Reason:            "target_already_synced",
+			TargetFingerprint: targetFingerprint,
+		}
+	}
+	return targetInspection{
+		Decision:          "overwrite",
+		Reason:            "target_exists_but_fingerprint_changed",
+		TargetFingerprint: targetFingerprint,
+	}
 }
 
 func (s *Service) materializeTaskEntriesIfNeeded(ctx context.Context, detail *Detail) error {
@@ -824,6 +894,7 @@ func initializeRuntimeState(plan planner.Plan) RuntimeState {
 		ExecutionState:  "idle",
 		ProcessedCount:  0,
 		DoneCount:       0,
+		SkippedCount:    0,
 		FailedCount:     0,
 		NextSequence:    1,
 		DirectoryStates: directoryStates,
@@ -896,12 +967,15 @@ func syncRuntimeCountsFromResults(runtime *RuntimeState, results []Result) {
 	}
 	runtime.ProcessedCount = len(results)
 	runtime.DoneCount = 0
+	runtime.SkippedCount = 0
 	runtime.FailedCount = 0
 	lastCompleted := ""
 	for _, result := range results {
 		switch result.Status {
 		case "done":
 			runtime.DoneCount++
+		case "skipped":
+			runtime.SkippedCount++
 		case "failed":
 			runtime.FailedCount++
 		}
@@ -935,6 +1009,8 @@ func updateRuntimeAfterItem(detail *Detail, path string, result Result) {
 	detail.Runtime.NextSequence = detail.Runtime.ProcessedCount + 1
 	if result.Status == "done" {
 		detail.Runtime.DoneCount++
+	} else if result.Status == "skipped" {
+		detail.Runtime.SkippedCount++
 	} else if result.Status == "failed" {
 		detail.Runtime.FailedCount++
 	}
@@ -975,6 +1051,8 @@ func applyDirectoryResult(runtime *RuntimeState, dirPath, itemPath, resultStatus
 	state.LastItemPath = itemPath
 	if resultStatus == "done" {
 		state.DoneItems++
+	} else if resultStatus == "skipped" {
+		state.SkippedItems++
 	} else if resultStatus == "failed" {
 		state.FailedItems++
 	}
@@ -1037,13 +1115,108 @@ func matchRootPath(path string, roots []string) string {
 	return parentDirectory(normalized)
 }
 
+func targetEntryExists(metadata provider.MetadataResult) bool {
+	if metadata.Status == "exists" {
+		return true
+	}
+	if metadata.Entry == nil {
+		return false
+	}
+	if exists, ok := metadata.Entry["exists"].(bool); ok {
+		return exists
+	}
+	return false
+}
+
+func sourceFingerprintForPath(entries []planner.SourceEntry, path string, fallbackSize int64) map[string]interface{} {
+	for _, item := range entries {
+		if item.Path != path {
+			continue
+		}
+		return map[string]interface{}{
+			"path": item.Path,
+			"size": firstNonZeroInt64(item.Size, fallbackSize),
+			"md5":  firstNonEmpty(item.MD5, item.ETag),
+			"sha1": item.SHA1,
+			"gcid": item.GCID,
+			"etag": item.ETag,
+		}
+	}
+	return map[string]interface{}{
+		"path": path,
+		"size": fallbackSize,
+	}
+}
+
+func fingerprintFromMetadata(entry map[string]interface{}) map[string]interface{} {
+	if entry == nil {
+		return nil
+	}
+	return map[string]interface{}{
+		"path": stringMapValue(entry, "path"),
+		"size": int64Number(entry["size"]),
+		"md5":  firstString(entry, "md5", "etag"),
+		"sha1": stringMapValue(entry, "sha1"),
+		"gcid": stringMapValue(entry, "gcid"),
+		"etag": stringMapValue(entry, "etag"),
+	}
+}
+
+func fingerprintsMatch(source map[string]interface{}, target map[string]interface{}) bool {
+	if len(source) == 0 || len(target) == 0 {
+		return false
+	}
+	sourceSize := int64Number(source["size"])
+	targetSize := int64Number(target["size"])
+	if sourceSize <= 0 || targetSize <= 0 || sourceSize != targetSize {
+		return false
+	}
+	if valuesMatch(source["md5"], target["md5"]) {
+		return true
+	}
+	if valuesMatch(source["sha1"], target["sha1"]) {
+		return true
+	}
+	if valuesMatch(source["gcid"], target["gcid"]) {
+		return true
+	}
+	return false
+}
+
+func valuesMatch(left interface{}, right interface{}) bool {
+	leftValue := strings.TrimSpace(stringValue(left))
+	rightValue := strings.TrimSpace(stringValue(right))
+	return leftValue != "" && rightValue != "" && leftValue == rightValue
+}
+
+func firstNonZeroInt64(values ...int64) int64 {
+	for _, value := range values {
+		if value > 0 {
+			return value
+		}
+	}
+	return 0
+}
+
+func firstNonEmpty(values ...string) string {
+	for _, value := range values {
+		if strings.TrimSpace(value) != "" {
+			return value
+		}
+	}
+	return ""
+}
+
 func buildProviderProbe(detail Detail, profile provider.AuthProfile, results []Result, createdAt string) ProviderProbe {
 	doneCount := 0
+	skippedCount := 0
 	failedCount := 0
 	for _, result := range results {
 		switch result.Status {
 		case "done":
 			doneCount++
+		case "skipped":
+			skippedCount++
 		case "failed":
 			failedCount++
 		}
@@ -1058,6 +1231,7 @@ func buildProviderProbe(detail Detail, profile provider.AuthProfile, results []R
 			"taskState":                      detail.Task.State,
 			"completionKind":                 detail.Task.CompletionKind,
 			"doneCount":                      doneCount,
+			"skippedCount":                   skippedCount,
 			"failedCount":                    failedCount,
 			"resultCount":                    len(results),
 			"executionMode":                  detail.Plan.Metadata["executionMode"],

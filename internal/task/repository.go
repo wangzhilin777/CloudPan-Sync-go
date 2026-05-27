@@ -296,6 +296,9 @@ func taskEvidenceSummary(ctx context.Context, store *sqlitestore.Store) (Evidenc
 	if err := store.DB().QueryRowContext(ctx, `SELECT COUNT(1) FROM task_results WHERE status = 'done'`).Scan(&summary.DoneResultCount); err != nil {
 		return summary, err
 	}
+	if err := store.DB().QueryRowContext(ctx, `SELECT COUNT(1) FROM task_results WHERE status = 'skipped'`).Scan(&summary.SkippedResultCount); err != nil {
+		return summary, err
+	}
 	results, err := recentTaskResults(ctx, store, 10)
 	if err != nil {
 		return summary, err
@@ -447,6 +450,9 @@ func buildProviderStatusSnapshot(ctx context.Context, store *sqlitestore.Store, 
 			"recommendedExecutionModeReason": detail.Plan.Metadata["recommendedExecutionModeReason"],
 			"scanMode":                       detail.Plan.Metadata["scanMode"],
 			"runtime":                        detail.Runtime,
+			"doneCount":                      detail.Runtime.DoneCount,
+			"skippedCount":                   detail.Runtime.SkippedCount,
+			"failedCount":                    detail.Runtime.FailedCount,
 			"currentRoot":                    detail.Runtime.CurrentRoot,
 			"currentDirectory":               detail.Runtime.CurrentDirectory,
 			"lastCompletedPath":              detail.Runtime.LastCompletedPath,
