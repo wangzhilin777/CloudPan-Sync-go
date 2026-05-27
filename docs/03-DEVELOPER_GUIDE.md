@@ -149,6 +149,9 @@
   - `blockedActions`
   - provider 维度的 `blockedCount`
 - 当前任务详情页还会根据 `blockedAction` 生成“下一步处理”引导区，并提供跳转到授权面板、任务向导或状态矩阵的直达入口
+- 当前状态页的 `blockedActions` 聚合摘要也已经支持：
+  - 一键打开这一类阻塞动作的样本任务
+  - 一键把最近重试队列收敛到当前阻塞动作
 - 当前这些直达入口已支持：
   - 自动定位当前授权档案
   - 按当前任务预填任务向导里的 provider/profile/risk/entries 参数

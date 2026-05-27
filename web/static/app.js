@@ -598,6 +598,53 @@ function focusRetryClass(scope, retryClass, retryState) {
   showFlash("已收敛到最近同类重试队列");
 }
 
+function blockedActionFilterPreset(action) {
+  switch (action) {
+    case "refresh_auth_profile":
+      return { retryClass: "auth_expired", retryState: "blocked" };
+    case "restore_local_source_file":
+      return { retryClass: "local_file_missing", retryState: "blocked" };
+    case "wait_for_cooldown":
+      return { retryClass: "rate_limited", retryState: "blocked" };
+    case "manual_confirmation_required":
+      return { retryClass: "pending_manual", retryState: "blocked" };
+    case "review_and_reset_retry_strategy":
+      return { retryClass: "", retryState: "exhausted" };
+    default:
+      return { retryClass: "", retryState: "" };
+  }
+}
+
+async function openTaskByID(taskID) {
+  if (!taskID) {
+    showFlash("当前 blocked 摘要没有可用样本任务", true);
+    return;
+  }
+  activateTab("tasks");
+  if (!state.tasks.some((item) => item.task.id === taskID)) {
+    await loadTasks();
+  }
+  if (!state.tasks.some((item) => item.task.id === taskID)) {
+    showFlash("未找到对应样本任务，可能已被清理", true);
+    return;
+  }
+  state.selectedTaskId = taskID;
+  renderTasks();
+  renderSelectedTask();
+  showFlash("已打开 blocked 摘要对应的样本任务");
+}
+
+function focusBlockedActionSummary(action) {
+  const preset = blockedActionFilterPreset(action);
+  activateTab("status");
+  state.treeFilters.statusRetry.retryClass = preset.retryClass;
+  state.treeFilters.statusRetry.retryState = preset.retryState;
+  setFilterControlValue("#status-retry-filter-class", preset.retryClass);
+  setFilterControlValue("#status-retry-filter-state", preset.retryState);
+  updateStatusRetryQueue(recentRuntimePayload());
+  showFlash("已按 blocked action 收敛最近重试队列");
+}
+
 function wireRetryQueueActions(scope) {
   const wrap = scope === "task" ? $("#task-retry-queue") : $("#status-retry-queue");
   if (!wrap) {
@@ -611,6 +658,27 @@ function wireRetryQueueActions(scope) {
   wrap.querySelectorAll("[data-retry-focus-class]").forEach((button) => {
     button.addEventListener("click", () => {
       focusRetryClass(scope, button.dataset.retryFocusClass, button.dataset.retryFocusState);
+    });
+  });
+}
+
+function wireBlockedActionsSummary() {
+  const wrap = $("#blocked-actions-summary");
+  if (!wrap) {
+    return;
+  }
+  wrap.querySelectorAll("[data-blocked-open-task]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      try {
+        await openTaskByID(button.dataset.blockedOpenTask);
+      } catch (error) {
+        showFlash(error.message, true);
+      }
+    });
+  });
+  wrap.querySelectorAll("[data-blocked-focus-action]").forEach((button) => {
+    button.addEventListener("click", () => {
+      focusBlockedActionSummary(button.dataset.blockedFocusAction);
     });
   });
 }
@@ -1285,6 +1353,7 @@ function renderStatus() {
     <div class="metric"><span>Risk Hits</span><strong>${evidence.riskHitCount}</strong></div>
   `;
   $("#blocked-actions-summary").innerHTML = renderBlockedActionsSummary(evidence.blockedActions || []);
+  wireBlockedActionsSummary();
 
   $("#status-table").innerHTML = `
     <table>
@@ -1359,6 +1428,18 @@ function renderBlockedActionsSummary(items) {
             <span class="pill">next ${stringifyValue(item.nextRetryAt, "-")}</span>
           </div>
           <div class="muted">${escapeHTML(stringifyValue(item.advice, "-"))}</div>
+          <div class="actions compact">
+            <button
+              type="button"
+              class="ghost"
+              data-blocked-focus-action="${escapeHTML(stringifyValue(item.action))}"
+            >只看这一类阻塞</button>
+            <button
+              type="button"
+              class="ghost"
+              data-blocked-open-task="${escapeHTML(stringifyValue(item.sampleTaskID || item.sampleTaskId, ""))}"
+            >打开样本任务</button>
+          </div>
         </div>
       `,
     )
