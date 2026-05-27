@@ -482,6 +482,8 @@ func handleServiceError(w http.ResponseWriter, err error) {
 		writeError(w, http.StatusBadRequest, "missing_access_token_or_cookie", "Provider requires token or cookie.")
 	case err != nil && err.Error() == "missing_md5":
 		writeError(w, http.StatusBadRequest, "missing_md5", "Fast upload requires md5.")
+	case err != nil && err.Error() == "missing_sha1":
+		writeError(w, http.StatusBadRequest, "missing_sha1", "Fast upload requires sha1.")
 	case err != nil && err.Error() == "missing_gcid":
 		writeError(w, http.StatusBadRequest, "missing_gcid", "Fast upload requires gcid.")
 	case err != nil && err.Error() == "pending_manual_requires_confirmation":
