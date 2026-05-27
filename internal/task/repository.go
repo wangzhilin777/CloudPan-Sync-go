@@ -14,13 +14,14 @@ import (
 )
 
 type taskPayload struct {
+	SourceProfileID string                `json:"sourceProfileId,omitempty"`
 	TargetProfileID string                `json:"targetProfileId"`
 	ConflictPolicy  string                `json:"conflictPolicy"`
 	Plan            planner.Plan          `json:"plan"`
 	Entries         []planner.SourceEntry `json:"entries,omitempty"`
 }
 
-func createTask(ctx context.Context, store *sqlitestore.Store, t Task, plan planner.Plan, items []Item, sourceEntries []planner.SourceEntry, targetProfileID, conflictPolicy string) error {
+func createTask(ctx context.Context, store *sqlitestore.Store, t Task, plan planner.Plan, items []Item, sourceEntries []planner.SourceEntry, sourceProfileID, targetProfileID, conflictPolicy string) error {
 	tx, err := store.DB().BeginTx(ctx, nil)
 	if err != nil {
 		return err
@@ -28,6 +29,7 @@ func createTask(ctx context.Context, store *sqlitestore.Store, t Task, plan plan
 	defer func() { _ = tx.Rollback() }()
 
 	payloadJSON, err := json.Marshal(taskPayload{
+		SourceProfileID: sourceProfileID,
 		TargetProfileID: targetProfileID,
 		ConflictPolicy:  conflictPolicy,
 		Plan:            plan,
@@ -123,6 +125,7 @@ WHERE id = ?`, id)
 	}
 
 	return Detail{
+		SourceProfileID: payload.SourceProfileID,
 		Task:            t,
 		Plan:            payload.Plan,
 		Items:           items,
@@ -131,6 +134,42 @@ WHERE id = ?`, id)
 		ConflictPolicy:  payload.ConflictPolicy,
 		SourceEntries:   payload.Entries,
 	}, true, nil
+}
+
+func replaceTaskPlanAndItems(ctx context.Context, store *sqlitestore.Store, detail Detail) error {
+	tx, err := store.DB().BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	payloadJSON, err := json.Marshal(taskPayload{
+		SourceProfileID: detail.SourceProfileID,
+		TargetProfileID: detail.TargetProfileID,
+		ConflictPolicy:  detail.ConflictPolicy,
+		Plan:            detail.Plan,
+		Entries:         detail.SourceEntries,
+	})
+	if err != nil {
+		return err
+	}
+
+	if _, err := tx.ExecContext(ctx, `UPDATE tasks SET payload_json = ?, updated_at = ? WHERE id = ?`, string(payloadJSON), detail.Task.UpdatedAt, detail.Task.ID); err != nil {
+		return err
+	}
+	if _, err := tx.ExecContext(ctx, `DELETE FROM task_items WHERE task_id = ?`, detail.Task.ID); err != nil {
+		return err
+	}
+	for i, item := range detail.Items {
+		if _, err := tx.ExecContext(ctx, `
+INSERT INTO task_items(id, task_id, path, size, strategy, payload_json, created_at)
+VALUES (?, ?, ?, ?, ?, ?, ?)`,
+			item.ID, item.TaskID, item.Path, item.Size, detail.Plan.Items[i].Strategy, `{}`, detail.Task.CreatedAt,
+		); err != nil {
+			return err
+		}
+	}
+	return tx.Commit()
 }
 
 func replaceTaskResults(ctx context.Context, store *sqlitestore.Store, t Task, results []Result) error {

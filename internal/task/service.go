@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -16,6 +17,7 @@ import (
 
 type CreateRequest struct {
 	SourceProvider  string                  `json:"sourceProvider"`
+	SourceProfileID string                  `json:"sourceProfileId"`
 	TargetProvider  string                  `json:"targetProvider"`
 	TargetProfileID string                  `json:"targetProfileId"`
 	ThresholdMB     int                     `json:"thresholdMB"`
@@ -30,6 +32,7 @@ type Detail struct {
 	Plan            planner.Plan          `json:"plan"`
 	Items           []Item                `json:"items"`
 	Results         []Result              `json:"results"`
+	SourceProfileID string                `json:"sourceProfileId,omitempty"`
 	TargetProfileID string                `json:"targetProfileId,omitempty"`
 	ConflictPolicy  string                `json:"conflictPolicy,omitempty"`
 	SourceEntries   []planner.SourceEntry `json:"sourceEntries,omitempty"`
@@ -96,10 +99,10 @@ func (s *Service) Create(ctx context.Context, req CreateRequest) (Detail, error)
 			Size:   planItem.Size,
 		})
 	}
-	if err := createTask(ctx, s.store, t, plan, items, req.Entries, req.TargetProfileID, string(req.ConflictPolicy)); err != nil {
+	if err := createTask(ctx, s.store, t, plan, items, req.Entries, req.SourceProfileID, req.TargetProfileID, string(req.ConflictPolicy)); err != nil {
 		return Detail{}, err
 	}
-	return Detail{Task: t, Plan: plan, Items: items, Results: []Result{}, TargetProfileID: req.TargetProfileID, ConflictPolicy: string(req.ConflictPolicy), SourceEntries: req.Entries}, nil
+	return Detail{Task: t, Plan: plan, Items: items, Results: []Result{}, SourceProfileID: req.SourceProfileID, TargetProfileID: req.TargetProfileID, ConflictPolicy: string(req.ConflictPolicy), SourceEntries: req.Entries}, nil
 }
 
 func (s *Service) List(ctx context.Context) ([]Detail, error) {
@@ -117,6 +120,9 @@ func (s *Service) Run(ctx context.Context, id string) (Detail, bool, error) {
 	}
 	if detail.Task.State != StateReady && detail.Task.State != StatePaused {
 		return Detail{}, true, fmt.Errorf("task_not_runnable")
+	}
+	if err := s.materializeTaskEntriesIfNeeded(ctx, &detail); err != nil {
+		return Detail{}, true, err
 	}
 	entry, exists := s.registry.Get(detail.Task.TargetProvider)
 	if !exists {
@@ -218,6 +224,69 @@ func (s *Service) Run(ctx context.Context, id string) (Detail, bool, error) {
 		return Detail{}, true, err
 	}
 	return detail, true, nil
+}
+
+func (s *Service) materializeTaskEntriesIfNeeded(ctx context.Context, detail *Detail) error {
+	if len(detail.SourceEntries) > 0 {
+		return nil
+	}
+	selectedRoots := metadataStringSlice(detail.Plan.Metadata, "selectedRoots")
+	if len(selectedRoots) == 0 {
+		return nil
+	}
+	if strings.TrimSpace(detail.SourceProfileID) == "" {
+		return fmt.Errorf("source_profile_required_for_lazy_scan")
+	}
+	sourceProfile, sourceEntry, err := s.resolveSourceProfile(ctx, detail.Task.SourceProvider, detail.SourceProfileID)
+	if err != nil {
+		return err
+	}
+	riskProfile, _ := detail.Plan.Metadata["riskProfile"].(map[string]interface{})
+	pageSize := 0
+	if riskProfile != nil {
+		pageSize = intNumber(riskProfile["pageSize"])
+	}
+	if pageSize <= 0 {
+		pageSize = 200
+	}
+
+	entries, trace, err := s.collectLeafFirstEntries(ctx, sourceEntry, sourceProfile, selectedRoots, pageSize)
+	if err != nil {
+		return err
+	}
+	plan, err := planner.BuildPreview(s.registry, planner.PreviewRequest{
+		SourceProvider: detail.Task.SourceProvider,
+		TargetProvider: detail.Task.TargetProvider,
+		ThresholdMB:    detail.Plan.ThresholdMB,
+		RiskMode:       planner.RiskMode(metadataStringFromRisk(riskProfile, "mode")),
+		ConflictPolicy: provider.ConflictPolicy(detail.ConflictPolicy),
+		SelectedRoots:  selectedRoots,
+		Entries:        entries,
+	})
+	if err != nil {
+		return err
+	}
+	if plan.Metadata == nil {
+		plan.Metadata = map[string]interface{}{}
+	}
+	plan.Metadata["scanMode"] = "lazy_leaf_first"
+	plan.Metadata["scanTrace"] = trace
+
+	items := make([]Item, 0, len(plan.Items))
+	for _, planItem := range plan.Items {
+		items = append(items, Item{
+			ID:     uuid.NewString(),
+			TaskID: detail.Task.ID,
+			Path:   planItem.Path,
+			Size:   planItem.Size,
+		})
+	}
+
+	detail.SourceEntries = entries
+	detail.Plan = plan
+	detail.Items = items
+	detail.Task.UpdatedAt = time.Now().UTC().Format(time.RFC3339)
+	return replaceTaskPlanAndItems(ctx, s.store, *detail)
 }
 
 func (s *Service) Pause(ctx context.Context, id string) (Detail, bool, error) {
@@ -413,6 +482,197 @@ func localFileExists(path string) bool {
 		return false
 	}
 	return !info.IsDir()
+}
+
+func (s *Service) resolveSourceProfile(ctx context.Context, providerKey, profileID string) (provider.AuthProfile, provider.Entry, error) {
+	entry, exists := s.registry.Get(providerKey)
+	if !exists {
+		return provider.AuthProfile{}, provider.Entry{}, fmt.Errorf("provider_not_found")
+	}
+	profile, ok, err := s.authSvc.GetProfile(ctx, profileID)
+	if err != nil {
+		return provider.AuthProfile{}, provider.Entry{}, err
+	}
+	if !ok {
+		return provider.AuthProfile{}, provider.Entry{}, fmt.Errorf("source_profile_not_found")
+	}
+	return provider.AuthProfile{
+		ID:          profile.ID,
+		ProviderKey: profile.ProviderKey,
+		AuthMode:    profile.AuthMode,
+		DisplayName: profile.DisplayName,
+		Token:       profile.Token,
+		Cookie:      profile.Cookie,
+		Extra:       profile.Extra,
+	}, entry, nil
+}
+
+func (s *Service) collectLeafFirstEntries(ctx context.Context, source provider.Entry, profile provider.AuthProfile, roots []string, pageSize int) ([]planner.SourceEntry, []string, error) {
+	entries := make([]planner.SourceEntry, 0)
+	trace := make([]string, 0)
+	visited := make(map[string]bool)
+
+	var walk func(string) error
+	walk = func(path string) error {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+		normalized := normalizeScanPath(path)
+		if visited[normalized] {
+			return nil
+		}
+		visited[normalized] = true
+		trace = append(trace, normalized)
+
+		list := source.Adapter.List(provider.ListRequest{
+			Profile:  profile,
+			Path:     normalized,
+			ParentID: "",
+			PageSize: pageSize,
+		})
+		if !list.OK {
+			return fmt.Errorf("%s", list.Status)
+		}
+
+		dirs := make([]string, 0)
+		files := make([]planner.SourceEntry, 0)
+		for _, raw := range list.Items {
+			childPath := normalizeScanPath(stringMapValue(raw, "path"))
+			if childPath == "" || childPath == "/" {
+				continue
+			}
+			if boolMapValue(raw, "isDir") {
+				dirs = append(dirs, childPath)
+				continue
+			}
+			files = append(files, planner.SourceEntry{
+				Path:      childPath,
+				Size:      int64Number(raw["size"]),
+				MD5:       firstString(raw, "md5", "etag"),
+				SHA1:      stringMapValue(raw, "sha1"),
+				GCID:      stringMapValue(raw, "gcid"),
+				ETag:      stringMapValue(raw, "etag"),
+				LocalPath: stringMapValue(raw, "localPath"),
+				Raw:       raw,
+			})
+		}
+		for _, dir := range dirs {
+			if err := walk(dir); err != nil {
+				return err
+			}
+		}
+		entries = append(entries, files...)
+		return nil
+	}
+
+	for _, root := range roots {
+		if err := walk(root); err != nil {
+			return nil, trace, err
+		}
+	}
+	return entries, trace, nil
+}
+
+func normalizeScanPath(path string) string {
+	trimmed := strings.TrimSpace(path)
+	if trimmed == "" {
+		return "/"
+	}
+	trimmed = strings.ReplaceAll(trimmed, "\\", "/")
+	if !strings.HasPrefix(trimmed, "/") {
+		trimmed = "/" + trimmed
+	}
+	for strings.Contains(trimmed, "//") {
+		trimmed = strings.ReplaceAll(trimmed, "//", "/")
+	}
+	if len(trimmed) > 1 && strings.HasSuffix(trimmed, "/") {
+		trimmed = strings.TrimRight(trimmed, "/")
+	}
+	return trimmed
+}
+
+func metadataStringSlice(values map[string]interface{}, key string) []string {
+	if values == nil {
+		return nil
+	}
+	raw, ok := values[key]
+	if !ok {
+		return nil
+	}
+	switch typed := raw.(type) {
+	case []string:
+		out := make([]string, 0, len(typed))
+		for _, item := range typed {
+			item = strings.TrimSpace(item)
+			if item != "" {
+				out = append(out, item)
+			}
+		}
+		return out
+	case []interface{}:
+		out := make([]string, 0, len(typed))
+		for _, item := range typed {
+			if value, ok := item.(string); ok && strings.TrimSpace(value) != "" {
+				out = append(out, strings.TrimSpace(value))
+			}
+		}
+		return out
+	default:
+		return nil
+	}
+}
+
+func metadataStringFromRisk(values map[string]interface{}, key string) string {
+	if values == nil {
+		return ""
+	}
+	value, _ := values[key].(string)
+	return value
+}
+
+func stringMapValue(values map[string]interface{}, key string) string {
+	value, _ := values[key].(string)
+	return value
+}
+
+func boolMapValue(values map[string]interface{}, key string) bool {
+	value, _ := values[key].(bool)
+	return value
+}
+
+func firstString(values map[string]interface{}, keys ...string) string {
+	for _, key := range keys {
+		if value := stringMapValue(values, key); value != "" {
+			return value
+		}
+	}
+	return ""
+}
+
+func intNumber(raw interface{}) int {
+	switch value := raw.(type) {
+	case int:
+		return value
+	case int64:
+		return int(value)
+	case float64:
+		return int(value)
+	default:
+		return 0
+	}
+}
+
+func int64Number(raw interface{}) int64 {
+	switch value := raw.(type) {
+	case int:
+		return int64(value)
+	case int64:
+		return value
+	case float64:
+		return int64(value)
+	default:
+		return 0
+	}
 }
 
 func buildProviderProbe(detail Detail, profile provider.AuthProfile, results []Result, createdAt string) ProviderProbe {

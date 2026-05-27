@@ -473,6 +473,10 @@ func handleServiceError(w http.ResponseWriter, err error) {
 		writeError(w, http.StatusBadRequest, "task_state_transition_not_allowed", "Task state transition is not allowed.")
 	case err != nil && err.Error() == "target_profile_not_found":
 		writeError(w, http.StatusBadRequest, "target_profile_not_found", "Target profile was not found.")
+	case err != nil && err.Error() == "source_profile_not_found":
+		writeError(w, http.StatusBadRequest, "source_profile_not_found", "Source profile was not found.")
+	case err != nil && err.Error() == "source_profile_required_for_lazy_scan":
+		writeError(w, http.StatusBadRequest, "source_profile_required_for_lazy_scan", "Lazy scan mode requires a source profile.")
 	case err != nil && err.Error() == "missing_access_token":
 		writeError(w, http.StatusBadRequest, "missing_access_token", "Provider token is required.")
 	case err != nil && err.Error() == "missing_domain_or_drive_id":

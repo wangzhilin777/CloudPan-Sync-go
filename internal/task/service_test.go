@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"cloudpan-sync-go/internal/auth"
@@ -344,10 +345,193 @@ func TestServiceRuntimeHandlesPendingManualAuthExpiredRateLimitAndMissingLocalFi
 	assertResultStatus("/missing.bin", "failed", "local_file_missing")
 }
 
+func TestServiceRunLazilyScansLeafFirstByRootSubtree(t *testing.T) {
+	ctx := context.Background()
+	store, err := sqlitestore.New(ctx, filepath.Join(t.TempDir(), "lazy-scan.db"))
+	if err != nil {
+		t.Fatalf("new store: %v", err)
+	}
+	defer func() { _ = store.Close() }()
+
+	sourceAdapter := &scriptedAdapter{
+		meta: provider.Provider{
+			Key:           "source_tree",
+			DisplayName:   "Source Tree",
+			ProtocolGroup: "fake",
+			AuthModes:     []string{"manual_token"},
+			Status:        "planned",
+		},
+		capability: provider.CapabilitySet{
+			SupportsAuthValidation: true,
+			SupportsList:           true,
+		},
+		listFunc: func(req provider.ListRequest) provider.ListResult {
+			switch req.Path {
+			case "/1":
+				return scriptedListResult(
+					dirItem("/1/11"),
+					dirItem("/1/12"),
+				)
+			case "/1/11":
+				return scriptedListResult(
+					dirItem("/1/11/111"),
+					dirItem("/1/11/112"),
+				)
+			case "/1/11/111":
+				return scriptedListResult(fileItem("/1/11/111/a.bin", 10))
+			case "/1/11/112":
+				return scriptedListResult(fileItem("/1/11/112/b.bin", 20))
+			case "/1/12":
+				return scriptedListResult(
+					dirItem("/1/12/121"),
+					dirItem("/1/12/123"),
+				)
+			case "/1/12/121":
+				return scriptedListResult(fileItem("/1/12/121/c.bin", 30))
+			case "/1/12/123":
+				return scriptedListResult(fileItem("/1/12/123/d.bin", 40))
+			case "/2":
+				return scriptedListResult(dirItem("/2/22"))
+			case "/2/22":
+				return scriptedListResult(
+					dirItem("/2/22/221"),
+					dirItem("/2/22/222"),
+				)
+			case "/2/22/221":
+				return scriptedListResult(fileItem("/2/22/221/e.bin", 50))
+			case "/2/22/222":
+				return scriptedListResult(fileItem("/2/22/222/f.bin", 60))
+			case "/3":
+				return scriptedListResult(fileItem("/3/g.bin", 70))
+			default:
+				return scriptedListResult()
+			}
+		},
+	}
+	targetUploads := make([]string, 0)
+	targetAdapter := &scriptedAdapter{
+		meta: provider.Provider{
+			Key:              "target_tree",
+			DisplayName:      "Target Tree",
+			ProtocolGroup:    "fake",
+			AuthModes:        []string{"manual_token"},
+			FastUploadInputs: []string{"md5", "size"},
+			FallbackModes:    []string{"download_upload"},
+			Status:           "planned",
+		},
+		capability: provider.CapabilitySet{
+			SupportsAuthValidation: true,
+			SupportsUpload:         true,
+		},
+		uploadFunc: func(req provider.UploadRequest) provider.UploadResult {
+			targetUploads = append(targetUploads, req.Path)
+			return provider.UploadResult{
+				OperationResult: provider.OperationResult{
+					OK:      true,
+					Status:  "ok",
+					Message: "uploaded",
+					Mode:    "scripted_upload",
+				},
+			}
+		},
+	}
+
+	registry := provider.NewRegistry(sourceAdapter, targetAdapter)
+	authSvc := auth.NewService(store, registry)
+	svc := NewService(store, registry, authSvc)
+	sourceProfile, err := authSvc.CreateProfile(ctx, auth.CreateProfileInput{
+		ProviderKey: "source_tree",
+		AuthMode:    "manual_token",
+		DisplayName: "source",
+		Token:       "source-token",
+	})
+	if err != nil {
+		t.Fatalf("CreateProfile(source) error = %v", err)
+	}
+	targetProfile, err := authSvc.CreateProfile(ctx, auth.CreateProfileInput{
+		ProviderKey: "target_tree",
+		AuthMode:    "manual_token",
+		DisplayName: "target",
+		Token:       "target-token",
+	})
+	if err != nil {
+		t.Fatalf("CreateProfile(target) error = %v", err)
+	}
+
+	detail, err := svc.Create(ctx, CreateRequest{
+		SourceProvider:  "source_tree",
+		SourceProfileID: sourceProfile.ID,
+		TargetProvider:  "target_tree",
+		TargetProfileID: targetProfile.ID,
+		ThresholdMB:     1,
+		SelectedRoots:   []string{"/1", "/2", "/3"},
+	})
+	if err != nil {
+		t.Fatalf("Create() error = %v", err)
+	}
+	if len(detail.SourceEntries) != 0 {
+		t.Fatalf("expected no eager source entries at create time, got %d", len(detail.SourceEntries))
+	}
+
+	running, ok, err := svc.Run(ctx, detail.Task.ID)
+	if err != nil {
+		t.Fatalf("Run() error = %v", err)
+	}
+	if !ok {
+		t.Fatal("expected task to exist")
+	}
+
+	wantListOrder := []string{"/1", "/1/11", "/1/11/111", "/1/11/112", "/1/12", "/1/12/121", "/1/12/123", "/2", "/2/22", "/2/22/221", "/2/22/222", "/3"}
+	if len(sourceAdapter.listCalls) != len(wantListOrder) {
+		t.Fatalf("expected %d list calls, got %d: %#v", len(wantListOrder), len(sourceAdapter.listCalls), sourceAdapter.listCalls)
+	}
+	for i, want := range wantListOrder {
+		if sourceAdapter.listCalls[i] != want {
+			t.Fatalf("list call %d expected %s, got %s", i, want, sourceAdapter.listCalls[i])
+		}
+	}
+
+	wantUploadOrder := []string{
+		"/1/11/111/a.bin",
+		"/1/11/112/b.bin",
+		"/1/12/121/c.bin",
+		"/1/12/123/d.bin",
+		"/2/22/221/e.bin",
+		"/2/22/222/f.bin",
+		"/3/g.bin",
+	}
+	if len(targetUploads) != len(wantUploadOrder) {
+		t.Fatalf("expected %d uploads, got %d: %#v", len(wantUploadOrder), len(targetUploads), targetUploads)
+	}
+	for i, want := range wantUploadOrder {
+		if targetUploads[i] != want {
+			t.Fatalf("upload order %d expected %s, got %s", i, want, targetUploads[i])
+		}
+	}
+
+	if got, _ := running.Plan.Metadata["scanMode"].(string); got != "lazy_leaf_first" {
+		t.Fatalf("expected lazy scan mode, got %v", running.Plan.Metadata["scanMode"])
+	}
+	switch trace := running.Plan.Metadata["scanTrace"].(type) {
+	case []string:
+		if len(trace) != len(wantListOrder) {
+			t.Fatalf("expected scanTrace len %d, got %d", len(wantListOrder), len(trace))
+		}
+	case []interface{}:
+		if len(trace) != len(wantListOrder) {
+			t.Fatalf("expected scanTrace len %d, got %d", len(wantListOrder), len(trace))
+		}
+	default:
+		t.Fatalf("expected scanTrace in metadata, got %#v", running.Plan.Metadata["scanTrace"])
+	}
+}
+
 type scriptedAdapter struct {
 	meta       provider.Provider
 	capability provider.CapabilitySet
+	listFunc   func(req provider.ListRequest) provider.ListResult
 	uploadFunc func(req provider.UploadRequest) provider.UploadResult
+	listCalls  []string
 }
 
 func (a *scriptedAdapter) Meta() provider.Provider {
@@ -363,6 +547,10 @@ func (a *scriptedAdapter) ValidateAuth(profile provider.AuthProfile) provider.Op
 }
 
 func (a *scriptedAdapter) List(req provider.ListRequest) provider.ListResult {
+	a.listCalls = append(a.listCalls, req.Path)
+	if a.listFunc != nil {
+		return a.listFunc(req)
+	}
 	return provider.ListResult{OperationResult: provider.OperationResult{OK: true, Status: "ok", Message: "ok", Mode: "scripted"}}
 }
 
@@ -383,4 +571,43 @@ func (a *scriptedAdapter) Upload(req provider.UploadRequest) provider.UploadResu
 		return provider.UploadResult{OperationResult: provider.OperationResult{OK: true, Status: "ok", Message: "ok", Mode: "scripted"}}
 	}
 	return a.uploadFunc(req)
+}
+
+func scriptedListResult(items ...map[string]interface{}) provider.ListResult {
+	return provider.ListResult{
+		OperationResult: provider.OperationResult{
+			OK:      true,
+			Status:  "ok",
+			Message: "ok",
+			Mode:    "scripted_list",
+		},
+		Items: items,
+	}
+}
+
+func dirItem(path string) map[string]interface{} {
+	return map[string]interface{}{
+		"path":  path,
+		"name":  inferNameForTest(path),
+		"isDir": true,
+	}
+}
+
+func fileItem(path string, size int64) map[string]interface{} {
+	return map[string]interface{}{
+		"path":  path,
+		"name":  inferNameForTest(path),
+		"size":  size,
+		"isDir": false,
+		"md5":   "md5-" + inferNameForTest(path),
+	}
+}
+
+func inferNameForTest(path string) string {
+	path = strings.ReplaceAll(path, "\\", "/")
+	index := strings.LastIndex(path, "/")
+	if index >= 0 && index < len(path)-1 {
+		return path[index+1:]
+	}
+	return path
 }
