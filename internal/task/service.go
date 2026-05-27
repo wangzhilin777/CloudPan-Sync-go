@@ -34,17 +34,23 @@ type Detail struct {
 }
 
 type EvidenceSummary struct {
-	TotalTasks        int `json:"totalTasks"`
-	CompletedTasks    int `json:"completedTasks"`
-	FailedResultCount int `json:"failedResultCount"`
-	DoneResultCount   int `json:"doneResultCount"`
+	TotalTasks        int             `json:"totalTasks"`
+	CompletedTasks    int             `json:"completedTasks"`
+	FailedResultCount int             `json:"failedResultCount"`
+	DoneResultCount   int             `json:"doneResultCount"`
+	RecentResults     []Result        `json:"recentResults"`
+	RecentProbes      []ProviderProbe `json:"recentProbes"`
 }
 
 type StatusSummary struct {
-	ProviderKey    string `json:"providerKey"`
-	ProfileCount   int    `json:"profileCount"`
-	TaskCount      int    `json:"taskCount"`
-	CompletedCount int    `json:"completedCount"`
+	ProviderKey     string                 `json:"providerKey"`
+	ProfileCount    int                    `json:"profileCount"`
+	TaskCount       int                    `json:"taskCount"`
+	CompletedCount  int                    `json:"completedCount"`
+	LastTaskState   string                 `json:"lastTaskState,omitempty"`
+	LatestProbe     string                 `json:"latestProbe,omitempty"`
+	LastObservedAt  string                 `json:"lastObservedAt,omitempty"`
+	SnapshotSummary map[string]interface{} `json:"snapshotSummary,omitempty"`
 }
 
 type Service struct {
@@ -181,6 +187,17 @@ func (s *Service) Run(ctx context.Context, id string) (Detail, bool, error) {
 	if err := replaceTaskResults(ctx, s.store, detail.Task, results); err != nil {
 		return Detail{}, true, err
 	}
+	probe := buildProviderProbe(detail, providerProfile, results, now)
+	if err := saveProviderProbe(ctx, s.store, probe); err != nil {
+		return Detail{}, true, err
+	}
+	snapshot, err := buildProviderStatusSnapshot(ctx, s.store, detail, probe, now)
+	if err != nil {
+		return Detail{}, true, err
+	}
+	if err := saveProviderStatusSnapshot(ctx, s.store, snapshot); err != nil {
+		return Detail{}, true, err
+	}
 	return detail, true, nil
 }
 
@@ -283,4 +300,33 @@ func (s *Service) transitionState(ctx context.Context, id string, allowed []Stat
 		return Detail{}, true, err
 	}
 	return detail, true, nil
+}
+
+func buildProviderProbe(detail Detail, profile provider.AuthProfile, results []Result, createdAt string) ProviderProbe {
+	doneCount := 0
+	failedCount := 0
+	for _, result := range results {
+		switch result.Status {
+		case "done":
+			doneCount++
+		case "failed":
+			failedCount++
+		}
+	}
+	return ProviderProbe{
+		ID:          uuid.NewString(),
+		ProviderKey: detail.Task.TargetProvider,
+		ProfileID:   profile.ID,
+		Status:      string(detail.Task.State),
+		Payload: map[string]interface{}{
+			"taskId":          detail.Task.ID,
+			"taskState":       detail.Task.State,
+			"completionKind":  detail.Task.CompletionKind,
+			"doneCount":       doneCount,
+			"failedCount":     failedCount,
+			"resultCount":     len(results),
+			"targetProfileId": detail.TargetProfileID,
+		},
+		CreatedAt: createdAt,
+	}
 }

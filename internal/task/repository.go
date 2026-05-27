@@ -4,6 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"fmt"
+
+	"github.com/google/uuid"
 
 	"cloudpan-sync-go/internal/planner"
 	"cloudpan-sync-go/internal/provider"
@@ -190,6 +193,16 @@ func taskEvidenceSummary(ctx context.Context, store *sqlitestore.Store) (Evidenc
 	if err := store.DB().QueryRowContext(ctx, `SELECT COUNT(1) FROM task_results WHERE status = 'done'`).Scan(&summary.DoneResultCount); err != nil {
 		return summary, err
 	}
+	results, err := recentTaskResults(ctx, store, 10)
+	if err != nil {
+		return summary, err
+	}
+	probes, err := recentProviderProbes(ctx, store, 10)
+	if err != nil {
+		return summary, err
+	}
+	summary.RecentResults = results
+	summary.RecentProbes = probes
 	return summary, nil
 }
 
@@ -205,6 +218,16 @@ func providerStatusSummary(ctx context.Context, store *sqlitestore.Store, provid
 		}
 		if err := store.DB().QueryRowContext(ctx, `SELECT COUNT(1) FROM tasks WHERE target_provider = ? AND state IN ('completed', 'completed_with_errors')`, entry.Meta.Key).Scan(&item.CompletedCount); err != nil {
 			return nil, err
+		}
+		snapshot, ok, err := latestProviderStatusSnapshot(ctx, store, entry.Meta.Key)
+		if err != nil {
+			return nil, err
+		}
+		if ok {
+			item.LastObservedAt = snapshot.CreatedAt
+			item.SnapshotSummary = snapshot.Summary
+			item.LastTaskState = stringValue(snapshot.Summary["lastTaskState"])
+			item.LatestProbe = stringValue(snapshot.Summary["latestProbe"])
 		}
 		items = append(items, item)
 	}
@@ -253,4 +276,144 @@ ORDER BY created_at ASC`, taskID)
 		items = append(items, item)
 	}
 	return items, rows.Err()
+}
+
+func saveProviderProbe(ctx context.Context, store *sqlitestore.Store, probe ProviderProbe) error {
+	payloadJSON, err := json.Marshal(probe.Payload)
+	if err != nil {
+		return err
+	}
+	_, err = store.DB().ExecContext(ctx, `
+INSERT INTO provider_probes(id, provider_key, profile_id, status, payload_json, created_at)
+VALUES (?, ?, ?, ?, ?, ?)`,
+		probe.ID, probe.ProviderKey, probe.ProfileID, probe.Status, string(payloadJSON), probe.CreatedAt,
+	)
+	return err
+}
+
+func saveProviderStatusSnapshot(ctx context.Context, store *sqlitestore.Store, snapshot ProviderStatus) error {
+	summaryJSON, err := json.Marshal(snapshot.Summary)
+	if err != nil {
+		return err
+	}
+	_, err = store.DB().ExecContext(ctx, `
+INSERT INTO provider_status_snapshots(id, provider_key, summary_json, created_at)
+VALUES (?, ?, ?, ?)`,
+		snapshot.ID, snapshot.ProviderKey, string(summaryJSON), snapshot.CreatedAt,
+	)
+	return err
+}
+
+func buildProviderStatusSnapshot(ctx context.Context, store *sqlitestore.Store, detail Detail, probe ProviderProbe, createdAt string) (ProviderStatus, error) {
+	var (
+		profileCount   int
+		taskCount      int
+		completedCount int
+	)
+	if err := store.DB().QueryRowContext(ctx, `SELECT COUNT(1) FROM auth_profiles WHERE provider_key = ?`, detail.Task.TargetProvider).Scan(&profileCount); err != nil {
+		return ProviderStatus{}, err
+	}
+	if err := store.DB().QueryRowContext(ctx, `SELECT COUNT(1) FROM tasks WHERE target_provider = ?`, detail.Task.TargetProvider).Scan(&taskCount); err != nil {
+		return ProviderStatus{}, err
+	}
+	if err := store.DB().QueryRowContext(ctx, `SELECT COUNT(1) FROM tasks WHERE target_provider = ? AND state IN ('completed', 'completed_with_errors')`, detail.Task.TargetProvider).Scan(&completedCount); err != nil {
+		return ProviderStatus{}, err
+	}
+	return ProviderStatus{
+		ID:          uuid.NewString(),
+		ProviderKey: detail.Task.TargetProvider,
+		Summary: map[string]interface{}{
+			"profileCount":   profileCount,
+			"taskCount":      taskCount,
+			"completedCount": completedCount,
+			"lastTaskId":     detail.Task.ID,
+			"lastTaskState":  detail.Task.State,
+			"latestProbe":    probe.Status,
+		},
+		CreatedAt: createdAt,
+	}, nil
+}
+
+func latestProviderStatusSnapshot(ctx context.Context, store *sqlitestore.Store, providerKey string) (ProviderStatus, bool, error) {
+	row := store.DB().QueryRowContext(ctx, `
+SELECT id, provider_key, summary_json, created_at
+FROM provider_status_snapshots
+WHERE provider_key = ?
+ORDER BY created_at DESC, rowid DESC
+LIMIT 1`, providerKey)
+	var (
+		item        ProviderStatus
+		summaryJSON string
+	)
+	if err := row.Scan(&item.ID, &item.ProviderKey, &summaryJSON, &item.CreatedAt); err != nil {
+		if err == sql.ErrNoRows {
+			return ProviderStatus{}, false, nil
+		}
+		return ProviderStatus{}, false, err
+	}
+	item.Summary = map[string]interface{}{}
+	if summaryJSON != "" {
+		if err := json.Unmarshal([]byte(summaryJSON), &item.Summary); err != nil {
+			return ProviderStatus{}, false, err
+		}
+	}
+	return item, true, nil
+}
+
+func recentProviderProbes(ctx context.Context, store *sqlitestore.Store, limit int) ([]ProviderProbe, error) {
+	rows, err := store.DB().QueryContext(ctx, fmt.Sprintf(`
+SELECT id, provider_key, profile_id, status, payload_json, created_at
+FROM provider_probes
+ORDER BY created_at DESC, rowid DESC
+LIMIT %d`, limit))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	items := []ProviderProbe{}
+	for rows.Next() {
+		var (
+			item        ProviderProbe
+			payloadJSON string
+		)
+		if err := rows.Scan(&item.ID, &item.ProviderKey, &item.ProfileID, &item.Status, &payloadJSON, &item.CreatedAt); err != nil {
+			return nil, err
+		}
+		item.Payload = map[string]interface{}{}
+		if payloadJSON != "" {
+			if err := json.Unmarshal([]byte(payloadJSON), &item.Payload); err != nil {
+				return nil, err
+			}
+		}
+		items = append(items, item)
+	}
+	return items, rows.Err()
+}
+
+func recentTaskResults(ctx context.Context, store *sqlitestore.Store, limit int) ([]Result, error) {
+	rows, err := store.DB().QueryContext(ctx, fmt.Sprintf(`
+SELECT id, task_id, task_item_id, status, mode, message, created_at
+FROM task_results
+ORDER BY created_at DESC, rowid DESC
+LIMIT %d`, limit))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	items := []Result{}
+	for rows.Next() {
+		var item Result
+		if err := rows.Scan(&item.ID, &item.TaskID, &item.ItemID, &item.Status, &item.Mode, &item.Message, &item.CreatedAt); err != nil {
+			return nil, err
+		}
+		items = append(items, item)
+	}
+	return items, rows.Err()
+}
+
+func stringValue(raw interface{}) string {
+	value, _ := raw.(string)
+	return value
 }

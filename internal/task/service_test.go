@@ -61,6 +61,38 @@ func TestServiceCreateRunRetryTask(t *testing.T) {
 	if running.Task.State != StateCompletedWithErrors {
 		t.Fatalf("expected completed_with_errors, got %s", running.Task.State)
 	}
+	evidence, err := svc.RuntimeEvidence(ctx)
+	if err != nil {
+		t.Fatalf("RuntimeEvidence() error = %v", err)
+	}
+	if evidence.TotalTasks != 1 {
+		t.Fatalf("expected TotalTasks=1, got %d", evidence.TotalTasks)
+	}
+	if len(evidence.RecentResults) == 0 {
+		t.Fatal("expected recent task results to be populated")
+	}
+	if len(evidence.RecentProbes) == 0 {
+		t.Fatal("expected recent provider probes to be populated")
+	}
+	statuses, err := svc.ProviderStatuses(ctx)
+	if err != nil {
+		t.Fatalf("ProviderStatuses() error = %v", err)
+	}
+	foundTarget := false
+	for _, item := range statuses {
+		if item.ProviderKey == "123_open" {
+			foundTarget = true
+			if item.LastTaskState == "" {
+				t.Fatal("expected target provider to include LastTaskState")
+			}
+			if item.LatestProbe == "" {
+				t.Fatal("expected target provider to include LatestProbe")
+			}
+		}
+	}
+	if !foundTarget {
+		t.Fatal("expected 123_open in provider statuses")
+	}
 
 	retried, ok, err := svc.Retry(ctx, detail.Task.ID)
 	if err != nil {

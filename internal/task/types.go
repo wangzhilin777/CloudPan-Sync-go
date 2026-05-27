@@ -1,5 +1,21 @@
 package task
 
+type ProviderProbe struct {
+	ID          string                 `json:"id"`
+	ProviderKey string                 `json:"providerKey"`
+	ProfileID   string                 `json:"profileId,omitempty"`
+	Status      string                 `json:"status"`
+	Payload     map[string]interface{} `json:"payload,omitempty"`
+	CreatedAt   string                 `json:"createdAt"`
+}
+
+type ProviderStatus struct {
+	ID          string                 `json:"id"`
+	ProviderKey string                 `json:"providerKey"`
+	Summary     map[string]interface{} `json:"summary"`
+	CreatedAt   string                 `json:"createdAt"`
+}
+
 type State string
 
 const (
