@@ -46,6 +46,30 @@ type Task struct {
 	UpdatedAt      string         `json:"updatedAt"`
 }
 
+type DirectoryState struct {
+	Path           string `json:"path"`
+	RootPath       string `json:"rootPath,omitempty"`
+	Status         string `json:"status"`
+	TotalItems     int    `json:"totalItems"`
+	ProcessedItems int    `json:"processedItems"`
+	DoneItems      int    `json:"doneItems"`
+	FailedItems    int    `json:"failedItems"`
+	LastItemPath   string `json:"lastItemPath,omitempty"`
+}
+
+type RuntimeState struct {
+	ExecutionState    string           `json:"executionState"`
+	CurrentRoot       string           `json:"currentRoot,omitempty"`
+	CurrentDirectory  string           `json:"currentDirectory,omitempty"`
+	CurrentItemPath   string           `json:"currentItemPath,omitempty"`
+	LastCompletedPath string           `json:"lastCompletedPath,omitempty"`
+	ProcessedCount    int              `json:"processedCount"`
+	DoneCount         int              `json:"doneCount"`
+	FailedCount       int              `json:"failedCount"`
+	NextSequence      int              `json:"nextSequence"`
+	DirectoryStates   []DirectoryState `json:"directoryStates,omitempty"`
+}
+
 type Item struct {
 	ID     string `json:"id"`
 	TaskID string `json:"taskId"`

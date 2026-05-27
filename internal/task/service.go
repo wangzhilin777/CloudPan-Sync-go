@@ -31,6 +31,7 @@ type CreateRequest struct {
 type Detail struct {
 	Task            Task                  `json:"task"`
 	Plan            planner.Plan          `json:"plan"`
+	Runtime         RuntimeState          `json:"runtime"`
 	Items           []Item                `json:"items"`
 	Results         []Result              `json:"results"`
 	SourceProfileID string                `json:"sourceProfileId,omitempty"`
@@ -101,10 +102,11 @@ func (s *Service) Create(ctx context.Context, req CreateRequest) (Detail, error)
 			Size:   planItem.Size,
 		})
 	}
-	if err := createTask(ctx, s.store, t, plan, items, req.Entries, req.SourceProfileID, req.TargetProfileID, string(req.ConflictPolicy)); err != nil {
+	runtime := initializeRuntimeState(plan)
+	if err := createTask(ctx, s.store, t, plan, runtime, items, req.Entries, req.SourceProfileID, req.TargetProfileID, string(req.ConflictPolicy)); err != nil {
 		return Detail{}, err
 	}
-	return Detail{Task: t, Plan: plan, Items: items, Results: []Result{}, SourceProfileID: req.SourceProfileID, TargetProfileID: req.TargetProfileID, ConflictPolicy: string(req.ConflictPolicy), SourceEntries: req.Entries}, nil
+	return Detail{Task: t, Plan: plan, Runtime: runtime, Items: items, Results: []Result{}, SourceProfileID: req.SourceProfileID, TargetProfileID: req.TargetProfileID, ConflictPolicy: string(req.ConflictPolicy), SourceEntries: req.Entries}, nil
 }
 
 func (s *Service) List(ctx context.Context) ([]Detail, error) {
@@ -126,6 +128,7 @@ func (s *Service) Run(ctx context.Context, id string) (Detail, bool, error) {
 	if err := s.materializeTaskEntriesIfNeeded(ctx, &detail); err != nil {
 		return Detail{}, true, err
 	}
+	ensureRuntimeState(&detail)
 	entry, exists := s.registry.Get(detail.Task.TargetProvider)
 	if !exists {
 		return Detail{}, true, fmt.Errorf("provider_not_found")
@@ -149,17 +152,29 @@ func (s *Service) Run(ctx context.Context, id string) (Detail, bool, error) {
 			Extra:       profile.Extra,
 		}
 	}
-	results := make([]Result, 0, len(detail.Plan.Items))
-	failed := 0
-	now := time.Now().UTC().Format(time.RFC3339)
-	for i, item := range detail.Plan.Items {
+	if detail.Task.State != StateRunning {
+		detail.Task.State = StateRunning
+		detail.Task.UpdatedAt = time.Now().UTC().Format(time.RFC3339)
+		detail.Runtime.ExecutionState = "running"
+		if err := updateTaskDetailState(ctx, s.store, detail); err != nil {
+			return Detail{}, true, err
+		}
+	}
+
+	results := append([]Result(nil), detail.Results...)
+	startIndex := len(results)
+	syncRuntimeCountsFromResults(&detail.Runtime, results)
+
+	for i := startIndex; i < len(detail.Plan.Items); i++ {
+		item := detail.Plan.Items[i]
 		result := Result{
 			ID:        uuid.NewString(),
 			TaskID:    detail.Task.ID,
 			ItemID:    detail.Items[i].ID,
 			Payload:   map[string]interface{}{},
-			CreatedAt: now,
+			CreatedAt: time.Now().UTC().Format(time.RFC3339),
 		}
+		updateRuntimeBeforeItem(&detail, item.Path, i)
 		localPath := lookupLocalPath(detail.SourceEntries, item.Path)
 		conflictPolicy, conflictAction := resolveConflictPolicy(entry.Meta, provider.ConflictPolicy(detail.ConflictPolicy))
 		uploadReq := provider.UploadRequest{
@@ -204,25 +219,36 @@ func (s *Service) Run(ctx context.Context, id string) (Detail, bool, error) {
 		}
 		if item.Strategy == planner.StrategyPendingManual && !upload.OK {
 			result.Status = "failed"
-			failed++
 		} else if upload.OK {
 			result.Status = "done"
 		} else {
 			result.Status = "failed"
-			failed++
 		}
 		results = append(results, result)
+		detail.Results = results
+		updateRuntimeAfterItem(&detail, item.Path, result)
+		detail.Task.UpdatedAt = time.Now().UTC().Format(time.RFC3339)
+		if err := replaceTaskDetailAndResults(ctx, s.store, detail); err != nil {
+			return Detail{}, true, err
+		}
 	}
+
+	failed := detail.Runtime.FailedCount
 	detail.Task.State = StateCompleted
 	detail.Task.CompletionKind = CompletionKindProbeOnly
 	if failed > 0 {
 		detail.Task.State = StateCompletedWithErrors
 	}
-	detail.Task.UpdatedAt = now
+	detail.Runtime.ExecutionState = "completed"
+	detail.Runtime.CurrentItemPath = ""
+	detail.Runtime.CurrentDirectory = ""
+	detail.Runtime.CurrentRoot = ""
+	detail.Task.UpdatedAt = time.Now().UTC().Format(time.RFC3339)
 	detail.Results = results
-	if err := replaceTaskResults(ctx, s.store, detail.Task, results); err != nil {
+	if err := replaceTaskDetailAndResults(ctx, s.store, detail); err != nil {
 		return Detail{}, true, err
 	}
+	now := time.Now().UTC().Format(time.RFC3339)
 	probe := buildProviderProbe(detail, providerProfile, results, now)
 	if err := saveProviderProbe(ctx, s.store, probe); err != nil {
 		return Detail{}, true, err
@@ -300,6 +326,7 @@ func (s *Service) materializeTaskEntriesIfNeeded(ctx context.Context, detail *De
 
 	detail.SourceEntries = entries
 	detail.Plan = plan
+	detail.Runtime = initializeRuntimeState(plan)
 	detail.Items = items
 	detail.Task.UpdatedAt = time.Now().UTC().Format(time.RFC3339)
 	return replaceTaskPlanAndItems(ctx, s.store, *detail)
@@ -321,8 +348,12 @@ func (s *Service) Retry(ctx context.Context, id string) (Detail, bool, error) {
 	detail.Task.State = StateReady
 	detail.Task.CompletionKind = ""
 	detail.Task.UpdatedAt = time.Now().UTC().Format(time.RFC3339)
+	detail.Runtime = initializeRuntimeState(detail.Plan)
 	detail.Results = []Result{}
 	if err := resetTaskResults(ctx, s.store, detail.Task); err != nil {
+		return Detail{}, true, err
+	}
+	if err := updateTaskDetailState(ctx, s.store, detail); err != nil {
 		return Detail{}, true, err
 	}
 	return detail, true, nil
@@ -409,7 +440,18 @@ func (s *Service) transitionState(ctx context.Context, id string, allowed []Stat
 	}
 	detail.Task.State = target
 	detail.Task.UpdatedAt = time.Now().UTC().Format(time.RFC3339)
-	if err := updateTaskState(ctx, s.store, detail.Task); err != nil {
+	ensureRuntimeState(&detail)
+	switch target {
+	case StatePaused:
+		detail.Runtime.ExecutionState = "paused"
+	case StateReady:
+		if len(detail.Results) > 0 {
+			detail.Runtime.ExecutionState = "ready_to_resume"
+		} else {
+			detail.Runtime.ExecutionState = "idle"
+		}
+	}
+	if err := updateTaskDetailState(ctx, s.store, detail); err != nil {
 		return Detail{}, true, err
 	}
 	return detail, true, nil
@@ -776,6 +818,225 @@ func int64Number(raw interface{}) int64 {
 	}
 }
 
+func initializeRuntimeState(plan planner.Plan) RuntimeState {
+	directoryStates := collectDirectoryStates(plan)
+	return RuntimeState{
+		ExecutionState:  "idle",
+		ProcessedCount:  0,
+		DoneCount:       0,
+		FailedCount:     0,
+		NextSequence:    1,
+		DirectoryStates: directoryStates,
+	}
+}
+
+func ensureRuntimeState(detail *Detail) {
+	if detail == nil {
+		return
+	}
+	if len(detail.Runtime.DirectoryStates) == 0 {
+		detail.Runtime = initializeRuntimeState(detail.Plan)
+	}
+	if detail.Runtime.ExecutionState == "" {
+		detail.Runtime.ExecutionState = "idle"
+	}
+	if detail.Runtime.NextSequence <= 0 {
+		detail.Runtime.NextSequence = len(detail.Results) + 1
+	}
+}
+
+func collectDirectoryStates(plan planner.Plan) []DirectoryState {
+	ordered := make([]DirectoryState, 0)
+	indexByPath := make(map[string]int)
+	selectedRoots := metadataStringSlice(plan.Metadata, "selectedRoots")
+	scanTrace := metadataStringSlice(plan.Metadata, "scanTrace")
+
+	addPath := func(path string) {
+		path = normalizeScanPath(path)
+		if path == "/" {
+			return
+		}
+		if _, exists := indexByPath[path]; exists {
+			return
+		}
+		root := matchRootPath(path, selectedRoots)
+		indexByPath[path] = len(ordered)
+		ordered = append(ordered, DirectoryState{
+			Path:     path,
+			RootPath: root,
+			Status:   "pending",
+		})
+	}
+
+	for _, root := range selectedRoots {
+		addPath(root)
+	}
+	for _, path := range scanTrace {
+		addPath(path)
+	}
+	for _, item := range plan.Items {
+		addPath(parentDirectory(item.Path))
+	}
+
+	for idx := range ordered {
+		total := 0
+		for _, item := range plan.Items {
+			if itemBelongsToDirectory(item.Path, ordered[idx].Path) {
+				total++
+			}
+		}
+		ordered[idx].TotalItems = total
+	}
+	return ordered
+}
+
+func syncRuntimeCountsFromResults(runtime *RuntimeState, results []Result) {
+	if runtime == nil {
+		return
+	}
+	runtime.ProcessedCount = len(results)
+	runtime.DoneCount = 0
+	runtime.FailedCount = 0
+	lastCompleted := ""
+	for _, result := range results {
+		switch result.Status {
+		case "done":
+			runtime.DoneCount++
+		case "failed":
+			runtime.FailedCount++
+		}
+		if path, _ := result.Payload["path"].(string); path != "" {
+			lastCompleted = path
+		}
+	}
+	runtime.LastCompletedPath = lastCompleted
+	runtime.NextSequence = len(results) + 1
+}
+
+func updateRuntimeBeforeItem(detail *Detail, path string, index int) {
+	ensureRuntimeState(detail)
+	currentRoot := matchRootPath(path, metadataStringSlice(detail.Plan.Metadata, "selectedRoots"))
+	currentDir := parentDirectory(path)
+	detail.Runtime.ExecutionState = "running"
+	detail.Runtime.CurrentRoot = currentRoot
+	detail.Runtime.CurrentDirectory = currentDir
+	detail.Runtime.CurrentItemPath = path
+	detail.Runtime.NextSequence = index + 1
+	setDirectoryInProgress(&detail.Runtime, currentRoot, path)
+	setDirectoryInProgress(&detail.Runtime, currentDir, path)
+}
+
+func updateRuntimeAfterItem(detail *Detail, path string, result Result) {
+	ensureRuntimeState(detail)
+	result.Payload["path"] = path
+	detail.Runtime.ProcessedCount++
+	detail.Runtime.LastCompletedPath = path
+	detail.Runtime.CurrentItemPath = ""
+	detail.Runtime.NextSequence = detail.Runtime.ProcessedCount + 1
+	if result.Status == "done" {
+		detail.Runtime.DoneCount++
+	} else if result.Status == "failed" {
+		detail.Runtime.FailedCount++
+	}
+	currentRoot := matchRootPath(path, metadataStringSlice(detail.Plan.Metadata, "selectedRoots"))
+	currentDir := parentDirectory(path)
+	applyDirectoryResult(&detail.Runtime, currentRoot, path, result.Status)
+	applyDirectoryResult(&detail.Runtime, currentDir, path, result.Status)
+}
+
+func setDirectoryInProgress(runtime *RuntimeState, dirPath, itemPath string) {
+	if runtime == nil {
+		return
+	}
+	index := findDirectoryState(runtime.DirectoryStates, dirPath)
+	if index < 0 {
+		return
+	}
+	state := runtime.DirectoryStates[index]
+	if state.Status == "completed" || state.Status == "completed_with_errors" {
+		runtime.DirectoryStates[index] = state
+		return
+	}
+	state.Status = "in_progress"
+	state.LastItemPath = itemPath
+	runtime.DirectoryStates[index] = state
+}
+
+func applyDirectoryResult(runtime *RuntimeState, dirPath, itemPath, resultStatus string) {
+	if runtime == nil {
+		return
+	}
+	index := findDirectoryState(runtime.DirectoryStates, dirPath)
+	if index < 0 {
+		return
+	}
+	state := runtime.DirectoryStates[index]
+	state.ProcessedItems++
+	state.LastItemPath = itemPath
+	if resultStatus == "done" {
+		state.DoneItems++
+	} else if resultStatus == "failed" {
+		state.FailedItems++
+	}
+	state.Status = "in_progress"
+	if state.TotalItems > 0 && state.ProcessedItems >= state.TotalItems {
+		if state.FailedItems > 0 {
+			state.Status = "completed_with_errors"
+		} else {
+			state.Status = "completed"
+		}
+	}
+	runtime.DirectoryStates[index] = state
+}
+
+func findDirectoryState(states []DirectoryState, path string) int {
+	path = normalizeScanPath(path)
+	for idx, state := range states {
+		if normalizeScanPath(state.Path) == path {
+			return idx
+		}
+	}
+	return -1
+}
+
+func itemBelongsToDirectory(itemPath, dirPath string) bool {
+	dirPath = normalizeScanPath(dirPath)
+	itemPath = normalizeScanPath(itemPath)
+	if dirPath == "/" {
+		return true
+	}
+	if itemPath == dirPath {
+		return true
+	}
+	return strings.HasPrefix(itemPath, dirPath+"/")
+}
+
+func parentDirectory(path string) string {
+	normalized := normalizeScanPath(path)
+	if normalized == "/" {
+		return "/"
+	}
+	index := strings.LastIndex(normalized, "/")
+	if index <= 0 {
+		return "/"
+	}
+	return normalized[:index]
+}
+
+func matchRootPath(path string, roots []string) string {
+	normalized := normalizeScanPath(path)
+	for _, root := range roots {
+		root = normalizeScanPath(root)
+		if normalized == root || strings.HasPrefix(normalized, root+"/") {
+			return root
+		}
+	}
+	if len(roots) == 1 {
+		return normalizeScanPath(roots[0])
+	}
+	return parentDirectory(normalized)
+}
+
 func buildProviderProbe(detail Detail, profile provider.AuthProfile, results []Result, createdAt string) ProviderProbe {
 	doneCount := 0
 	failedCount := 0
@@ -803,6 +1064,10 @@ func buildProviderProbe(detail Detail, profile provider.AuthProfile, results []R
 			"recommendedExecutionMode":       detail.Plan.Metadata["recommendedExecutionMode"],
 			"recommendedExecutionModeReason": detail.Plan.Metadata["recommendedExecutionModeReason"],
 			"scanMode":                       detail.Plan.Metadata["scanMode"],
+			"runtime":                        detail.Runtime,
+			"currentRoot":                    detail.Runtime.CurrentRoot,
+			"currentDirectory":               detail.Runtime.CurrentDirectory,
+			"lastCompletedPath":              detail.Runtime.LastCompletedPath,
 			"targetProfileId":                detail.TargetProfileID,
 		},
 		CreatedAt: createdAt,

@@ -519,6 +519,19 @@ func TestServiceRunLazilyScansLeafFirstByRootSubtree(t *testing.T) {
 		t.Fatalf("expected lazy scan mode, got %v", running.Plan.Metadata["scanMode"])
 	}
 	assertExecutionModeValue(t, running.Plan.Metadata["executionMode"], planner.ExecutionModeLeafFirstLazy)
+	if running.Runtime.ExecutionState != "completed" {
+		t.Fatalf("expected runtime completed, got %s", running.Runtime.ExecutionState)
+	}
+	if running.Runtime.ProcessedCount != len(wantUploadOrder) {
+		t.Fatalf("expected processed count %d, got %d", len(wantUploadOrder), running.Runtime.ProcessedCount)
+	}
+	rootStateIndex := findDirectoryState(running.Runtime.DirectoryStates, "/1")
+	if rootStateIndex < 0 {
+		t.Fatal("expected runtime directory state for /1")
+	}
+	if got := running.Runtime.DirectoryStates[rootStateIndex].Status; got != "completed" {
+		t.Fatalf("expected root /1 completed, got %s", got)
+	}
 	switch trace := running.Plan.Metadata["scanTrace"].(type) {
 	case []string:
 		if len(trace) != len(wantListOrder) {
@@ -530,6 +543,169 @@ func TestServiceRunLazilyScansLeafFirstByRootSubtree(t *testing.T) {
 		}
 	default:
 		t.Fatalf("expected scanTrace in metadata, got %#v", running.Plan.Metadata["scanTrace"])
+	}
+}
+
+func TestServiceResumeContinuesCurrentSubtreeFromCheckpoint(t *testing.T) {
+	ctx := context.Background()
+	store, err := sqlitestore.New(ctx, filepath.Join(t.TempDir(), "resume.db"))
+	if err != nil {
+		t.Fatalf("new store: %v", err)
+	}
+	defer func() { _ = store.Close() }()
+
+	sourceAdapter := &scriptedAdapter{
+		meta: provider.Provider{
+			Key:           "resume_source",
+			DisplayName:   "Resume Source",
+			ProtocolGroup: "fake",
+			AuthModes:     []string{"manual_token"},
+			Status:        "planned",
+		},
+		capability: provider.CapabilitySet{
+			SupportsAuthValidation: true,
+			SupportsList:           true,
+		},
+		listFunc: func(req provider.ListRequest) provider.ListResult {
+			switch req.Path {
+			case "/1":
+				return scriptedListResult(dirItem("/1/11"), dirItem("/1/12"))
+			case "/1/11":
+				return scriptedListResult(fileItem("/1/11/a.bin", 10), fileItem("/1/11/b.bin", 20))
+			case "/1/12":
+				return scriptedListResult(fileItem("/1/12/c.bin", 30))
+			case "/2":
+				return scriptedListResult(fileItem("/2/d.bin", 40))
+			default:
+				return scriptedListResult()
+			}
+		},
+	}
+	targetUploads := make([]string, 0)
+	targetAdapter := &scriptedAdapter{
+		meta: provider.Provider{
+			Key:              "resume_target",
+			DisplayName:      "Resume Target",
+			ProtocolGroup:    "fake",
+			AuthModes:        []string{"manual_token"},
+			FastUploadInputs: []string{"md5", "size"},
+			FallbackModes:    []string{"download_upload"},
+			Status:           "planned",
+		},
+		capability: provider.CapabilitySet{
+			SupportsAuthValidation: true,
+			SupportsUpload:         true,
+		},
+		uploadFunc: func(req provider.UploadRequest) provider.UploadResult {
+			targetUploads = append(targetUploads, req.Path)
+			return provider.UploadResult{
+				OperationResult: provider.OperationResult{
+					OK:      true,
+					Status:  "ok",
+					Message: "uploaded",
+					Mode:    "scripted_upload",
+				},
+			}
+		},
+	}
+
+	registry := provider.NewRegistry(sourceAdapter, targetAdapter)
+	authSvc := auth.NewService(store, registry)
+	svc := NewService(store, registry, authSvc)
+	sourceProfile, err := authSvc.CreateProfile(ctx, auth.CreateProfileInput{
+		ProviderKey: "resume_source",
+		AuthMode:    "manual_token",
+		DisplayName: "resume source",
+		Token:       "source-token",
+	})
+	if err != nil {
+		t.Fatalf("CreateProfile(source) error = %v", err)
+	}
+	targetProfile, err := authSvc.CreateProfile(ctx, auth.CreateProfileInput{
+		ProviderKey: "resume_target",
+		AuthMode:    "manual_token",
+		DisplayName: "resume target",
+		Token:       "target-token",
+	})
+	if err != nil {
+		t.Fatalf("CreateProfile(target) error = %v", err)
+	}
+
+	created, err := svc.Create(ctx, CreateRequest{
+		SourceProvider:  "resume_source",
+		SourceProfileID: sourceProfile.ID,
+		TargetProvider:  "resume_target",
+		TargetProfileID: targetProfile.ID,
+		SelectedRoots:   []string{"/1", "/2"},
+	})
+	if err != nil {
+		t.Fatalf("Create() error = %v", err)
+	}
+	if err := svc.materializeTaskEntriesIfNeeded(ctx, &created); err != nil {
+		t.Fatalf("materializeTaskEntriesIfNeeded() error = %v", err)
+	}
+
+	firstResult := Result{
+		ID:        "resume-result-1",
+		TaskID:    created.Task.ID,
+		ItemID:    created.Items[0].ID,
+		Status:    "done",
+		Mode:      "scripted_upload",
+		Message:   "uploaded",
+		CreatedAt: created.Task.CreatedAt,
+		Payload: map[string]interface{}{
+			"path":          created.Plan.Items[0].Path,
+			"executionMode": string(planner.ExecutionModeLeafFirstLazy),
+		},
+	}
+	created.Results = []Result{firstResult}
+	created.Task.State = StatePaused
+	created.Task.UpdatedAt = created.Task.CreatedAt
+	created.Runtime = initializeRuntimeState(created.Plan)
+	updateRuntimeAfterItem(&created, created.Plan.Items[0].Path, firstResult)
+	created.Runtime.ExecutionState = "paused"
+	created.Runtime.CurrentRoot = "/1"
+	created.Runtime.CurrentDirectory = "/1/11"
+	if err := replaceTaskDetailAndResults(ctx, store, created); err != nil {
+		t.Fatalf("replaceTaskDetailAndResults() error = %v", err)
+	}
+
+	resumed, ok, err := svc.Resume(ctx, created.Task.ID)
+	if err != nil {
+		t.Fatalf("Resume() error = %v", err)
+	}
+	if !ok || resumed.Task.State != StateReady {
+		t.Fatalf("expected ready after resume, ok=%v state=%s", ok, resumed.Task.State)
+	}
+
+	running, ok, err := svc.Run(ctx, created.Task.ID)
+	if err != nil {
+		t.Fatalf("Run() error = %v", err)
+	}
+	if !ok {
+		t.Fatal("expected resumed task to exist")
+	}
+	wantUploads := []string{"/1/11/b.bin", "/1/12/c.bin", "/2/d.bin"}
+	if len(targetUploads) != len(wantUploads) {
+		t.Fatalf("expected %d resumed uploads, got %d: %#v", len(wantUploads), len(targetUploads), targetUploads)
+	}
+	for i, want := range wantUploads {
+		if targetUploads[i] != want {
+			t.Fatalf("resumed upload %d expected %s, got %s", i, want, targetUploads[i])
+		}
+	}
+	if running.Runtime.ProcessedCount != 4 {
+		t.Fatalf("expected processed count 4 after resume, got %d", running.Runtime.ProcessedCount)
+	}
+	if running.Runtime.LastCompletedPath != "/2/d.bin" {
+		t.Fatalf("expected last completed /2/d.bin, got %s", running.Runtime.LastCompletedPath)
+	}
+	dirStateIndex := findDirectoryState(running.Runtime.DirectoryStates, "/1/11")
+	if dirStateIndex < 0 {
+		t.Fatal("expected runtime directory state for /1/11")
+	}
+	if got := running.Runtime.DirectoryStates[dirStateIndex].Status; got != "completed" {
+		t.Fatalf("expected /1/11 completed after resume, got %s", got)
 	}
 }
 

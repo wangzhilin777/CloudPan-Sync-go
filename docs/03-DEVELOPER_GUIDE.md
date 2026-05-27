@@ -70,6 +70,10 @@
   - `recommendedExecutionMode`
   - `recommendedExecutionModeReason`
   - `executionOrder`
+  - `runtime`
+  - `currentRoot`
+  - `currentDirectory`
+  - `lastCompletedPath`
 
 ### 启动服务
 
@@ -108,6 +112,12 @@ go build ./...
 - 创建任务时可以只给 `selectedRoots`
 - 运行任务时需要 `sourceProfileId`
 - 运行时才会按当前需要逐段列目录
+- 当前任务 payload 已持久化：
+  - 目录状态
+  - 已处理数量
+  - 当前根目录 / 当前目录
+  - 上次完成路径
+- 如果任务已经带有部分结果，再次运行时会从未完成项继续，而不是整任务从头重跑
 
 ## 当前 API 范围
 

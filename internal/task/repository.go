@@ -18,10 +18,11 @@ type taskPayload struct {
 	TargetProfileID string                `json:"targetProfileId"`
 	ConflictPolicy  string                `json:"conflictPolicy"`
 	Plan            planner.Plan          `json:"plan"`
+	Runtime         RuntimeState          `json:"runtime"`
 	Entries         []planner.SourceEntry `json:"entries,omitempty"`
 }
 
-func createTask(ctx context.Context, store *sqlitestore.Store, t Task, plan planner.Plan, items []Item, sourceEntries []planner.SourceEntry, sourceProfileID, targetProfileID, conflictPolicy string) error {
+func createTask(ctx context.Context, store *sqlitestore.Store, t Task, plan planner.Plan, runtime RuntimeState, items []Item, sourceEntries []planner.SourceEntry, sourceProfileID, targetProfileID, conflictPolicy string) error {
 	tx, err := store.DB().BeginTx(ctx, nil)
 	if err != nil {
 		return err
@@ -33,6 +34,7 @@ func createTask(ctx context.Context, store *sqlitestore.Store, t Task, plan plan
 		TargetProfileID: targetProfileID,
 		ConflictPolicy:  conflictPolicy,
 		Plan:            plan,
+		Runtime:         runtime,
 		Entries:         sourceEntries,
 	})
 	if err != nil {
@@ -128,6 +130,7 @@ WHERE id = ?`, id)
 		SourceProfileID: payload.SourceProfileID,
 		Task:            t,
 		Plan:            payload.Plan,
+		Runtime:         payload.Runtime,
 		Items:           items,
 		Results:         results,
 		TargetProfileID: payload.TargetProfileID,
@@ -148,6 +151,7 @@ func replaceTaskPlanAndItems(ctx context.Context, store *sqlitestore.Store, deta
 		TargetProfileID: detail.TargetProfileID,
 		ConflictPolicy:  detail.ConflictPolicy,
 		Plan:            detail.Plan,
+		Runtime:         detail.Runtime,
 		Entries:         detail.SourceEntries,
 	})
 	if err != nil {
@@ -165,6 +169,49 @@ func replaceTaskPlanAndItems(ctx context.Context, store *sqlitestore.Store, deta
 INSERT INTO task_items(id, task_id, path, size, strategy, payload_json, created_at)
 VALUES (?, ?, ?, ?, ?, ?, ?)`,
 			item.ID, item.TaskID, item.Path, item.Size, detail.Plan.Items[i].Strategy, `{}`, detail.Task.CreatedAt,
+		); err != nil {
+			return err
+		}
+	}
+	return tx.Commit()
+}
+
+func replaceTaskDetailAndResults(ctx context.Context, store *sqlitestore.Store, detail Detail) error {
+	tx, err := store.DB().BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	payloadJSON, err := json.Marshal(taskPayload{
+		SourceProfileID: detail.SourceProfileID,
+		TargetProfileID: detail.TargetProfileID,
+		ConflictPolicy:  detail.ConflictPolicy,
+		Plan:            detail.Plan,
+		Runtime:         detail.Runtime,
+		Entries:         detail.SourceEntries,
+	})
+	if err != nil {
+		return err
+	}
+
+	if _, err := tx.ExecContext(ctx, `UPDATE tasks SET state = ?, completion_kind = ?, payload_json = ?, updated_at = ? WHERE id = ?`,
+		detail.Task.State, detail.Task.CompletionKind, string(payloadJSON), detail.Task.UpdatedAt, detail.Task.ID,
+	); err != nil {
+		return err
+	}
+	if _, err := tx.ExecContext(ctx, `DELETE FROM task_results WHERE task_id = ?`, detail.Task.ID); err != nil {
+		return err
+	}
+	for _, result := range detail.Results {
+		payloadJSON, err := json.Marshal(result.Payload)
+		if err != nil {
+			return err
+		}
+		if _, err := tx.ExecContext(ctx, `
+INSERT INTO task_results(id, task_id, task_item_id, status, mode, message, payload_json, created_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+			result.ID, result.TaskID, result.ItemID, result.Status, result.Mode, result.Message, string(payloadJSON), result.CreatedAt,
 		); err != nil {
 			return err
 		}
@@ -217,8 +264,21 @@ func resetTaskResults(ctx context.Context, store *sqlitestore.Store, t Task) err
 	return tx.Commit()
 }
 
-func updateTaskState(ctx context.Context, store *sqlitestore.Store, t Task) error {
-	_, err := store.DB().ExecContext(ctx, `UPDATE tasks SET state = ?, completion_kind = ?, updated_at = ? WHERE id = ?`, t.State, t.CompletionKind, t.UpdatedAt, t.ID)
+func updateTaskDetailState(ctx context.Context, store *sqlitestore.Store, detail Detail) error {
+	payloadJSON, err := json.Marshal(taskPayload{
+		SourceProfileID: detail.SourceProfileID,
+		TargetProfileID: detail.TargetProfileID,
+		ConflictPolicy:  detail.ConflictPolicy,
+		Plan:            detail.Plan,
+		Runtime:         detail.Runtime,
+		Entries:         detail.SourceEntries,
+	})
+	if err != nil {
+		return err
+	}
+	_, err = store.DB().ExecContext(ctx, `UPDATE tasks SET state = ?, completion_kind = ?, payload_json = ?, updated_at = ? WHERE id = ?`,
+		detail.Task.State, detail.Task.CompletionKind, string(payloadJSON), detail.Task.UpdatedAt, detail.Task.ID,
+	)
 	return err
 }
 
@@ -386,6 +446,10 @@ func buildProviderStatusSnapshot(ctx context.Context, store *sqlitestore.Store, 
 			"recommendedExecutionMode":       detail.Plan.Metadata["recommendedExecutionMode"],
 			"recommendedExecutionModeReason": detail.Plan.Metadata["recommendedExecutionModeReason"],
 			"scanMode":                       detail.Plan.Metadata["scanMode"],
+			"runtime":                        detail.Runtime,
+			"currentRoot":                    detail.Runtime.CurrentRoot,
+			"currentDirectory":               detail.Runtime.CurrentDirectory,
+			"lastCompletedPath":              detail.Runtime.LastCompletedPath,
 		},
 		CreatedAt: createdAt,
 	}, nil
