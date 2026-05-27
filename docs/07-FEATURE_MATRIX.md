@@ -216,5 +216,6 @@
   - 已经支持任务详情和状态页里直接查看 retryQueue 分类、attempt / retryLimit / remainingCount / eligibleAt
   - 已经支持在任务详情和状态页按路径 / 状态 / reason 筛选目录树与待补传树
   - 已经支持按 retry class / retry state 筛选重试队列项
+  - 已经支持从 retry queue item 一键定位待补传树或同类失败项
   - 已经支持把待补传树切到“仅叶子节点”视角
   - 不表示已经达到最终产品化 UI 形态

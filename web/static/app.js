@@ -327,6 +327,19 @@ function renderRetryQueue(items, filters = {}) {
           ${item.eligibleAt ? `<div class="muted">eligibleAt: <code>${escapeHTML(item.eligibleAt)}</code></div>` : ""}
           ${item.rootPath ? `<div class="muted">root: <code>${escapeHTML(item.rootPath)}</code></div>` : ""}
           ${item.reason ? `<div class="muted">reason: <code>${escapeHTML(item.reason)}</code></div>` : ""}
+          <div class="actions compact">
+            <button
+              type="button"
+              class="ghost"
+              data-retry-focus-pending="${escapeHTML(item.rootPath || item.path)}"
+            >定位待补传树</button>
+            <button
+              type="button"
+              class="ghost"
+              data-retry-focus-class="${escapeHTML(item.retryClass)}"
+              data-retry-focus-state="${escapeHTML(stateValue)}"
+            >只看同类队列</button>
+          </div>
         </div>
       `;
     })
@@ -527,6 +540,7 @@ function updateTaskRetryQueue(detail) {
   const rendered = renderRetryQueue(runtime.retryQueue || [], state.treeFilters.taskRetry);
   $("#task-retry-queue").innerHTML = rendered.html;
   $("#task-retry-filter-summary").textContent = detail ? rendered.summaryText : "等待任务数据...";
+  wireRetryQueueActions("task");
 }
 
 function updateStatusRetryQueue(runtimePayload) {
@@ -534,6 +548,71 @@ function updateStatusRetryQueue(runtimePayload) {
   const rendered = renderRetryQueue(runtime.retryQueue || [], state.treeFilters.statusRetry);
   $("#status-retry-queue").innerHTML = rendered.html;
   $("#status-retry-filter-summary").textContent = rendered.summaryText;
+  wireRetryQueueActions("status");
+}
+
+function setFilterControlValue(selector, value) {
+  const element = $(selector);
+  if (!element) {
+    return;
+  }
+  if (element.type === "checkbox") {
+    element.checked = Boolean(value);
+    return;
+  }
+  element.value = value;
+}
+
+function focusPendingTreeFromRetry(scope, path) {
+  if (!path) {
+    return;
+  }
+  if (scope === "task") {
+    state.treeFilters.taskPending.query = path;
+    setFilterControlValue("#task-pending-filter-query", path);
+    updateTaskTreePanels(currentSelectedTaskDetail());
+    showFlash("已按当前重试项定位待补传树");
+    return;
+  }
+  state.treeFilters.statusPending.query = path;
+  setFilterControlValue("#status-pending-filter-query", path);
+  updateStatusTreePanels(recentRuntimePayload());
+  showFlash("已按当前重试项定位最近待补传树");
+}
+
+function focusRetryClass(scope, retryClass, retryState) {
+  if (scope === "task") {
+    state.treeFilters.taskRetry.retryClass = retryClass || "";
+    state.treeFilters.taskRetry.retryState = retryState || "";
+    setFilterControlValue("#task-retry-filter-class", retryClass || "");
+    setFilterControlValue("#task-retry-filter-state", retryState || "");
+    updateTaskRetryQueue(currentSelectedTaskDetail());
+    showFlash("已收敛到当前同类重试队列");
+    return;
+  }
+  state.treeFilters.statusRetry.retryClass = retryClass || "";
+  state.treeFilters.statusRetry.retryState = retryState || "";
+  setFilterControlValue("#status-retry-filter-class", retryClass || "");
+  setFilterControlValue("#status-retry-filter-state", retryState || "");
+  updateStatusRetryQueue(recentRuntimePayload());
+  showFlash("已收敛到最近同类重试队列");
+}
+
+function wireRetryQueueActions(scope) {
+  const wrap = scope === "task" ? $("#task-retry-queue") : $("#status-retry-queue");
+  if (!wrap) {
+    return;
+  }
+  wrap.querySelectorAll("[data-retry-focus-pending]").forEach((button) => {
+    button.addEventListener("click", () => {
+      focusPendingTreeFromRetry(scope, button.dataset.retryFocusPending);
+    });
+  });
+  wrap.querySelectorAll("[data-retry-focus-class]").forEach((button) => {
+    button.addEventListener("click", () => {
+      focusRetryClass(scope, button.dataset.retryFocusClass, button.dataset.retryFocusState);
+    });
+  });
 }
 
 function recentRuntimePayload() {
