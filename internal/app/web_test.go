@@ -12,6 +12,10 @@ import (
 )
 
 func TestHandleIndexServesHTML(t *testing.T) {
+	indexHTML, err := webui.IndexHTML()
+	if err != nil {
+		t.Fatalf("IndexHTML() error = %v", err)
+	}
 	staticFS, err := webui.StaticFS()
 	if err != nil {
 		t.Fatalf("StaticFS() error = %v", err)
@@ -19,7 +23,7 @@ func TestHandleIndexServesHTML(t *testing.T) {
 
 	app := &App{
 		logger:    slog.New(slog.NewTextHandler(io.Discard, nil)),
-		webIndex:  []byte("<html><body>ok</body></html>"),
+		webIndex:  indexHTML,
 		webStatic: http.StripPrefix("/assets/", http.FileServer(http.FS(staticFS))),
 	}
 
@@ -33,8 +37,15 @@ func TestHandleIndexServesHTML(t *testing.T) {
 	if got := rec.Header().Get("Content-Type"); !strings.Contains(got, "text/html") {
 		t.Fatalf("expected html content type, got %q", got)
 	}
-	if !strings.Contains(rec.Body.String(), "<html>") {
-		t.Fatalf("expected html body, got %q", rec.Body.String())
+	body := rec.Body.String()
+	if !strings.Contains(body, "CloudPan Sync Go Console") {
+		t.Fatalf("expected console html body, got %q", body)
+	}
+	if !strings.Contains(body, `id="recent-results"`) {
+		t.Fatalf("expected recent-results panel in html body, got %q", body)
+	}
+	if !strings.Contains(body, `id="recent-probes"`) {
+		t.Fatalf("expected recent-probes panel in html body, got %q", body)
 	}
 }
 

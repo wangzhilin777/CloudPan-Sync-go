@@ -290,6 +290,20 @@ label {
   border: 1px solid var(--line);
 }
 
+.summary-block {
+  display: grid;
+  gap: 4px;
+}
+
+.summary-block code {
+  display: inline-block;
+  padding: 0.14rem 0.4rem;
+  border-radius: 999px;
+  background: rgba(15, 118, 110, 0.08);
+  color: var(--accent);
+  font-size: 0.8rem;
+}
+
 table {
   width: 100%;
   border-collapse: collapse;

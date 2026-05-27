@@ -246,6 +246,8 @@ function renderStatus() {
     completedTasks: 0,
     failedResultCount: 0,
     doneResultCount: 0,
+    recentResults: [],
+    recentProbes: [],
   };
   $("#evidence-summary").innerHTML = `
     <div class="metric"><span>Total Tasks</span><strong>${evidence.totalTasks}</strong></div>
@@ -262,6 +264,9 @@ function renderStatus() {
           <th>Profiles</th>
           <th>Tasks</th>
           <th>Completed</th>
+          <th>Latest Probe</th>
+          <th>Last Task State</th>
+          <th>Snapshot Summary</th>
         </tr>
       </thead>
       <tbody>
@@ -273,6 +278,93 @@ function renderStatus() {
                 <td>${item.profileCount}</td>
                 <td>${item.taskCount}</td>
                 <td>${item.completedCount}</td>
+                <td>${item.latestProbe || "-"}</td>
+                <td>${item.lastTaskState || "-"}</td>
+                <td>
+                  <div class="summary-block">
+                    ${renderSnapshotSummary(item.snapshotSummary)}
+                  </div>
+                </td>
+              </tr>
+            `,
+          )
+          .join("")}
+      </tbody>
+    </table>
+  `;
+
+  $("#recent-results").innerHTML = renderRecentResultsTable(evidence.recentResults || []);
+  $("#recent-probes").innerHTML = renderRecentProbesTable(evidence.recentProbes || []);
+}
+
+function renderSnapshotSummary(summary) {
+  if (!summary || typeof summary !== "object") {
+    return "-";
+  }
+  return Object.entries(summary)
+    .map(([key, value]) => `<div><strong>${key}</strong> <code>${String(value)}</code></div>`)
+    .join("");
+}
+
+function renderRecentResultsTable(items) {
+  if (!items.length) {
+    return `<div class="provider-card">暂无结果证据。</div>`;
+  }
+  return `
+    <table>
+      <thead>
+        <tr>
+          <th>Status</th>
+          <th>Mode</th>
+          <th>Message</th>
+          <th>Conflict</th>
+          <th>Created</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${items
+          .map(
+            (item) => `
+              <tr>
+                <td>${item.status}</td>
+                <td>${item.mode || "-"}</td>
+                <td>${item.message || "-"}</td>
+                <td>${item.conflictAction || "-"}</td>
+                <td>${item.createdAt || "-"}</td>
+              </tr>
+            `,
+          )
+          .join("")}
+      </tbody>
+    </table>
+  `;
+}
+
+function renderRecentProbesTable(items) {
+  if (!items.length) {
+    return `<div class="provider-card">暂无 probe 证据。</div>`;
+  }
+  return `
+    <table>
+      <thead>
+        <tr>
+          <th>Provider</th>
+          <th>Status</th>
+          <th>Profile</th>
+          <th>Payload</th>
+          <th>Created</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${items
+          .map(
+            (item) => `
+              <tr>
+                <td>${item.providerKey}</td>
+                <td>${item.status}</td>
+                <td>${item.profileId || "-"}</td>
+                <td><code>${JSON.stringify(item.payload || {})}</code></td>
+                <td>${item.createdAt || "-"}</td>
               </tr>
             `,
           )
