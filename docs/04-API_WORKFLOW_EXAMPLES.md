@@ -285,6 +285,8 @@ Invoke-RestMethod `
   - 只保留待补传文件对应的 `plan/items`
   - 只保留待补传文件对应的 `entries`
   - `metadata.retryPendingOnly` 会标记为 `true`
+- 当前如果失败项是 `rate_limited`，还会检查冷却时间：
+  - 未到 `eligibleAt` 时，`retry` 会返回 `retry_cooldown_active`
 - 如果当前没有待补传项，`retry` 仍按普通整任务重置语义处理。
 
 ## 10. 查看运行证据
@@ -412,4 +414,5 @@ Invoke-RestMethod `
 - 不传 `executionMode` 时，默认按 `leaf_first_lazy`。
 - `pending_manual_requires_confirmation` 目前仍代表需要后续真实 fallback 运行时补全。
 - 当任务详情里出现 `metadata.retryPendingOnly=true` 时，表示这次重试已经缩成待补传子集。
+- 当 runtime / probe / snapshot 中出现 `retryQueue` 时，表示当前任务已经具备失败分类后的重试队列证据。
 - 当前很多 provider 仍是协议占位实现，适合联调内核、字段口径和控制台闭环，不代表真实外部平台已经完全打通。

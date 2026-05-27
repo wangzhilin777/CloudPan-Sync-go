@@ -117,8 +117,15 @@
 - 当前 `POST /api/tasks/{id}/retry` 已支持：
   - 发现待补传项后优先缩小到待补传子集
   - 清空旧结果后只重跑这些待补传文件
+- 当前 runtime 还会维护 `retryQueue`：
+  - `pending_manual_requires_confirmation`
+  - `rate_limited`
+  - `auth_expired`
+  - `local_file_missing`
+- 当前 `rate_limited` 项会生成 `eligibleAt`，冷却未到时 `retry` 会直接拒绝过早重试
 - 当前控制台任务详情页也会直接显示：
   - 当前是否处于 `pending_only` 重试范围
+  - 当前重试队列里的 `retryable / blocked` 计数
 - 当前还没有做到：
   - 后台自动补传调度
   - 在 UI 里对待补传树做更复杂的筛选和批量操作

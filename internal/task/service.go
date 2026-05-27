@@ -171,6 +171,7 @@ func (s *Service) Run(ctx context.Context, id string) (Detail, bool, error) {
 	syncRuntimeCountsFromResults(&detail.Runtime, results)
 	syncRuntimeRiskEvidence(&detail.Runtime, detail.Plan.Metadata, results)
 	syncRuntimePendingTree(&detail.Runtime, detail.Plan.Metadata, results)
+	syncRuntimeRetryQueue(&detail.Runtime, detail.Plan.Metadata, results)
 
 	for i := startIndex; i < len(detail.Plan.Items); i++ {
 		item := detail.Plan.Items[i]
@@ -203,6 +204,7 @@ func (s *Service) Run(ctx context.Context, id string) (Detail, bool, error) {
 			results = append(results, result)
 			syncRuntimeRiskEvidence(&detail.Runtime, detail.Plan.Metadata, results)
 			syncRuntimePendingTree(&detail.Runtime, detail.Plan.Metadata, results)
+			syncRuntimeRetryQueue(&detail.Runtime, detail.Plan.Metadata, results)
 			detail.Results = results
 			updateRuntimeAfterItem(&detail, item.Path, result)
 			detail.Task.UpdatedAt = time.Now().UTC().Format(time.RFC3339)
@@ -270,6 +272,7 @@ func (s *Service) Run(ctx context.Context, id string) (Detail, bool, error) {
 		results = append(results, result)
 		syncRuntimeRiskEvidence(&detail.Runtime, detail.Plan.Metadata, results)
 		syncRuntimePendingTree(&detail.Runtime, detail.Plan.Metadata, results)
+		syncRuntimeRetryQueue(&detail.Runtime, detail.Plan.Metadata, results)
 		detail.Results = results
 		updateRuntimeAfterItem(&detail, item.Path, result)
 		detail.Task.UpdatedAt = time.Now().UTC().Format(time.RFC3339)
@@ -514,10 +517,14 @@ func inferUploadName(path string) string {
 
 func (s *Service) buildRetryDetail(detail Detail) (Detail, error) {
 	previousState := detail.Task.State
+	syncRuntimeRetryQueue(&detail.Runtime, detail.Plan.Metadata, detail.Results)
 	detail.Task.State = StateReady
 	detail.Task.CompletionKind = ""
 	detail.Task.UpdatedAt = time.Now().UTC().Format(time.RFC3339)
-	retryEntries, retryPaths := pendingRetryEntries(detail)
+	retryEntries, retryPaths, retryMode, retryBlockedUntil := selectRetryEntries(detail)
+	if retryBlockedUntil != "" {
+		return Detail{}, fmt.Errorf("retry_cooldown_active:%s", retryBlockedUntil)
+	}
 	if len(retryEntries) > 0 {
 		executionMode, err := executionModeFromMetadata(detail.Plan.Metadata)
 		if err != nil {
@@ -543,6 +550,10 @@ func (s *Service) buildRetryDetail(detail Detail) (Detail, error) {
 			plan.Metadata = map[string]interface{}{}
 		}
 		plan.Metadata["retryPendingOnly"] = true
+		if retryMode != "" && retryMode != "pending_only" {
+			plan.Metadata["retryPendingOnly"] = false
+		}
+		plan.Metadata["retryMode"] = retryMode
 		plan.Metadata["retryPendingPaths"] = retryPaths
 		plan.Metadata["retrySourceResultCount"] = len(detail.Results)
 		plan.Metadata["retrySourceTaskState"] = string(previousState)
@@ -1117,6 +1128,9 @@ func syncRuntimeCountsFromResults(runtime *RuntimeState, results []Result) {
 	runtime.LastRiskStatus = ""
 	runtime.RiskHits = nil
 	runtime.PendingTree = nil
+	runtime.RetryQueue = nil
+	runtime.RetryableCount = 0
+	runtime.BlockedRetryCount = 0
 	lastCompleted := ""
 	for _, result := range results {
 		switch result.Status {
@@ -1409,6 +1423,60 @@ func pendingRetryEntries(detail Detail) ([]planner.SourceEntry, []string) {
 	return filtered, pendingPaths
 }
 
+func selectRetryEntries(detail Detail) ([]planner.SourceEntry, []string, string, string) {
+	pendingEntries, pendingPaths := pendingRetryEntries(detail)
+	if len(pendingEntries) > 0 {
+		return pendingEntries, pendingPaths, "pending_only", ""
+	}
+
+	eligiblePaths := make([]string, 0)
+	blockedUntil := ""
+	entryByPath := make(map[string]planner.SourceEntry, len(detail.SourceEntries))
+	for _, entry := range detail.SourceEntries {
+		entryByPath[normalizeScanPath(entry.Path)] = entry
+	}
+	sizeByPath := make(map[string]int64, len(detail.Plan.Items))
+	for _, item := range detail.Plan.Items {
+		sizeByPath[normalizeScanPath(item.Path)] = item.Size
+	}
+	for _, item := range detail.Runtime.RetryQueue {
+		if !item.Retryable {
+			continue
+		}
+		switch item.RetryClass {
+		case "pending_manual":
+			continue
+		case "rate_limited":
+			if item.EligibleAt != "" {
+				eligibleAt, err := time.Parse(time.RFC3339, item.EligibleAt)
+				if err == nil && time.Now().UTC().Before(eligibleAt) {
+					if blockedUntil == "" || item.EligibleAt < blockedUntil {
+						blockedUntil = item.EligibleAt
+					}
+					continue
+				}
+			}
+		}
+		eligiblePaths = append(eligiblePaths, item.Path)
+	}
+	if len(eligiblePaths) == 0 {
+		return nil, nil, "", blockedUntil
+	}
+	filtered := make([]planner.SourceEntry, 0, len(eligiblePaths))
+	for _, path := range eligiblePaths {
+		normalized := normalizeScanPath(path)
+		if entry, ok := entryByPath[normalized]; ok {
+			filtered = append(filtered, entry)
+			continue
+		}
+		filtered = append(filtered, planner.SourceEntry{
+			Path: normalized,
+			Size: sizeByPath[normalized],
+		})
+	}
+	return filtered, eligiblePaths, "retry_queue", ""
+}
+
 func pendingRetryPaths(results []Result) []string {
 	seen := make(map[string]struct{})
 	paths := make([]string, 0)
@@ -1600,6 +1668,78 @@ func syncRuntimePendingTree(runtime *RuntimeState, metadata map[string]interface
 	runtime.PendingCount = 0
 	runtime.PendingTree = buildPendingTree(metadata, results)
 	runtime.PendingCount = countPendingNodes(runtime.PendingTree)
+}
+
+func syncRuntimeRetryQueue(runtime *RuntimeState, metadata map[string]interface{}, results []Result) {
+	if runtime == nil {
+		return
+	}
+	runtime.RetryQueue = buildRetryQueue(metadata, results)
+	runtime.RetryableCount = 0
+	runtime.BlockedRetryCount = 0
+	for _, item := range runtime.RetryQueue {
+		if item.Retryable {
+			runtime.RetryableCount++
+		}
+		if item.Blocked {
+			runtime.BlockedRetryCount++
+		}
+	}
+}
+
+func buildRetryQueue(metadata map[string]interface{}, results []Result) []RetryQueueItem {
+	if len(results) == 0 {
+		return nil
+	}
+	queue := make([]RetryQueueItem, 0)
+	selectedRoots := metadataStringSlice(metadata, "selectedRoots")
+	cooldownSeconds := riskProfileFromMetadata(metadata).CooldownSeconds
+	for _, result := range results {
+		if result.Status != "failed" {
+			continue
+		}
+		path := normalizeScanPath(stringValue(result.Payload["path"]))
+		if path == "" || path == "/" {
+			continue
+		}
+		status := stringValue(result.Payload["providerStatus"])
+		item := RetryQueueItem{
+			Path:           path,
+			RootPath:       matchRootPath(path, selectedRoots),
+			ProviderStatus: status,
+			Strategy:       stringValue(result.Payload["strategy"]),
+			Reason:         firstNonEmpty(stringValue(result.Payload["syncDecisionReason"]), result.Message),
+		}
+		switch status {
+		case "pending_manual_requires_confirmation":
+			item.RetryClass = "pending_manual"
+			item.RetryAction = "retry_after_manual_confirmation"
+			item.Retryable = true
+		case "rate_limited":
+			item.RetryClass = "rate_limited"
+			item.RetryAction = "retry_after_cooldown"
+			item.Retryable = true
+			if cooldownSeconds > 0 {
+				if createdAt, err := time.Parse(time.RFC3339, result.CreatedAt); err == nil {
+					item.EligibleAt = createdAt.Add(time.Duration(cooldownSeconds) * time.Second).UTC().Format(time.RFC3339)
+				}
+			}
+		case "auth_expired":
+			item.RetryClass = "auth_expired"
+			item.RetryAction = "refresh_auth_profile"
+			item.Blocked = true
+		case "local_file_missing":
+			item.RetryClass = "local_file_missing"
+			item.RetryAction = "restore_local_file"
+			item.Blocked = true
+		default:
+			item.RetryClass = "retry_failed"
+			item.RetryAction = "retry_now"
+			item.Retryable = true
+		}
+		queue = append(queue, item)
+	}
+	return queue
 }
 
 func buildPendingTree(metadata map[string]interface{}, results []Result) []PendingNode {
@@ -1826,6 +1966,9 @@ func buildProviderProbe(detail Detail, profile provider.AuthProfile, results []R
 			"runtime":                        detail.Runtime,
 			"pendingCount":                   detail.Runtime.PendingCount,
 			"pendingTree":                    detail.Runtime.PendingTree,
+			"retryableCount":                 detail.Runtime.RetryableCount,
+			"blockedRetryCount":              detail.Runtime.BlockedRetryCount,
+			"retryQueue":                     detail.Runtime.RetryQueue,
 			"riskHitCount":                   detail.Runtime.RiskHitCount,
 			"lastRiskStatus":                 detail.Runtime.LastRiskStatus,
 			"currentRoot":                    detail.Runtime.CurrentRoot,

@@ -429,6 +429,15 @@ func TestServiceRuntimeHandlesPendingManualAuthExpiredRateLimitAndMissingLocalFi
 	if evidence.PendingResultCount != 1 {
 		t.Fatalf("expected pending result count 1, got %d", evidence.PendingResultCount)
 	}
+	if running.Runtime.RetryableCount != 2 {
+		t.Fatalf("expected retryable count 2, got %d", running.Runtime.RetryableCount)
+	}
+	if running.Runtime.BlockedRetryCount != 2 {
+		t.Fatalf("expected blocked retry count 2, got %d", running.Runtime.BlockedRetryCount)
+	}
+	if len(running.Runtime.RetryQueue) != 4 {
+		t.Fatalf("expected retry queue len 4, got %d", len(running.Runtime.RetryQueue))
+	}
 }
 
 func TestServiceRuntimeBuildsPendingRelayTreeByRootAndDirectory(t *testing.T) {
@@ -676,6 +685,9 @@ func TestServiceRetryNarrowsToPendingRelayEntriesAndReplaysOnlyPendingItems(t *t
 	if retryPendingOnly, _ := retried.Plan.Metadata["retryPendingOnly"].(bool); !retryPendingOnly {
 		t.Fatalf("expected retryPendingOnly metadata true, got %#v", retried.Plan.Metadata["retryPendingOnly"])
 	}
+	if retryMode, _ := retried.Plan.Metadata["retryMode"].(string); retryMode != "pending_only" {
+		t.Fatalf("expected retryMode pending_only, got %s", retryMode)
+	}
 
 	secondRun, ok, err := svc.Run(ctx, detail.Task.ID)
 	if err != nil {
@@ -698,6 +710,91 @@ func TestServiceRetryNarrowsToPendingRelayEntriesAndReplaysOnlyPendingItems(t *t
 	}
 	if uploadCalls[2] != "/pending.bin" {
 		t.Fatalf("expected last upload call /pending.bin, got %s", uploadCalls[2])
+	}
+}
+
+func TestServiceRetryQueueHonorsCooldownForRateLimitedItems(t *testing.T) {
+	ctx := context.Background()
+	store, err := sqlitestore.New(ctx, filepath.Join(t.TempDir(), "retry-cooldown.db"))
+	if err != nil {
+		t.Fatalf("new store: %v", err)
+	}
+	defer func() { _ = store.Close() }()
+
+	adapter := &scriptedAdapter{
+		meta: provider.Provider{
+			Key:              "retry_cooldown_target",
+			DisplayName:      "Retry Cooldown Target",
+			ProtocolGroup:    "fake",
+			AuthModes:        []string{"manual_token"},
+			FastUploadInputs: []string{"md5", "size"},
+			FallbackModes:    []string{"download_upload"},
+			Status:           "planned",
+		},
+		capability: provider.CapabilitySet{
+			SupportsAuthValidation: true,
+			SupportsUpload:         true,
+		},
+		uploadFunc: func(req provider.UploadRequest) provider.UploadResult {
+			return provider.UploadResult{
+				OperationResult: provider.OperationResult{
+					Status:  "rate_limited",
+					Message: "rate limited",
+					Mode:    "fake_rate",
+				},
+			}
+		},
+	}
+
+	registry := provider.NewRegistry(adapter)
+	authSvc := auth.NewService(store, registry)
+	svc := NewService(store, registry, authSvc)
+	profile, err := authSvc.CreateProfile(ctx, auth.CreateProfileInput{
+		ProviderKey: "retry_cooldown_target",
+		AuthMode:    "manual_token",
+		DisplayName: "retry cooldown target",
+		Token:       "token-1",
+	})
+	if err != nil {
+		t.Fatalf("CreateProfile() error = %v", err)
+	}
+
+	detail, err := svc.Create(ctx, CreateRequest{
+		SourceProvider:  "guangya",
+		TargetProvider:  "retry_cooldown_target",
+		TargetProfileID: profile.ID,
+		ThresholdMB:     1,
+		RiskOverride: &planner.RiskProfileOverride{
+			CooldownSeconds: intPtrTask(3600),
+		},
+		Entries: []planner.SourceEntry{
+			{Path: "/rate.bin", Size: 1024, MD5: "abc"},
+		},
+	})
+	if err != nil {
+		t.Fatalf("Create() error = %v", err)
+	}
+
+	running, ok, err := svc.Run(ctx, detail.Task.ID)
+	if err != nil {
+		t.Fatalf("Run() error = %v", err)
+	}
+	if !ok {
+		t.Fatal("expected task to exist")
+	}
+	if len(running.Runtime.RetryQueue) != 1 {
+		t.Fatalf("expected retry queue len 1, got %d", len(running.Runtime.RetryQueue))
+	}
+	if running.Runtime.RetryQueue[0].RetryClass != "rate_limited" {
+		t.Fatalf("expected retry class rate_limited, got %s", running.Runtime.RetryQueue[0].RetryClass)
+	}
+	if running.Runtime.RetryQueue[0].EligibleAt == "" {
+		t.Fatal("expected eligibleAt for rate-limited retry item")
+	}
+	if _, ok, err := svc.Retry(ctx, detail.Task.ID); err == nil || !ok {
+		t.Fatalf("expected retry cooldown error with task present, ok=%v err=%v", ok, err)
+	} else if !strings.HasPrefix(err.Error(), "retry_cooldown_active:") {
+		t.Fatalf("expected retry_cooldown_active error, got %v", err)
 	}
 }
 

@@ -124,10 +124,17 @@ CloudPan Sync 的 Go 重构版工作区。
   - 仅保留待补传文件对应的 `entries`
   - 仅重建待补传文件对应的 `plan/items`
   - 清空旧结果后，以新的 `pending_only` 范围重新进入 `ready`
+- 当前还会进一步按失败原因生成重试队列：
+  - `pending_manual_requires_confirmation` -> `pending_only`
+  - `rate_limited` -> 冷却后可重试
+  - `auth_expired` -> 需要先刷新授权
+  - `local_file_missing` -> 需要先补回本地文件
 - 这意味着当前已经接通：
   - 待补传项聚合
   - 待补传树展示
   - 待补传子集重试执行
+  - 基于失败原因的重试队列分类
+  - `rate_limited` 的冷却阻断
 - 当前还没有接通的是：
   - 后台自动补传调度
   - 更复杂的补传批量选择与筛选

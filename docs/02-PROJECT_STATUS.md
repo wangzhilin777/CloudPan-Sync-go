@@ -235,7 +235,13 @@
   - 运行时更偏“可验证内核 + 可扩展占位实现”，而非真实大规模传输引擎
   - 当前已支持把 `pending_manual` 类结果聚合成待补传树，并回写到 runtime / probe / provider status
   - 当前已支持在 `Retry` 时自动缩小到待补传子集，并按新 plan 继续执行
-  - 当前这棵树不再只是证据展示，但仍不代表已经实现后台自动补传调度
+  - 当前已支持把失败结果分类成重试队列，并区分：
+    - `pending_manual`
+    - `rate_limited`
+    - `auth_expired`
+    - `local_file_missing`
+  - 当前 `rate_limited` 会按冷却时间阻断过早重试
+  - 当前这棵树和队列不再只是证据展示，但仍不代表已经实现后台自动补传调度
 
 ### 6. Runtime Evidence / 状态矩阵
 

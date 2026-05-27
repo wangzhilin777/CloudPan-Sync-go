@@ -173,6 +173,10 @@ function renderRuntimeCheckpoint(runtime) {
       <strong>风控命中</strong>
       <span>${stringifyValue(runtime.riskHitCount, "0")} / last ${stringifyValue(runtime.lastRiskStatus, "-")}</span>
     </div>
+    <div class="insight-card checkpoint-card">
+      <strong>重试队列</strong>
+      <span>retryable ${stringifyValue(runtime.retryableCount, "0")} / blocked ${stringifyValue(runtime.blockedRetryCount, "0")}</span>
+    </div>
   `;
 }
 
@@ -559,6 +563,10 @@ function renderSelectedTask() {
     <div class="insight-card">
       <strong>重试范围</strong>
       <span>${metadata.retryPendingOnly ? `pending_only (${Array.isArray(metadata.retryPendingPaths) ? metadata.retryPendingPaths.length : 0} items)` : "full_task"}</span>
+    </div>
+    <div class="insight-card">
+      <strong>重试模式</strong>
+      <span>${stringifyValue(metadata.retryMode, "default")}</span>
     </div>
   `;
   $("#task-runtime").innerHTML = renderRuntimeCheckpoint(runtime);

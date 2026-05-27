@@ -177,6 +177,12 @@ func TestAppWorkflowMainline(t *testing.T) {
 	if got := int(recentProbePayload["pendingCount"].(float64)); got != 1 {
 		t.Fatalf("expected probe pendingCount 1, got %d", got)
 	}
+	if got := int(recentProbePayload["retryableCount"].(float64)); got != 1 {
+		t.Fatalf("expected probe retryableCount 1, got %d", got)
+	}
+	if got := int(recentProbePayload["blockedRetryCount"].(float64)); got != 1 {
+		t.Fatalf("expected probe blockedRetryCount 1, got %d", got)
+	}
 	if got := len(recentProbePayload["pendingTree"].([]interface{})); got == 0 {
 		t.Fatal("expected pendingTree in recent probe payload")
 	}
@@ -209,6 +215,9 @@ func TestAppWorkflowMainline(t *testing.T) {
 		if got := int(summary["pendingCount"].(float64)); got != 1 {
 			t.Fatalf("expected status summary pendingCount 1, got %d", got)
 		}
+		if got := int(summary["retryableCount"].(float64)); got != 1 {
+			t.Fatalf("expected status summary retryableCount 1, got %d", got)
+		}
 		if got := len(summary["pendingTree"].([]interface{})); got == 0 {
 			t.Fatal("expected pendingTree in status summary")
 		}
@@ -232,6 +241,9 @@ func TestAppWorkflowMainline(t *testing.T) {
 	retryMetadata := retriedPlan["metadata"].(map[string]interface{})
 	if retryPendingOnly, _ := retryMetadata["retryPendingOnly"].(bool); !retryPendingOnly {
 		t.Fatalf("expected retryPendingOnly metadata true, got %#v", retryMetadata["retryPendingOnly"])
+	}
+	if retryMode, _ := retryMetadata["retryMode"].(string); retryMode != "pending_only" {
+		t.Fatalf("expected retryMode pending_only, got %s", retryMode)
 	}
 }
 

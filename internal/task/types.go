@@ -73,6 +73,9 @@ type RuntimeState struct {
 	LastRiskStatus    string           `json:"lastRiskStatus,omitempty"`
 	RiskHits          []RiskHit        `json:"riskHits,omitempty"`
 	PendingTree       []PendingNode    `json:"pendingTree,omitempty"`
+	RetryQueue        []RetryQueueItem `json:"retryQueue,omitempty"`
+	RetryableCount    int              `json:"retryableCount"`
+	BlockedRetryCount int              `json:"blockedRetryCount"`
 	NextSequence      int              `json:"nextSequence"`
 	DirectoryStates   []DirectoryState `json:"directoryStates,omitempty"`
 }
@@ -96,6 +99,19 @@ type PendingNode struct {
 	Reason         string        `json:"reason,omitempty"`
 	ProviderStatus string        `json:"providerStatus,omitempty"`
 	Children       []PendingNode `json:"children,omitempty"`
+}
+
+type RetryQueueItem struct {
+	Path           string `json:"path"`
+	RootPath       string `json:"rootPath,omitempty"`
+	ProviderStatus string `json:"providerStatus,omitempty"`
+	Strategy       string `json:"strategy,omitempty"`
+	RetryClass     string `json:"retryClass"`
+	RetryAction    string `json:"retryAction"`
+	EligibleAt     string `json:"eligibleAt,omitempty"`
+	Retryable      bool   `json:"retryable"`
+	Blocked        bool   `json:"blocked"`
+	Reason         string `json:"reason,omitempty"`
 }
 
 type Item struct {
