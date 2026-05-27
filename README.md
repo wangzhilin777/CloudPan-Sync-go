@@ -23,6 +23,7 @@ CloudPan Sync 的 Go 重构版工作区。
 - 当前功能与进度：`docs/02-PROJECT_STATUS.md`
 - 开发与上手说明：`docs/03-DEVELOPER_GUIDE.md`
 - API 工作流示例：`docs/04-API_WORKFLOW_EXAMPLES.md`
+- Provider 接入指南：`docs/05-PROVIDER_INTEGRATION_GUIDE.md`
 
 ## 当前已完成的核心能力
 

@@ -10,6 +10,7 @@
 - 项目目标和重构边界：`docs/01-GO_REBUILD_PLAN.md`
 - 当前功能范围和进度：`docs/02-PROJECT_STATUS.md`
 - API 工作流示例：`docs/04-API_WORKFLOW_EXAMPLES.md`
+- Provider 接入指南：`docs/05-PROVIDER_INTEGRATION_GUIDE.md`
 - 前端资源说明：`web/README.md`
 
 ## 当前目录说明
