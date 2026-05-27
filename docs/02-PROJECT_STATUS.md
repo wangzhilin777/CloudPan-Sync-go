@@ -93,6 +93,8 @@
     - `List`
     - `Metadata`
     - `CreateDir`
+    - `FastUploadCheck`
+    - `Upload`
   - 真实外部平台 SDK / HTTP 联网细节仍未全面接入
 
 ### 2.1 Provider 辅助调试接口

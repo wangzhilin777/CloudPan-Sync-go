@@ -91,20 +91,23 @@
     - `extra.driveId`
     - 支持通过 `extra.apiEndpoint` 覆盖真实校验目标地址，便于本地 mock 或联调
 - 当前快传指纹：
-  - `md5`
+  - `sha1`
   - `size`
 - 当前落地进度：
   - `aliyundrive_open` 的 `ValidateAuth` 已走真实远程校验
-  - 当前最小目录链路也已接通：
+  - 当前最小目录与上传链路已接通：
     - `List`
     - `Metadata`
     - `CreateDir`
+    - `FastUploadCheck`
+    - `Upload`
   - 当前会访问：
     - `POST /v2/user/get`
     - `POST /v2/drive/get_default_drive`
     - `POST /adrive/v1.0/openFile/list`
     - `POST /adrive/v1.0/openFile/get`
     - `POST /adrive/v1.0/openFile/create`
+    - `POST /v2/file/complete`
   - `123_open` 当前仍保留占位校验语义
 
 ### 2. Share Family
@@ -220,8 +223,8 @@
   - `name`
 - provider 要根据自身协议声明可用指纹
 - 当前已有口径：
-  - Open / Share / Baidu / 189Cloud：`md5`
-  - 115：`sha1`
+  - Aliyun Open / 115：`sha1`
+  - 123 Open / Share / Baidu / 189Cloud：`md5`
   - Xunlei / PikPak：`gcid`
   - Guangya：`md5 + size + name`
 

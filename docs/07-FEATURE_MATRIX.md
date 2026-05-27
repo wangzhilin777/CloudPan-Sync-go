@@ -33,7 +33,7 @@
 | Runtime Evidence | 最近结果、最近探针、状态快照、状态矩阵 API | 已完成 | 无 | 真实联调样本沉淀 |
 | 控制台前端 | 登录、授权、任务向导、任务列表详情、状态矩阵/证据、执行模式可视化、目录状态展示、目录树/待补传树筛选与叶子视角、重试队列分类视图 | 已完成 | 异常场景提示可继续增强 | 更产品化视觉与更细交互 |
 | 单元测试 | auth、planner、task、provider、workflow、web、UI smoke | 已完成 | 持续补样本 | 真实 provider 契约覆盖继续加深 |
-| Provider 真实实现 | `aliyundrive_open` 已接入真实 `ValidateAuth + List + Metadata + CreateDir` 最小目录链路 | 部分完成 | 下一步优先补真实 `Upload` 与更多 provider | 其余 provider 真实实现、上传链路、异常恢复 |
+| Provider 真实实现 | `aliyundrive_open` 已接入真实 `ValidateAuth + List + Metadata + CreateDir + FastUploadCheck + Upload` 最小主链路 | 部分完成 | 下一步优先补更完整分片/断点语义与更多 provider | 其余 provider 真实实现、上传链路、异常恢复 |
 | 真实联调验收 | 模板、流程、文档已具备 | 部分完成 | 首批真实样本沉淀中 | 每个协议族至少一条真实成功样本 |
 
 ## 当前已经能直接演示的能力
@@ -160,7 +160,7 @@
 
 | Provider | 协议族 | 当前状态 | 说明 |
 | --- | --- | --- | --- |
-| `aliyundrive_open` | `aliyun_123_open` | 部分真实 | 已接入真实 `ValidateAuth`，并已落地 `List / Metadata / CreateDir` 最小目录链路 |
+| `aliyundrive_open` | `aliyun_123_open` | 部分真实 | 已接入真实 `ValidateAuth`，并已落地 `List / Metadata / CreateDir / FastUploadCheck / Upload` 最小主链路 |
 | `123_open` | `aliyun_123_open` | 占位可运行 | 统一接口已接通，真实实现待补 |
 | `xunlei` | `xunlei_pikpak` | 占位可运行 | 适合当前内核联调 |
 | `pikpak` | `xunlei_pikpak` | 占位可运行 | 适合当前内核联调 |

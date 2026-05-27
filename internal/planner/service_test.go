@@ -14,7 +14,7 @@ func TestBuildPreviewClassifiesStrategies(t *testing.T) {
 		TargetProvider: "aliyundrive_open",
 		ThresholdMB:    10,
 		Entries: []SourceEntry{
-			{Path: "/a.bin", Size: 1024, MD5: "abc"},
+			{Path: "/a.bin", Size: 1024, SHA1: "sha1-a"},
 			{Path: "/b.bin", Size: 1024},
 			{Path: "/c.bin", Size: 20 * 1024 * 1024},
 		},

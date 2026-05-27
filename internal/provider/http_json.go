@@ -52,3 +52,24 @@ func postProviderJSON(ctx context.Context, endpoint string, token string, body i
 	}
 	return resp.StatusCode, payloadMap, nil
 }
+
+func putProviderBytes(ctx context.Context, endpoint string, body []byte, headers map[string]string) (int, http.Header, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodPut, endpoint, bytes.NewReader(body))
+	if err != nil {
+		return 0, nil, err
+	}
+	for key, value := range headers {
+		if strings.TrimSpace(key) == "" || strings.TrimSpace(value) == "" {
+			continue
+		}
+		req.Header.Set(key, value)
+	}
+
+	resp, err := providerHTTPClient.Do(req)
+	if err != nil {
+		return 0, nil, err
+	}
+	defer func() { _ = resp.Body.Close() }()
+	_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, 1<<20))
+	return resp.StatusCode, resp.Header.Clone(), nil
+}

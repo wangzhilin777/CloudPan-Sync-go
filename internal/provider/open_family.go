@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
 )
@@ -222,6 +223,9 @@ func (a OpenFamilyAdapter) FastUploadCheck(req FastUploadCheckRequest) FastUploa
 	if !validation.OK {
 		return FastUploadCheckResult{OperationResult: validation}
 	}
+	if a.RequireDomainDrive {
+		return a.fastUploadCheckAliyunOpen(req)
+	}
 	candidate := strings.TrimSpace(req.MD5) != "" && req.Size > 0
 	return FastUploadCheckResult{
 		OperationResult: OperationResult{
@@ -238,6 +242,9 @@ func (a OpenFamilyAdapter) Upload(req UploadRequest) UploadResult {
 	validation := a.ValidateAuth(req.Profile)
 	if !validation.OK {
 		return UploadResult{OperationResult: validation}
+	}
+	if a.RequireDomainDrive {
+		return a.uploadAliyunOpen(req)
 	}
 	if req.Strategy == "pending_manual" {
 		return UploadResult{
@@ -270,6 +277,281 @@ func (a OpenFamilyAdapter) Upload(req UploadRequest) UploadResult {
 				"strategy": req.Strategy,
 				"provider": a.MetaInfo.Key,
 			},
+		},
+		ConflictAction: "none",
+	}
+}
+
+func (a OpenFamilyAdapter) fastUploadCheckAliyunOpen(req FastUploadCheckRequest) FastUploadCheckResult {
+	candidate := strings.TrimSpace(req.SHA1) != "" && req.Size > 0
+	message := "Aliyun Open fast-upload requires sha1 and size."
+	if candidate {
+		message = "Aliyun Open fast-upload candidate is available."
+	}
+	return FastUploadCheckResult{
+		OperationResult: OperationResult{
+			OK:      true,
+			Status:  "ok",
+			Message: message,
+			Mode:    "open_family_real_upload",
+			Payload: map[string]interface{}{
+				"requires": []string{"sha1", "size"},
+			},
+		},
+		Candidate: candidate,
+	}
+}
+
+func (a OpenFamilyAdapter) uploadAliyunOpen(req UploadRequest) UploadResult {
+	if req.Strategy == "pending_manual" {
+		return UploadResult{
+			OperationResult: OperationResult{
+				Status:  "pending_manual_requires_confirmation",
+				Message: "Aliyun Open pending_manual items still require follow-up runtime support.",
+				Mode:    "open_family_real_upload",
+			},
+		}
+	}
+
+	session, err := a.newAliyunOpenSession(req.Profile)
+	if err != nil {
+		return UploadResult{
+			OperationResult: OperationResult{
+				Status:  "invalid_provider_endpoint",
+				Message: err.Error(),
+				Mode:    "open_family_real_upload",
+			},
+		}
+	}
+
+	targetPath := normalizeOpenFamilyPath(req.Path)
+	parentID, parentPath, parentErr := a.resolveAliyunOpenUploadParent(session, req)
+	if parentErr != nil {
+		return UploadResult{
+			OperationResult: OperationResult{
+				Status:  normalizeAliyunOpenRequestErrorStatus(parentErr),
+				Message: fmt.Sprintf("Aliyun Open upload parent resolution failed: %v", parentErr),
+				Mode:    "open_family_real_upload",
+			},
+		}
+	}
+
+	createBody := map[string]interface{}{
+		"drive_id":        session.DriveID,
+		"parent_file_id":  parentID,
+		"name":            inferAliyunOpenUploadName(req, targetPath),
+		"type":            "file",
+		"size":            req.Size,
+		"check_name_mode": aliyunOpenCheckNameMode(req.ConflictPolicy),
+	}
+
+	if req.ConflictPolicy == ConflictPolicyOverwriteExisting {
+		if existingID, _, found, resolveErr := a.resolveAliyunOpenFileByPath(session, targetPath, 0); resolveErr == nil && found && existingID != "" {
+			createBody["file_id"] = existingID
+		}
+	}
+
+	var rapidAttempt bool
+	if req.Strategy == "fast_upload" {
+		if strings.TrimSpace(req.SHA1) == "" {
+			return UploadResult{
+				OperationResult: OperationResult{
+					Status:  "missing_sha1",
+					Message: "Aliyun Open fast upload requires sha1.",
+					Mode:    "open_family_real_upload",
+				},
+			}
+		}
+		rapidAttempt = true
+		createBody["content_hash"] = strings.TrimSpace(req.SHA1)
+		createBody["content_hash_name"] = "sha1"
+	}
+
+	partInfoList := []map[string]interface{}{{"part_number": 1}}
+	if req.Strategy != "fast_upload" {
+		createBody["part_info_list"] = partInfoList
+	} else {
+		createBody["part_info_list"] = partInfoList
+	}
+
+	statusCode, payload, createErr := postProviderJSON(context.Background(), session.BaseEndpoint+"/adrive/v1.0/openFile/create", session.Token, createBody)
+	if createErr != nil {
+		return UploadResult{
+			OperationResult: OperationResult{
+				Status:  "provider_request_failed",
+				Message: fmt.Sprintf("Aliyun Open upload create request failed: %v", createErr),
+				Mode:    "open_family_real_upload",
+			},
+		}
+	}
+	if statusCode == http.StatusUnauthorized || statusCode == http.StatusForbidden {
+		return UploadResult{
+			OperationResult: OperationResult{
+				Status:  "auth_invalid",
+				Message: "Aliyun Open rejected the supplied access token while creating an upload.",
+				Mode:    "open_family_real_upload",
+				Payload: payload,
+			},
+		}
+	}
+	if statusCode < 200 || statusCode >= 300 {
+		return UploadResult{
+			OperationResult: OperationResult{
+				Status:  "provider_request_failed",
+				Message: fmt.Sprintf("Aliyun Open upload create returned HTTP %d.", statusCode),
+				Mode:    "open_family_real_upload",
+				Payload: payload,
+			},
+		}
+	}
+
+	if rapidAttempt && boolMapValue(payload, "rapid_upload") {
+		resultPayload := a.normalizeAliyunOpenEntry(payload, pathJoin(parentPath, inferAliyunOpenUploadName(req, targetPath)))
+		resultPayload["rapidUpload"] = true
+		return UploadResult{
+			OperationResult: OperationResult{
+				OK:      true,
+				Status:  "ok",
+				Message: "Aliyun Open rapid upload succeeded.",
+				Mode:    "open_family_real_upload",
+				Payload: resultPayload,
+			},
+			ConflictAction: "none",
+		}
+	}
+	if rapidAttempt {
+		return UploadResult{
+			OperationResult: OperationResult{
+				Status:  "hash_miss",
+				Message: "Aliyun Open did not match the supplied sha1 for rapid upload.",
+				Mode:    "open_family_real_upload",
+				Payload: payload,
+			},
+		}
+	}
+
+	if strings.TrimSpace(req.LocalPath) == "" {
+		return UploadResult{
+			OperationResult: OperationResult{
+				Status:  "local_file_missing",
+				Message: "Aliyun Open binary upload requires a local file path.",
+				Mode:    "open_family_real_upload",
+				Payload: payload,
+			},
+		}
+	}
+	content, readErr := os.ReadFile(req.LocalPath)
+	if readErr != nil {
+		return UploadResult{
+			OperationResult: OperationResult{
+				Status:  "local_file_missing",
+				Message: fmt.Sprintf("Aliyun Open could not read local file: %v", readErr),
+				Mode:    "open_family_real_upload",
+				Payload: payload,
+			},
+		}
+	}
+
+	partItems := partInfoMapSlice(payload, "part_info_list")
+	if len(partItems) == 0 {
+		return UploadResult{
+			OperationResult: OperationResult{
+				Status:  "provider_request_failed",
+				Message: "Aliyun Open upload create did not return part upload URLs.",
+				Mode:    "open_family_real_upload",
+				Payload: payload,
+			},
+		}
+	}
+	uploadURL := firstNonEmptyString(partItems[0], "upload_url", "internal_upload_url")
+	if uploadURL == "" {
+		return UploadResult{
+			OperationResult: OperationResult{
+				Status:  "provider_request_failed",
+				Message: "Aliyun Open upload part is missing upload_url.",
+				Mode:    "open_family_real_upload",
+				Payload: payload,
+			},
+		}
+	}
+
+	putStatus, putHeaders, putErr := putProviderBytes(context.Background(), uploadURL, content, map[string]string{
+		"Content-Length": strconv.FormatInt(int64(len(content)), 10),
+	})
+	if putErr != nil {
+		return UploadResult{
+			OperationResult: OperationResult{
+				Status:  "provider_request_failed",
+				Message: fmt.Sprintf("Aliyun Open upload part request failed: %v", putErr),
+				Mode:    "open_family_real_upload",
+				Payload: payload,
+			},
+		}
+	}
+	if putStatus < 200 || putStatus >= 300 {
+		return UploadResult{
+			OperationResult: OperationResult{
+				Status:  "provider_request_failed",
+				Message: fmt.Sprintf("Aliyun Open upload part returned HTTP %d.", putStatus),
+				Mode:    "open_family_real_upload",
+				Payload: mergePayloads(payload, map[string]interface{}{
+					"upload.http_status": putStatus,
+				}),
+			},
+		}
+	}
+
+	fileID := firstNonEmptyString(payload, "file_id", "fileId")
+	uploadID := firstNonEmptyString(payload, "upload_id", "uploadId")
+	completeStatus, completePayload, completeErr := postProviderJSON(context.Background(), session.BaseEndpoint+"/v2/file/complete", session.Token, map[string]interface{}{
+		"drive_id":  session.DriveID,
+		"file_id":   fileID,
+		"upload_id": uploadID,
+	})
+	if completeErr != nil {
+		return UploadResult{
+			OperationResult: OperationResult{
+				Status:  "provider_request_failed",
+				Message: fmt.Sprintf("Aliyun Open complete upload request failed: %v", completeErr),
+				Mode:    "open_family_real_upload",
+				Payload: payload,
+			},
+		}
+	}
+	if completeStatus == http.StatusUnauthorized || completeStatus == http.StatusForbidden {
+		return UploadResult{
+			OperationResult: OperationResult{
+				Status:  "auth_invalid",
+				Message: "Aliyun Open rejected the supplied access token while completing an upload.",
+				Mode:    "open_family_real_upload",
+				Payload: completePayload,
+			},
+		}
+	}
+	if completeStatus < 200 || completeStatus >= 300 {
+		return UploadResult{
+			OperationResult: OperationResult{
+				Status:  "provider_request_failed",
+				Message: fmt.Sprintf("Aliyun Open complete upload returned HTTP %d.", completeStatus),
+				Mode:    "open_family_real_upload",
+				Payload: completePayload,
+			},
+		}
+	}
+
+	resultPayload := a.normalizeAliyunOpenEntry(completePayload, pathJoin(parentPath, inferAliyunOpenUploadName(req, targetPath)))
+	if etag := strings.TrimSpace(putHeaders.Get("ETag")); etag != "" {
+		resultPayload["etag"] = strings.Trim(etag, "\"")
+	}
+	resultPayload["uploadId"] = uploadID
+	resultPayload["rapidUpload"] = false
+	return UploadResult{
+		OperationResult: OperationResult{
+			OK:      true,
+			Status:  "ok",
+			Message: "Aliyun Open upload succeeded.",
+			Mode:    "open_family_real_upload",
+			Payload: resultPayload,
 		},
 		ConflictAction: "none",
 	}
@@ -644,6 +926,75 @@ func (a OpenFamilyAdapter) normalizeAliyunOpenEntry(raw map[string]interface{}, 
 		entry["gcid"] = gcid
 	}
 	return entry
+}
+
+func (a OpenFamilyAdapter) resolveAliyunOpenUploadParent(session aliyunOpenSession, req UploadRequest) (string, string, error) {
+	if parentID := strings.TrimSpace(req.ParentID); parentID != "" {
+		parentPath := normalizeOpenFamilyPath(parentDirectory(req.Path))
+		if parentPath == "." || parentPath == "" {
+			parentPath = "/"
+		}
+		return parentID, parentPath, nil
+	}
+
+	parentPath := normalizeOpenFamilyPath(parentDirectory(req.Path))
+	if parentPath == "." || parentPath == "" {
+		parentPath = "/"
+	}
+	if parentPath == "/" {
+		return "root", "/", nil
+	}
+	parentID, _, found, err := a.resolveAliyunOpenFileByPath(session, parentPath, 0)
+	if err != nil {
+		return "", "", err
+	}
+	if !found || parentID == "" {
+		return "", "", fmt.Errorf("parent_path_not_found")
+	}
+	return parentID, parentPath, nil
+}
+
+func inferAliyunOpenUploadName(req UploadRequest, targetPath string) string {
+	if name := strings.TrimSpace(req.Name); name != "" {
+		return name
+	}
+	return inferName(targetPath, "remote.bin")
+}
+
+func aliyunOpenCheckNameMode(policy ConflictPolicy) string {
+	switch policy {
+	case ConflictPolicyOverwriteExisting:
+		return "overwrite"
+	case ConflictPolicyAutoRenameNew:
+		return "auto_rename"
+	default:
+		return "auto_rename"
+	}
+}
+
+func partInfoMapSlice(values map[string]interface{}, key string) []map[string]interface{} {
+	rawItems := interfaceSliceValue(values, key)
+	items := make([]map[string]interface{}, 0, len(rawItems))
+	for _, raw := range rawItems {
+		item, ok := raw.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		items = append(items, item)
+	}
+	return items
+}
+
+func parentDirectory(path string) string {
+	normalized := normalizeOpenFamilyPath(path)
+	if normalized == "/" {
+		return "/"
+	}
+	idx := strings.LastIndex(normalized, "/")
+	if idx <= 0 {
+		return "/"
+	}
+	return normalized[:idx]
 }
 
 func normalizeOpenFamilyPath(path string) string {
