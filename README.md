@@ -143,6 +143,8 @@ CloudPan Sync 的 Go 重构版工作区。
   - 状态矩阵中的 `blockedTasks / blockedActions` 聚合摘要
   - 任务详情中的“下一步处理”引导区与直达入口
   - 直达入口会自动定位当前授权档案，或按当前任务预填任务向导参数
+  - 当前任务向导预填会同步带上 provider/profile/risk/selectedRoots/entries
+  - 任务详情还支持一键“按当前任务重建向导”和“复制任务创建参数”
 - 当前还没有接通的是：
   - 更复杂的补传批量选择与筛选
   - 更精细的后台补传策略编排

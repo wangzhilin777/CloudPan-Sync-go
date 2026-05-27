@@ -355,6 +355,41 @@ function setInputValueIfPresent(selector, value) {
   element.dispatchEvent(new Event("change"));
 }
 
+async function copyTextToClipboard(text) {
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(text);
+    return;
+  }
+  const probe = document.createElement("textarea");
+  probe.value = text;
+  probe.setAttribute("readonly", "readonly");
+  probe.style.position = "fixed";
+  probe.style.opacity = "0";
+  document.body.appendChild(probe);
+  probe.select();
+  document.execCommand("copy");
+  probe.remove();
+}
+
+function buildCreatePayloadFromTask(detail) {
+  if (!detail || !detail.task || !detail.plan) {
+    return null;
+  }
+  return {
+    sourceProvider: detail.task.sourceProvider,
+    sourceProfileId: detail.sourceProfileId || "",
+    targetProvider: detail.task.targetProvider,
+    targetProfileId: detail.targetProfileId || "",
+    thresholdMB: Number(detail.plan.thresholdMB || 0),
+    riskMode: detail.plan.metadata?.riskProfile?.mode || "balanced",
+    riskOverride: detail.plan.metadata?.riskOverride || null,
+    executionMode: detail.plan.metadata?.executionMode || "leaf_first_lazy",
+    conflictPolicy: detail.conflictPolicy || "auto_rename_new",
+    selectedRoots: detail.plan.metadata?.selectedRoots || ["/"],
+    entries: detail.sourceEntries || [],
+  };
+}
+
 function prefillWizardFromTask(detail) {
   if (!detail || !detail.task || !detail.plan) {
     return;
@@ -385,6 +420,38 @@ function focusProfile(profileId) {
     const row = document.querySelector(`[data-profile-row="${profileId}"]`);
     row?.scrollIntoView({ block: "center", behavior: "smooth" });
   });
+}
+
+function wireTaskQuickActions(detail) {
+  const prefillButton = $("#task-prefill-wizard");
+  const copyButton = $("#task-copy-payload");
+  const payload = buildCreatePayloadFromTask(detail);
+  const disabled = !payload;
+
+  if (prefillButton) {
+    prefillButton.disabled = disabled;
+    prefillButton.onclick = disabled
+      ? () => showFlash("请先选择任务", true)
+      : () => {
+          activateTab("wizard");
+          prefillWizardFromTask(detail);
+          showFlash("已按当前任务重建向导参数");
+        };
+  }
+
+  if (copyButton) {
+    copyButton.disabled = disabled;
+    copyButton.onclick = disabled
+      ? () => showFlash("请先选择任务", true)
+      : async () => {
+          try {
+            await copyTextToClipboard(formatJSON(payload));
+            showFlash("任务创建参数已复制到剪贴板");
+          } catch (error) {
+            showFlash(`复制失败：${error.message}`, true);
+          }
+        };
+  }
 }
 
 function renderTaskResolutionGuide(detail) {
@@ -689,6 +756,7 @@ function renderTasks() {
   const wrap = $("#tasks-list");
   if (!state.tasks.length) {
     wrap.innerHTML = `<div class="task-item">暂无任务。</div>`;
+    wireTaskQuickActions(null);
     $("#task-summary").innerHTML = `
       <div class="insight-card">
         <strong>执行模式</strong>
@@ -741,6 +809,7 @@ function renderTasks() {
 function renderSelectedTask() {
   const detail = state.tasks.find((item) => item.task.id === state.selectedTaskId);
   if (!detail) {
+    wireTaskQuickActions(null);
     $("#task-summary").innerHTML = `
       <div class="insight-card">
         <strong>执行模式</strong>
@@ -761,6 +830,7 @@ function renderSelectedTask() {
   }
   const metadata = detail.plan?.metadata || {};
   const runtime = detail.runtime || metadata.runtime || {};
+  wireTaskQuickActions(detail);
   $("#task-summary").innerHTML = `
     <div class="insight-card">
       <strong>执行模式</strong>

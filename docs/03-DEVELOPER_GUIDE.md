@@ -142,6 +142,10 @@
 - 当前这些直达入口已支持：
   - 自动定位当前授权档案
   - 按当前任务预填任务向导里的 provider/profile/risk/entries 参数
+  - 同时回填 `selectedRoots / thresholdMB / conflictPolicy`
+- 当前任务详情区还支持两个快捷动作：
+  - 一键按当前任务重建向导
+  - 一键复制当前任务创建参数 JSON，便于重建相似任务或做接口联调
 - 当前如果 `retryLimit` 已耗尽：
   - queue item 会标记为 `exhausted`
   - 手动 `retry` 会返回 `retry_blocked`
