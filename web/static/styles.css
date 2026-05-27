@@ -223,6 +223,41 @@ label {
   padding-inline: 0.9rem;
 }
 
+.filter-bar {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.filter-bar input,
+.filter-bar select {
+  flex: 1 1 180px;
+  min-width: 0;
+}
+
+.filter-summary {
+  margin-bottom: 10px;
+  font-size: 0.9rem;
+}
+
+.toggle-chip {
+  width: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0.68rem 0.9rem;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.74);
+  color: var(--muted);
+}
+
+.toggle-chip input {
+  width: auto;
+  margin: 0;
+}
+
 .section-head {
   display: flex;
   justify-content: space-between;

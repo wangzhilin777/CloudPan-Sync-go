@@ -8,6 +8,12 @@ const state = {
   focusedProfileId: null,
   evidence: null,
   statuses: [],
+  treeFilters: {
+    taskDirectory: { query: "", status: "" },
+    taskPending: { query: "", reason: "", leafOnly: false },
+    statusDirectory: { query: "", status: "" },
+    statusPending: { query: "", reason: "", leafOnly: false },
+  },
 };
 
 function $(selector) {
@@ -136,6 +142,85 @@ function buildDirectoryStateTree(states) {
   return sortNodes(rootOrder.map((path) => nodes.get(path)).filter(Boolean));
 }
 
+function countTreeNodes(nodes) {
+  if (!Array.isArray(nodes) || !nodes.length) {
+    return 0;
+  }
+  return nodes.reduce((total, node) => total + 1 + countTreeNodes(node.children || []), 0);
+}
+
+function includesFilterText(values, text) {
+  if (!text) {
+    return true;
+  }
+  return values.some((value) => String(value || "").toLowerCase().includes(text));
+}
+
+function filterDirectoryTree(states, filters = {}) {
+  const tree = Array.isArray(states) && states[0]?.children ? states : buildDirectoryStateTree(states);
+  const query = String(filters.query || "").trim().toLowerCase();
+  const status = String(filters.status || "").trim().toLowerCase();
+  const filterActive = Boolean(query || status);
+  const prune = (nodes) =>
+    nodes.flatMap((node) => {
+      const children = prune(node.children || []);
+      const selfMatch =
+        includesFilterText([node.path, node.name, node.rootPath, node.lastItemPath], query) &&
+        includesFilterText([node.status], status);
+      if (!selfMatch && !children.length) {
+        return [];
+      }
+      return [{ ...node, children }];
+    });
+
+  const filtered = prune(tree);
+  return {
+    nodes: filtered,
+    totalNodes: countTreeNodes(tree),
+    visibleNodes: countTreeNodes(filtered),
+    filterActive,
+  };
+}
+
+function filterPendingTree(nodes, filters = {}) {
+  const tree = Array.isArray(nodes) && nodes[0]?.children !== undefined ? nodes : normalizePendingTree(nodes);
+  const query = String(filters.query || "").trim().toLowerCase();
+  const reason = String(filters.reason || "").trim().toLowerCase();
+  const leafOnly = Boolean(filters.leafOnly);
+  const filterActive = Boolean(query || reason || leafOnly);
+  const prune = (items) =>
+    items.flatMap((node) => {
+      const children = prune(node.children || []);
+      const isLeaf = !node.children?.length || node.nodeType === "file";
+      const selfMatch =
+        includesFilterText([node.path, node.name, node.rootPath], query) &&
+        includesFilterText([node.reason, node.providerStatus, node.status], reason) &&
+        (!leafOnly || isLeaf);
+      if (!selfMatch && !children.length) {
+        return [];
+      }
+      return [{ ...node, children }];
+    });
+
+  const filtered = prune(tree);
+  return {
+    nodes: filtered,
+    totalNodes: countTreeNodes(tree),
+    visibleNodes: countTreeNodes(filtered),
+    filterActive,
+  };
+}
+
+function renderTreeFilterSummary(result, label) {
+  if (!result.totalNodes) {
+    return `暂无${label}。`;
+  }
+  if (!result.filterActive) {
+    return `显示全部 ${result.visibleNodes} 个${label}。`;
+  }
+  return `当前显示 ${result.visibleNodes} / ${result.totalNodes} 个${label}。`;
+}
+
 function renderRuntimeCheckpoint(runtime) {
   if (!runtime || typeof runtime !== "object") {
     return `
@@ -201,9 +286,10 @@ function renderTreeNodes(nodes, options = {}) {
   const {
     mode = "directory",
     emptyMessage = "暂无数据。",
+    normalized = false,
   } = options;
-  const normalized = mode === "pending" ? normalizePendingTree(nodes) : buildDirectoryStateTree(nodes);
-  if (!normalized.length) {
+  const tree = normalized ? nodes : mode === "pending" ? normalizePendingTree(nodes) : buildDirectoryStateTree(nodes);
+  if (!tree.length) {
     return `<div class="directory-empty">${escapeHTML(emptyMessage)}</div>`;
   }
 
@@ -249,7 +335,7 @@ function renderTreeNodes(nodes, options = {}) {
     `;
   };
 
-  return normalized
+  return tree
     .map(
       (root) => `
         <section class="directory-group">
@@ -271,6 +357,50 @@ function renderDirectoryStates(states) {
 
 function renderPendingTree(nodes) {
   return renderTreeNodes(nodes, { mode: "pending", emptyMessage: "暂无待补传项。" });
+}
+
+function currentSelectedTaskDetail() {
+  return state.tasks.find((item) => item.task.id === state.selectedTaskId) || null;
+}
+
+function updateTaskTreePanels(detail) {
+  const runtime = detail?.runtime || detail?.plan?.metadata?.runtime || {};
+  const directoryResult = filterDirectoryTree(runtime.directoryStates || [], state.treeFilters.taskDirectory);
+  const pendingResult = filterPendingTree(runtime.pendingTree || [], state.treeFilters.taskPending);
+  $("#task-directory-states").innerHTML = renderTreeNodes(directoryResult.nodes, {
+    mode: "directory",
+    emptyMessage: "暂无目录状态。",
+    normalized: true,
+  });
+  $("#task-pending-tree").innerHTML = renderTreeNodes(pendingResult.nodes, {
+    mode: "pending",
+    emptyMessage: "暂无待补传项。",
+    normalized: true,
+  });
+  $("#task-directory-filter-summary").textContent = detail
+    ? renderTreeFilterSummary(directoryResult, "目录节点")
+    : "等待任务数据...";
+  $("#task-pending-filter-summary").textContent = detail
+    ? renderTreeFilterSummary(pendingResult, "待补传节点")
+    : "等待任务数据...";
+}
+
+function updateStatusTreePanels(runtimePayload) {
+  const runtime = runtimePayload?.runtime || runtimePayload || {};
+  const directoryResult = filterDirectoryTree(runtime.directoryStates || [], state.treeFilters.statusDirectory);
+  const pendingResult = filterPendingTree(runtime.pendingTree || [], state.treeFilters.statusPending);
+  $("#status-directory-states").innerHTML = renderTreeNodes(directoryResult.nodes, {
+    mode: "directory",
+    emptyMessage: "暂无目录状态。",
+    normalized: true,
+  });
+  $("#status-pending-tree").innerHTML = renderTreeNodes(pendingResult.nodes, {
+    mode: "pending",
+    emptyMessage: "暂无待补传项。",
+    normalized: true,
+  });
+  $("#status-directory-filter-summary").textContent = renderTreeFilterSummary(directoryResult, "目录节点");
+  $("#status-pending-filter-summary").textContent = renderTreeFilterSummary(pendingResult, "待补传节点");
 }
 
 function recentRuntimePayload() {
@@ -770,8 +900,7 @@ function renderTasks() {
       </div>
     `;
     $("#task-resolution-guide").innerHTML = `<div class="directory-empty">选择任务后显示处理建议。</div>`;
-    $("#task-directory-states").innerHTML = `<div class="directory-empty">暂无目录状态。</div>`;
-    $("#task-pending-tree").innerHTML = `<div class="directory-empty">暂无待补传项。</div>`;
+    updateTaskTreePanels(null);
     $("#task-detail").textContent = "选择一条任务查看详情...";
     return;
   }
@@ -807,7 +936,7 @@ function renderTasks() {
 }
 
 function renderSelectedTask() {
-  const detail = state.tasks.find((item) => item.task.id === state.selectedTaskId);
+  const detail = currentSelectedTaskDetail();
   if (!detail) {
     wireTaskQuickActions(null);
     $("#task-summary").innerHTML = `
@@ -822,8 +951,7 @@ function renderSelectedTask() {
         <span>选择任务后显示</span>
       </div>
     `;
-    $("#task-directory-states").innerHTML = `<div class="directory-empty">暂无目录状态。</div>`;
-    $("#task-pending-tree").innerHTML = `<div class="directory-empty">暂无待补传项。</div>`;
+    updateTaskTreePanels(null);
     $("#task-resolution-guide").innerHTML = `<div class="directory-empty">选择任务后显示处理建议。</div>`;
     $("#task-detail").textContent = "选择一条任务查看详情...";
     return;
@@ -871,8 +999,7 @@ function renderSelectedTask() {
   `;
   $("#task-runtime").innerHTML = renderRuntimeCheckpoint(runtime);
   $("#task-resolution-guide").innerHTML = renderTaskResolutionGuide(detail);
-  $("#task-directory-states").innerHTML = renderDirectoryStates(runtime.directoryStates);
-  $("#task-pending-tree").innerHTML = renderPendingTree(runtime.pendingTree);
+  updateTaskTreePanels(detail);
   $("#task-detail").textContent = detail ? formatJSON(detail) : "选择一条任务查看详情...";
   wireTaskResolutionGuide(detail);
 }
@@ -995,8 +1122,7 @@ function renderStatus() {
   $("#recent-probes").innerHTML = renderRecentProbesTable(evidence.recentProbes || []);
   const runtimePayload = recentRuntimePayload();
   $("#status-runtime-checkpoints").innerHTML = renderRuntimeCheckpoint(runtimePayload?.runtime || runtimePayload);
-  $("#status-directory-states").innerHTML = renderDirectoryStates(runtimePayload?.runtime?.directoryStates || runtimePayload?.directoryStates);
-  $("#status-pending-tree").innerHTML = renderPendingTree(runtimePayload?.runtime?.pendingTree || runtimePayload?.pendingTree);
+  updateStatusTreePanels(runtimePayload);
 }
 
 function renderBlockedActionsSummary(items) {
@@ -1332,6 +1458,36 @@ function wireStatus() {
   });
 }
 
+function wireTreeFilters() {
+  const bindTextFilter = (selector, section, key, rerender) => {
+    $(selector).addEventListener("input", (event) => {
+      state.treeFilters[section][key] = event.target.value;
+      rerender();
+    });
+  };
+  const bindCheckboxFilter = (selector, section, key, rerender) => {
+    $(selector).addEventListener("change", (event) => {
+      state.treeFilters[section][key] = event.target.checked;
+      rerender();
+    });
+  };
+
+  const rerenderTask = () => updateTaskTreePanels(currentSelectedTaskDetail());
+  const rerenderStatus = () => updateStatusTreePanels(recentRuntimePayload());
+
+  bindTextFilter("#task-directory-filter-query", "taskDirectory", "query", rerenderTask);
+  bindTextFilter("#task-directory-filter-status", "taskDirectory", "status", rerenderTask);
+  bindTextFilter("#task-pending-filter-query", "taskPending", "query", rerenderTask);
+  bindTextFilter("#task-pending-filter-reason", "taskPending", "reason", rerenderTask);
+  bindCheckboxFilter("#task-pending-filter-leaf-only", "taskPending", "leafOnly", rerenderTask);
+
+  bindTextFilter("#status-directory-filter-query", "statusDirectory", "query", rerenderStatus);
+  bindTextFilter("#status-directory-filter-status", "statusDirectory", "status", rerenderStatus);
+  bindTextFilter("#status-pending-filter-query", "statusPending", "query", rerenderStatus);
+  bindTextFilter("#status-pending-filter-reason", "statusPending", "reason", rerenderStatus);
+  bindCheckboxFilter("#status-pending-filter-leaf-only", "statusPending", "leafOnly", rerenderStatus);
+}
+
 async function init() {
   setupTabs();
   wireLogin();
@@ -1339,6 +1495,7 @@ async function init() {
   wirePlanner();
   wireTasks();
   wireStatus();
+  wireTreeFilters();
   syncSessionState();
   syncExecutionModeHint();
   renderPreview();
