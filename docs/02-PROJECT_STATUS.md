@@ -142,6 +142,8 @@
   - `deepest-first` 顺序相关测试基础
   - `fast_upload / download_upload / pending_manual` 运行语义
   - fallback、状态机、结果写库等运行时基础
+  - `fast_upload` 先走 `FastUploadCheck` 的 runtime 预检
+  - 预检未命中时优先在 runtime 层直接回退到 `download_upload`
   - `sourceProfileId + selectedRoots` 的按需扫描骨架
   - 顶层目录按顺序、子树内部叶子优先的懒展开执行样例测试
   - `executionMode` 任务级配置能力
@@ -169,6 +171,10 @@
   - 目录级状态、完成数、跳过数、失败数
   - 最近待补传树
   - 当前重试是否已缩小为待补传子集
+  - 当前任务结果证据已可直接看到：
+    - `fastCheck`
+    - `fallbackUsed`
+    - `fallbackFrom`
   - 但原始项目要求的这些通用能力还未完整落地：
     - 更完整的后台补传调度与队列策略
     - 真正异步 worker 下的运行中暂停 / 恢复

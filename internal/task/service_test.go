@@ -160,7 +160,19 @@ func TestServiceRuntimeHandlesFallbackAndConflictDowngrade(t *testing.T) {
 		},
 		capability: provider.CapabilitySet{
 			SupportsAuthValidation: true,
+			SupportsFastUpload:     true,
 			SupportsUpload:         true,
+		},
+		fastCheckFunc: func(req provider.FastUploadCheckRequest) provider.FastUploadCheckResult {
+			return provider.FastUploadCheckResult{
+				OperationResult: provider.OperationResult{
+					OK:      true,
+					Status:  "ok",
+					Message: "candidate",
+					Mode:    "fake_fast_check",
+				},
+				Candidate: true,
+			}
 		},
 		uploadFunc: func(req provider.UploadRequest) provider.UploadResult {
 			if req.Strategy == string(planner.StrategyFastUpload) {
@@ -238,6 +250,16 @@ func TestServiceRuntimeHandlesFallbackAndConflictDowngrade(t *testing.T) {
 	if value, _ := running.Results[0].Payload["fallbackUsed"].(bool); !value {
 		t.Fatalf("expected fallbackUsed payload, got %+v", running.Results[0].Payload)
 	}
+	fastCheck, ok := running.Results[0].Payload["fastCheck"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("expected fastCheck payload, got %#v", running.Results[0].Payload["fastCheck"])
+	}
+	if candidate, _ := fastCheck["candidate"].(bool); !candidate {
+		t.Fatalf("expected fastCheck candidate=true, got %#v", fastCheck)
+	}
+	if status, _ := fastCheck["status"].(string); status != "ok" {
+		t.Fatalf("expected fastCheck status ok, got %#v", fastCheck)
+	}
 	riskProfile, ok := running.Results[0].Payload["riskProfile"].(map[string]interface{})
 	if !ok {
 		t.Fatalf("expected result riskProfile payload, got %#v", running.Results[0].Payload["riskProfile"])
@@ -247,6 +269,115 @@ func TestServiceRuntimeHandlesFallbackAndConflictDowngrade(t *testing.T) {
 	}
 	if mode, _ := running.Results[0].Payload["executionMode"].(string); mode != string(planner.ExecutionModeLeafFirstLazy) {
 		t.Fatalf("expected result execution mode leaf_first_lazy, got %v", running.Results[0].Payload["executionMode"])
+	}
+}
+
+func TestServiceRuntimeFallsBackAfterFastUploadPrecheckMiss(t *testing.T) {
+	ctx := context.Background()
+	store, err := sqlitestore.New(ctx, filepath.Join(t.TempDir(), "runtime-fastcheck.db"))
+	if err != nil {
+		t.Fatalf("new store: %v", err)
+	}
+	defer func() { _ = store.Close() }()
+
+	uploadStrategies := make([]string, 0, 2)
+	adapter := &scriptedAdapter{
+		meta: provider.Provider{
+			Key:              "runtime_fastcheck",
+			DisplayName:      "Runtime FastCheck",
+			ProtocolGroup:    "fake",
+			AuthModes:        []string{"manual_token"},
+			FastUploadInputs: []string{"md5", "size"},
+			FallbackModes:    []string{"download_upload"},
+			ConflictPolicies: []provider.ConflictPolicy{provider.ConflictPolicyAutoRenameNew},
+			Status:           "planned",
+		},
+		capability: provider.CapabilitySet{
+			SupportsAuthValidation: true,
+			SupportsFastUpload:     true,
+			SupportsUpload:         true,
+		},
+		fastCheckFunc: func(req provider.FastUploadCheckRequest) provider.FastUploadCheckResult {
+			return provider.FastUploadCheckResult{
+				OperationResult: provider.OperationResult{
+					OK:      true,
+					Status:  "ok",
+					Message: "not candidate",
+					Mode:    "fake_fast_check",
+				},
+				Candidate: false,
+			}
+		},
+		uploadFunc: func(req provider.UploadRequest) provider.UploadResult {
+			uploadStrategies = append(uploadStrategies, req.Strategy)
+			return provider.UploadResult{
+				OperationResult: provider.OperationResult{
+					OK:      true,
+					Status:  "ok",
+					Message: "binary ok",
+					Mode:    "fake_binary",
+				},
+			}
+		},
+	}
+
+	registry := provider.NewRegistry(adapter)
+	authSvc := auth.NewService(store, registry)
+	svc := NewService(store, registry, authSvc)
+	profile, err := authSvc.CreateProfile(ctx, auth.CreateProfileInput{
+		ProviderKey: "runtime_fastcheck",
+		AuthMode:    "manual_token",
+		DisplayName: "runtime fastcheck",
+		Token:       "token-1",
+	})
+	if err != nil {
+		t.Fatalf("CreateProfile() error = %v", err)
+	}
+
+	localFile := filepath.Join(t.TempDir(), "source.bin")
+	if err := os.WriteFile(localFile, []byte("hello"), 0o644); err != nil {
+		t.Fatalf("WriteFile() error = %v", err)
+	}
+
+	detail, err := svc.Create(ctx, CreateRequest{
+		SourceProvider:  "guangya",
+		TargetProvider:  "runtime_fastcheck",
+		TargetProfileID: profile.ID,
+		ThresholdMB:     0,
+		ConflictPolicy:  provider.ConflictPolicyAutoRenameNew,
+		Entries: []planner.SourceEntry{
+			{Path: "/a.bin", Size: 1024, MD5: "abc", LocalPath: localFile},
+		},
+	})
+	if err != nil {
+		t.Fatalf("Create() error = %v", err)
+	}
+
+	running, ok, err := svc.Run(ctx, detail.Task.ID)
+	if err != nil {
+		t.Fatalf("Run() error = %v", err)
+	}
+	if !ok {
+		t.Fatal("expected task to exist")
+	}
+	if len(uploadStrategies) != 1 || uploadStrategies[0] != string(planner.StrategyDownloadUpload) {
+		t.Fatalf("expected only download_upload to execute after precheck miss, got %#v", uploadStrategies)
+	}
+	if len(running.Results) != 1 {
+		t.Fatalf("expected one result, got %d", len(running.Results))
+	}
+	if value, _ := running.Results[0].Payload["fallbackUsed"].(bool); !value {
+		t.Fatalf("expected fallbackUsed payload, got %+v", running.Results[0].Payload)
+	}
+	fastCheck, ok := running.Results[0].Payload["fastCheck"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("expected fastCheck payload, got %#v", running.Results[0].Payload["fastCheck"])
+	}
+	if candidate, _ := fastCheck["candidate"].(bool); candidate {
+		t.Fatalf("expected fastCheck candidate=false, got %#v", fastCheck)
+	}
+	if got := running.Results[0].Message; got != "Fast upload pre-check reported no candidate, fallback to download_upload succeeded." {
+		t.Fatalf("unexpected fallback message: %s", got)
 	}
 }
 
@@ -1844,12 +1975,13 @@ func TestServiceRunSupportsPreScanFlatExecutionMode(t *testing.T) {
 }
 
 type scriptedAdapter struct {
-	meta         provider.Provider
-	capability   provider.CapabilitySet
-	listFunc     func(req provider.ListRequest) provider.ListResult
-	metadataFunc func(req provider.MetadataRequest) provider.MetadataResult
-	uploadFunc   func(req provider.UploadRequest) provider.UploadResult
-	listCalls    []string
+	meta          provider.Provider
+	capability    provider.CapabilitySet
+	listFunc      func(req provider.ListRequest) provider.ListResult
+	metadataFunc  func(req provider.MetadataRequest) provider.MetadataResult
+	fastCheckFunc func(req provider.FastUploadCheckRequest) provider.FastUploadCheckResult
+	uploadFunc    func(req provider.UploadRequest) provider.UploadResult
+	listCalls     []string
 }
 
 func (a *scriptedAdapter) Meta() provider.Provider {
@@ -1884,6 +2016,9 @@ func (a *scriptedAdapter) CreateDir(req provider.CreateDirRequest) provider.Oper
 }
 
 func (a *scriptedAdapter) FastUploadCheck(req provider.FastUploadCheckRequest) provider.FastUploadCheckResult {
+	if a.fastCheckFunc != nil {
+		return a.fastCheckFunc(req)
+	}
 	return provider.FastUploadCheckResult{OperationResult: provider.OperationResult{OK: true, Status: "ok", Message: "ok", Mode: "scripted"}, Candidate: true}
 }
 

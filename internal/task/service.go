@@ -250,12 +250,15 @@ func (s *Service) Run(ctx context.Context, id string) (Detail, bool, error) {
 			SHA1:           lookupSHA1(detail.SourceEntries, item.Path),
 			GCID:           lookupGCID(detail.SourceEntries, item.Path),
 		}
-		upload, fallbackUsed := s.executeUpload(entry, uploadReq)
+		upload, fallbackUsed, fastCheckPayload := s.executeUpload(entry, uploadReq)
 		result.Mode = upload.Mode
 		result.Message = upload.Message
 		result.ConflictAction = conflictAction
 		result.Payload["strategy"] = uploadReq.Strategy
 		result.Payload["providerStatus"] = upload.Status
+		if fastCheckPayload != nil {
+			result.Payload["fastCheck"] = fastCheckPayload
+		}
 		if executionMode, ok := detail.Plan.Metadata["executionMode"]; ok {
 			result.Payload["executionMode"] = executionMode
 		}
@@ -704,7 +707,8 @@ func resolveConflictPolicy(meta provider.Provider, requested provider.ConflictPo
 	return requested, ""
 }
 
-func (s *Service) executeUpload(entry provider.Entry, req provider.UploadRequest) (provider.UploadResult, bool) {
+func (s *Service) executeUpload(entry provider.Entry, req provider.UploadRequest) (provider.UploadResult, bool, map[string]interface{}) {
+	fastCheckPayload := map[string]interface{}(nil)
 	if req.Strategy == string(planner.StrategyDownloadUpload) {
 		if !localFileExists(req.LocalPath) {
 			return provider.UploadResult{
@@ -713,22 +717,77 @@ func (s *Service) executeUpload(entry provider.Entry, req provider.UploadRequest
 					Message: "Local file is required for download_upload fallback.",
 					Mode:    "runtime_guard",
 				},
-			}, false
+			}, false, fastCheckPayload
+		}
+	}
+
+	if req.Strategy == string(planner.StrategyFastUpload) && entry.Capability.SupportsFastUpload {
+		check := entry.Adapter.FastUploadCheck(provider.FastUploadCheckRequest{
+			Profile:  req.Profile,
+			Path:     req.Path,
+			ParentID: req.ParentID,
+			Name:     req.Name,
+			Size:     req.Size,
+			MD5:      req.MD5,
+			SHA1:     req.SHA1,
+			GCID:     req.GCID,
+		})
+		fastCheckPayload = map[string]interface{}{
+			"performed": check.OK || check.Status != "",
+			"candidate": check.Candidate,
+			"status":    check.Status,
+			"message":   check.Message,
+			"mode":      check.Mode,
+		}
+		if !check.OK {
+			return provider.UploadResult{OperationResult: check.OperationResult}, false, fastCheckPayload
+		}
+		if !check.Candidate {
+			if !supportsFallback(entry.Meta.FallbackModes, string(planner.StrategyDownloadUpload)) {
+				return provider.UploadResult{
+					OperationResult: provider.OperationResult{
+						Status:  "hash_miss",
+						Message: "Fast upload pre-check reported no candidate.",
+						Mode:    "runtime_fast_check",
+					},
+				}, false, fastCheckPayload
+			}
+			if !localFileExists(req.LocalPath) {
+				return provider.UploadResult{
+					OperationResult: provider.OperationResult{
+						Status:  "local_file_missing",
+						Message: "Fast upload pre-check fallback requires a local file.",
+						Mode:    "runtime_guard",
+					},
+				}, false, fastCheckPayload
+			}
+
+			fallbackReq := req
+			fallbackReq.Strategy = string(planner.StrategyDownloadUpload)
+			fallback := entry.Adapter.Upload(fallbackReq)
+			if fallback.OK {
+				if fallback.Payload == nil {
+					fallback.Payload = map[string]interface{}{}
+				}
+				fallback.Payload["fallbackFrom"] = "fast_upload_precheck"
+				fallback.Message = "Fast upload pre-check reported no candidate, fallback to download_upload succeeded."
+			}
+			return fallback, true, fastCheckPayload
 		}
 	}
 
 	upload := entry.Adapter.Upload(req)
 	if upload.OK {
-		return upload, false
+		return upload, false, fastCheckPayload
 	}
 	if req.Strategy != string(planner.StrategyFastUpload) {
-		return upload, false
+		return upload, false, fastCheckPayload
 	}
 	if upload.Status != "hash_miss" {
-		return upload, false
+		return upload, false, fastCheckPayload
 	}
 	if !supportsFallback(entry.Meta.FallbackModes, string(planner.StrategyDownloadUpload)) {
-		return upload, false
+		return upload, false, fastCheckPayload
 	}
 	if !localFileExists(req.LocalPath) {
 		return provider.UploadResult{
@@ -737,7 +796,7 @@ func (s *Service) executeUpload(entry provider.Entry, req provider.UploadRequest
 				Message: "Hash miss fallback requires a local file.",
 				Mode:    "runtime_guard",
 			},
-		}, false
+		}, false, fastCheckPayload
 	}
 
 	fallbackReq := req
@@ -750,7 +809,7 @@ func (s *Service) executeUpload(entry provider.Entry, req provider.UploadRequest
 		fallback.Payload["fallbackFrom"] = string(planner.StrategyFastUpload)
 		fallback.Message = "Fast upload hash miss, fallback to download_upload succeeded."
 	}
-	return fallback, true
+	return fallback, true, fastCheckPayload
 }
 
 func supportsFallback(modes []string, expected string) bool {

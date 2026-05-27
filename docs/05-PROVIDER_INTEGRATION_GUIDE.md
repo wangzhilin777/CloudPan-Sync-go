@@ -252,6 +252,8 @@
 - provider 真实实现时至少要考虑：
   - hash 命中直接快传
   - hash miss 是否允许回落到二进制上传
+  - `FastUploadCheck` 是否会被 runtime 先调用做预检
+  - 预检未命中时，是否允许 runtime 不再发起一次无意义快传而直接回退
   - 超大文件或特殊场景是否暂时返回 `pending_manual_requires_confirmation`
 
 ## 推荐的实现方式
