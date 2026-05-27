@@ -1,0 +1,512 @@
+package app
+
+import (
+	"context"
+	"errors"
+	"net/http"
+	"strings"
+
+	"cloudpan-sync-go/internal/auth"
+	"cloudpan-sync-go/internal/planner"
+	"cloudpan-sync-go/internal/provider"
+	"cloudpan-sync-go/internal/task"
+)
+
+type loginRequest struct {
+	Password string `json:"password"`
+}
+
+type providerListRequest struct {
+	ProfileID string `json:"profileId"`
+	Path      string `json:"path"`
+	ParentID  string `json:"parentId"`
+	PageSize  int    `json:"pageSize"`
+}
+
+type providerMetadataRequest struct {
+	ProfileID string `json:"profileId"`
+	Path      string `json:"path"`
+	FileID    string `json:"fileId"`
+	ParentID  string `json:"parentId"`
+}
+
+type providerCreateDirRequest struct {
+	ProfileID string `json:"profileId"`
+	ParentID  string `json:"parentId"`
+	DirName   string `json:"dirName"`
+}
+
+type providerFastCheckRequest struct {
+	ProfileID string `json:"profileId"`
+	Path      string `json:"path"`
+	ParentID  string `json:"parentId"`
+	Name      string `json:"name"`
+	Size      int64  `json:"size"`
+	MD5       string `json:"md5"`
+	SHA1      string `json:"sha1"`
+	GCID      string `json:"gcid"`
+}
+
+func (a *App) routes() http.Handler {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", a.handleIndex)
+	mux.HandleFunc("/api/health", a.handleHealth)
+	mux.HandleFunc("/api/session/login", a.handleLogin)
+	mux.HandleFunc("/api/providers", a.handleProviders)
+	mux.HandleFunc("/api/providers/", a.handleProviderByKey)
+	mux.HandleFunc("/api/auth/profiles", a.handleAuthProfiles)
+	mux.HandleFunc("/api/auth/profiles/", a.handleAuthProfileByID)
+	mux.HandleFunc("/api/plans/preview", a.handlePlanPreview)
+	mux.HandleFunc("/api/tasks", a.handleTasks)
+	mux.HandleFunc("/api/tasks/", a.handleTaskByID)
+	mux.HandleFunc("/api/evidence/runtime", a.handleRuntimeEvidence)
+	mux.HandleFunc("/api/status/providers", a.handleProviderStatuses)
+	return a.loggingMiddleware(mux)
+}
+
+func (a *App) handleIndex(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Path != "/" {
+		writeError(w, http.StatusNotFound, "not_found", "Resource not found.")
+		return
+	}
+	writeOK(w, http.StatusOK, map[string]string{
+		"name":    a.cfg.AppName,
+		"status":  "bootstrapped",
+		"message": "CloudPan Sync Go scaffold is running.",
+	})
+}
+
+func (a *App) handleHealth(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		writeError(w, http.StatusMethodNotAllowed, "method_not_allowed", "Method not allowed.")
+		return
+	}
+	writeOK(w, http.StatusOK, map[string]string{
+		"status": "ok",
+		"env":    a.cfg.Env,
+	})
+}
+
+func (a *App) handleLogin(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		writeError(w, http.StatusMethodNotAllowed, "method_not_allowed", "Method not allowed.")
+		return
+	}
+	var req loginRequest
+	if err := decodeJSON(r, &req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid_json", "Invalid JSON payload.")
+		return
+	}
+	if req.Password != a.cfg.AdminPassword {
+		writeError(w, http.StatusUnauthorized, "invalid_password", "Invalid password.")
+		return
+	}
+	writeOK(w, http.StatusOK, map[string]string{
+		"message": "Login validated for scaffold mode.",
+	})
+}
+
+func (a *App) handleProviders(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		writeError(w, http.StatusMethodNotAllowed, "method_not_allowed", "Method not allowed.")
+		return
+	}
+	writeOK(w, http.StatusOK, map[string]interface{}{
+		"items": a.providers.List(),
+	})
+}
+
+func (a *App) handleProviderByKey(w http.ResponseWriter, r *http.Request) {
+	path := strings.TrimPrefix(r.URL.Path, "/api/providers/")
+	parts := strings.Split(strings.Trim(path, "/"), "/")
+	if len(parts) < 2 || parts[0] == "" {
+		writeError(w, http.StatusNotFound, "not_found", "Resource not found.")
+		return
+	}
+
+	item, ok := a.providers.Get(parts[0])
+	if !ok {
+		writeError(w, http.StatusNotFound, "provider_not_found", "Provider was not found.")
+		return
+	}
+
+	switch {
+	case len(parts) == 2 && parts[1] == "capabilities" && r.Method == http.MethodGet:
+		writeOK(w, http.StatusOK, map[string]interface{}{
+			"provider":     item.Meta,
+			"capabilities": item.Capability,
+		})
+	case len(parts) == 2 && parts[1] == "list" && r.Method == http.MethodPost:
+		var req providerListRequest
+		if err := decodeJSON(r, &req); err != nil {
+			writeError(w, http.StatusBadRequest, "invalid_json", "Invalid JSON payload.")
+			return
+		}
+		profile, err := a.resolveProviderProfile(r.Context(), req.ProfileID)
+		if err != nil {
+			handleServiceError(w, err)
+			return
+		}
+		result := item.Adapter.List(provider.ListRequest{
+			Profile:  profile,
+			Path:     req.Path,
+			ParentID: req.ParentID,
+			PageSize: req.PageSize,
+		})
+		if !result.OK {
+			handleServiceError(w, errors.New(result.Status))
+			return
+		}
+		writeOK(w, http.StatusOK, result)
+	case len(parts) == 2 && parts[1] == "metadata" && r.Method == http.MethodPost:
+		var req providerMetadataRequest
+		if err := decodeJSON(r, &req); err != nil {
+			writeError(w, http.StatusBadRequest, "invalid_json", "Invalid JSON payload.")
+			return
+		}
+		profile, err := a.resolveProviderProfile(r.Context(), req.ProfileID)
+		if err != nil {
+			handleServiceError(w, err)
+			return
+		}
+		result := item.Adapter.Metadata(provider.MetadataRequest{
+			Profile:  profile,
+			Path:     req.Path,
+			FileID:   req.FileID,
+			ParentID: req.ParentID,
+		})
+		if !result.OK {
+			handleServiceError(w, errors.New(result.Status))
+			return
+		}
+		writeOK(w, http.StatusOK, result)
+	case len(parts) == 2 && parts[1] == "create_dir" && r.Method == http.MethodPost:
+		var req providerCreateDirRequest
+		if err := decodeJSON(r, &req); err != nil {
+			writeError(w, http.StatusBadRequest, "invalid_json", "Invalid JSON payload.")
+			return
+		}
+		profile, err := a.resolveProviderProfile(r.Context(), req.ProfileID)
+		if err != nil {
+			handleServiceError(w, err)
+			return
+		}
+		result := item.Adapter.CreateDir(provider.CreateDirRequest{
+			Profile:  profile,
+			ParentID: req.ParentID,
+			DirName:  req.DirName,
+		})
+		if !result.OK {
+			handleServiceError(w, errors.New(result.Status))
+			return
+		}
+		writeOK(w, http.StatusOK, result)
+	case len(parts) == 2 && parts[1] == "fast_check" && r.Method == http.MethodPost:
+		var req providerFastCheckRequest
+		if err := decodeJSON(r, &req); err != nil {
+			writeError(w, http.StatusBadRequest, "invalid_json", "Invalid JSON payload.")
+			return
+		}
+		profile, err := a.resolveProviderProfile(r.Context(), req.ProfileID)
+		if err != nil {
+			handleServiceError(w, err)
+			return
+		}
+		result := item.Adapter.FastUploadCheck(provider.FastUploadCheckRequest{
+			Profile:  profile,
+			Path:     req.Path,
+			ParentID: req.ParentID,
+			Name:     req.Name,
+			Size:     req.Size,
+			MD5:      req.MD5,
+			SHA1:     req.SHA1,
+			GCID:     req.GCID,
+		})
+		if !result.OK {
+			handleServiceError(w, errors.New(result.Status))
+			return
+		}
+		writeOK(w, http.StatusOK, result)
+	default:
+		writeError(w, http.StatusMethodNotAllowed, "method_not_allowed", "Method not allowed.")
+	}
+}
+
+func (a *App) handleAuthProfiles(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		items, err := a.auth.ListProfiles(r.Context())
+		if err != nil {
+			handleError(w, err)
+			return
+		}
+		writeOK(w, http.StatusOK, map[string]interface{}{"items": items})
+	case http.MethodPost:
+		var req auth.CreateProfileInput
+		if err := decodeJSON(r, &req); err != nil {
+			writeError(w, http.StatusBadRequest, "invalid_json", "Invalid JSON payload.")
+			return
+		}
+		item, err := a.auth.CreateProfile(r.Context(), req)
+		if err != nil {
+			handleServiceError(w, err)
+			return
+		}
+		writeOK(w, http.StatusCreated, item)
+	default:
+		writeError(w, http.StatusMethodNotAllowed, "method_not_allowed", "Method not allowed.")
+	}
+}
+
+func (a *App) handleAuthProfileByID(w http.ResponseWriter, r *http.Request) {
+	path := strings.TrimPrefix(r.URL.Path, "/api/auth/profiles/")
+	parts := strings.Split(strings.Trim(path, "/"), "/")
+	if len(parts) == 0 || parts[0] == "" {
+		writeError(w, http.StatusNotFound, "not_found", "Resource not found.")
+		return
+	}
+	id := parts[0]
+
+	if len(parts) == 2 && parts[1] == "validate" {
+		if r.Method != http.MethodPost {
+			writeError(w, http.StatusMethodNotAllowed, "method_not_allowed", "Method not allowed.")
+			return
+		}
+		item, ok, err := a.auth.ValidateProfile(r.Context(), id)
+		if err != nil {
+			handleServiceError(w, err)
+			return
+		}
+		if !ok {
+			writeError(w, http.StatusNotFound, "profile_not_found", "Auth profile was not found.")
+			return
+		}
+		writeOK(w, http.StatusOK, item)
+		return
+	}
+
+	switch r.Method {
+	case http.MethodGet:
+		item, ok, err := a.auth.GetProfile(r.Context(), id)
+		if err != nil {
+			handleError(w, err)
+			return
+		}
+		if !ok {
+			writeError(w, http.StatusNotFound, "profile_not_found", "Auth profile was not found.")
+			return
+		}
+		writeOK(w, http.StatusOK, item)
+	case http.MethodPatch:
+		var req auth.UpdateProfileInput
+		if err := decodeJSON(r, &req); err != nil {
+			writeError(w, http.StatusBadRequest, "invalid_json", "Invalid JSON payload.")
+			return
+		}
+		item, ok, err := a.auth.UpdateProfile(r.Context(), id, req)
+		if err != nil {
+			handleServiceError(w, err)
+			return
+		}
+		if !ok {
+			writeError(w, http.StatusNotFound, "profile_not_found", "Auth profile was not found.")
+			return
+		}
+		writeOK(w, http.StatusOK, item)
+	case http.MethodDelete:
+		ok, err := a.auth.DeleteProfile(r.Context(), id)
+		if err != nil {
+			handleError(w, err)
+			return
+		}
+		if !ok {
+			writeError(w, http.StatusNotFound, "profile_not_found", "Auth profile was not found.")
+			return
+		}
+		writeOK(w, http.StatusOK, map[string]string{"deleted": id})
+	default:
+		writeError(w, http.StatusMethodNotAllowed, "method_not_allowed", "Method not allowed.")
+	}
+}
+
+func (a *App) handlePlanPreview(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		writeError(w, http.StatusMethodNotAllowed, "method_not_allowed", "Method not allowed.")
+		return
+	}
+	var req planner.PreviewRequest
+	if err := decodeJSON(r, &req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid_json", "Invalid JSON payload.")
+		return
+	}
+	item, err := planner.BuildPreview(a.providers, req)
+	if err != nil {
+		handleServiceError(w, err)
+		return
+	}
+	writeOK(w, http.StatusOK, item)
+}
+
+func (a *App) handleTasks(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		items, err := a.tasks.List(r.Context())
+		if err != nil {
+			handleError(w, err)
+			return
+		}
+		writeOK(w, http.StatusOK, map[string]interface{}{"items": items})
+	case http.MethodPost:
+		var req task.CreateRequest
+		if err := decodeJSON(r, &req); err != nil {
+			writeError(w, http.StatusBadRequest, "invalid_json", "Invalid JSON payload.")
+			return
+		}
+		item, err := a.tasks.Create(r.Context(), req)
+		if err != nil {
+			handleServiceError(w, err)
+			return
+		}
+		writeOK(w, http.StatusCreated, item)
+	default:
+		writeError(w, http.StatusMethodNotAllowed, "method_not_allowed", "Method not allowed.")
+	}
+}
+
+func (a *App) handleTaskByID(w http.ResponseWriter, r *http.Request) {
+	path := strings.TrimPrefix(r.URL.Path, "/api/tasks/")
+	parts := strings.Split(strings.Trim(path, "/"), "/")
+	if len(parts) == 0 || parts[0] == "" {
+		writeError(w, http.StatusNotFound, "not_found", "Resource not found.")
+		return
+	}
+	id := parts[0]
+	if len(parts) == 1 && r.Method == http.MethodGet {
+		item, ok, err := a.tasks.Get(r.Context(), id)
+		if err != nil {
+			handleError(w, err)
+			return
+		}
+		if !ok {
+			writeError(w, http.StatusNotFound, "task_not_found", "Task was not found.")
+			return
+		}
+		writeOK(w, http.StatusOK, item)
+		return
+	}
+	if len(parts) != 2 || r.Method != http.MethodPost {
+		writeError(w, http.StatusMethodNotAllowed, "method_not_allowed", "Method not allowed.")
+		return
+	}
+
+	var (
+		item task.Detail
+		ok   bool
+		err  error
+	)
+	switch parts[1] {
+	case "run":
+		item, ok, err = a.tasks.Run(r.Context(), id)
+	case "pause":
+		item, ok, err = a.tasks.Pause(r.Context(), id)
+	case "resume":
+		item, ok, err = a.tasks.Resume(r.Context(), id)
+	case "retry":
+		item, ok, err = a.tasks.Retry(r.Context(), id)
+	default:
+		writeError(w, http.StatusNotFound, "not_found", "Resource not found.")
+		return
+	}
+	if err != nil {
+		handleServiceError(w, err)
+		return
+	}
+	if !ok {
+		writeError(w, http.StatusNotFound, "task_not_found", "Task was not found.")
+		return
+	}
+	writeOK(w, http.StatusOK, item)
+}
+
+func (a *App) handleRuntimeEvidence(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		writeError(w, http.StatusMethodNotAllowed, "method_not_allowed", "Method not allowed.")
+		return
+	}
+	item, err := a.tasks.RuntimeEvidence(r.Context())
+	if err != nil {
+		handleError(w, err)
+		return
+	}
+	writeOK(w, http.StatusOK, item)
+}
+
+func (a *App) handleProviderStatuses(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		writeError(w, http.StatusMethodNotAllowed, "method_not_allowed", "Method not allowed.")
+		return
+	}
+	items, err := a.tasks.ProviderStatuses(r.Context())
+	if err != nil {
+		handleError(w, err)
+		return
+	}
+	writeOK(w, http.StatusOK, map[string]interface{}{"items": items})
+}
+
+func handleServiceError(w http.ResponseWriter, err error) {
+	switch {
+	case errors.Is(err, planner.ErrTargetProviderNotFound):
+		writeError(w, http.StatusBadRequest, "target_provider_not_found", "Target provider was not found.")
+	case err != nil && err.Error() == "provider_not_found":
+		writeError(w, http.StatusBadRequest, "provider_not_found", "Provider was not found.")
+	case err != nil && err.Error() == "auth_mode_not_supported":
+		writeError(w, http.StatusBadRequest, "auth_mode_not_supported", "Auth mode is not supported by the provider.")
+	case err != nil && err.Error() == "display_name_required":
+		writeError(w, http.StatusBadRequest, "display_name_required", "Display name is required.")
+	case err != nil && err.Error() == "task_not_runnable":
+		writeError(w, http.StatusBadRequest, "task_not_runnable", "Task cannot be run from the current state.")
+	case err != nil && err.Error() == "task_state_transition_not_allowed":
+		writeError(w, http.StatusBadRequest, "task_state_transition_not_allowed", "Task state transition is not allowed.")
+	case err != nil && err.Error() == "target_profile_not_found":
+		writeError(w, http.StatusBadRequest, "target_profile_not_found", "Target profile was not found.")
+	case err != nil && err.Error() == "missing_access_token":
+		writeError(w, http.StatusBadRequest, "missing_access_token", "Provider token is required.")
+	case err != nil && err.Error() == "missing_domain_or_drive_id":
+		writeError(w, http.StatusBadRequest, "missing_domain_or_drive_id", "Provider requires domainId and driveId.")
+	case err != nil && err.Error() == "missing_cookie":
+		writeError(w, http.StatusBadRequest, "missing_cookie", "Provider cookie is required.")
+	case err != nil && err.Error() == "missing_pwd_id":
+		writeError(w, http.StatusBadRequest, "missing_pwd_id", "Provider requires pwdId.")
+	case err != nil && err.Error() == "missing_md5":
+		writeError(w, http.StatusBadRequest, "missing_md5", "Fast upload requires md5.")
+	case err != nil && err.Error() == "missing_gcid":
+		writeError(w, http.StatusBadRequest, "missing_gcid", "Fast upload requires gcid.")
+	case err != nil && err.Error() == "pending_manual_requires_confirmation":
+		writeError(w, http.StatusBadRequest, "pending_manual_requires_confirmation", "Pending-manual items cannot run until fallback runtime is implemented.")
+	default:
+		handleError(w, err)
+	}
+}
+
+func (a *App) resolveProviderProfile(ctx context.Context, profileID string) (provider.AuthProfile, error) {
+	if strings.TrimSpace(profileID) == "" {
+		return provider.AuthProfile{}, nil
+	}
+	profile, ok, err := a.auth.GetProfile(ctx, profileID)
+	if err != nil {
+		return provider.AuthProfile{}, err
+	}
+	if !ok {
+		return provider.AuthProfile{}, errors.New("target_profile_not_found")
+	}
+	return provider.AuthProfile{
+		ID:          profile.ID,
+		ProviderKey: profile.ProviderKey,
+		AuthMode:    profile.AuthMode,
+		DisplayName: profile.DisplayName,
+		Token:       profile.Token,
+		Cookie:      profile.Cookie,
+		Extra:       profile.Extra,
+	}, nil
+}

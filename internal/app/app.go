@@ -1,0 +1,94 @@
+package app
+
+import (
+	"context"
+	"fmt"
+	"log/slog"
+	"net/http"
+	"os"
+	"time"
+
+	"cloudpan-sync-go/internal/auth"
+	"cloudpan-sync-go/internal/provider"
+	sqlitestore "cloudpan-sync-go/internal/store/sqlite"
+	"cloudpan-sync-go/internal/task"
+)
+
+type App struct {
+	cfg       Config
+	logger    *slog.Logger
+	store     *sqlitestore.Store
+	providers *provider.Registry
+	auth      *auth.Service
+	tasks     *task.Service
+	server    *http.Server
+}
+
+func New(ctx context.Context, cfg Config) (*App, error) {
+	if err := os.MkdirAll(cfg.DataDir, 0o755); err != nil {
+		return nil, fmt.Errorf("create data dir: %w", err)
+	}
+
+	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
+		Level: cfg.LogLevel,
+	}))
+
+	store, err := sqlitestore.New(ctx, cfg.DBPath)
+	if err != nil {
+		return nil, fmt.Errorf("open sqlite store: %w", err)
+	}
+
+	registry := provider.NewRegistry(provider.DefaultCatalog()...)
+	authService := auth.NewService(store, registry)
+	app := &App{
+		cfg:       cfg,
+		logger:    logger,
+		store:     store,
+		providers: registry,
+		auth:      authService,
+		tasks:     task.NewService(store, registry, authService),
+	}
+
+	app.server = &http.Server{
+		Addr:              cfg.Addr,
+		Handler:           app.routes(),
+		ReadHeaderTimeout: 5 * time.Second,
+	}
+
+	return app, nil
+}
+
+func (a *App) Run(ctx context.Context) error {
+	errCh := make(chan error, 1)
+
+	go func() {
+		a.logger.Info("http server starting", "addr", a.cfg.Addr, "db_path", a.cfg.DBPath)
+		if err := a.server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			errCh <- err
+			return
+		}
+		errCh <- nil
+	}()
+
+	select {
+	case <-ctx.Done():
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		_ = a.server.Shutdown(shutdownCtx)
+		return a.store.Close()
+	case err := <-errCh:
+		closeErr := a.store.Close()
+		if err != nil {
+			return err
+		}
+		return closeErr
+	}
+}
+
+func (a *App) loggingMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		start := time.Now()
+		next.ServeHTTP(w, r)
+		a.logger.Info("request completed", "method", r.Method, "path", r.URL.Path, "elapsed_ms", time.Since(start).Milliseconds())
+	})
+}

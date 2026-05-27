@@ -1,0 +1,256 @@
+package task
+
+import (
+	"context"
+	"database/sql"
+	"encoding/json"
+
+	"cloudpan-sync-go/internal/planner"
+	"cloudpan-sync-go/internal/provider"
+	sqlitestore "cloudpan-sync-go/internal/store/sqlite"
+)
+
+type taskPayload struct {
+	TargetProfileID string                `json:"targetProfileId"`
+	ConflictPolicy  string                `json:"conflictPolicy"`
+	Plan            planner.Plan          `json:"plan"`
+	Entries         []planner.SourceEntry `json:"entries,omitempty"`
+}
+
+func createTask(ctx context.Context, store *sqlitestore.Store, t Task, plan planner.Plan, items []Item, sourceEntries []planner.SourceEntry, targetProfileID, conflictPolicy string) error {
+	tx, err := store.DB().BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	payloadJSON, err := json.Marshal(taskPayload{
+		TargetProfileID: targetProfileID,
+		ConflictPolicy:  conflictPolicy,
+		Plan:            plan,
+		Entries:         sourceEntries,
+	})
+	if err != nil {
+		return err
+	}
+
+	if _, err := tx.ExecContext(ctx, `
+INSERT INTO tasks(id, source_provider, target_provider, state, completion_kind, payload_json, created_at, updated_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+		t.ID, t.SourceProvider, t.TargetProvider, t.State, t.CompletionKind, string(payloadJSON), t.CreatedAt, t.UpdatedAt,
+	); err != nil {
+		return err
+	}
+
+	for i, item := range items {
+		if _, err := tx.ExecContext(ctx, `
+INSERT INTO task_items(id, task_id, path, size, strategy, payload_json, created_at)
+VALUES (?, ?, ?, ?, ?, ?, ?)`,
+			item.ID, item.TaskID, item.Path, item.Size, plan.Items[i].Strategy, `{}`, t.CreatedAt,
+		); err != nil {
+			return err
+		}
+	}
+	return tx.Commit()
+}
+
+func listTasks(ctx context.Context, store *sqlitestore.Store) ([]Detail, error) {
+	rows, err := store.DB().QueryContext(ctx, `SELECT id FROM tasks ORDER BY created_at DESC`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	ids := []string{}
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		ids = append(ids, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	items := make([]Detail, 0, len(ids))
+	for _, id := range ids {
+		item, ok, err := getTask(ctx, store, id)
+		if err != nil {
+			return nil, err
+		}
+		if ok {
+			items = append(items, item)
+		}
+	}
+	return items, nil
+}
+
+func getTask(ctx context.Context, store *sqlitestore.Store, id string) (Detail, bool, error) {
+	row := store.DB().QueryRowContext(ctx, `
+SELECT id, source_provider, target_provider, state, completion_kind, payload_json, created_at, updated_at
+FROM tasks
+WHERE id = ?`, id)
+
+	var (
+		t           Task
+		completion  string
+		payloadJSON string
+	)
+	if err := row.Scan(&t.ID, &t.SourceProvider, &t.TargetProvider, &t.State, &completion, &payloadJSON, &t.CreatedAt, &t.UpdatedAt); err != nil {
+		if err == sql.ErrNoRows {
+			return Detail{}, false, nil
+		}
+		return Detail{}, false, err
+	}
+	t.CompletionKind = CompletionKind(completion)
+
+	var payload taskPayload
+	if err := json.Unmarshal([]byte(payloadJSON), &payload); err != nil {
+		return Detail{}, false, err
+	}
+
+	items, err := getTaskItems(ctx, store, id)
+	if err != nil {
+		return Detail{}, false, err
+	}
+	results, err := getTaskResults(ctx, store, id)
+	if err != nil {
+		return Detail{}, false, err
+	}
+
+	return Detail{
+		Task:            t,
+		Plan:            payload.Plan,
+		Items:           items,
+		Results:         results,
+		TargetProfileID: payload.TargetProfileID,
+		ConflictPolicy:  payload.ConflictPolicy,
+		SourceEntries:   payload.Entries,
+	}, true, nil
+}
+
+func replaceTaskResults(ctx context.Context, store *sqlitestore.Store, t Task, results []Result) error {
+	tx, err := store.DB().BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	if _, err := tx.ExecContext(ctx, `DELETE FROM task_results WHERE task_id = ?`, t.ID); err != nil {
+		return err
+	}
+	if _, err := tx.ExecContext(ctx, `UPDATE tasks SET state = ?, completion_kind = ?, updated_at = ? WHERE id = ?`, t.State, t.CompletionKind, t.UpdatedAt, t.ID); err != nil {
+		return err
+	}
+	for _, result := range results {
+		if _, err := tx.ExecContext(ctx, `
+INSERT INTO task_results(id, task_id, task_item_id, status, mode, message, payload_json, created_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+			result.ID, result.TaskID, result.ItemID, result.Status, result.Mode, result.Message, `{}`, result.CreatedAt,
+		); err != nil {
+			return err
+		}
+	}
+	return tx.Commit()
+}
+
+func resetTaskResults(ctx context.Context, store *sqlitestore.Store, t Task) error {
+	tx, err := store.DB().BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	if _, err := tx.ExecContext(ctx, `DELETE FROM task_results WHERE task_id = ?`, t.ID); err != nil {
+		return err
+	}
+	if _, err := tx.ExecContext(ctx, `UPDATE tasks SET state = ?, completion_kind = ?, updated_at = ? WHERE id = ?`, t.State, t.CompletionKind, t.UpdatedAt, t.ID); err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
+func updateTaskState(ctx context.Context, store *sqlitestore.Store, t Task) error {
+	_, err := store.DB().ExecContext(ctx, `UPDATE tasks SET state = ?, completion_kind = ?, updated_at = ? WHERE id = ?`, t.State, t.CompletionKind, t.UpdatedAt, t.ID)
+	return err
+}
+
+func taskEvidenceSummary(ctx context.Context, store *sqlitestore.Store) (EvidenceSummary, error) {
+	var summary EvidenceSummary
+	if err := store.DB().QueryRowContext(ctx, `SELECT COUNT(1) FROM tasks`).Scan(&summary.TotalTasks); err != nil {
+		return summary, err
+	}
+	if err := store.DB().QueryRowContext(ctx, `SELECT COUNT(1) FROM tasks WHERE state IN ('completed', 'completed_with_errors')`).Scan(&summary.CompletedTasks); err != nil {
+		return summary, err
+	}
+	if err := store.DB().QueryRowContext(ctx, `SELECT COUNT(1) FROM task_results WHERE status = 'failed'`).Scan(&summary.FailedResultCount); err != nil {
+		return summary, err
+	}
+	if err := store.DB().QueryRowContext(ctx, `SELECT COUNT(1) FROM task_results WHERE status = 'done'`).Scan(&summary.DoneResultCount); err != nil {
+		return summary, err
+	}
+	return summary, nil
+}
+
+func providerStatusSummary(ctx context.Context, store *sqlitestore.Store, providers []provider.Entry) ([]StatusSummary, error) {
+	items := make([]StatusSummary, 0, len(providers))
+	for _, entry := range providers {
+		item := StatusSummary{ProviderKey: entry.Meta.Key}
+		if err := store.DB().QueryRowContext(ctx, `SELECT COUNT(1) FROM auth_profiles WHERE provider_key = ?`, entry.Meta.Key).Scan(&item.ProfileCount); err != nil {
+			return nil, err
+		}
+		if err := store.DB().QueryRowContext(ctx, `SELECT COUNT(1) FROM tasks WHERE target_provider = ?`, entry.Meta.Key).Scan(&item.TaskCount); err != nil {
+			return nil, err
+		}
+		if err := store.DB().QueryRowContext(ctx, `SELECT COUNT(1) FROM tasks WHERE target_provider = ? AND state IN ('completed', 'completed_with_errors')`, entry.Meta.Key).Scan(&item.CompletedCount); err != nil {
+			return nil, err
+		}
+		items = append(items, item)
+	}
+	return items, nil
+}
+
+func getTaskItems(ctx context.Context, store *sqlitestore.Store, taskID string) ([]Item, error) {
+	rows, err := store.DB().QueryContext(ctx, `
+SELECT id, task_id, path, size
+FROM task_items
+WHERE task_id = ?
+ORDER BY created_at ASC`, taskID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	items := []Item{}
+	for rows.Next() {
+		var item Item
+		if err := rows.Scan(&item.ID, &item.TaskID, &item.Path, &item.Size); err != nil {
+			return nil, err
+		}
+		items = append(items, item)
+	}
+	return items, rows.Err()
+}
+
+func getTaskResults(ctx context.Context, store *sqlitestore.Store, taskID string) ([]Result, error) {
+	rows, err := store.DB().QueryContext(ctx, `
+SELECT id, task_id, task_item_id, status, mode, message, created_at
+FROM task_results
+WHERE task_id = ?
+ORDER BY created_at ASC`, taskID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	items := []Result{}
+	for rows.Next() {
+		var item Result
+		if err := rows.Scan(&item.ID, &item.TaskID, &item.ItemID, &item.Status, &item.Mode, &item.Message, &item.CreatedAt); err != nil {
+			return nil, err
+		}
+		items = append(items, item)
+	}
+	return items, rows.Err()
+}
