@@ -53,6 +53,8 @@ func TestAppWorkflowMainline(t *testing.T) {
 		"sourceProvider": "baidu_netdisk",
 		"targetProvider": "guangya",
 		"thresholdMB":    1,
+		"riskMode":       "fast",
+		"executionMode":  "pre_scan_flat",
 		"conflictPolicy": "overwrite_existing",
 		"selectedRoots":  []string{"/demo"},
 		"entries": []map[string]interface{}{
@@ -66,6 +68,16 @@ func TestAppWorkflowMainline(t *testing.T) {
 	if len(items) != 3 {
 		t.Fatalf("expected 3 preview items, got %d", len(items))
 	}
+	metadata := previewData["metadata"].(map[string]interface{})
+	if got := metadata["executionMode"].(string); got != "pre_scan_flat" {
+		t.Fatalf("expected preview executionMode pre_scan_flat, got %s", got)
+	}
+	if got := metadata["recommendedExecutionMode"].(string); got == "" {
+		t.Fatal("expected recommendedExecutionMode in preview metadata")
+	}
+	if got := metadata["recommendedExecutionModeReason"].(string); got == "" {
+		t.Fatal("expected recommendedExecutionModeReason in preview metadata")
+	}
 
 	localFile := filepath.Join(t.TempDir(), "existing.bin")
 	if err := os.WriteFile(localFile, []byte("workflow"), 0o644); err != nil {
@@ -77,6 +89,8 @@ func TestAppWorkflowMainline(t *testing.T) {
 		"targetProvider":  "guangya",
 		"targetProfileId": profileID,
 		"thresholdMB":     1,
+		"riskMode":        "fast",
+		"executionMode":   "pre_scan_flat",
 		"conflictPolicy":  "overwrite_existing",
 		"selectedRoots":   []string{"/demo"},
 		"entries": []map[string]interface{}{
@@ -89,6 +103,10 @@ func TestAppWorkflowMainline(t *testing.T) {
 	taskID := taskData["task"].(map[string]interface{})["id"].(string)
 	if taskID == "" {
 		t.Fatal("expected task id")
+	}
+	createdMetadata := taskData["plan"].(map[string]interface{})["metadata"].(map[string]interface{})
+	if got := createdMetadata["executionMode"].(string); got != "pre_scan_flat" {
+		t.Fatalf("expected task executionMode pre_scan_flat, got %s", got)
 	}
 
 	pauseResp := invokeJSON(t, handler, http.MethodPost, "/api/tasks/"+taskID+"/pause", nil)
@@ -110,6 +128,10 @@ func TestAppWorkflowMainline(t *testing.T) {
 	if len(results) != 3 {
 		t.Fatalf("expected 3 task results, got %d", len(results))
 	}
+	firstResultPayload := results[0].(map[string]interface{})["payload"].(map[string]interface{})
+	if got := firstResultPayload["executionMode"].(string); got != "pre_scan_flat" {
+		t.Fatalf("expected result executionMode pre_scan_flat, got %s", got)
+	}
 
 	evidenceResp := invokeJSON(t, handler, http.MethodGet, "/api/evidence/runtime", nil)
 	evidenceData := evidenceResp.Data.(map[string]interface{})
@@ -121,6 +143,10 @@ func TestAppWorkflowMainline(t *testing.T) {
 	}
 	if got := len(evidenceData["recentProbes"].([]interface{})); got == 0 {
 		t.Fatal("expected recentProbes to be populated")
+	}
+	recentProbePayload := evidenceData["recentProbes"].([]interface{})[0].(map[string]interface{})["payload"].(map[string]interface{})
+	if got := recentProbePayload["executionMode"].(string); got != "pre_scan_flat" {
+		t.Fatalf("expected probe executionMode pre_scan_flat, got %s", got)
 	}
 
 	statusResp := invokeJSON(t, handler, http.MethodGet, "/api/status/providers", nil)
@@ -137,6 +163,10 @@ func TestAppWorkflowMainline(t *testing.T) {
 		}
 		if item["lastTaskState"].(string) == "" {
 			t.Fatal("expected lastTaskState for guangya")
+		}
+		summary := item["snapshotSummary"].(map[string]interface{})
+		if got := summary["executionMode"].(string); got != "pre_scan_flat" {
+			t.Fatalf("expected status summary executionMode pre_scan_flat, got %s", got)
 		}
 	}
 	if !foundGuangya {

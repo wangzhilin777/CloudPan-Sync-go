@@ -130,9 +130,12 @@ go build ./...
 
 - `sourceProfileId`
   - 当任务要走按需扫描时，需要它来在运行阶段对 source provider 执行 `List`
+- `riskMode`
+  - 当前控制台任务向导已支持直接选择
 - `executionMode`
   - 不传时默认按 `leaf_first_lazy`
   - 传 `pre_scan_flat` 时会切换到预扫描平铺模式
+  - 当前控制台任务向导也已支持直接选择，并会展示推荐模式与推荐原因
 
 ## 当前额外可用的 Provider 调试接口
 

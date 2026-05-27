@@ -47,6 +47,12 @@ func TestHandleIndexServesHTML(t *testing.T) {
 	if !strings.Contains(body, `id="recent-probes"`) {
 		t.Fatalf("expected recent-probes panel in html body, got %q", body)
 	}
+	if !strings.Contains(body, `id="plan-execution-mode"`) {
+		t.Fatalf("expected execution mode selector in html body, got %q", body)
+	}
+	if !strings.Contains(body, `id="plan-preview-meta"`) {
+		t.Fatalf("expected preview meta panel in html body, got %q", body)
+	}
 }
 
 func TestRoutesServeStaticAssets(t *testing.T) {

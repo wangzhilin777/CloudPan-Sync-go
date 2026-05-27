@@ -17,6 +17,16 @@ function formatJSON(value) {
   return JSON.stringify(value, null, 2);
 }
 
+function stringifyValue(value, fallback = "-") {
+  if (value === undefined || value === null || value === "") {
+    return fallback;
+  }
+  if (typeof value === "object") {
+    return JSON.stringify(value);
+  }
+  return String(value);
+}
+
 function parseJSONInput(raw, fallback) {
   const text = raw.trim();
   if (!text) {
@@ -100,7 +110,9 @@ function renderProviders() {
     .join("");
 
   syncAuthModes();
+  syncSourceProfiles();
   syncTargetProfiles();
+  syncExecutionModeHint();
 }
 
 function syncAuthModes() {
@@ -120,6 +132,7 @@ function renderProfiles() {
   const wrap = $("#profiles-table");
   if (!state.profiles.length) {
     wrap.innerHTML = `<div class="provider-card">暂无授权档案。</div>`;
+    syncSourceProfiles();
     syncTargetProfiles();
     return;
   }
@@ -182,6 +195,7 @@ function renderProfiles() {
     });
   });
 
+  syncSourceProfiles();
   syncTargetProfiles();
 }
 
@@ -194,10 +208,35 @@ function syncTargetProfiles() {
     .join("")}`;
 }
 
+function syncSourceProfiles() {
+  const sourceProvider = $("#plan-source-provider").value;
+  const profiles = state.profiles.filter((item) => item.providerKey === sourceProvider);
+  const select = $("#plan-source-profile");
+  select.innerHTML = `<option value="">无</option>${profiles
+    .map((profile) => `<option value="${profile.id}">${profile.displayName}</option>`)
+    .join("")}`;
+}
+
+function syncExecutionModeHint() {
+  const mode = $("#plan-execution-mode").value;
+  const hint = $("#plan-execution-hint");
+  if (mode === "pre_scan_flat") {
+    hint.textContent = "pre_scan_flat 适合目录较小、希望先拿到完整扫描结果再执行的场景。";
+    return;
+  }
+  hint.textContent = "leaf_first_lazy 是默认优先推荐模式，会按顶层目录顺序逐棵子树推进，只扫描当前真正需要传的目录。";
+}
+
 function renderTasks() {
   const wrap = $("#tasks-list");
   if (!state.tasks.length) {
     wrap.innerHTML = `<div class="task-item">暂无任务。</div>`;
+    $("#task-summary").innerHTML = `
+      <div class="insight-card">
+        <strong>执行模式</strong>
+        <span>选择任务后显示</span>
+      </div>
+    `;
     $("#task-detail").textContent = "选择一条任务查看详情...";
     return;
   }
@@ -211,6 +250,7 @@ function renderTasks() {
             <span class="pill">${detail.task.state}</span>
             <span class="pill">${detail.task.completionKind || "n/a"}</span>
             <span class="pill">${detail.plan.items.length} items</span>
+            <span class="pill">${stringifyValue(detail.plan?.metadata?.executionMode, "mode:n/a")}</span>
           </div>
         </article>
       `,
@@ -233,11 +273,73 @@ function renderTasks() {
 
 function renderSelectedTask() {
   const detail = state.tasks.find((item) => item.task.id === state.selectedTaskId);
+  if (!detail) {
+    $("#task-summary").innerHTML = `
+      <div class="insight-card">
+        <strong>执行模式</strong>
+        <span>选择任务后显示</span>
+      </div>
+    `;
+    $("#task-detail").textContent = "选择一条任务查看详情...";
+    return;
+  }
+  const metadata = detail.plan?.metadata || {};
+  $("#task-summary").innerHTML = `
+    <div class="insight-card">
+      <strong>执行模式</strong>
+      <span>${stringifyValue(metadata.executionMode)}</span>
+    </div>
+    <div class="insight-card">
+      <strong>推荐模式</strong>
+      <span>${stringifyValue(metadata.recommendedExecutionMode)}</span>
+    </div>
+    <div class="insight-card">
+      <strong>推荐原因</strong>
+      <span>${stringifyValue(metadata.recommendedExecutionModeReason)}</span>
+    </div>
+    <div class="insight-card">
+      <strong>扫描方式</strong>
+      <span>${stringifyValue(metadata.scanMode, "尚未运行或无需扫描")}</span>
+    </div>
+  `;
   $("#task-detail").textContent = detail ? formatJSON(detail) : "选择一条任务查看详情...";
 }
 
 function renderPreview() {
-  $("#plan-preview").textContent = state.preview ? formatJSON(state.preview) : "等待预览...";
+  if (!state.preview) {
+    $("#plan-preview-meta").innerHTML = `
+      <div class="insight-card">
+        <strong>当前模式</strong>
+        <span>等待预览</span>
+      </div>
+    `;
+    $("#plan-preview").textContent = "等待预览...";
+    return;
+  }
+  const metadata = state.preview.metadata || {};
+  $("#plan-preview-meta").innerHTML = `
+    <div class="insight-card">
+      <strong>当前模式</strong>
+      <span>${stringifyValue(metadata.executionMode)}</span>
+    </div>
+    <div class="insight-card">
+      <strong>推荐模式</strong>
+      <span>${stringifyValue(metadata.recommendedExecutionMode)}</span>
+    </div>
+    <div class="insight-card">
+      <strong>推荐原因</strong>
+      <span>${stringifyValue(metadata.recommendedExecutionModeReason)}</span>
+    </div>
+    <div class="insight-card">
+      <strong>执行顺序</strong>
+      <span>${stringifyValue(metadata.executionOrder)}</span>
+    </div>
+    <div class="insight-card">
+      <strong>风险档位</strong>
+      <span>${stringifyValue(metadata.riskProfile?.mode, "balanced")}</span>
+    </div>
+  `;
+  $("#plan-preview").textContent = formatJSON(state.preview);
 }
 
 function renderStatus() {
@@ -264,6 +366,8 @@ function renderStatus() {
           <th>Profiles</th>
           <th>Tasks</th>
           <th>Completed</th>
+          <th>Execution Mode</th>
+          <th>Scan Mode</th>
           <th>Latest Probe</th>
           <th>Last Task State</th>
           <th>Snapshot Summary</th>
@@ -278,6 +382,8 @@ function renderStatus() {
                 <td>${item.profileCount}</td>
                 <td>${item.taskCount}</td>
                 <td>${item.completedCount}</td>
+                <td>${stringifyValue(item.snapshotSummary?.executionMode)}</td>
+                <td>${stringifyValue(item.snapshotSummary?.scanMode)}</td>
                 <td>${item.latestProbe || "-"}</td>
                 <td>${item.lastTaskState || "-"}</td>
                 <td>
@@ -316,6 +422,8 @@ function renderRecentResultsTable(items) {
         <tr>
           <th>Status</th>
           <th>Mode</th>
+          <th>Execution Mode</th>
+          <th>Recommended</th>
           <th>Message</th>
           <th>Conflict</th>
           <th>Created</th>
@@ -328,6 +436,8 @@ function renderRecentResultsTable(items) {
               <tr>
                 <td>${item.status}</td>
                 <td>${item.mode || "-"}</td>
+                <td>${stringifyValue(item.payload?.executionMode)}</td>
+                <td>${stringifyValue(item.payload?.recommendedExecutionMode)}</td>
                 <td>${item.message || "-"}</td>
                 <td>${item.conflictAction || "-"}</td>
                 <td>${item.createdAt || "-"}</td>
@@ -351,6 +461,8 @@ function renderRecentProbesTable(items) {
           <th>Provider</th>
           <th>Status</th>
           <th>Profile</th>
+          <th>Execution Mode</th>
+          <th>Scan Mode</th>
           <th>Payload</th>
           <th>Created</th>
         </tr>
@@ -363,6 +475,8 @@ function renderRecentProbesTable(items) {
                 <td>${item.providerKey}</td>
                 <td>${item.status}</td>
                 <td>${item.profileId || "-"}</td>
+                <td>${stringifyValue(item.payload?.executionMode)}</td>
+                <td>${stringifyValue(item.payload?.scanMode)}</td>
                 <td><code>${JSON.stringify(item.payload || {})}</code></td>
                 <td>${item.createdAt || "-"}</td>
               </tr>
@@ -435,7 +549,9 @@ function wireLogin() {
 
 function wireProfiles() {
   $("#profile-provider").addEventListener("change", syncAuthModes);
+  $("#plan-source-provider").addEventListener("change", syncSourceProfiles);
   $("#plan-target-provider").addEventListener("change", syncTargetProfiles);
+  $("#plan-execution-mode").addEventListener("change", syncExecutionModeHint);
 
   $("#refresh-providers").addEventListener("click", async () => {
     try {
@@ -483,9 +599,12 @@ function wireProfiles() {
 function buildPlanPayload() {
   return {
     sourceProvider: $("#plan-source-provider").value,
+    sourceProfileId: $("#plan-source-profile").value,
     targetProvider: $("#plan-target-provider").value,
     targetProfileId: $("#plan-target-profile").value,
     thresholdMB: Number($("#plan-threshold").value || "0"),
+    riskMode: $("#plan-risk-mode").value,
+    executionMode: $("#plan-execution-mode").value,
     conflictPolicy: $("#plan-conflict-policy").value,
     selectedRoots: parseJSONInput($("#plan-selected-roots").value, []),
     entries: parseJSONInput($("#plan-entries").value, []),
@@ -502,6 +621,8 @@ function wirePlanner() {
           sourceProvider: payload.sourceProvider,
           targetProvider: payload.targetProvider,
           thresholdMB: payload.thresholdMB,
+          riskMode: payload.riskMode,
+          executionMode: payload.executionMode,
           conflictPolicy: payload.conflictPolicy,
           selectedRoots: payload.selectedRoots,
           entries: payload.entries,
@@ -580,6 +701,7 @@ async function init() {
   wireTasks();
   wireStatus();
   syncSessionState();
+  syncExecutionModeHint();
   renderPreview();
   renderStatus();
   if (state.authenticated) {

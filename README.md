@@ -87,7 +87,14 @@ CloudPan Sync 的 Go 重构版工作区。
   - 当前使用的 `executionMode`
   - 推荐模式 `recommendedExecutionMode`
   - 推荐原因 `recommendedExecutionModeReason`
-- 当前前后端基线已经支持这套模式语义，但 UI 里的完整配置入口和推荐提示还会继续补强。
+- 当前控制台任务向导已经支持：
+  - 选择 `executionMode`
+  - 选择 `riskMode`
+  - 查看推荐模式与推荐原因
+  - 在任务详情、状态矩阵、最近结果、最近 probe 中查看执行模式证据
+- 当前还会继续补强的主要是：
+  - 模式与恢复语义联动
+  - 更完整的目录状态展示
 
 ## 快速启动
 

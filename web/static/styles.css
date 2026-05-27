@@ -245,6 +245,43 @@ label {
   border: 1px solid var(--line);
 }
 
+.inline-note,
+.insight-card {
+  padding: 14px 16px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.inline-note {
+  color: var(--muted);
+  line-height: 1.65;
+}
+
+.insight-grid {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.insight-card {
+  display: grid;
+  gap: 6px;
+}
+
+.insight-card strong {
+  font-size: 0.88rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.insight-card span,
+.insight-card code {
+  color: var(--ink);
+  line-height: 1.5;
+}
+
 .provider-card h3,
 .task-item h3 {
   margin: 0 0 8px;

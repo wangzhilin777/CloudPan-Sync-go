@@ -130,9 +130,32 @@
                   <select id="plan-target-provider" name="targetProvider"></select>
                 </label>
                 <label>
+                  <span>源授权档案</span>
+                  <select id="plan-source-profile" name="sourceProfileId"></select>
+                </label>
+                <label>
                   <span>目标授权档案</span>
                   <select id="plan-target-profile" name="targetProfileId"></select>
                 </label>
+                <label>
+                  <span>Risk Mode</span>
+                  <select id="plan-risk-mode" name="riskMode">
+                    <option value="balanced">balanced</option>
+                    <option value="safe">safe</option>
+                    <option value="fast">fast</option>
+                    <option value="custom">custom</option>
+                  </select>
+                </label>
+                <label>
+                  <span>Execution Mode</span>
+                  <select id="plan-execution-mode" name="executionMode">
+                    <option value="leaf_first_lazy">leaf_first_lazy</option>
+                    <option value="pre_scan_flat">pre_scan_flat</option>
+                  </select>
+                </label>
+                <div id="plan-execution-hint" class="inline-note">
+                  默认优先推荐 `leaf_first_lazy`，适合大目录、风控敏感 provider 和按需扫描场景。
+                </div>
                 <label>
                   <span>阈值(MB)</span>
                   <input id="plan-threshold" name="thresholdMB" type="number" min="0" value="10" />
@@ -166,6 +189,12 @@
             </article>
             <article class="card">
               <h2>预览结果</h2>
+              <div id="plan-preview-meta" class="insight-grid">
+                <div class="insight-card">
+                  <strong>当前模式</strong>
+                  <span>等待预览</span>
+                </div>
+              </div>
               <pre id="plan-preview" class="result-box">等待预览...</pre>
             </article>
           </div>
@@ -188,6 +217,12 @@
                   <button type="button" class="ghost" id="task-pause">Pause</button>
                   <button type="button" class="ghost" id="task-resume">Resume</button>
                   <button type="button" class="ghost" id="task-retry">Retry</button>
+                </div>
+              </div>
+              <div id="task-summary" class="insight-grid">
+                <div class="insight-card">
+                  <strong>执行模式</strong>
+                  <span>选择任务后显示</span>
                 </div>
               </div>
               <pre id="task-detail" class="result-box">选择一条任务查看详情...</pre>

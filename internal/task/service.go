@@ -187,6 +187,9 @@ func (s *Service) Run(ctx context.Context, id string) (Detail, bool, error) {
 		if recommendedMode, ok := detail.Plan.Metadata["recommendedExecutionMode"]; ok {
 			result.Payload["recommendedExecutionMode"] = recommendedMode
 		}
+		if recommendedReason, ok := detail.Plan.Metadata["recommendedExecutionModeReason"]; ok {
+			result.Payload["recommendedExecutionModeReason"] = recommendedReason
+		}
 		if item.Sequence > 0 {
 			result.Payload["sequence"] = item.Sequence
 		}
@@ -790,16 +793,17 @@ func buildProviderProbe(detail Detail, profile provider.AuthProfile, results []R
 		ProfileID:   profile.ID,
 		Status:      string(detail.Task.State),
 		Payload: map[string]interface{}{
-			"taskId":                   detail.Task.ID,
-			"taskState":                detail.Task.State,
-			"completionKind":           detail.Task.CompletionKind,
-			"doneCount":                doneCount,
-			"failedCount":              failedCount,
-			"resultCount":              len(results),
-			"executionMode":            detail.Plan.Metadata["executionMode"],
-			"recommendedExecutionMode": detail.Plan.Metadata["recommendedExecutionMode"],
-			"scanMode":                 detail.Plan.Metadata["scanMode"],
-			"targetProfileId":          detail.TargetProfileID,
+			"taskId":                         detail.Task.ID,
+			"taskState":                      detail.Task.State,
+			"completionKind":                 detail.Task.CompletionKind,
+			"doneCount":                      doneCount,
+			"failedCount":                    failedCount,
+			"resultCount":                    len(results),
+			"executionMode":                  detail.Plan.Metadata["executionMode"],
+			"recommendedExecutionMode":       detail.Plan.Metadata["recommendedExecutionMode"],
+			"recommendedExecutionModeReason": detail.Plan.Metadata["recommendedExecutionModeReason"],
+			"scanMode":                       detail.Plan.Metadata["scanMode"],
+			"targetProfileId":                detail.TargetProfileID,
 		},
 		CreatedAt: createdAt,
 	}
