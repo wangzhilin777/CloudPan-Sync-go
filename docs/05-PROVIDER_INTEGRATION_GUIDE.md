@@ -89,9 +89,16 @@
   - `aliyundrive_open` 还要求：
     - `extra.domainId`
     - `extra.driveId`
+    - 支持通过 `extra.apiEndpoint` 覆盖真实校验目标地址，便于本地 mock 或联调
 - 当前快传指纹：
   - `md5`
   - `size`
+- 当前落地进度：
+  - `aliyundrive_open` 的 `ValidateAuth` 已开始走真实远程校验骨架
+  - 当前会访问：
+    - `POST /v2/user/get`
+    - `POST /v2/drive/get_default_drive`
+  - `123_open` 当前仍保留占位校验语义
 
 ### 2. Share Family
 
@@ -245,6 +252,8 @@
   - 能验证 auth profile 字段设计是否够用
   - 能尽快形成真实联调样本
   - 能及时发现 cookie/token/extra 的缺口
+- 当前已落地的第一条样板：
+  - `aliyundrive_open`
 
 ### 2. 再替换目录与元数据链路
 

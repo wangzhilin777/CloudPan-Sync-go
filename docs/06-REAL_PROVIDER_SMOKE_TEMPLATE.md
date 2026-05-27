@@ -83,6 +83,7 @@ go build ./...
 - 使用的参考文档：
   - `docs/04-API_WORKFLOW_EXAMPLES.md`
   - `docs/05-PROVIDER_INTEGRATION_GUIDE.md`
+  - 如适用，记录本次参考的官方 API 文档链接
 
 ## 实际联调步骤记录
 

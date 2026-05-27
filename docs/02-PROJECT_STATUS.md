@@ -56,7 +56,8 @@
 - 当前状态：
   - 协议族和能力面已经统一
   - 各 provider 具备可执行占位行为，能参与 API、planner、task、evidence 全链路
-  - 真实外部平台 SDK / HTTP 联网细节还没有全面接入
+  - `aliyundrive_open` 已开始接入真实 `ValidateAuth` 远程校验骨架
+  - 真实外部平台 SDK / HTTP 联网细节仍未全面接入
 
 ### 3. Auth Profile 授权档案
 
