@@ -324,10 +324,161 @@ function syncSessionState() {
 function setupTabs() {
   document.querySelectorAll(".tab").forEach((button) => {
     button.addEventListener("click", () => {
-      document.querySelectorAll(".tab").forEach((item) => item.classList.remove("active"));
-      document.querySelectorAll(".panel").forEach((item) => item.classList.remove("active"));
-      button.classList.add("active");
-      document.querySelector(`[data-panel="${button.dataset.view}"]`).classList.add("active");
+      activateTab(button.dataset.view);
+    });
+  });
+}
+
+function activateTab(view) {
+  document.querySelectorAll(".tab").forEach((item) => item.classList.toggle("active", item.dataset.view === view));
+  document.querySelectorAll(".panel").forEach((item) => item.classList.toggle("active", item.dataset.panel === view));
+}
+
+function setSelectValueIfPresent(selector, value) {
+  const element = $(selector);
+  if (!element || value === undefined || value === null || value === "") {
+    return;
+  }
+  if ([...element.options].some((option) => option.value === value)) {
+    element.value = value;
+    element.dispatchEvent(new Event("change"));
+  }
+}
+
+function renderTaskResolutionGuide(detail) {
+  const metadata = detail?.plan?.metadata || {};
+  const runtime = detail?.runtime || {};
+  const retrySummary = metadata.retrySummary || {};
+  const action = runtime.blockedAction || retrySummary.blockedAction || "";
+  const advice = runtime.blockedAdvice || retrySummary.blockedAdvice || "";
+  if (!action) {
+    return `
+      <div class="insight-card">
+        <strong>下一步处理</strong>
+        <span>当前任务没有 blocked 人工处理动作，可直接继续运行或观察状态矩阵。</span>
+      </div>
+    `;
+  }
+
+  const providerKey = detail.task?.targetProvider || "";
+  const profileId = detail.targetProfileId || "";
+  const nextRetryAt = runtime.nextRetryAt || retrySummary.nextRetryAt || "";
+  const stepsByAction = {
+    refresh_auth_profile: {
+      title: "刷新授权档案",
+      steps: [
+        "切到“Provider / 授权”面板，定位当前目标端授权档案。",
+        "更新 token/cookie 后先执行 Validate，确认授权恢复正常。",
+        "回到任务详情页，再执行 Resume 或 Retry。",
+      ],
+      buttons: [
+        { label: "打开授权面板", view: "providers", providerKey, profileId },
+        { label: "打开状态矩阵", view: "status" },
+      ],
+    },
+    restore_local_source_file: {
+      title: "补回本地回退文件",
+      steps: [
+        "先补回源文件或校正本地 fallback 路径，确保 localPath 对应文件真实存在。",
+        "如果路径配置有误，建议回到任务向导核对 entries / selectedRoots。",
+        "补齐后返回任务详情页重新 Retry。",
+      ],
+      buttons: [
+        { label: "打开任务向导", view: "wizard", providerKey },
+        { label: "打开状态矩阵", view: "status" },
+      ],
+    },
+    wait_for_cooldown: {
+      title: "等待冷却窗口结束",
+      steps: [
+        nextRetryAt ? `当前最早自动补传时间是 ${nextRetryAt}。` : "当前处于风控冷却窗口。",
+        "冷却期间无需手动重试，系统会在窗口结束后自动尝试补传。",
+        "如果想确认整体阻塞分布，可切到状态矩阵查看 blocked 聚合看板。",
+      ],
+      buttons: [
+        { label: "查看状态矩阵", view: "status" },
+      ],
+    },
+    manual_confirmation_required: {
+      title: "等待人工确认",
+      steps: [
+        "当前任务存在 pending_manual 项，说明 provider 仍需要人工确认或后续 fallback 运行时能力。",
+        "先在状态矩阵和待补传树里确认影响范围，再决定是否拆分任务或等待后续链路补齐。",
+        "确认后再回到任务详情执行 Retry。",
+      ],
+      buttons: [
+        { label: "查看状态矩阵", view: "status" },
+        { label: "留在任务详情", view: "tasks" },
+      ],
+    },
+    review_and_reset_retry_strategy: {
+      title: "调整重试策略",
+      steps: [
+        "当前任务已经达到 retryLimit，继续原样 Retry 不会再推进。",
+        "建议回到任务向导调整 riskOverride / retryLimit / 执行策略，必要时拆成更小任务。",
+        "创建新任务后，用状态矩阵对比新的 blocked 分布是否收敛。",
+      ],
+      buttons: [
+        { label: "打开任务向导", view: "wizard", providerKey },
+        { label: "查看状态矩阵", view: "status" },
+      ],
+    },
+  };
+
+  const config = stepsByAction[action] || {
+    title: "人工处理建议",
+    steps: [advice || "请根据 blocked 原因检查授权、源文件和 provider 返回状态。"] ,
+    buttons: [{ label: "打开状态矩阵", view: "status" }],
+  };
+
+  return `
+    <div class="provider-card">
+      <h3>${escapeHTML(config.title)}</h3>
+      <div class="meta-row">
+        <span class="pill">${escapeHTML(action)}</span>
+        ${nextRetryAt ? `<span class="pill">${escapeHTML(nextRetryAt)}</span>` : ""}
+      </div>
+      <ol class="checklist">
+        ${config.steps.map((step) => `<li>${escapeHTML(step)}</li>`).join("")}
+      </ol>
+      ${advice && advice !== config.steps[0] ? `<div class="muted">${escapeHTML(advice)}</div>` : ""}
+      <div class="actions compact">
+        ${config.buttons
+          .map(
+            (button) => `
+              <button
+                type="button"
+                class="ghost"
+                data-task-guide-view="${escapeHTML(button.view)}"
+                data-task-guide-provider="${escapeHTML(button.providerKey || "")}"
+                data-task-guide-profile="${escapeHTML(button.profileId || "")}"
+              >${escapeHTML(button.label)}</button>
+            `,
+          )
+          .join("")}
+      </div>
+    </div>
+  `;
+}
+
+function wireTaskResolutionGuide(detail) {
+  document.querySelectorAll("[data-task-guide-view]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const view = button.dataset.taskGuideView;
+      activateTab(view);
+      if (view === "providers") {
+        setSelectValueIfPresent("#profile-provider", button.dataset.taskGuideProvider);
+      }
+      if (view === "wizard") {
+        setSelectValueIfPresent("#plan-target-provider", detail?.task?.targetProvider || button.dataset.taskGuideProvider);
+        setSelectValueIfPresent("#plan-target-profile", detail?.targetProfileId || button.dataset.taskGuideProfile);
+        setSelectValueIfPresent("#plan-source-provider", detail?.task?.sourceProvider);
+      }
+      if (view === "tasks") {
+        state.selectedTaskId = detail?.task?.id || state.selectedTaskId;
+        renderTasks();
+        renderSelectedTask();
+      }
     });
   });
 }
@@ -497,6 +648,7 @@ function renderTasks() {
         <span>选择任务后显示</span>
       </div>
     `;
+    $("#task-resolution-guide").innerHTML = `<div class="directory-empty">选择任务后显示处理建议。</div>`;
     $("#task-directory-states").innerHTML = `<div class="directory-empty">暂无目录状态。</div>`;
     $("#task-pending-tree").innerHTML = `<div class="directory-empty">暂无待补传项。</div>`;
     $("#task-detail").textContent = "选择一条任务查看详情...";
@@ -550,6 +702,7 @@ function renderSelectedTask() {
     `;
     $("#task-directory-states").innerHTML = `<div class="directory-empty">暂无目录状态。</div>`;
     $("#task-pending-tree").innerHTML = `<div class="directory-empty">暂无待补传项。</div>`;
+    $("#task-resolution-guide").innerHTML = `<div class="directory-empty">选择任务后显示处理建议。</div>`;
     $("#task-detail").textContent = "选择一条任务查看详情...";
     return;
   }
@@ -594,9 +747,11 @@ function renderSelectedTask() {
     </div>
   `;
   $("#task-runtime").innerHTML = renderRuntimeCheckpoint(runtime);
+  $("#task-resolution-guide").innerHTML = renderTaskResolutionGuide(detail);
   $("#task-directory-states").innerHTML = renderDirectoryStates(runtime.directoryStates);
   $("#task-pending-tree").innerHTML = renderPendingTree(runtime.pendingTree);
   $("#task-detail").textContent = detail ? formatJSON(detail) : "选择一条任务查看详情...";
+  wireTaskResolutionGuide(detail);
 }
 
 function renderPreview() {

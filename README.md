@@ -141,6 +141,7 @@ CloudPan Sync 的 Go 重构版工作区。
   - `retryLimit` 的累计次数、剩余次数与 exhausted 阻断
   - `blockedAction / blockedAdvice` 的统一处理建议
   - 状态矩阵中的 `blockedTasks / blockedActions` 聚合摘要
+  - 任务详情中的“下一步处理”引导区与直达入口
 - 当前还没有接通的是：
   - 更复杂的补传批量选择与筛选
   - 更精细的后台补传策略编排
