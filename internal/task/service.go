@@ -3,6 +3,7 @@ package task
 import (
 	"context"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/google/uuid"
@@ -146,34 +147,44 @@ func (s *Service) Run(ctx context.Context, id string) (Detail, bool, error) {
 			ID:        uuid.NewString(),
 			TaskID:    detail.Task.ID,
 			ItemID:    detail.Items[i].ID,
+			Payload:   map[string]interface{}{},
 			CreatedAt: now,
 		}
-		upload := entry.Adapter.Upload(provider.UploadRequest{
+		localPath := lookupLocalPath(detail.SourceEntries, item.Path)
+		conflictPolicy, conflictAction := resolveConflictPolicy(entry.Meta, provider.ConflictPolicy(detail.ConflictPolicy))
+		uploadReq := provider.UploadRequest{
 			Profile:        providerProfile,
 			Path:           item.Path,
 			ParentID:       "",
 			Name:           inferUploadName(item.Path),
 			Size:           item.Size,
-			ConflictPolicy: provider.ConflictPolicy(detail.ConflictPolicy),
+			LocalPath:      localPath,
+			ConflictPolicy: conflictPolicy,
 			Strategy:       string(item.Strategy),
 			MD5:            lookupMD5(detail.SourceEntries, item.Path),
 			SHA1:           lookupSHA1(detail.SourceEntries, item.Path),
 			GCID:           lookupGCID(detail.SourceEntries, item.Path),
-		})
+		}
+		upload, fallbackUsed := s.executeUpload(entry, uploadReq)
 		result.Mode = upload.Mode
+		result.Message = upload.Message
+		result.ConflictAction = conflictAction
+		result.Payload["strategy"] = uploadReq.Strategy
+		result.Payload["providerStatus"] = upload.Status
+		if conflictAction != "" {
+			result.Payload["conflictAction"] = conflictAction
+		}
+		if fallbackUsed {
+			result.Payload["fallbackUsed"] = true
+		}
 		if item.Strategy == planner.StrategyPendingManual && !upload.OK {
 			result.Status = "failed"
-			result.Message = upload.Message
 			failed++
+		} else if upload.OK {
+			result.Status = "done"
 		} else {
-			if upload.OK {
-				result.Status = "done"
-				result.Message = upload.Message
-			} else {
-				result.Status = "failed"
-				result.Message = upload.Message
-				failed++
-			}
+			result.Status = "failed"
+			failed++
 		}
 		results = append(results, result)
 	}
@@ -254,6 +265,15 @@ func lookupGCID(entries []planner.SourceEntry, path string) string {
 	return ""
 }
 
+func lookupLocalPath(entries []planner.SourceEntry, path string) string {
+	for _, item := range entries {
+		if item.Path == path {
+			return item.LocalPath
+		}
+	}
+	return ""
+}
+
 func inferUploadName(path string) string {
 	if path == "" || path == "/" {
 		return "upload.bin"
@@ -300,6 +320,91 @@ func (s *Service) transitionState(ctx context.Context, id string, allowed []Stat
 		return Detail{}, true, err
 	}
 	return detail, true, nil
+}
+
+func resolveConflictPolicy(meta provider.Provider, requested provider.ConflictPolicy) (provider.ConflictPolicy, string) {
+	if requested == "" {
+		return provider.ConflictPolicyAutoRenameNew, ""
+	}
+	if requested != provider.ConflictPolicyOverwriteExisting {
+		return requested, ""
+	}
+	if meta.SupportsOverwrite {
+		return requested, ""
+	}
+	if meta.SupportsAutoRename {
+		return provider.ConflictPolicyAutoRenameNew, "downgrade_to_auto_rename"
+	}
+	return requested, ""
+}
+
+func (s *Service) executeUpload(entry provider.Entry, req provider.UploadRequest) (provider.UploadResult, bool) {
+	if req.Strategy == string(planner.StrategyDownloadUpload) {
+		if !localFileExists(req.LocalPath) {
+			return provider.UploadResult{
+				OperationResult: provider.OperationResult{
+					Status:  "local_file_missing",
+					Message: "Local file is required for download_upload fallback.",
+					Mode:    "runtime_guard",
+				},
+			}, false
+		}
+	}
+
+	upload := entry.Adapter.Upload(req)
+	if upload.OK {
+		return upload, false
+	}
+	if req.Strategy != string(planner.StrategyFastUpload) {
+		return upload, false
+	}
+	if upload.Status != "hash_miss" {
+		return upload, false
+	}
+	if !supportsFallback(entry.Meta.FallbackModes, string(planner.StrategyDownloadUpload)) {
+		return upload, false
+	}
+	if !localFileExists(req.LocalPath) {
+		return provider.UploadResult{
+			OperationResult: provider.OperationResult{
+				Status:  "local_file_missing",
+				Message: "Hash miss fallback requires a local file.",
+				Mode:    "runtime_guard",
+			},
+		}, false
+	}
+
+	fallbackReq := req
+	fallbackReq.Strategy = string(planner.StrategyDownloadUpload)
+	fallback := entry.Adapter.Upload(fallbackReq)
+	if fallback.OK {
+		if fallback.Payload == nil {
+			fallback.Payload = map[string]interface{}{}
+		}
+		fallback.Payload["fallbackFrom"] = string(planner.StrategyFastUpload)
+		fallback.Message = "Fast upload hash miss, fallback to download_upload succeeded."
+	}
+	return fallback, true
+}
+
+func supportsFallback(modes []string, expected string) bool {
+	for _, mode := range modes {
+		if mode == expected {
+			return true
+		}
+	}
+	return false
+}
+
+func localFileExists(path string) bool {
+	if path == "" {
+		return false
+	}
+	info, err := os.Stat(path)
+	if err != nil {
+		return false
+	}
+	return !info.IsDir()
 }
 
 func buildProviderProbe(detail Detail, profile provider.AuthProfile, results []Result, createdAt string) ProviderProbe {

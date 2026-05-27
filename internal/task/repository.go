@@ -147,10 +147,14 @@ func replaceTaskResults(ctx context.Context, store *sqlitestore.Store, t Task, r
 		return err
 	}
 	for _, result := range results {
+		payloadJSON, err := json.Marshal(result.Payload)
+		if err != nil {
+			return err
+		}
 		if _, err := tx.ExecContext(ctx, `
 INSERT INTO task_results(id, task_id, task_item_id, status, mode, message, payload_json, created_at)
 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-			result.ID, result.TaskID, result.ItemID, result.Status, result.Mode, result.Message, `{}`, result.CreatedAt,
+			result.ID, result.TaskID, result.ItemID, result.Status, result.Mode, result.Message, string(payloadJSON), result.CreatedAt,
 		); err != nil {
 			return err
 		}
@@ -258,7 +262,7 @@ ORDER BY created_at ASC`, taskID)
 
 func getTaskResults(ctx context.Context, store *sqlitestore.Store, taskID string) ([]Result, error) {
 	rows, err := store.DB().QueryContext(ctx, `
-SELECT id, task_id, task_item_id, status, mode, message, created_at
+SELECT id, task_id, task_item_id, status, mode, message, payload_json, created_at
 FROM task_results
 WHERE task_id = ?
 ORDER BY created_at ASC`, taskID)
@@ -269,9 +273,19 @@ ORDER BY created_at ASC`, taskID)
 
 	items := []Result{}
 	for rows.Next() {
-		var item Result
-		if err := rows.Scan(&item.ID, &item.TaskID, &item.ItemID, &item.Status, &item.Mode, &item.Message, &item.CreatedAt); err != nil {
+		var (
+			item        Result
+			payloadJSON string
+		)
+		if err := rows.Scan(&item.ID, &item.TaskID, &item.ItemID, &item.Status, &item.Mode, &item.Message, &payloadJSON, &item.CreatedAt); err != nil {
 			return nil, err
+		}
+		item.Payload = map[string]interface{}{}
+		if payloadJSON != "" {
+			if err := json.Unmarshal([]byte(payloadJSON), &item.Payload); err != nil {
+				return nil, err
+			}
+			item.ConflictAction = stringValue(item.Payload["conflictAction"])
 		}
 		items = append(items, item)
 	}
@@ -393,7 +407,7 @@ LIMIT %d`, limit))
 
 func recentTaskResults(ctx context.Context, store *sqlitestore.Store, limit int) ([]Result, error) {
 	rows, err := store.DB().QueryContext(ctx, fmt.Sprintf(`
-SELECT id, task_id, task_item_id, status, mode, message, created_at
+SELECT id, task_id, task_item_id, status, mode, message, payload_json, created_at
 FROM task_results
 ORDER BY created_at DESC, rowid DESC
 LIMIT %d`, limit))
@@ -404,9 +418,19 @@ LIMIT %d`, limit))
 
 	items := []Result{}
 	for rows.Next() {
-		var item Result
-		if err := rows.Scan(&item.ID, &item.TaskID, &item.ItemID, &item.Status, &item.Mode, &item.Message, &item.CreatedAt); err != nil {
+		var (
+			item        Result
+			payloadJSON string
+		)
+		if err := rows.Scan(&item.ID, &item.TaskID, &item.ItemID, &item.Status, &item.Mode, &item.Message, &payloadJSON, &item.CreatedAt); err != nil {
 			return nil, err
+		}
+		item.Payload = map[string]interface{}{}
+		if payloadJSON != "" {
+			if err := json.Unmarshal([]byte(payloadJSON), &item.Payload); err != nil {
+				return nil, err
+			}
+			item.ConflictAction = stringValue(item.Payload["conflictAction"])
 		}
 		items = append(items, item)
 	}

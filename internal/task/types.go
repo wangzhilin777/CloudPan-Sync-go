@@ -54,11 +54,13 @@ type Item struct {
 }
 
 type Result struct {
-	ID        string `json:"id"`
-	TaskID    string `json:"taskId"`
-	ItemID    string `json:"itemId"`
-	Status    string `json:"status"`
-	Mode      string `json:"mode"`
-	Message   string `json:"message"`
-	CreatedAt string `json:"createdAt"`
+	ID             string                 `json:"id"`
+	TaskID         string                 `json:"taskId"`
+	ItemID         string                 `json:"itemId"`
+	Status         string                 `json:"status"`
+	Mode           string                 `json:"mode"`
+	Message        string                 `json:"message"`
+	ConflictAction string                 `json:"conflictAction,omitempty"`
+	Payload        map[string]interface{} `json:"payload,omitempty"`
+	CreatedAt      string                 `json:"createdAt"`
 }
