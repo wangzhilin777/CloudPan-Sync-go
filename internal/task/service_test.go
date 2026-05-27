@@ -803,6 +803,12 @@ func TestServiceRetryQueueHonorsCooldownForRateLimitedItems(t *testing.T) {
 	if running.Runtime.BlockedReason != "retry_queue_waiting_for_cooldown" {
 		t.Fatalf("expected cooldown blocked reason, got %s", running.Runtime.BlockedReason)
 	}
+	if running.Runtime.BlockedAction != "wait_for_cooldown" {
+		t.Fatalf("expected cooldown blocked action, got %s", running.Runtime.BlockedAction)
+	}
+	if running.Runtime.BlockedAdvice == "" {
+		t.Fatal("expected blocked advice on cooldown runtime")
+	}
 	if running.Runtime.NextRetryAt == "" {
 		t.Fatal("expected nextRetryAt on blocked runtime")
 	}
@@ -1110,6 +1116,12 @@ func TestServiceRetryQueueMarksExhaustedAfterRetryLimit(t *testing.T) {
 	}
 	if secondRun.Runtime.BlockedReason != "retry_queue_retry_limit_exhausted" {
 		t.Fatalf("expected retry limit blocked reason, got %s", secondRun.Runtime.BlockedReason)
+	}
+	if secondRun.Runtime.BlockedAction != "review_and_reset_retry_strategy" {
+		t.Fatalf("expected retry limit blocked action, got %s", secondRun.Runtime.BlockedAction)
+	}
+	if secondRun.Runtime.BlockedAdvice == "" {
+		t.Fatal("expected retry limit blocked advice")
 	}
 	if len(secondRun.Runtime.RetryQueue) != 1 {
 		t.Fatalf("expected retry queue len 1, got %d", len(secondRun.Runtime.RetryQueue))

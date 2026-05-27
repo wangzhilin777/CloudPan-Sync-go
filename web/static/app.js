@@ -182,6 +182,14 @@ function renderRuntimeCheckpoint(runtime) {
       <span>${stringifyValue(runtime.blockedReason, "-")}</span>
     </div>
     <div class="insight-card checkpoint-card">
+      <strong>处理动作</strong>
+      <span>${stringifyValue(runtime.blockedAction, "-")}</span>
+    </div>
+    <div class="insight-card checkpoint-card">
+      <strong>处理建议</strong>
+      <span>${stringifyValue(runtime.blockedAdvice, "-")}</span>
+    </div>
+    <div class="insight-card checkpoint-card">
       <strong>下次自动补传</strong>
       <span>${stringifyValue(runtime.nextRetryAt, "-")}</span>
     </div>
@@ -580,6 +588,10 @@ function renderSelectedTask() {
       <strong>重试摘要</strong>
       <span>${stringifyValue(metadata.retrySummary?.blockedReason || (metadata.retrySummary?.shouldBlock ? "blocked" : "ready"), "-")}</span>
     </div>
+    <div class="insight-card">
+      <strong>建议动作</strong>
+      <span>${stringifyValue(metadata.retrySummary?.blockedAction, "-")}</span>
+    </div>
   `;
   $("#task-runtime").innerHTML = renderRuntimeCheckpoint(runtime);
   $("#task-directory-states").innerHTML = renderDirectoryStates(runtime.directoryStates);
@@ -704,6 +716,16 @@ function renderStatus() {
 function renderSnapshotSummary(summary) {
   if (!summary || typeof summary !== "object") {
     return "-";
+  }
+  const retrySummary = summary.retrySummary;
+  if (retrySummary && typeof retrySummary === "object") {
+    return `
+      <div><strong>lastTaskState</strong> <code>${escapeHTML(stringifyValue(summary.lastTaskState))}</code></div>
+      <div><strong>retryBlocked</strong> <code>${escapeHTML(stringifyValue(retrySummary.blockedReason, "-"))}</code></div>
+      <div><strong>blockedAction</strong> <code>${escapeHTML(stringifyValue(retrySummary.blockedAction, "-"))}</code></div>
+      <div><strong>nextRetryAt</strong> <code>${escapeHTML(stringifyValue(retrySummary.nextRetryAt, "-"))}</code></div>
+      <div><strong>queueSize</strong> <code>${escapeHTML(stringifyValue(retrySummary.queueSize, "0"))}</code></div>
+    `;
   }
   return Object.entries(summary)
     .map(([key, value]) => `<div><strong>${key}</strong> <code>${escapeHTML(stringifyValue(value))}</code></div>`)

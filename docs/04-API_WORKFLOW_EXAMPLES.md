@@ -291,6 +291,8 @@ Invoke-RestMethod `
   - `retry` 会返回 `retry_blocked`
 - 当前如果任务执行后只剩阻塞型重试项，任务状态会直接落为 `blocked`：
   - `runtime.blockedReason` 用于说明阻塞原因
+  - `runtime.blockedAction` 用于说明建议动作
+  - `runtime.blockedAdvice` 用于给出处理提示
   - `runtime.nextRetryAt` 用于说明最早自动恢复时间
 - 如果当前没有待补传项，`retry` 仍按普通整任务重置语义处理。
 

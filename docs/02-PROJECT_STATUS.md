@@ -246,6 +246,7 @@
   - 当前 runtime / probe / status 已回写 `blockedReason` 与 `nextRetryAt`
   - 当前已接入单机 tick 版后台自动补传调度，可自动恢复冷却到期的 `blocked` 任务
   - 当前 `retryLimit` 已真正接入重试队列，支持累计次数、剩余次数与 exhausted 阻断
+  - 当前 `blockedReason` 已补充统一的 `blockedAction / blockedAdvice`，便于状态矩阵直接给出处理建议
 
 ### 6. Runtime Evidence / 状态矩阵
 

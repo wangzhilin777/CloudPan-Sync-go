@@ -328,6 +328,8 @@ type targetInspection struct {
 type retryQueueSummary struct {
 	ShouldBlock   bool
 	BlockedReason string
+	BlockedAction string
+	BlockedAdvice string
 	NextRetryAt   string
 	CanAutoRetry  bool
 }
@@ -658,6 +660,8 @@ func (s *Service) transitionState(ctx context.Context, id string, allowed []Stat
 		detail.Runtime.ExecutionState = "paused"
 	case StateReady:
 		detail.Runtime.BlockedReason = ""
+		detail.Runtime.BlockedAction = ""
+		detail.Runtime.BlockedAdvice = ""
 		detail.Runtime.NextRetryAt = ""
 		if len(detail.Results) > 0 {
 			detail.Runtime.ExecutionState = "ready_to_resume"
@@ -1185,6 +1189,8 @@ func syncRuntimeCountsFromResults(runtime *RuntimeState, results []Result) {
 	runtime.RiskHitCount = 0
 	runtime.LastRiskStatus = ""
 	runtime.BlockedReason = ""
+	runtime.BlockedAction = ""
+	runtime.BlockedAdvice = ""
 	runtime.NextRetryAt = ""
 	runtime.RiskHits = nil
 	runtime.PendingTree = nil
@@ -1801,9 +1807,13 @@ func applyRetryQueueSummary(runtime *RuntimeState, metadata map[string]interface
 	}
 	summary := summarizeRetryQueue(runtime.RetryQueue)
 	runtime.BlockedReason = ""
+	runtime.BlockedAction = ""
+	runtime.BlockedAdvice = ""
 	runtime.NextRetryAt = ""
 	if summary.ShouldBlock {
 		runtime.BlockedReason = summary.BlockedReason
+		runtime.BlockedAction = summary.BlockedAction
+		runtime.BlockedAdvice = summary.BlockedAdvice
 		runtime.NextRetryAt = summary.NextRetryAt
 	}
 	if metadata == nil {
@@ -1816,9 +1826,28 @@ func applyRetryQueueSummary(runtime *RuntimeState, metadata map[string]interface
 	metadata["retrySummary"] = map[string]interface{}{
 		"shouldBlock":   summary.ShouldBlock,
 		"blockedReason": summary.BlockedReason,
+		"blockedAction": summary.BlockedAction,
+		"blockedAdvice": summary.BlockedAdvice,
 		"nextRetryAt":   summary.NextRetryAt,
 		"canAutoRetry":  summary.CanAutoRetry,
 		"queueSize":     len(runtime.RetryQueue),
+	}
+}
+
+func blockedGuidance(reason string) (string, string) {
+	switch reason {
+	case "retry_queue_retry_limit_exhausted":
+		return "review_and_reset_retry_strategy", "已达到任务级 retryLimit，请检查 provider 返回的失败原因、放宽策略或人工确认后再重新发起任务。"
+	case "retry_queue_requires_auth_refresh":
+		return "refresh_auth_profile", "目标端授权已失效，请先刷新或重建授权档案，再恢复任务。"
+	case "retry_queue_requires_local_file_restore":
+		return "restore_local_source_file", "本地回退文件缺失，请先补回源文件或调整执行策略，再继续重试。"
+	case "retry_queue_waiting_for_cooldown":
+		return "wait_for_cooldown", "当前处于风控冷却窗口，等待 nextRetryAt 后系统会尝试自动补传。"
+	case "retry_queue_pending_manual_confirmation":
+		return "manual_confirmation_required", "存在 pending_manual 项，需要人工确认或等待后续真实 fallback 运行时能力。"
+	default:
+		return "", ""
 	}
 }
 
@@ -1873,27 +1902,32 @@ func summarizeRetryQueue(queue []RetryQueueItem) retryQueueSummary {
 	if exhaustedCount > 0 {
 		summary.ShouldBlock = true
 		summary.BlockedReason = "retry_queue_retry_limit_exhausted"
+		summary.BlockedAction, summary.BlockedAdvice = blockedGuidance(summary.BlockedReason)
 		return summary
 	}
 	if authExpiredCount > 0 {
 		summary.ShouldBlock = true
 		summary.BlockedReason = "retry_queue_requires_auth_refresh"
+		summary.BlockedAction, summary.BlockedAdvice = blockedGuidance(summary.BlockedReason)
 		return summary
 	}
 	if localMissingCount > 0 {
 		summary.ShouldBlock = true
 		summary.BlockedReason = "retry_queue_requires_local_file_restore"
+		summary.BlockedAction, summary.BlockedAdvice = blockedGuidance(summary.BlockedReason)
 		return summary
 	}
 	if cooldownCount > 0 {
 		summary.ShouldBlock = true
 		summary.BlockedReason = "retry_queue_waiting_for_cooldown"
 		summary.CanAutoRetry = pendingManualCount == 0
+		summary.BlockedAction, summary.BlockedAdvice = blockedGuidance(summary.BlockedReason)
 		return summary
 	}
 	if pendingManualCount > 0 {
 		summary.ShouldBlock = true
 		summary.BlockedReason = "retry_queue_pending_manual_confirmation"
+		summary.BlockedAction, summary.BlockedAdvice = blockedGuidance(summary.BlockedReason)
 		return summary
 	}
 	return summary
@@ -2217,6 +2251,7 @@ func buildProviderProbe(detail Detail, profile provider.AuthProfile, results []R
 			"retryableCount":                 detail.Runtime.RetryableCount,
 			"blockedRetryCount":              detail.Runtime.BlockedRetryCount,
 			"retryQueue":                     detail.Runtime.RetryQueue,
+			"retrySummary":                   detail.Plan.Metadata["retrySummary"],
 			"riskHitCount":                   detail.Runtime.RiskHitCount,
 			"lastRiskStatus":                 detail.Runtime.LastRiskStatus,
 			"currentRoot":                    detail.Runtime.CurrentRoot,

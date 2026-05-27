@@ -131,6 +131,8 @@
 - 当前如果任务失败后只剩“冷却等待 / 人工确认 / 授权失效 / 本地文件缺失”这类项，任务会进入 `blocked`
 - 当前 runtime 会补充：
   - `blockedReason`
+  - `blockedAction`
+  - `blockedAdvice`
   - `nextRetryAt`
 - 当前如果 `retryLimit` 已耗尽：
   - queue item 会标记为 `exhausted`

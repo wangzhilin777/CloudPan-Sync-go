@@ -65,6 +65,8 @@ type RuntimeState struct {
 	CurrentItemPath   string           `json:"currentItemPath,omitempty"`
 	LastCompletedPath string           `json:"lastCompletedPath,omitempty"`
 	BlockedReason     string           `json:"blockedReason,omitempty"`
+	BlockedAction     string           `json:"blockedAction,omitempty"`
+	BlockedAdvice     string           `json:"blockedAdvice,omitempty"`
 	NextRetryAt       string           `json:"nextRetryAt,omitempty"`
 	ProcessedCount    int              `json:"processedCount"`
 	DoneCount         int              `json:"doneCount"`

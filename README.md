@@ -139,6 +139,7 @@ CloudPan Sync 的 Go 重构版工作区。
   - `blocked` 运行态与 `blockedReason / nextRetryAt` 证据
   - 单机 tick 版后台自动补传调度
   - `retryLimit` 的累计次数、剩余次数与 exhausted 阻断
+  - `blockedAction / blockedAdvice` 的统一处理建议
 - 当前还没有接通的是：
   - 更复杂的补传批量选择与筛选
   - 更精细的后台补传策略编排

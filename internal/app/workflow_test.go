@@ -156,6 +156,12 @@ func TestAppWorkflowMainline(t *testing.T) {
 	if got := runtimeData["blockedReason"].(string); got != "retry_queue_requires_local_file_restore" {
 		t.Fatalf("expected blockedReason retry_queue_requires_local_file_restore, got %s", got)
 	}
+	if got := runtimeData["blockedAction"].(string); got != "restore_local_source_file" {
+		t.Fatalf("expected blockedAction restore_local_source_file, got %s", got)
+	}
+	if got := runtimeData["blockedAdvice"].(string); got == "" {
+		t.Fatal("expected blockedAdvice on runtime payload")
+	}
 
 	evidenceResp := invokeJSON(t, handler, http.MethodGet, "/api/evidence/runtime", nil)
 	evidenceData := evidenceResp.Data.(map[string]interface{})
@@ -189,6 +195,9 @@ func TestAppWorkflowMainline(t *testing.T) {
 	}
 	if got := recentProbePayload["taskState"].(string); got != "blocked" {
 		t.Fatalf("expected probe taskState blocked, got %s", got)
+	}
+	if got := recentProbePayload["retrySummary"].(map[string]interface{})["blockedAction"].(string); got != "restore_local_source_file" {
+		t.Fatalf("expected probe blockedAction restore_local_source_file, got %s", got)
 	}
 	if got := len(recentProbePayload["pendingTree"].([]interface{})); got == 0 {
 		t.Fatal("expected pendingTree in recent probe payload")
@@ -227,6 +236,9 @@ func TestAppWorkflowMainline(t *testing.T) {
 		}
 		if got := summary["runtime"].(map[string]interface{})["blockedReason"].(string); got != "retry_queue_requires_local_file_restore" {
 			t.Fatalf("expected status summary blockedReason retry_queue_requires_local_file_restore, got %s", got)
+		}
+		if got := summary["retrySummary"].(map[string]interface{})["blockedAction"].(string); got != "restore_local_source_file" {
+			t.Fatalf("expected status summary blockedAction restore_local_source_file, got %s", got)
 		}
 		if got := len(summary["pendingTree"].([]interface{})); got == 0 {
 			t.Fatal("expected pendingTree in status summary")
