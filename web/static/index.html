@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CloudPan Sync Go Console</title>
+    <link rel="stylesheet" href="/assets/styles.css" />
+  </head>
+  <body>
+    <div class="shell">
+      <header class="hero">
+        <div class="hero-copy">
+          <p class="eyebrow">CloudPan Sync Go</p>
+          <h1>轻量控制台，先把迁移主链跑起来。</h1>
+          <p class="lede">
+            当前页面直接消费 Go API，覆盖登录、Provider/授权、任务向导、任务列表、状态矩阵与运行证据。
+          </p>
+        </div>
+        <div class="hero-badge">
+          <span class="dot"></span>
+          <strong id="session-state">未登录</strong>
+          <span>Scaffold Console</span>
+        </div>
+      </header>
+
+      <nav class="tabs" aria-label="Primary">
+        <button class="tab active" data-view="login">登录</button>
+        <button class="tab" data-view="providers">Provider / 授权</button>
+        <button class="tab" data-view="wizard">任务向导</button>
+        <button class="tab" data-view="tasks">任务列表详情</button>
+        <button class="tab" data-view="status">状态矩阵 / 证据</button>
+      </nav>
+
+      <main class="panels">
+        <section class="panel active" data-panel="login">
+          <div class="grid two">
+            <article class="card spotlight">
+              <h2>登录验证</h2>
+              <p>当前登录只调用 `POST /api/session/login` 做控制台访问确认，不依赖旧 Python 会话模型。</p>
+              <form id="login-form" class="stack">
+                <label>
+                  <span>管理员密码</span>
+                  <input id="login-password" name="password" type="password" placeholder="默认是 admin" />
+                </label>
+                <div class="actions">
+                  <button type="submit">验证登录</button>
+                  <button type="button" class="ghost" id="logout-button">退出本地会话</button>
+                </div>
+              </form>
+            </article>
+            <article class="card">
+              <h2>当前约束</h2>
+              <ul class="checklist">
+                <li>前端只走 Go API</li>
+                <li>不兼容 Python 旧页面</li>
+                <li>适合作为后续真实联调入口</li>
+              </ul>
+              <pre id="login-result" class="result-box">等待登录验证...</pre>
+            </article>
+          </div>
+        </section>
+
+        <section class="panel" data-panel="providers">
+          <div class="grid two">
+            <article class="card">
+              <div class="section-head">
+                <h2>授权档案</h2>
+                <button type="button" class="ghost" id="refresh-profiles">刷新</button>
+              </div>
+              <form id="profile-form" class="stack">
+                <label>
+                  <span>Provider</span>
+                  <select id="profile-provider" name="providerKey"></select>
+                </label>
+                <label>
+                  <span>Auth Mode</span>
+                  <select id="profile-auth-mode" name="authMode"></select>
+                </label>
+                <label>
+                  <span>显示名称</span>
+                  <input id="profile-display-name" name="displayName" type="text" placeholder="例如：189Cloud 主账号" />
+                </label>
+                <label>
+                  <span>Token</span>
+                  <input id="profile-token" name="token" type="text" placeholder="可留空" />
+                </label>
+                <label>
+                  <span>Cookie</span>
+                  <textarea id="profile-cookie" name="cookie" rows="3" placeholder="可留空"></textarea>
+                </label>
+                <label>
+                  <span>Extra(JSON)</span>
+                  <textarea id="profile-extra" name="extra" rows="4" placeholder='例如：{"pwdId":"abcd"}'></textarea>
+                </label>
+                <div class="actions">
+                  <button type="submit">创建授权档案</button>
+                </div>
+              </form>
+            </article>
+
+            <article class="card">
+              <div class="section-head">
+                <h2>Provider 能力概览</h2>
+                <button type="button" class="ghost" id="refresh-providers">刷新</button>
+              </div>
+              <div id="providers-grid" class="provider-grid"></div>
+            </article>
+          </div>
+
+          <article class="card">
+            <div class="section-head">
+              <h2>已保存授权档案</h2>
+              <span class="muted">支持 validate 与 delete</span>
+            </div>
+            <div id="profiles-table" class="table-wrap"></div>
+          </article>
+        </section>
+
+        <section class="panel" data-panel="wizard">
+          <div class="grid two">
+            <article class="card">
+              <h2>任务预览 / 创建</h2>
+              <form id="plan-form" class="stack">
+                <label>
+                  <span>源 Provider</span>
+                  <select id="plan-source-provider" name="sourceProvider"></select>
+                </label>
+                <label>
+                  <span>目标 Provider</span>
+                  <select id="plan-target-provider" name="targetProvider"></select>
+                </label>
+                <label>
+                  <span>目标授权档案</span>
+                  <select id="plan-target-profile" name="targetProfileId"></select>
+                </label>
+                <label>
+                  <span>阈值(MB)</span>
+                  <input id="plan-threshold" name="thresholdMB" type="number" min="0" value="10" />
+                </label>
+                <label>
+                  <span>Conflict Policy</span>
+                  <select id="plan-conflict-policy" name="conflictPolicy">
+                    <option value="auto_rename_new">auto_rename_new</option>
+                    <option value="overwrite_existing">overwrite_existing</option>
+                  </select>
+                </label>
+                <label>
+                  <span>Selected Roots(JSON)</span>
+                  <textarea id="plan-selected-roots" rows="2">["/demo"]</textarea>
+                </label>
+                <label>
+                  <span>Entries(JSON)</span>
+                  <textarea id="plan-entries" rows="12">[
+  {
+    "path": "/demo/file.bin",
+    "size": 2048,
+    "md5": "md5-demo"
+  }
+]</textarea>
+                </label>
+                <div class="actions">
+                  <button type="button" id="preview-plan">预览计划</button>
+                  <button type="submit">创建任务</button>
+                </div>
+              </form>
+            </article>
+            <article class="card">
+              <h2>预览结果</h2>
+              <pre id="plan-preview" class="result-box">等待预览...</pre>
+            </article>
+          </div>
+        </section>
+
+        <section class="panel" data-panel="tasks">
+          <div class="grid two">
+            <article class="card">
+              <div class="section-head">
+                <h2>任务列表</h2>
+                <button type="button" class="ghost" id="refresh-tasks">刷新</button>
+              </div>
+              <div id="tasks-list" class="task-list"></div>
+            </article>
+            <article class="card">
+              <div class="section-head">
+                <h2>任务详情</h2>
+                <div class="actions compact">
+                  <button type="button" class="ghost" id="task-run">Run</button>
+                  <button type="button" class="ghost" id="task-pause">Pause</button>
+                  <button type="button" class="ghost" id="task-resume">Resume</button>
+                  <button type="button" class="ghost" id="task-retry">Retry</button>
+                </div>
+              </div>
+              <pre id="task-detail" class="result-box">选择一条任务查看详情...</pre>
+            </article>
+          </div>
+        </section>
+
+        <section class="panel" data-panel="status">
+          <div class="grid two">
+            <article class="card">
+              <div class="section-head">
+                <h2>运行证据摘要</h2>
+                <button type="button" class="ghost" id="refresh-status">刷新</button>
+              </div>
+              <div id="evidence-summary" class="metrics"></div>
+            </article>
+            <article class="card">
+              <h2>Provider 状态矩阵</h2>
+              <div id="status-table" class="table-wrap"></div>
+            </article>
+          </div>
+        </section>
+      </main>
+
+      <aside id="flash" class="flash hidden" aria-live="polite"></aside>
+    </div>
+    <script src="/assets/app.js" defer></script>
+  </body>
+  </html>

@@ -12,6 +12,7 @@ import (
 	"cloudpan-sync-go/internal/provider"
 	sqlitestore "cloudpan-sync-go/internal/store/sqlite"
 	"cloudpan-sync-go/internal/task"
+	webui "cloudpan-sync-go/web"
 )
 
 type App struct {
@@ -22,6 +23,8 @@ type App struct {
 	auth      *auth.Service
 	tasks     *task.Service
 	server    *http.Server
+	webIndex  []byte
+	webStatic http.Handler
 }
 
 func New(ctx context.Context, cfg Config) (*App, error) {
@@ -40,6 +43,14 @@ func New(ctx context.Context, cfg Config) (*App, error) {
 
 	registry := provider.NewRegistry(provider.DefaultCatalog()...)
 	authService := auth.NewService(store, registry)
+	webIndex, err := webui.IndexHTML()
+	if err != nil {
+		return nil, fmt.Errorf("load web index: %w", err)
+	}
+	staticFS, err := webui.StaticFS()
+	if err != nil {
+		return nil, fmt.Errorf("load web assets: %w", err)
+	}
 	app := &App{
 		cfg:       cfg,
 		logger:    logger,
@@ -47,6 +58,8 @@ func New(ctx context.Context, cfg Config) (*App, error) {
 		providers: registry,
 		auth:      authService,
 		tasks:     task.NewService(store, registry, authService),
+		webIndex:  webIndex,
+		webStatic: http.StripPrefix("/assets/", http.FileServer(http.FS(staticFS))),
 	}
 
 	app.server = &http.Server{

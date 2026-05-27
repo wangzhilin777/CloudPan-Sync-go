@@ -50,6 +50,7 @@ type providerFastCheckRequest struct {
 func (a *App) routes() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", a.handleIndex)
+	mux.Handle("/assets/", a.webStatic)
 	mux.HandleFunc("/api/health", a.handleHealth)
 	mux.HandleFunc("/api/session/login", a.handleLogin)
 	mux.HandleFunc("/api/providers", a.handleProviders)
@@ -69,11 +70,13 @@ func (a *App) handleIndex(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusNotFound, "not_found", "Resource not found.")
 		return
 	}
-	writeOK(w, http.StatusOK, map[string]string{
-		"name":    a.cfg.AppName,
-		"status":  "bootstrapped",
-		"message": "CloudPan Sync Go scaffold is running.",
-	})
+	if r.Method != http.MethodGet {
+		writeError(w, http.StatusMethodNotAllowed, "method_not_allowed", "Method not allowed.")
+		return
+	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write(a.webIndex)
 }
 
 func (a *App) handleHealth(w http.ResponseWriter, r *http.Request) {
