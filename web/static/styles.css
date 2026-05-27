@@ -231,6 +231,16 @@ label {
   margin-bottom: 14px;
 }
 
+.compact-head {
+  margin-top: 8px;
+  margin-bottom: 10px;
+}
+
+.compact-head h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
 .provider-grid {
   display: grid;
   gap: 12px;
@@ -365,6 +375,62 @@ th {
 .task-list {
   display: grid;
   gap: 12px;
+}
+
+.directory-state-list {
+  display: grid;
+  gap: 12px;
+}
+
+.directory-group {
+  display: grid;
+  gap: 10px;
+  padding: 14px 16px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.directory-group h4 {
+  margin: 0;
+  font-size: 0.98rem;
+}
+
+.directory-row {
+  display: grid;
+  gap: 8px;
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(31, 27, 23, 0.08);
+  background: rgba(255, 253, 247, 0.92);
+}
+
+.directory-row-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.directory-row code,
+.checkpoint-card code {
+  font-family: "Cascadia Code", "Consolas", monospace;
+  font-size: 0.84rem;
+}
+
+.directory-metrics {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.directory-empty {
+  padding: 14px 16px;
+  border-radius: var(--radius-md);
+  border: 1px dashed var(--line);
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.56);
 }
 
 .task-item {

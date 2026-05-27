@@ -225,6 +225,17 @@
                   <span>选择任务后显示</span>
                 </div>
               </div>
+              <div id="task-runtime" class="insight-grid">
+                <div class="insight-card">
+                  <strong>运行检查点</strong>
+                  <span>选择任务后显示</span>
+                </div>
+              </div>
+              <div class="section-head compact-head">
+                <h3>目录状态</h3>
+                <span class="muted">当前子树进度与恢复点</span>
+              </div>
+              <div id="task-directory-states" class="directory-state-list"></div>
               <pre id="task-detail" class="result-box">选择一条任务查看详情...</pre>
             </article>
           </div>
@@ -246,12 +257,28 @@
           </div>
           <div class="grid two">
             <article class="card">
+              <div class="section-head">
+                <h2>运行检查点概览</h2>
+                <span class="muted">来自最近 probe / snapshot</span>
+              </div>
+              <div id="status-runtime-checkpoints" class="directory-state-list"></div>
+            </article>
+            <article class="card">
               <h2>最近结果</h2>
               <div id="recent-results" class="table-wrap"></div>
             </article>
+          </div>
+          <div class="grid two">
             <article class="card">
               <h2>最近 Probe</h2>
               <div id="recent-probes" class="table-wrap"></div>
+            </article>
+            <article class="card">
+              <div class="section-head">
+                <h2>最近目录状态</h2>
+                <span class="muted">按 root / 子目录分组</span>
+              </div>
+              <div id="status-directory-states" class="directory-state-list"></div>
             </article>
           </div>
         </section>

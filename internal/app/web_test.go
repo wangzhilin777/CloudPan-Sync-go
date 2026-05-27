@@ -53,6 +53,12 @@ func TestHandleIndexServesHTML(t *testing.T) {
 	if !strings.Contains(body, `id="plan-preview-meta"`) {
 		t.Fatalf("expected preview meta panel in html body, got %q", body)
 	}
+	if !strings.Contains(body, `id="task-directory-states"`) {
+		t.Fatalf("expected task directory states panel in html body, got %q", body)
+	}
+	if !strings.Contains(body, `id="status-directory-states"`) {
+		t.Fatalf("expected status directory states panel in html body, got %q", body)
+	}
 }
 
 func TestRoutesServeStaticAssets(t *testing.T) {

@@ -148,6 +148,9 @@ func TestAppWorkflowMainline(t *testing.T) {
 	if got := recentProbePayload["executionMode"].(string); got != "pre_scan_flat" {
 		t.Fatalf("expected probe executionMode pre_scan_flat, got %s", got)
 	}
+	if _, ok := recentProbePayload["runtime"].(map[string]interface{}); !ok {
+		t.Fatalf("expected runtime payload in recent probe, got %#v", recentProbePayload["runtime"])
+	}
 
 	statusResp := invokeJSON(t, handler, http.MethodGet, "/api/status/providers", nil)
 	statusItems := statusResp.Data.(map[string]interface{})["items"].([]interface{})
@@ -167,6 +170,9 @@ func TestAppWorkflowMainline(t *testing.T) {
 		summary := item["snapshotSummary"].(map[string]interface{})
 		if got := summary["executionMode"].(string); got != "pre_scan_flat" {
 			t.Fatalf("expected status summary executionMode pre_scan_flat, got %s", got)
+		}
+		if _, ok := summary["runtime"].(map[string]interface{}); !ok {
+			t.Fatalf("expected runtime summary in status snapshot, got %#v", summary["runtime"])
 		}
 	}
 	if !foundGuangya {

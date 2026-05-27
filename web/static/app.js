@@ -27,6 +27,125 @@ function stringifyValue(value, fallback = "-") {
   return String(value);
 }
 
+function escapeHTML(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+function normalizeDirectoryStates(states) {
+  if (!Array.isArray(states)) {
+    return [];
+  }
+  return states
+    .filter((item) => item && typeof item === "object" && item.path)
+    .map((item) => ({
+      path: String(item.path || ""),
+      rootPath: String(item.rootPath || ""),
+      status: String(item.status || "pending"),
+      totalItems: Number(item.totalItems || 0),
+      processedItems: Number(item.processedItems || 0),
+      doneItems: Number(item.doneItems || 0),
+      failedItems: Number(item.failedItems || 0),
+      lastItemPath: String(item.lastItemPath || ""),
+    }));
+}
+
+function renderRuntimeCheckpoint(runtime) {
+  if (!runtime || typeof runtime !== "object") {
+    return `
+      <div class="insight-card checkpoint-card">
+        <strong>运行检查点</strong>
+        <span>暂无运行时信息</span>
+      </div>
+    `;
+  }
+  return `
+    <div class="insight-card checkpoint-card">
+      <strong>执行状态</strong>
+      <span>${stringifyValue(runtime.executionState)}</span>
+    </div>
+    <div class="insight-card checkpoint-card">
+      <strong>当前根目录</strong>
+      <span><code>${escapeHTML(stringifyValue(runtime.currentRoot, "-"))}</code></span>
+    </div>
+    <div class="insight-card checkpoint-card">
+      <strong>当前目录</strong>
+      <span><code>${escapeHTML(stringifyValue(runtime.currentDirectory, "-"))}</code></span>
+    </div>
+    <div class="insight-card checkpoint-card">
+      <strong>上次完成</strong>
+      <span><code>${escapeHTML(stringifyValue(runtime.lastCompletedPath, "-"))}</code></span>
+    </div>
+    <div class="insight-card checkpoint-card">
+      <strong>处理进度</strong>
+      <span>${stringifyValue(runtime.processedCount, "0")} / next ${stringifyValue(runtime.nextSequence, "1")}</span>
+    </div>
+    <div class="insight-card checkpoint-card">
+      <strong>结果计数</strong>
+      <span>done ${stringifyValue(runtime.doneCount, "0")} / failed ${stringifyValue(runtime.failedCount, "0")}</span>
+    </div>
+  `;
+}
+
+function renderDirectoryStates(states) {
+  const normalized = normalizeDirectoryStates(states);
+  if (!normalized.length) {
+    return `<div class="directory-empty">暂无目录状态。</div>`;
+  }
+
+  const grouped = new Map();
+  normalized.forEach((item) => {
+    const key = item.rootPath || "/";
+    if (!grouped.has(key)) {
+      grouped.set(key, []);
+    }
+    grouped.get(key).push(item);
+  });
+
+  return Array.from(grouped.entries())
+    .map(([rootPath, items]) => {
+      const rows = items
+        .sort((left, right) => left.path.localeCompare(right.path))
+        .map(
+          (item) => `
+            <div class="directory-row">
+              <div class="directory-row-header">
+                <code>${escapeHTML(item.path)}</code>
+                <span class="pill">${escapeHTML(item.status)}</span>
+              </div>
+              <div class="directory-metrics">
+                <span class="pill">processed ${item.processedItems}/${item.totalItems}</span>
+                <span class="pill">done ${item.doneItems}</span>
+                <span class="pill">failed ${item.failedItems}</span>
+              </div>
+              <div class="muted">last item: <code>${escapeHTML(stringifyValue(item.lastItemPath, "-"))}</code></div>
+            </div>
+          `,
+        )
+        .join("");
+      return `
+        <section class="directory-group">
+          <h4>Root <code>${escapeHTML(rootPath)}</code></h4>
+          ${rows}
+        </section>
+      `;
+    })
+    .join("");
+}
+
+function recentRuntimePayload() {
+  const recentProbe = state.evidence?.recentProbes?.[0];
+  if (recentProbe && recentProbe.payload && typeof recentProbe.payload === "object") {
+    return recentProbe.payload;
+  }
+  const statusWithRuntime = (state.statuses || []).find((item) => item.snapshotSummary?.runtime);
+  return statusWithRuntime?.snapshotSummary || null;
+}
+
 function parseJSONInput(raw, fallback) {
   const text = raw.trim();
   if (!text) {
@@ -237,6 +356,13 @@ function renderTasks() {
         <span>选择任务后显示</span>
       </div>
     `;
+    $("#task-runtime").innerHTML = `
+      <div class="insight-card">
+        <strong>运行检查点</strong>
+        <span>选择任务后显示</span>
+      </div>
+    `;
+    $("#task-directory-states").innerHTML = `<div class="directory-empty">暂无目录状态。</div>`;
     $("#task-detail").textContent = "选择一条任务查看详情...";
     return;
   }
@@ -280,10 +406,18 @@ function renderSelectedTask() {
         <span>选择任务后显示</span>
       </div>
     `;
+    $("#task-runtime").innerHTML = `
+      <div class="insight-card">
+        <strong>运行检查点</strong>
+        <span>选择任务后显示</span>
+      </div>
+    `;
+    $("#task-directory-states").innerHTML = `<div class="directory-empty">暂无目录状态。</div>`;
     $("#task-detail").textContent = "选择一条任务查看详情...";
     return;
   }
   const metadata = detail.plan?.metadata || {};
+  const runtime = detail.runtime || metadata.runtime || {};
   $("#task-summary").innerHTML = `
     <div class="insight-card">
       <strong>执行模式</strong>
@@ -302,6 +436,8 @@ function renderSelectedTask() {
       <span>${stringifyValue(metadata.scanMode, "尚未运行或无需扫描")}</span>
     </div>
   `;
+  $("#task-runtime").innerHTML = renderRuntimeCheckpoint(runtime);
+  $("#task-directory-states").innerHTML = renderDirectoryStates(runtime.directoryStates);
   $("#task-detail").textContent = detail ? formatJSON(detail) : "选择一条任务查看详情...";
 }
 
@@ -401,6 +537,9 @@ function renderStatus() {
 
   $("#recent-results").innerHTML = renderRecentResultsTable(evidence.recentResults || []);
   $("#recent-probes").innerHTML = renderRecentProbesTable(evidence.recentProbes || []);
+  const runtimePayload = recentRuntimePayload();
+  $("#status-runtime-checkpoints").innerHTML = renderRuntimeCheckpoint(runtimePayload?.runtime || runtimePayload);
+  $("#status-directory-states").innerHTML = renderDirectoryStates(runtimePayload?.runtime?.directoryStates || runtimePayload?.directoryStates);
 }
 
 function renderSnapshotSummary(summary) {

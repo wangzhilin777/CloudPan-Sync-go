@@ -97,6 +97,7 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 		waitForText(`#task-summary`, "pre_scan_flat"),
 		waitForText(`#task-detail`, `"state": "ready"`),
 		waitForText(`#task-detail`, `"executionMode": "pre_scan_flat"`),
+		waitForText(`#task-directory-states`, "/demo"),
 	)
 
 	runStep(t, runCtx, "pause resume run task",
@@ -107,6 +108,7 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 		chromedp.Click(`#task-run`, chromedp.ByID),
 		waitForText(`#task-detail`, `"state": "completed"`),
 		waitForText(`#task-detail`, `"status": "done"`),
+		waitForText(`#task-runtime`, "completed"),
 	)
 
 	runStep(t, runCtx, "status evidence and retry",
@@ -117,6 +119,8 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 		waitForText(`#recent-results`, "pre_scan_flat"),
 		waitForText(`#recent-probes`, "completed"),
 		waitForText(`#recent-probes`, "pre_scan_flat"),
+		waitForText(`#status-runtime-checkpoints`, "completed"),
+		waitForText(`#status-directory-states`, "/demo"),
 		waitForText(`#evidence-summary`, "Total Tasks"),
 		chromedp.Click(`button[data-view="tasks"]`, chromedp.ByQuery),
 		chromedp.Click(`#task-retry`, chromedp.ByID),
