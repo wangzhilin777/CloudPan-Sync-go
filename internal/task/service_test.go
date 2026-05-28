@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
+
 	"cloudpan-sync-go/internal/auth"
 	"cloudpan-sync-go/internal/planner"
 	"cloudpan-sync-go/internal/provider"
@@ -3199,6 +3201,140 @@ func TestServiceRecoverBlockedTasksWithOptionsRespectsProviderBudget(t *testing.
 	}
 	if completedCount != 1 || blockedCount != 1 {
 		t.Fatalf("expected one completed and one blocked task, got completed=%d blocked=%d", completedCount, blockedCount)
+	}
+}
+
+func TestServiceRecoverBlockedTasksWithOptionsRoundRobinsProvidersWithinSameBand(t *testing.T) {
+	ctx := context.Background()
+	store, err := sqlitestore.New(ctx, filepath.Join(t.TempDir(), "auto-recover-provider-round-robin.db"))
+	if err != nil {
+		t.Fatalf("new store: %v", err)
+	}
+	defer func() { _ = store.Close() }()
+
+	recoveryOrder := make([]string, 0, 3)
+	newAdapter := func(key string) *scriptedAdapter {
+		return &scriptedAdapter{
+			meta: provider.Provider{
+				Key:              key,
+				DisplayName:      key,
+				ProtocolGroup:    "fake",
+				AuthModes:        []string{"manual_token"},
+				FastUploadInputs: []string{"md5", "size"},
+				FallbackModes:    []string{"download_upload"},
+				Status:           "planned",
+			},
+			capability: provider.CapabilitySet{
+				SupportsAuthValidation: true,
+				SupportsUpload:         true,
+			},
+			uploadFunc: func(req provider.UploadRequest) provider.UploadResult {
+				recoveryOrder = append(recoveryOrder, key+":"+req.Path)
+				return provider.UploadResult{
+					OperationResult: provider.OperationResult{
+						OK:      true,
+						Status:  "ok",
+						Message: "round robin recovered",
+						Mode:    "fake_round_robin_ok",
+					},
+				}
+			},
+		}
+	}
+
+	providerA := newAdapter("recover_rr_target_a")
+	providerB := newAdapter("recover_rr_target_b")
+	registry := provider.NewRegistry(providerA, providerB)
+	authSvc := auth.NewService(store, registry)
+	svc := NewService(store, registry, authSvc)
+
+	createProfile := func(providerKey string) string {
+		profile, err := authSvc.CreateProfile(ctx, auth.CreateProfileInput{
+			ProviderKey: providerKey,
+			AuthMode:    "manual_token",
+			DisplayName: providerKey,
+			Token:       "token-" + providerKey,
+		})
+		if err != nil {
+			t.Fatalf("CreateProfile(%s) error = %v", providerKey, err)
+		}
+		return profile.ID
+	}
+	profileA := createProfile("recover_rr_target_a")
+	profileB := createProfile("recover_rr_target_b")
+
+	createBlockedTask := func(providerKey, profileID, path string, offsetMinutes int) {
+		now := time.Now().Add(time.Duration(offsetMinutes) * time.Minute).UTC().Format(time.RFC3339)
+		detail, err := svc.Create(ctx, CreateRequest{
+			SourceProvider:  "guangya",
+			TargetProvider:  providerKey,
+			TargetProfileID: profileID,
+			ThresholdMB:     1,
+			RiskOverride: &planner.RiskProfileOverride{
+				MaxConcurrent: intPtrTask(3),
+			},
+			Entries: []planner.SourceEntry{
+				{Path: path, Size: 256, MD5: strings.Trim(path, "/")},
+			},
+		})
+		if err != nil {
+			t.Fatalf("Create(%s %s) error = %v", providerKey, path, err)
+		}
+		blocked, ok, err := svc.Get(ctx, detail.Task.ID)
+		if err != nil || !ok {
+			t.Fatalf("Get(%s %s) error=%v ok=%v", providerKey, path, err, ok)
+		}
+		blocked.Task.State = StateBlocked
+		blocked.Task.UpdatedAt = now
+		blocked.Runtime = initializeRuntimeState(blocked.Plan)
+		blocked.Runtime.ExecutionState = "blocked"
+		blocked.Runtime.RetryQueue = []RetryQueueItem{
+			{
+				Path:           path,
+				Retryable:      true,
+				RetryClass:     "retry_failed",
+				ProviderStatus: "provider_request_failed",
+			},
+		}
+		blocked.Results = []Result{
+			{
+				ID:        uuid.NewString(),
+				TaskID:    blocked.Task.ID,
+				ItemID:    blocked.Items[0].ID,
+				Status:    "failed",
+				Mode:      "fake_failed",
+				Message:   "failed",
+				CreatedAt: now,
+				Payload: map[string]interface{}{
+					"path":           path,
+					"providerStatus": "provider_request_failed",
+				},
+			},
+		}
+		applyRetryQueueSummary(&blocked.Runtime, blocked.Plan.Metadata)
+		if err := replaceTaskDetailAndResults(ctx, store, blocked); err != nil {
+			t.Fatalf("replaceTaskDetailAndResults(%s %s) error = %v", providerKey, path, err)
+		}
+	}
+
+	createBlockedTask("recover_rr_target_a", profileA, "/a-1.bin", -182)
+	createBlockedTask("recover_rr_target_a", profileA, "/a-2.bin", -181)
+	createBlockedTask("recover_rr_target_b", profileB, "/b-1.bin", -180)
+
+	result, err := svc.RecoverBlockedTasksWithOptions(ctx, RecoverOptions{Limit: 3})
+	if err != nil {
+		t.Fatalf("RecoverBlockedTasksWithOptions(round robin) error = %v", err)
+	}
+	if result.MatchedCount != 3 || result.RecoveredCount != 3 {
+		t.Fatalf("unexpected round robin result: %#v", result)
+	}
+	if len(recoveryOrder) != 3 {
+		t.Fatalf("expected 3 recovery operations, got %#v", recoveryOrder)
+	}
+	if recoveryOrder[0] != "recover_rr_target_a:/a-1.bin" ||
+		recoveryOrder[1] != "recover_rr_target_b:/b-1.bin" ||
+		recoveryOrder[2] != "recover_rr_target_a:/a-2.bin" {
+		t.Fatalf("expected provider round robin order [a1 b1 a2], got %#v", recoveryOrder)
 	}
 }
 

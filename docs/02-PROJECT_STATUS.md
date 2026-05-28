@@ -38,6 +38,7 @@
   - 当前混合失败队列的后台补传候选也已进入统一优先级排序：会综合 `mode / primaryRetryClass / primaryBlockedAction / nextRetryAt` 做稳定拆批
   - 当前状态页候选池已可直接按 `primaryRetryClass / primaryBlockedAction / lane(mode + class + action)` 一键聚焦或放行
   - 当前 `/api/tasks/recover` 也已支持按 `path + scope` 只放行某一棵子树，便于和叶子目录优先排障结合使用
+  - 当前同优先级档位下的后台补传候选会按 provider 轮转放行，避免同一个 provider 长时间独占当前批次
 
 ## 先用业务语言理解当前规则
 
@@ -60,6 +61,7 @@
   - 运行证据里会回写命中的风险状态
   - 自动补传时间窗会在 planner 阶段先归一化到合法小时范围，避免预览口径和 runtime 执行口径漂移
   - 后台补传单轮放行也会开始尊重 `riskProfile.maxConcurrent` 的 provider 级批量预算，避免某一类任务一次性吃掉整轮额度
+  - 同档位候选在额度之内也会优先做 provider 轮转，再在同 provider 内按原有时间顺序继续推进
 - 当前 `rate_limited` 重试队列也已经不再只有单一冷却秒数：
   - 会按失败次数进入 `fast / normal / extended` 三档退避
   - 队列项会直接展示 `cooldownTier / cooldownSeconds / eligibleAt`

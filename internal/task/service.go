@@ -1028,6 +1028,7 @@ func (s *Service) RecoverBlockedTasksWithOptions(ctx context.Context, opts Recov
 	sort.SliceStable(candidates, func(i, j int) bool {
 		return recoverCandidateLess(candidates[i], candidates[j])
 	})
+	candidates = interleaveRecoverCandidatesByProvider(candidates)
 	result.MatchedCount = len(candidates)
 	if opts.Limit > 0 && len(candidates) > opts.Limit {
 		result.SkippedByLimit = len(candidates) - opts.Limit
@@ -1090,6 +1091,66 @@ func recoverProviderBudget(detail Detail) int {
 		return 0
 	}
 	return riskProfile.MaxConcurrent
+}
+
+func interleaveRecoverCandidatesByProvider(candidates []recoverCandidate) []recoverCandidate {
+	if len(candidates) <= 2 {
+		return candidates
+	}
+	reordered := make([]recoverCandidate, 0, len(candidates))
+	for start := 0; start < len(candidates); {
+		end := start + 1
+		for end < len(candidates) && recoverCandidateSameBand(candidates[start], candidates[end]) {
+			end++
+		}
+		reordered = append(reordered, interleaveRecoverCandidateBand(candidates[start:end])...)
+		start = end
+	}
+	return reordered
+}
+
+func recoverCandidateSameBand(left, right recoverCandidate) bool {
+	return autoRecoverModePriority(left.Mode) == autoRecoverModePriority(right.Mode) &&
+		retryClassPriority(left.PrimaryRetryClass) == retryClassPriority(right.PrimaryRetryClass) &&
+		blockedActionPriority(left.EffectiveAction) == blockedActionPriority(right.EffectiveAction)
+}
+
+func interleaveRecoverCandidateBand(candidates []recoverCandidate) []recoverCandidate {
+	if len(candidates) <= 2 {
+		return candidates
+	}
+	order := make([]string, 0)
+	queues := make(map[string][]recoverCandidate)
+	for _, candidate := range candidates {
+		providerKey := strings.TrimSpace(candidate.Detail.Task.TargetProvider)
+		if providerKey == "" {
+			providerKey = "_unknown"
+		}
+		if _, ok := queues[providerKey]; !ok {
+			order = append(order, providerKey)
+		}
+		queues[providerKey] = append(queues[providerKey], candidate)
+	}
+	if len(order) <= 1 {
+		return candidates
+	}
+	result := make([]recoverCandidate, 0, len(candidates))
+	for {
+		progressed := false
+		for _, providerKey := range order {
+			queue := queues[providerKey]
+			if len(queue) == 0 {
+				continue
+			}
+			result = append(result, queue[0])
+			queues[providerKey] = queue[1:]
+			progressed = true
+		}
+		if !progressed {
+			break
+		}
+	}
+	return result
 }
 
 func retryQueueContainsClass(queue []RetryQueueItem, retryClass string) bool {

@@ -355,6 +355,8 @@ Invoke-RestMethod `
   - 本轮实际成功接管并重跑的任务数量
 - `skippedByLimit`
   - 因为本轮 `limit` 被保留到下一轮的候选数量
+- `skippedByProviderBudget`
+  - 因为当前 provider 已达到本轮 `riskProfile.maxConcurrent` 批量预算而被保留到下一轮的候选数量
 - `mode / providerKey / limit`
   - 便于 UI 和脚本确认本轮到底按什么条件执行
 - `retryClass / blockedAction / path / scope`
