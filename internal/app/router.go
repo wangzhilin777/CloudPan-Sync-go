@@ -85,14 +85,15 @@ type retryTaskRequest struct {
 }
 
 type recoverTasksRequest struct {
-	Mode          string `json:"mode"`
-	ProviderKey   string `json:"providerKey"`
-	RetryClass    string `json:"retryClass"`
-	BlockedAction string `json:"blockedAction"`
+	Mode          string   `json:"mode"`
+	TaskID        string   `json:"taskId"`
+	ProviderKey   string   `json:"providerKey"`
+	RetryClass    string   `json:"retryClass"`
+	BlockedAction string   `json:"blockedAction"`
 	Paths         []string `json:"paths"`
-	Path          string `json:"path"`
-	Scope         string `json:"scope"`
-	Limit         int    `json:"limit"`
+	Path          string   `json:"path"`
+	Scope         string   `json:"scope"`
+	Limit         int      `json:"limit"`
 }
 
 func (a *App) routes() http.Handler {
@@ -546,6 +547,7 @@ func (a *App) handleTaskRecovery(w http.ResponseWriter, r *http.Request) {
 	}
 	result, err := a.recoverBlockedTasks(r.Context(), task.RecoverOptions{
 		Mode:          req.Mode,
+		TaskID:        req.TaskID,
 		ProviderKey:   req.ProviderKey,
 		RetryClass:    req.RetryClass,
 		BlockedAction: req.BlockedAction,

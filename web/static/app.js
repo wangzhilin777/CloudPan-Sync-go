@@ -782,7 +782,7 @@ function renderTreeNodes(nodes, options = {}) {
               : ""
           }
           ${
-            scope === "task" && panel === "pending"
+            (scope === "task" || scope === "status") && panel === "pending"
               ? `
                 <button
                   type="button"
@@ -795,7 +795,7 @@ function renderTreeNodes(nodes, options = {}) {
               : ""
           }
           ${
-            scope === "task"
+            scope === "task" || scope === "status"
               ? `
                 <button
                   type="button"
@@ -871,7 +871,7 @@ function renderTreeNodes(nodes, options = {}) {
                     : ""
                 }
                 ${
-                  scope === "task" && panel === "pending"
+                  (scope === "task" || scope === "status") && panel === "pending"
                     ? `
                       <button
                         type="button"
@@ -884,7 +884,7 @@ function renderTreeNodes(nodes, options = {}) {
                     : ""
                 }
                 ${
-                  scope === "task"
+                  scope === "task" || scope === "status"
                     ? `
                       <button
                         type="button"
@@ -944,6 +944,23 @@ function renderPendingTree(nodes) {
 
 function currentSelectedTaskDetail() {
   return state.tasks.find((item) => item.task.id === state.selectedTaskId) || null;
+}
+
+function currentStatusTaskContext() {
+  const runtimePayload = recentRuntimePayload();
+  const taskId = String(runtimePayload?.taskId || runtimePayload?.runtime?.taskId || "").trim();
+  if (!taskId) {
+    return null;
+  }
+  const detail = state.tasks.find((item) => item?.task?.id === taskId) || null;
+  const providerKey = String(
+    runtimePayload?.providerKey || runtimePayload?.targetProvider || runtimePayload?.runtime?.targetProvider || detail?.task?.targetProvider || "",
+  ).trim();
+  return {
+    taskId,
+    providerKey,
+    detail,
+  };
 }
 
 function updateTaskTreePanels(detail) {
@@ -1341,7 +1358,7 @@ function wireTreeGroupToggles(scope, panel) {
   wrap.querySelectorAll("[data-tree-retry-path]").forEach((button) => {
     button.addEventListener("click", async () => {
       try {
-        await retryTaskPath(button.dataset.treeRetryPath || "");
+        await retryTaskPath(button.dataset.treeRetryScope || scope, button.dataset.treeRetryPath || "");
       } catch (error) {
         showFlash(error.message, true);
       }
@@ -1350,7 +1367,7 @@ function wireTreeGroupToggles(scope, panel) {
   wrap.querySelectorAll("[data-tree-auto-recover-path]").forEach((button) => {
     button.addEventListener("click", async () => {
       try {
-        await autoRecoverTaskPath(button.dataset.treeAutoRecoverPath || "");
+        await autoRecoverTaskPath(scope, button.dataset.treeAutoRecoverPath || "");
       } catch (error) {
         showFlash(error.message, true);
       }
@@ -3049,11 +3066,17 @@ async function triggerAutoRecover() {
   );
 }
 
-async function autoRecoverTaskPath(path) {
-  const detail = currentSelectedTaskDetail();
+async function autoRecoverTaskPath(scope, path) {
+  const context =
+    scope === "task"
+      ? {
+          taskId: state.selectedTaskId,
+          providerKey: currentSelectedTaskDetail()?.task?.targetProvider || "",
+        }
+      : currentStatusTaskContext();
   const normalizedPath = normalizeComparePath(path);
-  if (!detail || !detail.task) {
-    throw new Error("请先选择任务");
+  if (!context || !context.taskId) {
+    throw new Error(scope === "task" ? "请先选择任务" : "当前状态样本没有可用任务");
   }
   if (!normalizedPath) {
     throw new Error("缺少可恢复路径");
@@ -3061,7 +3084,8 @@ async function autoRecoverTaskPath(path) {
   const result = await api("/api/tasks/recover", {
     method: "POST",
     body: {
-      providerKey: detail.task.targetProvider || "",
+      taskId: context.taskId,
+      providerKey: context.providerKey || "",
       path: normalizedPath,
       scope: "selected_retry_subset",
       limit: 1,
@@ -3623,8 +3647,17 @@ async function runTaskAction(action, body = undefined) {
     showFlash("请先选择任务", true);
     return false;
   }
+  return runTaskActionForTask(state.selectedTaskId, action, body);
+}
+
+async function runTaskActionForTask(taskId, action, body = undefined) {
+  const normalizedTaskId = String(taskId || "").trim();
+  if (!normalizedTaskId) {
+    showFlash("缺少任务标识", true);
+    return false;
+  }
   try {
-    await api(`/api/tasks/${state.selectedTaskId}/${action}`, { method: "POST", body });
+    await api(`/api/tasks/${normalizedTaskId}/${action}`, { method: "POST", body });
     showFlash(`任务 ${action} 已执行`);
     await Promise.all([loadTasks(), loadStatus()]);
     return true;
@@ -3634,29 +3667,47 @@ async function runTaskAction(action, body = undefined) {
   }
 }
 
-async function retryVisibleSelection(source) {
-  if (!state.selectedTaskId) {
-    showFlash("请先选择任务", true);
+function visibleSelectionPaths(scope, source) {
+  if (source === "pending_tree" || source === "selected_pending_subset") {
+    return visibleTreePaths(scope, "pending");
+  }
+  return visibleRetryPaths(scope);
+}
+
+function recoverScopeFromSource(source) {
+  return source === "pending_tree" || source === "selected_pending_subset" ? "selected_pending_subset" : "selected_retry_subset";
+}
+
+async function retryVisibleSelection(scope, source) {
+  const taskId = scope === "task" ? state.selectedTaskId : currentStatusTaskContext()?.taskId;
+  if (!taskId) {
+    showFlash(scope === "task" ? "请先选择任务" : "当前状态样本没有可用任务", true);
     return;
   }
-  const paths = source === "pending_tree" ? visibleTreePaths("task", "pending") : visibleRetryPaths("task");
+  const paths = visibleSelectionPaths(scope, source);
   if (!paths.length) {
     showFlash("当前筛选结果里没有可重试的路径", true);
     return;
   }
-  const ok = await runTaskAction("retry", { paths, scope: source });
+  const ok = await runTaskActionForTask(taskId, "retry", { paths, scope: recoverScopeFromSource(source) });
   if (ok) {
     showFlash(`已按当前筛选重建 ${paths.length} 条路径的 retry 范围`);
   }
 }
 
-async function autoRecoverVisibleSelection(source) {
-  const detail = currentSelectedTaskDetail();
-  if (!detail || !detail.task) {
-    showFlash("请先选择任务", true);
+async function autoRecoverVisibleSelection(scope, source) {
+  const context =
+    scope === "task"
+      ? {
+          taskId: state.selectedTaskId,
+          providerKey: currentSelectedTaskDetail()?.task?.targetProvider || "",
+        }
+      : currentStatusTaskContext();
+  if (!context || !context.taskId) {
+    showFlash(scope === "task" ? "请先选择任务" : "当前状态样本没有可用任务", true);
     return;
   }
-  const paths = source === "pending_tree" ? visibleTreePaths("task", "pending") : visibleRetryPaths("task");
+  const paths = visibleSelectionPaths(scope, source);
   if (!paths.length) {
     showFlash("当前筛选结果里没有可后台补传的路径", true);
     return;
@@ -3664,9 +3715,10 @@ async function autoRecoverVisibleSelection(source) {
   const result = await api("/api/tasks/recover", {
     method: "POST",
     body: {
-      providerKey: detail.task.targetProvider || "",
+      taskId: context.taskId,
+      providerKey: context.providerKey || "",
       paths,
-      scope: source === "pending_tree" ? "selected_pending_subset" : "selected_retry_subset",
+      scope: recoverScopeFromSource(source),
       limit: 1,
     },
   });
@@ -3677,13 +3729,18 @@ async function autoRecoverVisibleSelection(source) {
   );
 }
 
-async function retryTaskPath(path) {
+async function retryTaskPath(scope, path) {
   const normalizedPath = normalizeComparePath(path);
+  const taskId = scope === "task" ? state.selectedTaskId : currentStatusTaskContext()?.taskId;
+  if (!taskId) {
+    showFlash(scope === "task" ? "请先选择任务" : "当前状态样本没有可用任务", true);
+    return false;
+  }
   if (!normalizedPath) {
     showFlash("当前路径无效，无法重试", true);
     return false;
   }
-  const ok = await runTaskAction("retry", {
+  const ok = await runTaskActionForTask(taskId, "retry", {
     paths: [normalizedPath],
     scope: "selected_pending_subset",
   });
@@ -3706,10 +3763,10 @@ function wireTasks() {
   $("#task-pause").addEventListener("click", () => runTaskAction("pause"));
   $("#task-resume").addEventListener("click", () => runTaskAction("resume"));
   $("#task-retry").addEventListener("click", () => runTaskAction("retry"));
-  $("#task-retry-visible-queue").addEventListener("click", () => retryVisibleSelection("selected_retry_subset"));
-  $("#task-retry-visible-pending").addEventListener("click", () => retryVisibleSelection("selected_pending_subset"));
-  $("#task-auto-recover-visible-queue").addEventListener("click", () => autoRecoverVisibleSelection("retry_queue"));
-  $("#task-auto-recover-visible-pending").addEventListener("click", () => autoRecoverVisibleSelection("pending_tree"));
+  $("#task-retry-visible-queue").addEventListener("click", () => retryVisibleSelection("task", "selected_retry_subset"));
+  $("#task-retry-visible-pending").addEventListener("click", () => retryVisibleSelection("task", "selected_pending_subset"));
+  $("#task-auto-recover-visible-queue").addEventListener("click", () => autoRecoverVisibleSelection("task", "retry_queue"));
+  $("#task-auto-recover-visible-pending").addEventListener("click", () => autoRecoverVisibleSelection("task", "pending_tree"));
 }
 
 function wireStatus() {
@@ -3754,6 +3811,10 @@ function wireStatus() {
   $("#auto-recover-reset").addEventListener("click", () => {
     resetAutoRecoverFilters();
   });
+  $("#status-retry-visible-queue").addEventListener("click", () => retryVisibleSelection("status", "selected_retry_subset"));
+  $("#status-auto-recover-visible-queue").addEventListener("click", () => autoRecoverVisibleSelection("status", "retry_queue"));
+  $("#status-retry-visible-pending").addEventListener("click", () => retryVisibleSelection("status", "selected_pending_subset"));
+  $("#status-auto-recover-visible-pending").addEventListener("click", () => autoRecoverVisibleSelection("status", "pending_tree"));
   $("#save-provider-smoke").addEventListener("click", async () => {
     try {
       const payload = {

@@ -362,6 +362,22 @@ Invoke-RestMethod `
   -ContentType "application/json" | ConvertTo-Json -Depth 12
 ```
 
+如果你要明确限制“只作用于某一个任务样本”，现在可以额外带上 `taskId`：
+
+```powershell
+Invoke-RestMethod `
+  -Method Post `
+  -Uri "$base/api/tasks/recover" `
+  -Body (@{
+    taskId      = "task-sample-id"
+    providerKey = "123_open"
+    paths       = @("/demo/leaf-b")
+    scope       = "selected_retry_subset"
+    limit       = 1
+  } | ConvertTo-Json -Depth 8) `
+  -ContentType "application/json" | ConvertTo-Json -Depth 12
+```
+
 返回重点字段：
 
 - `matchedCount`
@@ -374,8 +390,10 @@ Invoke-RestMethod `
   - 因为当前 provider 已达到本轮 `riskProfile.maxConcurrent` 批量预算而被保留到下一轮的候选数量
 - `mode / providerKey / limit`
   - 便于 UI 和脚本确认本轮到底按什么条件执行
-- `retryClass / blockedAction / path / scope`
+- `taskId / retryClass / blockedAction / path / scope`
   - 便于确认本轮是否只放行了某种失败类型、某个阻塞动作，或某一棵指定子树
+- `taskId`
+  - 适合把后台补传明确约束在某一个任务样本上，避免同 provider 的其它任务被一起命中
 - `path + scope=selected_retry_subset`
   - 适合只放行当前路径子树，避免把整批失败项一起重建
 - `paths + scope=selected_retry_subset`

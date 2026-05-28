@@ -504,7 +504,11 @@
             <article class="card">
               <div class="section-head">
                 <h2>最近重试队列</h2>
-                <span class="muted">来自最近 probe / snapshot</span>
+                <div class="actions compact">
+                  <span class="muted">来自最近 probe / snapshot</span>
+                  <button type="button" class="ghost" id="status-retry-visible-queue">重试当前筛选</button>
+                  <button type="button" class="ghost" id="status-auto-recover-visible-queue">后台补传当前筛选</button>
+                </div>
               </div>
               <div class="filter-bar">
                 <input id="status-retry-filter-query" type="text" placeholder="筛选路径 / reason / provider status" />
@@ -571,6 +575,8 @@
                   <button type="button" class="ghost" data-tree-bulk-scope="status" data-tree-bulk-panel="pending" data-tree-bulk-action="collapse">收起全部</button>
                   <button type="button" class="ghost" data-tree-bulk-scope="status" data-tree-bulk-panel="pending" data-tree-bulk-action="expand">展开全部</button>
                   <button type="button" class="ghost" id="status-pending-copy-visible">复制当前路径</button>
+                  <button type="button" class="ghost" id="status-retry-visible-pending">重试当前筛选</button>
+                  <button type="button" class="ghost" id="status-auto-recover-visible-pending">后台补传当前筛选</button>
                 </div>
               </div>
               <div class="filter-bar">

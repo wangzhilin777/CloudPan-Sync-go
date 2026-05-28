@@ -36,28 +36,30 @@ type RetryOptions struct {
 }
 
 type RecoverOptions struct {
-	Mode          string `json:"mode,omitempty"`
-	ProviderKey   string `json:"providerKey,omitempty"`
-	RetryClass    string `json:"retryClass,omitempty"`
-	BlockedAction string `json:"blockedAction,omitempty"`
+	Mode          string   `json:"mode,omitempty"`
+	TaskID        string   `json:"taskId,omitempty"`
+	ProviderKey   string   `json:"providerKey,omitempty"`
+	RetryClass    string   `json:"retryClass,omitempty"`
+	BlockedAction string   `json:"blockedAction,omitempty"`
 	Paths         []string `json:"paths,omitempty"`
-	Path          string `json:"path,omitempty"`
-	Scope         string `json:"scope,omitempty"`
-	Limit         int    `json:"limit,omitempty"`
+	Path          string   `json:"path,omitempty"`
+	Scope         string   `json:"scope,omitempty"`
+	Limit         int      `json:"limit,omitempty"`
 }
 
 type RecoverResult struct {
-	Mode           string `json:"mode,omitempty"`
-	ProviderKey    string `json:"providerKey,omitempty"`
-	RetryClass     string `json:"retryClass,omitempty"`
-	BlockedAction  string `json:"blockedAction,omitempty"`
-	Path           string `json:"path,omitempty"`
-	Scope          string `json:"scope,omitempty"`
-	Limit          int    `json:"limit,omitempty"`
-	MatchedCount   int    `json:"matchedCount"`
-	RecoveredCount int    `json:"recoveredCount"`
-	SkippedByLimit int    `json:"skippedByLimit"`
-	SkippedByProviderBudget int `json:"skippedByProviderBudget"`
+	Mode                    string `json:"mode,omitempty"`
+	TaskID                  string `json:"taskId,omitempty"`
+	ProviderKey             string `json:"providerKey,omitempty"`
+	RetryClass              string `json:"retryClass,omitempty"`
+	BlockedAction           string `json:"blockedAction,omitempty"`
+	Path                    string `json:"path,omitempty"`
+	Scope                   string `json:"scope,omitempty"`
+	Limit                   int    `json:"limit,omitempty"`
+	MatchedCount            int    `json:"matchedCount"`
+	RecoveredCount          int    `json:"recoveredCount"`
+	SkippedByLimit          int    `json:"skippedByLimit"`
+	SkippedByProviderBudget int    `json:"skippedByProviderBudget"`
 }
 
 type Detail struct {
@@ -974,6 +976,7 @@ func (s *Service) RecoverBlockedTasks(ctx context.Context) (int, error) {
 
 func (s *Service) RecoverBlockedTasksWithOptions(ctx context.Context, opts RecoverOptions) (RecoverResult, error) {
 	opts.Mode = strings.TrimSpace(opts.Mode)
+	opts.TaskID = strings.TrimSpace(opts.TaskID)
 	opts.ProviderKey = strings.TrimSpace(opts.ProviderKey)
 	opts.RetryClass = strings.TrimSpace(opts.RetryClass)
 	opts.BlockedAction = strings.TrimSpace(opts.BlockedAction)
@@ -982,6 +985,7 @@ func (s *Service) RecoverBlockedTasksWithOptions(ctx context.Context, opts Recov
 	opts.Scope = strings.TrimSpace(opts.Scope)
 	result := RecoverResult{
 		Mode:          opts.Mode,
+		TaskID:        opts.TaskID,
 		ProviderKey:   opts.ProviderKey,
 		RetryClass:    opts.RetryClass,
 		BlockedAction: opts.BlockedAction,
@@ -996,6 +1000,9 @@ func (s *Service) RecoverBlockedTasksWithOptions(ctx context.Context, opts Recov
 	candidates := make([]recoverCandidate, 0)
 	for _, detail := range items {
 		if detail.Task.State != StateBlocked && detail.Task.State != StateCompletedWithErrors {
+			continue
+		}
+		if opts.TaskID != "" && detail.Task.ID != opts.TaskID {
 			continue
 		}
 		syncRuntimeRetryQueue(&detail.Runtime, detail.Plan.Metadata, detail.Results)

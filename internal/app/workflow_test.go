@@ -907,7 +907,7 @@ func TestAppRecoverTasksEndpointReportsProviderBudgetSkips(t *testing.T) {
 			"targetProfileId": profileID,
 			"thresholdMB":     1,
 			"riskOverride": map[string]interface{}{
-				"maxConcurrent":   1,
+				"maxConcurrent": 1,
 			},
 			"entries": []map[string]interface{}{
 				{"path": path, "size": 1024, "md5": "md5-" + fileName, "localPath": localFile},
@@ -1069,6 +1069,126 @@ func TestAppRecoverTasksEndpointSupportsMultiplePaths(t *testing.T) {
 	}
 	if got := uploadCallsByPath["/leaf-b/two.bin"]; got != 1 {
 		t.Fatalf("expected /leaf-b/two.bin upload calls to remain 1, got %d", got)
+	}
+}
+
+func TestAppRecoverTasksEndpointFiltersTaskID(t *testing.T) {
+	ctx := context.Background()
+	application := mustNewTestApp(t, ctx)
+
+	uploadCallsByPath := map[string]int{}
+	targetAdapter := &appScriptedAdapter{
+		meta: provider.Provider{
+			Key:              "recover_task_id_api_target",
+			DisplayName:      "Recover Task ID API Target",
+			ProtocolGroup:    "fake_target",
+			AuthModes:        []string{"manual_token"},
+			FastUploadInputs: []string{"md5", "size"},
+			FallbackModes:    []string{"download_upload"},
+			Status:           "planned",
+		},
+		capability: provider.CapabilitySet{
+			SupportsAuthValidation: true,
+			SupportsUpload:         true,
+		},
+		uploadFunc: func(req provider.UploadRequest) provider.UploadResult {
+			uploadCallsByPath[req.Path]++
+			if uploadCallsByPath[req.Path] == 1 {
+				return provider.UploadResult{
+					OperationResult: provider.OperationResult{
+						Status:  "rate_limited",
+						Message: "rate limited",
+						Mode:    "scripted_rate_limit",
+					},
+				}
+			}
+			return provider.UploadResult{
+				OperationResult: provider.OperationResult{
+					OK:      true,
+					Status:  "ok",
+					Message: "task filtered recovered",
+					Mode:    "scripted_task_filter_ok",
+				},
+			}
+		},
+	}
+
+	registry := provider.NewRegistry(targetAdapter)
+	authSvc := auth.NewService(application.store, registry)
+	taskSvc := task.NewService(application.store, registry, authSvc)
+	application.providers = registry
+	application.auth = authSvc
+	application.tasks = taskSvc
+	handler := application.routes()
+
+	profileResp := invokeJSON(t, handler, http.MethodPost, "/api/auth/profiles", map[string]interface{}{
+		"providerKey": "recover_task_id_api_target",
+		"authMode":    "manual_token",
+		"displayName": "Recover Task ID API Target",
+		"token":       "token-recover-task-id-api",
+	})
+	profileID := profileResp.Data.(map[string]interface{})["id"].(string)
+
+	createBlockedTask := func(path string) string {
+		taskResp := invokeJSON(t, handler, http.MethodPost, "/api/tasks", map[string]interface{}{
+			"sourceProvider":  "recover_task_id_api_source",
+			"targetProvider":  "recover_task_id_api_target",
+			"targetProfileId": profileID,
+			"thresholdMB":     1,
+			"entries": []map[string]interface{}{
+				{"path": path, "size": 101, "md5": path},
+			},
+		})
+		taskID := taskResp.Data.(map[string]interface{})["task"].(map[string]interface{})["id"].(string)
+		runResp := invokeJSON(t, handler, http.MethodPost, "/api/tasks/"+taskID+"/run", nil)
+		if got := runResp.Data.(map[string]interface{})["task"].(map[string]interface{})["state"].(string); got != "blocked" {
+			t.Fatalf("expected blocked task for %s, got %s", path, got)
+		}
+		if _, err := application.store.DB().ExecContext(ctx, `UPDATE task_results SET created_at = ? WHERE task_id = ?`,
+			time.Now().Add(-2*time.Hour).UTC().Format(time.RFC3339), taskID,
+		); err != nil {
+			t.Fatalf("update task_results created_at for %s error = %v", path, err)
+		}
+		return taskID
+	}
+
+	firstTaskID := createBlockedTask("/group-a/one.bin")
+	secondTaskID := createBlockedTask("/group-b/two.bin")
+
+	recoverResp := invokeJSON(t, handler, http.MethodPost, "/api/tasks/recover", map[string]interface{}{
+		"taskId":      secondTaskID,
+		"providerKey": "recover_task_id_api_target",
+		"paths":       []string{"/group-b"},
+		"scope":       "selected_retry_subset",
+		"limit":       1,
+	})
+	recoverData := recoverResp.Data.(map[string]interface{})
+	if got := int(recoverData["matchedCount"].(float64)); got != 1 {
+		t.Fatalf("expected matchedCount 1, got %d", got)
+	}
+	if got := int(recoverData["recoveredCount"].(float64)); got != 1 {
+		t.Fatalf("expected recoveredCount 1, got %d", got)
+	}
+	if got := recoverData["taskId"].(string); got != secondTaskID {
+		t.Fatalf("expected taskId %s, got %s", secondTaskID, got)
+	}
+
+	firstDetail := invokeJSON(t, handler, http.MethodGet, "/api/tasks/"+firstTaskID, nil)
+	firstResults := firstDetail.Data.(map[string]interface{})["results"].([]interface{})
+	if len(firstResults) != 1 || firstResults[0].(map[string]interface{})["payload"].(map[string]interface{})["path"].(string) != "/group-a/one.bin" {
+		t.Fatalf("expected first task results unchanged, got %#v", firstResults)
+	}
+
+	secondDetail := invokeJSON(t, handler, http.MethodGet, "/api/tasks/"+secondTaskID, nil)
+	secondResults := secondDetail.Data.(map[string]interface{})["results"].([]interface{})
+	if len(secondResults) != 1 || secondResults[0].(map[string]interface{})["payload"].(map[string]interface{})["path"].(string) != "/group-b/two.bin" {
+		t.Fatalf("expected second task recovered path /group-b/two.bin, got %#v", secondResults)
+	}
+	if got := uploadCallsByPath["/group-a/one.bin"]; got != 1 {
+		t.Fatalf("expected first task upload calls to remain 1, got %d", got)
+	}
+	if got := uploadCallsByPath["/group-b/two.bin"]; got != 2 {
+		t.Fatalf("expected second task upload calls to become 2, got %d", got)
 	}
 }
 

@@ -3200,6 +3200,141 @@ func TestServiceRecoverBlockedTasksWithOptionsSupportsMultiplePaths(t *testing.T
 	}
 }
 
+func TestServiceRecoverBlockedTasksWithOptionsFiltersTaskID(t *testing.T) {
+	ctx := context.Background()
+	store, err := sqlitestore.New(ctx, filepath.Join(t.TempDir(), "auto-recover-task-id.db"))
+	if err != nil {
+		t.Fatalf("new store: %v", err)
+	}
+	defer func() { _ = store.Close() }()
+
+	uploadCallsByPath := map[string]int{}
+	adapter := &scriptedAdapter{
+		meta: provider.Provider{
+			Key:              "recover_task_id_target",
+			DisplayName:      "Recover Task ID Target",
+			ProtocolGroup:    "fake",
+			AuthModes:        []string{"manual_token"},
+			FastUploadInputs: []string{"md5", "size"},
+			FallbackModes:    []string{"download_upload"},
+			Status:           "planned",
+		},
+		capability: provider.CapabilitySet{
+			SupportsAuthValidation: true,
+			SupportsUpload:         true,
+		},
+		uploadFunc: func(req provider.UploadRequest) provider.UploadResult {
+			uploadCallsByPath[req.Path]++
+			if uploadCallsByPath[req.Path] == 1 {
+				return provider.UploadResult{
+					OperationResult: provider.OperationResult{
+						Status:  "rate_limited",
+						Message: "rate limited",
+						Mode:    "fake_rate_limit",
+					},
+				}
+			}
+			return provider.UploadResult{
+				OperationResult: provider.OperationResult{
+					OK:      true,
+					Status:  "ok",
+					Message: "task filtered recovered",
+					Mode:    "fake_task_filter_ok",
+				},
+			}
+		},
+	}
+
+	registry := provider.NewRegistry(adapter)
+	authSvc := auth.NewService(store, registry)
+	svc := NewService(store, registry, authSvc)
+	profile, err := authSvc.CreateProfile(ctx, auth.CreateProfileInput{
+		ProviderKey: "recover_task_id_target",
+		AuthMode:    "manual_token",
+		DisplayName: "recover task id target",
+		Token:       "token-task-id",
+	})
+	if err != nil {
+		t.Fatalf("CreateProfile(task id) error = %v", err)
+	}
+
+	createBlockedTask := func(path string) Detail {
+		detail, err := svc.Create(ctx, CreateRequest{
+			SourceProvider:  "guangya",
+			TargetProvider:  "recover_task_id_target",
+			TargetProfileID: profile.ID,
+			ThresholdMB:     1,
+			RiskOverride: &planner.RiskProfileOverride{
+				CooldownSeconds: intPtrTask(3600),
+			},
+			Entries: []planner.SourceEntry{
+				{Path: path, Size: 101, MD5: filepath.Base(path)},
+			},
+		})
+		if err != nil {
+			t.Fatalf("Create(%s) error = %v", path, err)
+		}
+		if _, ok, err := svc.Run(ctx, detail.Task.ID); err != nil || !ok {
+			t.Fatalf("Run(%s) error=%v ok=%v", path, err, ok)
+		}
+		blocked, ok, err := svc.Get(ctx, detail.Task.ID)
+		if err != nil || !ok {
+			t.Fatalf("Get(%s) error=%v ok=%v", path, err, ok)
+		}
+		for idx := range blocked.Results {
+			blocked.Results[idx].CreatedAt = time.Now().Add(-2 * time.Hour).UTC().Format(time.RFC3339)
+		}
+		syncRuntimeRetryQueue(&blocked.Runtime, blocked.Plan.Metadata, blocked.Results)
+		applyRetryQueueSummary(&blocked.Runtime, blocked.Plan.Metadata)
+		if err := replaceTaskDetailAndResults(ctx, store, blocked); err != nil {
+			t.Fatalf("replaceTaskDetailAndResults(%s) error = %v", path, err)
+		}
+		return blocked
+	}
+
+	first := createBlockedTask("/group-a/one.bin")
+	second := createBlockedTask("/group-b/two.bin")
+
+	result, err := svc.RecoverBlockedTasksWithOptions(ctx, RecoverOptions{
+		TaskID:      second.Task.ID,
+		ProviderKey: "recover_task_id_target",
+		Paths:       []string{"/group-b"},
+		Scope:       "selected_retry_subset",
+		Limit:       1,
+	})
+	if err != nil {
+		t.Fatalf("RecoverBlockedTasksWithOptions(task id) error = %v", err)
+	}
+	if result.MatchedCount != 1 || result.RecoveredCount != 1 || result.TaskID != second.Task.ID {
+		t.Fatalf("unexpected task id recover result: %#v", result)
+	}
+
+	afterFirst, ok, err := svc.Get(ctx, first.Task.ID)
+	if err != nil || !ok {
+		t.Fatalf("Get(first after task-id recover) error=%v ok=%v", err, ok)
+	}
+	if afterFirst.Task.State != StateBlocked {
+		t.Fatalf("expected first task to remain blocked, got %s", afterFirst.Task.State)
+	}
+	if len(afterFirst.Results) != 1 || stringValue(afterFirst.Results[0].Payload["path"]) != "/group-a/one.bin" {
+		t.Fatalf("expected first task results unchanged, got %#v", afterFirst.Results)
+	}
+
+	afterSecond, ok, err := svc.Get(ctx, second.Task.ID)
+	if err != nil || !ok {
+		t.Fatalf("Get(second after task-id recover) error=%v ok=%v", err, ok)
+	}
+	if len(afterSecond.Results) != 1 || stringValue(afterSecond.Results[0].Payload["path"]) != "/group-b/two.bin" {
+		t.Fatalf("expected second task recovered path /group-b/two.bin, got %#v", afterSecond.Results)
+	}
+	if got := uploadCallsByPath["/group-a/one.bin"]; got != 1 {
+		t.Fatalf("expected first task path upload calls to remain 1, got %d", got)
+	}
+	if got := uploadCallsByPath["/group-b/two.bin"]; got != 2 {
+		t.Fatalf("expected second task path upload calls to become 2, got %d", got)
+	}
+}
+
 func TestServiceRecoverBlockedTasksWithOptionsRespectsProviderBudget(t *testing.T) {
 	ctx := context.Background()
 	store, err := sqlitestore.New(ctx, filepath.Join(t.TempDir(), "auto-recover-provider-budget.db"))
