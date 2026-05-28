@@ -1254,6 +1254,8 @@ func TestAppRecoverTasksEndpointFiltersTaskID(t *testing.T) {
 		"paths":            []string{"/group-b"},
 		"scope":            "selected_retry_subset",
 		"limit":            1,
+		"limitPerMode":     1,
+		"limitPerLane":     1,
 		"limitPerProvider": 1,
 		"limitPerProfile":  1,
 	})
@@ -1275,6 +1277,12 @@ func TestAppRecoverTasksEndpointFiltersTaskID(t *testing.T) {
 	}
 	if got := int(recoverData["limitPerProfile"].(float64)); got != 1 {
 		t.Fatalf("expected limitPerProfile 1, got %d", got)
+	}
+	if got := int(recoverData["limitPerMode"].(float64)); got != 1 {
+		t.Fatalf("expected limitPerMode 1, got %d", got)
+	}
+	if got := int(recoverData["limitPerLane"].(float64)); got != 1 {
+		t.Fatalf("expected limitPerLane 1, got %d", got)
 	}
 
 	firstDetail := invokeJSON(t, handler, http.MethodGet, "/api/tasks/"+firstTaskID, nil)

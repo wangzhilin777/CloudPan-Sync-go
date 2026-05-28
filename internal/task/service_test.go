@@ -3832,6 +3832,257 @@ func TestServiceRecoverBlockedTasksWithOptionsRespectsProfileBudgetOverride(t *t
 	}
 }
 
+func TestServiceRecoverBlockedTasksWithOptionsRespectsModeBudget(t *testing.T) {
+	ctx := context.Background()
+	store, err := sqlitestore.New(ctx, filepath.Join(t.TempDir(), "auto-recover-mode-budget.db"))
+	if err != nil {
+		t.Fatalf("new store: %v", err)
+	}
+	defer func() { _ = store.Close() }()
+
+	recoveryOrder := make([]string, 0, 3)
+	adapter := &scriptedAdapter{
+		meta: provider.Provider{
+			Key:              "recover_mode_budget_target",
+			DisplayName:      "recover_mode_budget_target",
+			ProtocolGroup:    "fake",
+			AuthModes:        []string{"manual_token"},
+			FastUploadInputs: []string{"md5", "size"},
+			FallbackModes:    []string{"download_upload"},
+			Status:           "planned",
+		},
+		capability: provider.CapabilitySet{
+			SupportsAuthValidation: true,
+			SupportsUpload:         true,
+		},
+		uploadFunc: func(req provider.UploadRequest) provider.UploadResult {
+			recoveryOrder = append(recoveryOrder, req.Profile.ID+":"+req.Path)
+			return provider.UploadResult{
+				OperationResult: provider.OperationResult{
+					OK:      true,
+					Status:  "ok",
+					Message: "mode budget recovered",
+					Mode:    "fake_mode_budget_ok",
+				},
+			}
+		},
+	}
+
+	registry := provider.NewRegistry(adapter)
+	authSvc := auth.NewService(store, registry)
+	svc := NewService(store, registry, authSvc)
+
+	createProfile := func(name string) string {
+		profile, err := authSvc.CreateProfile(ctx, auth.CreateProfileInput{
+			ProviderKey: "recover_mode_budget_target",
+			AuthMode:    "manual_token",
+			DisplayName: name,
+			Token:       "token-" + name,
+		})
+		if err != nil {
+			t.Fatalf("CreateProfile(%s) error = %v", name, err)
+		}
+		return profile.ID
+	}
+
+	createBlockedTask := func(profileID, path string, offsetMinutes int) {
+		now := time.Now().Add(time.Duration(offsetMinutes) * time.Minute).UTC().Format(time.RFC3339)
+		detail, err := svc.Create(ctx, CreateRequest{
+			SourceProvider:  "guangya",
+			TargetProvider:  "recover_mode_budget_target",
+			TargetProfileID: profileID,
+			ThresholdMB:     1,
+			RiskOverride: &planner.RiskProfileOverride{
+				MaxConcurrent: intPtrTask(4),
+			},
+			Entries: []planner.SourceEntry{
+				{Path: path, Size: 256, MD5: strings.Trim(path, "/")},
+			},
+		})
+		if err != nil {
+			t.Fatalf("Create(%s %s) error = %v", profileID, path, err)
+		}
+		blocked, ok, err := svc.Get(ctx, detail.Task.ID)
+		if err != nil || !ok {
+			t.Fatalf("Get(%s %s) error=%v ok=%v", profileID, path, err, ok)
+		}
+		blocked.Task.State = StateBlocked
+		blocked.Task.UpdatedAt = now
+		blocked.Runtime = initializeRuntimeState(blocked.Plan)
+		blocked.Runtime.ExecutionState = "blocked"
+		blocked.Runtime.RetryQueue = []RetryQueueItem{{
+			Path:           path,
+			Retryable:      true,
+			RetryClass:     "retry_failed",
+			ProviderStatus: "provider_request_failed",
+		}}
+		blocked.Results = []Result{{
+			ID:        uuid.NewString(),
+			TaskID:    blocked.Task.ID,
+			ItemID:    blocked.Items[0].ID,
+			Status:    "failed",
+			Mode:      "fake_failed",
+			Message:   "failed",
+			CreatedAt: now,
+			Payload: map[string]interface{}{
+				"path":           path,
+				"providerStatus": "provider_request_failed",
+			},
+		}}
+		applyRetryQueueSummary(&blocked.Runtime, blocked.Plan.Metadata)
+		if err := replaceTaskDetailAndResults(ctx, store, blocked); err != nil {
+			t.Fatalf("replaceTaskDetailAndResults(%s %s) error = %v", profileID, path, err)
+		}
+	}
+
+	createBlockedTask(createProfile("mode-profile-a"), "/mode-a.bin", -183)
+	createBlockedTask(createProfile("mode-profile-b"), "/mode-b.bin", -182)
+	createBlockedTask(createProfile("mode-profile-c"), "/mode-c.bin", -181)
+
+	result, err := svc.RecoverBlockedTasksWithOptions(ctx, RecoverOptions{Limit: 3, LimitPerMode: 1})
+	if err != nil {
+		t.Fatalf("RecoverBlockedTasksWithOptions(mode budget) error = %v", err)
+	}
+	if result.MatchedCount != 3 || result.RecoveredCount != 1 || result.SkippedByModeBudget != 2 || result.LimitPerMode != 1 {
+		t.Fatalf("unexpected mode budget result: %#v", result)
+	}
+	if len(recoveryOrder) != 1 || recoveryOrder[0] == "" {
+		t.Fatalf("expected exactly one recovered item under mode budget, got %#v", recoveryOrder)
+	}
+}
+
+func TestServiceRecoverBlockedTasksWithOptionsRespectsLaneBudget(t *testing.T) {
+	ctx := context.Background()
+	store, err := sqlitestore.New(ctx, filepath.Join(t.TempDir(), "auto-recover-lane-budget.db"))
+	if err != nil {
+		t.Fatalf("new store: %v", err)
+	}
+	defer func() { _ = store.Close() }()
+
+	recoveryOrder := make([]string, 0, 3)
+	adapter := &scriptedAdapter{
+		meta: provider.Provider{
+			Key:              "recover_lane_budget_target",
+			DisplayName:      "recover_lane_budget_target",
+			ProtocolGroup:    "fake",
+			AuthModes:        []string{"manual_token"},
+			FastUploadInputs: []string{"md5", "size"},
+			FallbackModes:    []string{"download_upload"},
+			Status:           "planned",
+		},
+		capability: provider.CapabilitySet{
+			SupportsAuthValidation: true,
+			SupportsUpload:         true,
+		},
+		uploadFunc: func(req provider.UploadRequest) provider.UploadResult {
+			recoveryOrder = append(recoveryOrder, req.Profile.ID+":"+req.Path)
+			return provider.UploadResult{
+				OperationResult: provider.OperationResult{
+					OK:      true,
+					Status:  "ok",
+					Message: "lane budget recovered",
+					Mode:    "fake_lane_budget_ok",
+				},
+			}
+		},
+	}
+
+	registry := provider.NewRegistry(adapter)
+	authSvc := auth.NewService(store, registry)
+	svc := NewService(store, registry, authSvc)
+
+	createProfile := func(name string) string {
+		profile, err := authSvc.CreateProfile(ctx, auth.CreateProfileInput{
+			ProviderKey: "recover_lane_budget_target",
+			AuthMode:    "manual_token",
+			DisplayName: name,
+			Token:       "token-" + name,
+		})
+		if err != nil {
+			t.Fatalf("CreateProfile(%s) error = %v", name, err)
+		}
+		return profile.ID
+	}
+
+	createBlockedTask := func(profileID, path, retryClass string, offsetMinutes int) {
+		now := time.Now().Add(time.Duration(offsetMinutes) * time.Minute).UTC().Format(time.RFC3339)
+		providerStatus := "provider_request_failed"
+		eligibleAt := ""
+		if retryClass == "rate_limited" {
+			providerStatus = "rate_limited"
+			eligibleAt = time.Now().Add(-5 * time.Minute).UTC().Format(time.RFC3339)
+		}
+		detail, err := svc.Create(ctx, CreateRequest{
+			SourceProvider:  "guangya",
+			TargetProvider:  "recover_lane_budget_target",
+			TargetProfileID: profileID,
+			ThresholdMB:     1,
+			RiskOverride: &planner.RiskProfileOverride{
+				MaxConcurrent: intPtrTask(4),
+			},
+			Entries: []planner.SourceEntry{
+				{Path: path, Size: 256, MD5: strings.Trim(path, "/")},
+			},
+		})
+		if err != nil {
+			t.Fatalf("Create(%s %s) error = %v", profileID, path, err)
+		}
+		blocked, ok, err := svc.Get(ctx, detail.Task.ID)
+		if err != nil || !ok {
+			t.Fatalf("Get(%s %s) error=%v ok=%v", profileID, path, err, ok)
+		}
+		blocked.Task.State = StateBlocked
+		blocked.Task.UpdatedAt = now
+		blocked.Runtime = initializeRuntimeState(blocked.Plan)
+		blocked.Runtime.ExecutionState = "blocked"
+		blocked.Runtime.RetryQueue = []RetryQueueItem{{
+			Path:           path,
+			Retryable:      true,
+			RetryClass:     retryClass,
+			ProviderStatus: providerStatus,
+			EligibleAt:     eligibleAt,
+		}}
+		blocked.Results = []Result{{
+			ID:        uuid.NewString(),
+			TaskID:    blocked.Task.ID,
+			ItemID:    blocked.Items[0].ID,
+			Status:    "failed",
+			Mode:      "fake_failed",
+			Message:   "failed",
+			CreatedAt: now,
+			Payload: map[string]interface{}{
+				"path":           path,
+				"providerStatus": providerStatus,
+			},
+		}}
+		applyRetryQueueSummary(&blocked.Runtime, blocked.Plan.Metadata)
+		if err := replaceTaskDetailAndResults(ctx, store, blocked); err != nil {
+			t.Fatalf("replaceTaskDetailAndResults(%s %s) error = %v", profileID, path, err)
+		}
+	}
+
+	profileA := createProfile("lane-profile-a")
+	profileB := createProfile("lane-profile-b")
+	profileC := createProfile("lane-profile-c")
+	createBlockedTask(profileA, "/lane-a.bin", "retry_failed", -183)
+	createBlockedTask(profileB, "/lane-b.bin", "retry_failed", -182)
+	createBlockedTask(profileC, "/lane-c.bin", "rate_limited", -181)
+
+	result, err := svc.RecoverBlockedTasksWithOptions(ctx, RecoverOptions{Limit: 3, LimitPerLane: 1})
+	if err != nil {
+		t.Fatalf("RecoverBlockedTasksWithOptions(lane budget) error = %v", err)
+	}
+	if result.MatchedCount != 3 || result.RecoveredCount != 2 || result.SkippedByLaneBudget != 1 || result.LimitPerLane != 1 {
+		t.Fatalf("unexpected lane budget result: %#v", result)
+	}
+	if len(recoveryOrder) != 2 {
+		t.Fatalf("expected two recovered items under lane budget, got %#v", recoveryOrder)
+	}
+	if !strings.HasSuffix(recoveryOrder[0], ":/lane-a.bin") || !strings.HasSuffix(recoveryOrder[1], ":/lane-c.bin") {
+		t.Fatalf("expected lane budget to keep one retry_failed lane and one rate_limited lane, got %#v", recoveryOrder)
+	}
+}
+
 func TestServiceRecoverBlockedTasksWithOptionsRoundRobinsProvidersWithinSameBand(t *testing.T) {
 	ctx := context.Background()
 	store, err := sqlitestore.New(ctx, filepath.Join(t.TempDir(), "auto-recover-provider-round-robin.db"))

@@ -46,6 +46,8 @@ type RecoverOptions struct {
 	Path             string   `json:"path,omitempty"`
 	Scope            string   `json:"scope,omitempty"`
 	Limit            int      `json:"limit,omitempty"`
+	LimitPerMode     int      `json:"limitPerMode,omitempty"`
+	LimitPerLane     int      `json:"limitPerLane,omitempty"`
 	LimitPerProvider int      `json:"limitPerProvider,omitempty"`
 	LimitPerProfile  int      `json:"limitPerProfile,omitempty"`
 }
@@ -60,11 +62,15 @@ type RecoverResult struct {
 	Path                    string `json:"path,omitempty"`
 	Scope                   string `json:"scope,omitempty"`
 	Limit                   int    `json:"limit,omitempty"`
+	LimitPerMode            int    `json:"limitPerMode,omitempty"`
+	LimitPerLane            int    `json:"limitPerLane,omitempty"`
 	LimitPerProvider        int    `json:"limitPerProvider,omitempty"`
 	LimitPerProfile         int    `json:"limitPerProfile,omitempty"`
 	MatchedCount            int    `json:"matchedCount"`
 	RecoveredCount          int    `json:"recoveredCount"`
 	SkippedByLimit          int    `json:"skippedByLimit"`
+	SkippedByModeBudget     int    `json:"skippedByModeBudget"`
+	SkippedByLaneBudget     int    `json:"skippedByLaneBudget"`
 	SkippedByProviderBudget int    `json:"skippedByProviderBudget"`
 	SkippedByProfileBudget  int    `json:"skippedByProfileBudget"`
 }
@@ -1007,6 +1013,8 @@ func (s *Service) RecoverBlockedTasksWithOptions(ctx context.Context, opts Recov
 		Path:             opts.Path,
 		Scope:            opts.Scope,
 		Limit:            opts.Limit,
+		LimitPerMode:     opts.LimitPerMode,
+		LimitPerLane:     opts.LimitPerLane,
 		LimitPerProvider: opts.LimitPerProvider,
 		LimitPerProfile:  opts.LimitPerProfile,
 	}
@@ -1064,10 +1072,22 @@ func (s *Service) RecoverBlockedTasksWithOptions(ctx context.Context, opts Recov
 		candidates = candidates[:opts.Limit]
 	}
 	recovered := 0
+	recoveredByMode := make(map[string]int)
+	recoveredByLane := make(map[string]int)
 	recoveredByProvider := make(map[string]int)
 	recoveredByProfile := make(map[string]int)
 	for _, candidate := range candidates {
 		detail := candidate.Detail
+		modeKey := recoverModeBudgetKey(candidate.Mode)
+		if opts.LimitPerMode > 0 && recoveredByMode[modeKey] >= opts.LimitPerMode {
+			result.SkippedByModeBudget++
+			continue
+		}
+		laneKey := recoverLaneBudgetKey(candidate)
+		if opts.LimitPerLane > 0 && recoveredByLane[laneKey] >= opts.LimitPerLane {
+			result.SkippedByLaneBudget++
+			continue
+		}
 		providerKey := strings.TrimSpace(detail.Task.TargetProvider)
 		profileID := normalizedRecoverProfileID(detail.TargetProfileID)
 		providerBudget := recoverProviderBudgetWithOverride(detail, opts.LimitPerProvider)
@@ -1107,11 +1127,30 @@ func (s *Service) RecoverBlockedTasksWithOptions(ctx context.Context, opts Recov
 			return result, err
 		}
 		recovered++
+		recoveredByMode[modeKey] = recoveredByMode[modeKey] + 1
+		recoveredByLane[laneKey] = recoveredByLane[laneKey] + 1
 		recoveredByProvider[providerKey] = recoveredByProvider[providerKey] + 1
 		recoveredByProfile[recoverProfileBudgetKey(providerKey, profileID)] = recoveredByProfile[recoverProfileBudgetKey(providerKey, profileID)] + 1
 	}
 	result.RecoveredCount = recovered
 	return result, nil
+}
+
+func recoverModeBudgetKey(mode string) string {
+	mode = strings.TrimSpace(mode)
+	if mode == "" {
+		return "_unknown_mode"
+	}
+	return mode
+}
+
+func recoverLaneBudgetKey(candidate recoverCandidate) string {
+	parts := []string{
+		recoverModeBudgetKey(candidate.Mode),
+		strings.TrimSpace(candidate.PrimaryRetryClass),
+		strings.TrimSpace(candidate.EffectiveAction),
+	}
+	return strings.Join(parts, "::")
 }
 
 func recoverSelectionScope(scope string) string {

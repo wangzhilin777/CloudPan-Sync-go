@@ -95,6 +95,8 @@ type recoverTasksRequest struct {
 	Path             string   `json:"path"`
 	Scope            string   `json:"scope"`
 	Limit            int      `json:"limit"`
+	LimitPerMode     int      `json:"limitPerMode"`
+	LimitPerLane     int      `json:"limitPerLane"`
 	LimitPerProvider int      `json:"limitPerProvider"`
 	LimitPerProfile  int      `json:"limitPerProfile"`
 }
@@ -559,6 +561,8 @@ func (a *App) handleTaskRecovery(w http.ResponseWriter, r *http.Request) {
 		Path:             req.Path,
 		Scope:            req.Scope,
 		Limit:            req.Limit,
+		LimitPerMode:     req.LimitPerMode,
+		LimitPerLane:     req.LimitPerLane,
 		LimitPerProvider: req.LimitPerProvider,
 		LimitPerProfile:  req.LimitPerProfile,
 	})

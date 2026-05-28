@@ -29,6 +29,8 @@ const state = {
     retryClass: "",
     blockedAction: "",
     limit: "",
+    limitPerMode: "",
+    limitPerLane: "",
     limitPerProvider: "",
     limitPerProfile: "",
   },
@@ -2827,6 +2829,8 @@ function renderAutoRecoverFilterSummary(visibleItems, allItems) {
   const retryClass = String(state.autoRecoverFilters.retryClass || "").trim();
   const blockedAction = String(state.autoRecoverFilters.blockedAction || "").trim();
   const limit = String(state.autoRecoverFilters.limit || "").trim();
+  const limitPerMode = String(state.autoRecoverFilters.limitPerMode || "").trim();
+  const limitPerLane = String(state.autoRecoverFilters.limitPerLane || "").trim();
   const limitPerProvider = String(state.autoRecoverFilters.limitPerProvider || "").trim();
   const limitPerProfile = String(state.autoRecoverFilters.limitPerProfile || "").trim();
   const parts = [];
@@ -2847,6 +2851,12 @@ function renderAutoRecoverFilterSummary(visibleItems, allItems) {
   }
   if (limit) {
     parts.push(`limit=${limit}`);
+  }
+  if (limitPerMode) {
+    parts.push(`limitPerMode=${limitPerMode}`);
+  }
+  if (limitPerLane) {
+    parts.push(`limitPerLane=${limitPerLane}`);
   }
   if (limitPerProvider) {
     parts.push(`limitPerProvider=${limitPerProvider}`);
@@ -3024,6 +3034,14 @@ function applyAutoRecoverFilters(nextFilters, options = {}) {
   if (Object.prototype.hasOwnProperty.call(filters, "limit")) {
     state.autoRecoverFilters.limit = String(filters.limit || "");
     setInputValueIfPresent("#auto-recover-limit", state.autoRecoverFilters.limit);
+  }
+  if (Object.prototype.hasOwnProperty.call(filters, "limitPerMode")) {
+    state.autoRecoverFilters.limitPerMode = String(filters.limitPerMode || "");
+    setInputValueIfPresent("#auto-recover-limit-per-mode", state.autoRecoverFilters.limitPerMode);
+  }
+  if (Object.prototype.hasOwnProperty.call(filters, "limitPerLane")) {
+    state.autoRecoverFilters.limitPerLane = String(filters.limitPerLane || "");
+    setInputValueIfPresent("#auto-recover-limit-per-lane", state.autoRecoverFilters.limitPerLane);
   }
   if (Object.prototype.hasOwnProperty.call(filters, "limitPerProvider")) {
     state.autoRecoverFilters.limitPerProvider = String(filters.limitPerProvider || "");
@@ -3405,9 +3423,13 @@ function wireAutoRecoverSummary() {
 
 function currentAutoRecoverRequest() {
   const limitText = String($("#auto-recover-limit")?.value || "").trim();
+  const limitPerModeText = String($("#auto-recover-limit-per-mode")?.value || "").trim();
+  const limitPerLaneText = String($("#auto-recover-limit-per-lane")?.value || "").trim();
   const limitPerProviderText = String($("#auto-recover-limit-per-provider")?.value || "").trim();
   const limitPerProfileText = String($("#auto-recover-limit-per-profile")?.value || "").trim();
   const limit = limitText ? Number(limitText) : 0;
+  const limitPerMode = limitPerModeText ? Number(limitPerModeText) : 0;
+  const limitPerLane = limitPerLaneText ? Number(limitPerLaneText) : 0;
   const limitPerProvider = limitPerProviderText ? Number(limitPerProviderText) : 0;
   const limitPerProfile = limitPerProfileText ? Number(limitPerProfileText) : 0;
   return {
@@ -3417,6 +3439,8 @@ function currentAutoRecoverRequest() {
     retryClass: String($("#auto-recover-retry-class")?.value || "").trim(),
     blockedAction: String($("#auto-recover-blocked-action")?.value || "").trim(),
     limit: Number.isFinite(limit) && limit > 0 ? limit : 0,
+    limitPerMode: Number.isFinite(limitPerMode) && limitPerMode > 0 ? limitPerMode : 0,
+    limitPerLane: Number.isFinite(limitPerLane) && limitPerLane > 0 ? limitPerLane : 0,
     limitPerProvider: Number.isFinite(limitPerProvider) && limitPerProvider > 0 ? limitPerProvider : 0,
     limitPerProfile: Number.isFinite(limitPerProfile) && limitPerProfile > 0 ? limitPerProfile : 0,
   };
@@ -3430,6 +3454,8 @@ async function triggerAutoRecover() {
   state.autoRecoverFilters.retryClass = payload.retryClass;
   state.autoRecoverFilters.blockedAction = payload.blockedAction;
   state.autoRecoverFilters.limit = payload.limit ? String(payload.limit) : "";
+  state.autoRecoverFilters.limitPerMode = payload.limitPerMode ? String(payload.limitPerMode) : "";
+  state.autoRecoverFilters.limitPerLane = payload.limitPerLane ? String(payload.limitPerLane) : "";
   state.autoRecoverFilters.limitPerProvider = payload.limitPerProvider ? String(payload.limitPerProvider) : "";
   state.autoRecoverFilters.limitPerProfile = payload.limitPerProfile ? String(payload.limitPerProfile) : "";
   const result = await api("/api/tasks/recover", {
@@ -3438,7 +3464,7 @@ async function triggerAutoRecover() {
   });
   await Promise.all([loadTasks(), loadStatus()]);
   showFlash(
-    `后台补传已执行：matched ${stringifyValue(result.matchedCount, "0")} / recovered ${stringifyValue(result.recoveredCount, "0")} / limit ${stringifyValue(result.skippedByLimit, "0")} / providerBudget ${stringifyValue(result.skippedByProviderBudget, "0")} / profileBudget ${stringifyValue(result.skippedByProfileBudget, "0")}`,
+    `后台补传已执行：matched ${stringifyValue(result.matchedCount, "0")} / recovered ${stringifyValue(result.recoveredCount, "0")} / limit ${stringifyValue(result.skippedByLimit, "0")} / modeBudget ${stringifyValue(result.skippedByModeBudget, "0")} / laneBudget ${stringifyValue(result.skippedByLaneBudget, "0")} / providerBudget ${stringifyValue(result.skippedByProviderBudget, "0")} / profileBudget ${stringifyValue(result.skippedByProfileBudget, "0")}`,
   );
 }
 
@@ -3481,6 +3507,8 @@ function resetAutoRecoverFilters() {
   state.autoRecoverFilters.retryClass = "";
   state.autoRecoverFilters.blockedAction = "";
   state.autoRecoverFilters.limit = "";
+  state.autoRecoverFilters.limitPerMode = "";
+  state.autoRecoverFilters.limitPerLane = "";
   state.autoRecoverFilters.limitPerProvider = "";
   state.autoRecoverFilters.limitPerProfile = "";
   setFilterControlValue("#auto-recover-mode", "");
@@ -3489,6 +3517,8 @@ function resetAutoRecoverFilters() {
   setFilterControlValue("#auto-recover-retry-class", "");
   setFilterControlValue("#auto-recover-blocked-action", "");
   setInputValueIfPresent("#auto-recover-limit", "");
+  setInputValueIfPresent("#auto-recover-limit-per-mode", "");
+  setInputValueIfPresent("#auto-recover-limit-per-lane", "");
   setInputValueIfPresent("#auto-recover-limit-per-provider", "");
   setInputValueIfPresent("#auto-recover-limit-per-profile", "");
   renderStatus();
@@ -4209,6 +4239,20 @@ function wireStatus() {
   });
   $("#auto-recover-limit").addEventListener("input", () => {
     state.autoRecoverFilters.limit = $("#auto-recover-limit").value.trim();
+    $("#auto-recover-filter-summary").textContent = renderAutoRecoverFilterSummary(
+      filterAutoRecoverItems(state.evidence?.autoRecoverPool || []),
+      state.evidence?.autoRecoverPool || [],
+    );
+  });
+  $("#auto-recover-limit-per-mode").addEventListener("input", () => {
+    state.autoRecoverFilters.limitPerMode = $("#auto-recover-limit-per-mode").value.trim();
+    $("#auto-recover-filter-summary").textContent = renderAutoRecoverFilterSummary(
+      filterAutoRecoverItems(state.evidence?.autoRecoverPool || []),
+      state.evidence?.autoRecoverPool || [],
+    );
+  });
+  $("#auto-recover-limit-per-lane").addEventListener("input", () => {
+    state.autoRecoverFilters.limitPerLane = $("#auto-recover-limit-per-lane").value.trim();
     $("#auto-recover-filter-summary").textContent = renderAutoRecoverFilterSummary(
       filterAutoRecoverItems(state.evidence?.autoRecoverPool || []),
       state.evidence?.autoRecoverPool || [],
