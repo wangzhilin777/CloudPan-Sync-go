@@ -85,16 +85,18 @@ type retryTaskRequest struct {
 }
 
 type recoverTasksRequest struct {
-	Mode          string   `json:"mode"`
-	TaskID        string   `json:"taskId"`
-	ProviderKey   string   `json:"providerKey"`
-	ProfileID     string   `json:"profileId"`
-	RetryClass    string   `json:"retryClass"`
-	BlockedAction string   `json:"blockedAction"`
-	Paths         []string `json:"paths"`
-	Path          string   `json:"path"`
-	Scope         string   `json:"scope"`
-	Limit         int      `json:"limit"`
+	Mode             string   `json:"mode"`
+	TaskID           string   `json:"taskId"`
+	ProviderKey      string   `json:"providerKey"`
+	ProfileID        string   `json:"profileId"`
+	RetryClass       string   `json:"retryClass"`
+	BlockedAction    string   `json:"blockedAction"`
+	Paths            []string `json:"paths"`
+	Path             string   `json:"path"`
+	Scope            string   `json:"scope"`
+	Limit            int      `json:"limit"`
+	LimitPerProvider int      `json:"limitPerProvider"`
+	LimitPerProfile  int      `json:"limitPerProfile"`
 }
 
 func (a *App) routes() http.Handler {
@@ -547,16 +549,18 @@ func (a *App) handleTaskRecovery(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	result, err := a.recoverBlockedTasks(r.Context(), task.RecoverOptions{
-		Mode:          req.Mode,
-		TaskID:        req.TaskID,
-		ProviderKey:   req.ProviderKey,
-		ProfileID:     req.ProfileID,
-		RetryClass:    req.RetryClass,
-		BlockedAction: req.BlockedAction,
-		Paths:         req.Paths,
-		Path:          req.Path,
-		Scope:         req.Scope,
-		Limit:         req.Limit,
+		Mode:             req.Mode,
+		TaskID:           req.TaskID,
+		ProviderKey:      req.ProviderKey,
+		ProfileID:        req.ProfileID,
+		RetryClass:       req.RetryClass,
+		BlockedAction:    req.BlockedAction,
+		Paths:            req.Paths,
+		Path:             req.Path,
+		Scope:            req.Scope,
+		Limit:            req.Limit,
+		LimitPerProvider: req.LimitPerProvider,
+		LimitPerProfile:  req.LimitPerProfile,
 	})
 	if err != nil {
 		handleServiceError(w, err)

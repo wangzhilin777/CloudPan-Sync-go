@@ -36,16 +36,18 @@ type RetryOptions struct {
 }
 
 type RecoverOptions struct {
-	Mode          string   `json:"mode,omitempty"`
-	TaskID        string   `json:"taskId,omitempty"`
-	ProviderKey   string   `json:"providerKey,omitempty"`
-	ProfileID     string   `json:"profileId,omitempty"`
-	RetryClass    string   `json:"retryClass,omitempty"`
-	BlockedAction string   `json:"blockedAction,omitempty"`
-	Paths         []string `json:"paths,omitempty"`
-	Path          string   `json:"path,omitempty"`
-	Scope         string   `json:"scope,omitempty"`
-	Limit         int      `json:"limit,omitempty"`
+	Mode             string   `json:"mode,omitempty"`
+	TaskID           string   `json:"taskId,omitempty"`
+	ProviderKey      string   `json:"providerKey,omitempty"`
+	ProfileID        string   `json:"profileId,omitempty"`
+	RetryClass       string   `json:"retryClass,omitempty"`
+	BlockedAction    string   `json:"blockedAction,omitempty"`
+	Paths            []string `json:"paths,omitempty"`
+	Path             string   `json:"path,omitempty"`
+	Scope            string   `json:"scope,omitempty"`
+	Limit            int      `json:"limit,omitempty"`
+	LimitPerProvider int      `json:"limitPerProvider,omitempty"`
+	LimitPerProfile  int      `json:"limitPerProfile,omitempty"`
 }
 
 type RecoverResult struct {
@@ -58,10 +60,13 @@ type RecoverResult struct {
 	Path                    string `json:"path,omitempty"`
 	Scope                   string `json:"scope,omitempty"`
 	Limit                   int    `json:"limit,omitempty"`
+	LimitPerProvider        int    `json:"limitPerProvider,omitempty"`
+	LimitPerProfile         int    `json:"limitPerProfile,omitempty"`
 	MatchedCount            int    `json:"matchedCount"`
 	RecoveredCount          int    `json:"recoveredCount"`
 	SkippedByLimit          int    `json:"skippedByLimit"`
 	SkippedByProviderBudget int    `json:"skippedByProviderBudget"`
+	SkippedByProfileBudget  int    `json:"skippedByProfileBudget"`
 }
 
 type Detail struct {
@@ -99,6 +104,8 @@ type AutoRecoverLane struct {
 	TaskCount                int      `json:"taskCount"`
 	ProviderCount            int      `json:"providerCount"`
 	ProfileCount             int      `json:"profileCount"`
+	SuggestedProviderBudget  int      `json:"suggestedProviderBudget,omitempty"`
+	SuggestedProfileBudget   int      `json:"suggestedProfileBudget,omitempty"`
 	QueueItemCount           int      `json:"queueItemCount"`
 	RetryableNowCount        int      `json:"retryableNowCount"`
 	CooldownCount            int      `json:"cooldownCount"`
@@ -991,15 +998,17 @@ func (s *Service) RecoverBlockedTasksWithOptions(ctx context.Context, opts Recov
 	opts.Path = firstRecoverSelectionPath(opts.Paths)
 	opts.Scope = strings.TrimSpace(opts.Scope)
 	result := RecoverResult{
-		Mode:          opts.Mode,
-		TaskID:        opts.TaskID,
-		ProviderKey:   opts.ProviderKey,
-		ProfileID:     opts.ProfileID,
-		RetryClass:    opts.RetryClass,
-		BlockedAction: opts.BlockedAction,
-		Path:          opts.Path,
-		Scope:         opts.Scope,
-		Limit:         opts.Limit,
+		Mode:             opts.Mode,
+		TaskID:           opts.TaskID,
+		ProviderKey:      opts.ProviderKey,
+		ProfileID:        opts.ProfileID,
+		RetryClass:       opts.RetryClass,
+		BlockedAction:    opts.BlockedAction,
+		Path:             opts.Path,
+		Scope:            opts.Scope,
+		Limit:            opts.Limit,
+		LimitPerProvider: opts.LimitPerProvider,
+		LimitPerProfile:  opts.LimitPerProfile,
 	}
 	items, err := s.List(ctx)
 	if err != nil {
@@ -1056,12 +1065,19 @@ func (s *Service) RecoverBlockedTasksWithOptions(ctx context.Context, opts Recov
 	}
 	recovered := 0
 	recoveredByProvider := make(map[string]int)
+	recoveredByProfile := make(map[string]int)
 	for _, candidate := range candidates {
 		detail := candidate.Detail
 		providerKey := strings.TrimSpace(detail.Task.TargetProvider)
-		providerBudget := recoverProviderBudget(detail)
+		profileID := normalizedRecoverProfileID(detail.TargetProfileID)
+		providerBudget := recoverProviderBudgetWithOverride(detail, opts.LimitPerProvider)
 		if providerBudget > 0 && recoveredByProvider[providerKey] >= providerBudget {
 			result.SkippedByProviderBudget++
+			continue
+		}
+		profileBudget := recoverProfileBudgetWithOverride(detail, opts.LimitPerProfile)
+		if profileBudget > 0 && recoveredByProfile[recoverProfileBudgetKey(providerKey, profileID)] >= profileBudget {
+			result.SkippedByProfileBudget++
 			continue
 		}
 		retryOpts := RetryOptions{}
@@ -1092,6 +1108,7 @@ func (s *Service) RecoverBlockedTasksWithOptions(ctx context.Context, opts Recov
 		}
 		recovered++
 		recoveredByProvider[providerKey] = recoveredByProvider[providerKey] + 1
+		recoveredByProfile[recoverProfileBudgetKey(providerKey, profileID)] = recoveredByProfile[recoverProfileBudgetKey(providerKey, profileID)] + 1
 	}
 	result.RecoveredCount = recovered
 	return result, nil
@@ -1130,6 +1147,51 @@ func recoverProviderBudget(detail Detail) int {
 		return 0
 	}
 	return riskProfile.MaxConcurrent
+}
+
+func recoverProviderBudgetWithOverride(detail Detail, override int) int {
+	return applyRecoverBudgetOverride(recoverProviderBudget(detail), override)
+}
+
+func recoverProfileBudget(detail Detail) int {
+	riskProfile := riskProfileFromMetadata(detail.Plan.Metadata)
+	if riskProfile.MaxConcurrent <= 0 {
+		return 0
+	}
+	switch strings.TrimSpace(detail.Task.TargetProvider) {
+	case "baidu_netdisk", "quark", "uc", "189cloud", "115_open", "guangya":
+		return 1
+	}
+	if riskProfile.MaxConcurrent <= 2 {
+		return 1
+	}
+	return minInt(riskProfile.MaxConcurrent, 2)
+}
+
+func recoverProfileBudgetWithOverride(detail Detail, override int) int {
+	return applyRecoverBudgetOverride(recoverProfileBudget(detail), override)
+}
+
+func applyRecoverBudgetOverride(base, override int) int {
+	if override <= 0 {
+		return base
+	}
+	if base <= 0 {
+		return override
+	}
+	return minInt(base, override)
+}
+
+func recoverProfileBudgetKey(providerKey, profileID string) string {
+	return strings.TrimSpace(providerKey) + "::" + normalizedRecoverProfileID(profileID)
+}
+
+func normalizedRecoverProfileID(profileID string) string {
+	profileID = strings.TrimSpace(profileID)
+	if profileID == "" {
+		return "_unknown_profile"
+	}
+	return profileID
 }
 
 func interleaveRecoverCandidatesByProviderAndProfile(candidates []recoverCandidate) []recoverCandidate {

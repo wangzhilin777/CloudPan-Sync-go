@@ -358,9 +358,11 @@ Invoke-RestMethod `
   -Uri "$base/api/tasks/recover" `
   -Body (@{
     providerKey = "123_open"
-    paths       = @("/demo/leaf-a", "/demo/leaf-c")
-    scope       = "selected_retry_subset"
-    limit       = 1
+    paths            = @("/demo/leaf-a", "/demo/leaf-c")
+    scope            = "selected_retry_subset"
+    limit            = 1
+    limitPerProvider = 1
+    limitPerProfile  = 1
   } | ConvertTo-Json -Depth 8) `
   -ContentType "application/json" | ConvertTo-Json -Depth 12
 ```
@@ -390,13 +392,17 @@ Invoke-RestMethod `
 - `skippedByLimit`
   - 因为本轮 `limit` 被保留到下一轮的候选数量
 - `skippedByProviderBudget`
-  - 因为当前 provider 已达到本轮 `riskProfile.maxConcurrent` 批量预算而被保留到下一轮的候选数量
-- `mode / providerKey / limit`
+  - 因为当前 provider 已达到本轮 provider 预算而被保留到下一轮的候选数量
+- `skippedByProfileBudget`
+  - 因为当前授权档案已达到本轮账号预算而被保留到下一轮的候选数量
+- `mode / providerKey / limit / limitPerProvider / limitPerProfile`
   - 便于 UI 和脚本确认本轮到底按什么条件执行
 - `taskId / retryClass / blockedAction / path / scope`
   - 便于确认本轮是否只放行了某种失败类型、某个阻塞动作，或某一棵指定子树
 - `profileId`
   - 适合把后台补传进一步收敛到某个授权档案，避免同 provider 下的其它账号被一起命中
+- `limitPerProvider / limitPerProfile`
+  - 适合在手动放行时明确要求“同一轮最多放行几个 provider 任务 / 同一账号最多放行几个任务”，避免一次性打满风控配额
 - `mode=retry_window_waiting_auto_retry`
   - 适合只查看“已经满足自动补传条件，但还不在允许时间窗内”的候选
 - `taskId`

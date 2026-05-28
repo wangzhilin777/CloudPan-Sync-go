@@ -344,6 +344,8 @@ type autoRecoverLaneAccumulator struct {
 	profiles                 map[string]struct{}
 	retryClasses             map[string]struct{}
 	blockedActions           map[string]struct{}
+	suggestedProviderBudget  int
+	suggestedProfileBudget   int
 	queueItemCount           int
 	retryableNowCount        int
 	cooldownCount            int
@@ -352,6 +354,16 @@ type autoRecoverLaneAccumulator struct {
 	sampleTaskID             string
 	sampleProvider           string
 	sampleProfileID          string
+}
+
+func minPositiveBudget(current, next int) int {
+	if next <= 0 {
+		return current
+	}
+	if current <= 0 || next < current {
+		return next
+	}
+	return current
 }
 
 func sortedMapKeys(values map[string]struct{}) []string {
@@ -500,6 +512,8 @@ func summarizeAutoRecoverPool(details []Detail) ([]AutoRecoverLane, int) {
 				acc.retryClasses[retryClass] = struct{}{}
 			}
 		}
+		acc.suggestedProviderBudget = minPositiveBudget(acc.suggestedProviderBudget, recoverProviderBudget(detail))
+		acc.suggestedProfileBudget = minPositiveBudget(acc.suggestedProfileBudget, recoverProfileBudget(detail))
 		acc.queueItemCount += len(detail.Runtime.RetryQueue)
 		acc.retryableNowCount += candidate.Summary.RetryableNowCount
 		acc.cooldownCount += candidate.Summary.CooldownCount
@@ -526,6 +540,8 @@ func summarizeAutoRecoverPool(details []Detail) ([]AutoRecoverLane, int) {
 			TaskCount:                len(acc.taskIDs),
 			ProviderCount:            len(acc.providers),
 			ProfileCount:             len(acc.profiles),
+			SuggestedProviderBudget:  acc.suggestedProviderBudget,
+			SuggestedProfileBudget:   acc.suggestedProfileBudget,
 			QueueItemCount:           acc.queueItemCount,
 			RetryableNowCount:        acc.retryableNowCount,
 			CooldownCount:            acc.cooldownCount,

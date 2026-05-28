@@ -1248,12 +1248,14 @@ func TestAppRecoverTasksEndpointFiltersTaskID(t *testing.T) {
 	secondTaskID := createBlockedTask("/group-b/two.bin")
 
 	recoverResp := invokeJSON(t, handler, http.MethodPost, "/api/tasks/recover", map[string]interface{}{
-		"taskId":      secondTaskID,
-		"providerKey": "recover_task_id_api_target",
-		"profileId":   profileID,
-		"paths":       []string{"/group-b"},
-		"scope":       "selected_retry_subset",
-		"limit":       1,
+		"taskId":           secondTaskID,
+		"providerKey":      "recover_task_id_api_target",
+		"profileId":        profileID,
+		"paths":            []string{"/group-b"},
+		"scope":            "selected_retry_subset",
+		"limit":            1,
+		"limitPerProvider": 1,
+		"limitPerProfile":  1,
 	})
 	recoverData := recoverResp.Data.(map[string]interface{})
 	if got := int(recoverData["matchedCount"].(float64)); got != 1 {
@@ -1267,6 +1269,12 @@ func TestAppRecoverTasksEndpointFiltersTaskID(t *testing.T) {
 	}
 	if got := recoverData["profileId"].(string); got != profileID {
 		t.Fatalf("expected profileId %s, got %s", profileID, got)
+	}
+	if got := int(recoverData["limitPerProvider"].(float64)); got != 1 {
+		t.Fatalf("expected limitPerProvider 1, got %d", got)
+	}
+	if got := int(recoverData["limitPerProfile"].(float64)); got != 1 {
+		t.Fatalf("expected limitPerProfile 1, got %d", got)
 	}
 
 	firstDetail := invokeJSON(t, handler, http.MethodGet, "/api/tasks/"+firstTaskID, nil)

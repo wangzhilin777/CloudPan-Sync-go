@@ -29,6 +29,8 @@ const state = {
     retryClass: "",
     blockedAction: "",
     limit: "",
+    limitPerProvider: "",
+    limitPerProfile: "",
   },
   treeGroupsCollapsed: {},
   treeFilters: {
@@ -2583,6 +2585,8 @@ function renderAutoRecoverFilterSummary(visibleItems, allItems) {
   const retryClass = String(state.autoRecoverFilters.retryClass || "").trim();
   const blockedAction = String(state.autoRecoverFilters.blockedAction || "").trim();
   const limit = String(state.autoRecoverFilters.limit || "").trim();
+  const limitPerProvider = String(state.autoRecoverFilters.limitPerProvider || "").trim();
+  const limitPerProfile = String(state.autoRecoverFilters.limitPerProfile || "").trim();
   const parts = [];
   if (mode) {
     parts.push(`mode=${mode}`);
@@ -2601,6 +2605,12 @@ function renderAutoRecoverFilterSummary(visibleItems, allItems) {
   }
   if (limit) {
     parts.push(`limit=${limit}`);
+  }
+  if (limitPerProvider) {
+    parts.push(`limitPerProvider=${limitPerProvider}`);
+  }
+  if (limitPerProfile) {
+    parts.push(`limitPerProfile=${limitPerProfile}`);
   }
   if (!parts.length) {
     return total ? `当前显示全部 ${current}/${total} 条后台补传候选。` : "显示全部后台补传候选。";
@@ -2629,6 +2639,8 @@ function renderAutoRecoverSummary(items) {
             <span class="pill">providers ${stringifyValue(item.providerCount, "0")}</span>
             <span class="pill">profiles ${stringifyValue(item.profileCount, "0")}</span>
             <span class="pill">queue ${stringifyValue(item.queueItemCount, "0")}</span>
+            <span class="pill">provider budget ${stringifyValue(item.suggestedProviderBudget, "-")}</span>
+            <span class="pill">profile budget ${stringifyValue(item.suggestedProfileBudget, "-")}</span>
             <span class="pill">ready ${stringifyValue(item.retryableNowCount, "0")}</span>
             <span class="pill">cooldown ${stringifyValue(item.cooldownCount, "0")}</span>
             <span class="pill">checkpoint ${stringifyValue(item.uploadCheckpointEligible, "0")}</span>
@@ -2643,7 +2655,7 @@ function renderAutoRecoverSummary(items) {
               ? `<div class="muted">主失败口径：retryClass <code>${escapeHTML(stringifyValue(item.primaryRetryClass, "-"))}</code> / blockedAction <code>${escapeHTML(stringifyValue(item.primaryBlockedAction, "-"))}</code></div>`
               : ""
           }
-          <div class="muted">同档位会先按 provider 轮转，再在同 provider 内按授权档案轮转，并继续受 provider 级批量预算约束。</div>
+          <div class="muted">同档位会先按 provider 轮转，再在同 provider 内按授权档案轮转；默认建议 provider 预算 <code>${escapeHTML(stringifyValue(item.suggestedProviderBudget, "-"))}</code> / profile 预算 <code>${escapeHTML(stringifyValue(item.suggestedProfileBudget, "-"))}</code>。</div>
           <div class="muted">${escapeHTML(stringifyValue(item.advice, "-"))}</div>
           <div class="actions compact">
             <span class="pill">next ${escapeHTML(stringifyValue(item.nextRetryAt, "-"))}</span>
@@ -2770,6 +2782,14 @@ function applyAutoRecoverFilters(nextFilters, options = {}) {
   if (Object.prototype.hasOwnProperty.call(filters, "limit")) {
     state.autoRecoverFilters.limit = String(filters.limit || "");
     setInputValueIfPresent("#auto-recover-limit", state.autoRecoverFilters.limit);
+  }
+  if (Object.prototype.hasOwnProperty.call(filters, "limitPerProvider")) {
+    state.autoRecoverFilters.limitPerProvider = String(filters.limitPerProvider || "");
+    setInputValueIfPresent("#auto-recover-limit-per-provider", state.autoRecoverFilters.limitPerProvider);
+  }
+  if (Object.prototype.hasOwnProperty.call(filters, "limitPerProfile")) {
+    state.autoRecoverFilters.limitPerProfile = String(filters.limitPerProfile || "");
+    setInputValueIfPresent("#auto-recover-limit-per-profile", state.autoRecoverFilters.limitPerProfile);
   }
   if (options.render !== false) {
     renderStatus();
@@ -3143,7 +3163,11 @@ function wireAutoRecoverSummary() {
 
 function currentAutoRecoverRequest() {
   const limitText = String($("#auto-recover-limit")?.value || "").trim();
+  const limitPerProviderText = String($("#auto-recover-limit-per-provider")?.value || "").trim();
+  const limitPerProfileText = String($("#auto-recover-limit-per-profile")?.value || "").trim();
   const limit = limitText ? Number(limitText) : 0;
+  const limitPerProvider = limitPerProviderText ? Number(limitPerProviderText) : 0;
+  const limitPerProfile = limitPerProfileText ? Number(limitPerProfileText) : 0;
   return {
     mode: String($("#auto-recover-mode")?.value || "").trim(),
     providerKey: String($("#auto-recover-provider")?.value || "").trim(),
@@ -3151,6 +3175,8 @@ function currentAutoRecoverRequest() {
     retryClass: String($("#auto-recover-retry-class")?.value || "").trim(),
     blockedAction: String($("#auto-recover-blocked-action")?.value || "").trim(),
     limit: Number.isFinite(limit) && limit > 0 ? limit : 0,
+    limitPerProvider: Number.isFinite(limitPerProvider) && limitPerProvider > 0 ? limitPerProvider : 0,
+    limitPerProfile: Number.isFinite(limitPerProfile) && limitPerProfile > 0 ? limitPerProfile : 0,
   };
 }
 
@@ -3162,13 +3188,15 @@ async function triggerAutoRecover() {
   state.autoRecoverFilters.retryClass = payload.retryClass;
   state.autoRecoverFilters.blockedAction = payload.blockedAction;
   state.autoRecoverFilters.limit = payload.limit ? String(payload.limit) : "";
+  state.autoRecoverFilters.limitPerProvider = payload.limitPerProvider ? String(payload.limitPerProvider) : "";
+  state.autoRecoverFilters.limitPerProfile = payload.limitPerProfile ? String(payload.limitPerProfile) : "";
   const result = await api("/api/tasks/recover", {
     method: "POST",
     body: payload,
   });
   await Promise.all([loadTasks(), loadStatus()]);
   showFlash(
-    `后台补传已执行：matched ${stringifyValue(result.matchedCount, "0")} / recovered ${stringifyValue(result.recoveredCount, "0")} / limit ${stringifyValue(result.skippedByLimit, "0")} / providerBudget ${stringifyValue(result.skippedByProviderBudget, "0")}`,
+    `后台补传已执行：matched ${stringifyValue(result.matchedCount, "0")} / recovered ${stringifyValue(result.recoveredCount, "0")} / limit ${stringifyValue(result.skippedByLimit, "0")} / providerBudget ${stringifyValue(result.skippedByProviderBudget, "0")} / profileBudget ${stringifyValue(result.skippedByProfileBudget, "0")}`,
   );
 }
 
@@ -3211,12 +3239,16 @@ function resetAutoRecoverFilters() {
   state.autoRecoverFilters.retryClass = "";
   state.autoRecoverFilters.blockedAction = "";
   state.autoRecoverFilters.limit = "";
+  state.autoRecoverFilters.limitPerProvider = "";
+  state.autoRecoverFilters.limitPerProfile = "";
   setFilterControlValue("#auto-recover-mode", "");
   setFilterControlValue("#auto-recover-provider", "");
   setFilterControlValue("#auto-recover-profile", "");
   setFilterControlValue("#auto-recover-retry-class", "");
   setFilterControlValue("#auto-recover-blocked-action", "");
   setInputValueIfPresent("#auto-recover-limit", "");
+  setInputValueIfPresent("#auto-recover-limit-per-provider", "");
+  setInputValueIfPresent("#auto-recover-limit-per-profile", "");
   renderStatus();
   showFlash("后台补传筛选已清空");
 }
@@ -3935,6 +3967,20 @@ function wireStatus() {
   });
   $("#auto-recover-limit").addEventListener("input", () => {
     state.autoRecoverFilters.limit = $("#auto-recover-limit").value.trim();
+    $("#auto-recover-filter-summary").textContent = renderAutoRecoverFilterSummary(
+      filterAutoRecoverItems(state.evidence?.autoRecoverPool || []),
+      state.evidence?.autoRecoverPool || [],
+    );
+  });
+  $("#auto-recover-limit-per-provider").addEventListener("input", () => {
+    state.autoRecoverFilters.limitPerProvider = $("#auto-recover-limit-per-provider").value.trim();
+    $("#auto-recover-filter-summary").textContent = renderAutoRecoverFilterSummary(
+      filterAutoRecoverItems(state.evidence?.autoRecoverPool || []),
+      state.evidence?.autoRecoverPool || [],
+    );
+  });
+  $("#auto-recover-limit-per-profile").addEventListener("input", () => {
+    state.autoRecoverFilters.limitPerProfile = $("#auto-recover-limit-per-profile").value.trim();
     $("#auto-recover-filter-summary").textContent = renderAutoRecoverFilterSummary(
       filterAutoRecoverItems(state.evidence?.autoRecoverPool || []),
       state.evidence?.autoRecoverPool || [],
