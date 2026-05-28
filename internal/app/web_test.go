@@ -59,6 +59,9 @@ func TestHandleIndexServesHTML(t *testing.T) {
 	if !strings.Contains(body, `id="status-directory-states"`) {
 		t.Fatalf("expected status directory states panel in html body, got %q", body)
 	}
+	if !strings.Contains(body, `id="auto-recover-run"`) {
+		t.Fatalf("expected auto recover controls in html body, got %q", body)
+	}
 }
 
 func TestRoutesServeStaticAssets(t *testing.T) {

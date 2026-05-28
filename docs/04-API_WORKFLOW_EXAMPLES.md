@@ -323,6 +323,31 @@ Invoke-RestMethod `
 - 如果传入的 `paths` 没有命中任何可运行 pending / retryable 项：
   - API 会返回 `retry_selection_empty`
 
+后台补传手动触发示例：
+
+```powershell
+Invoke-RestMethod `
+  -Method Post `
+  -Uri "$base/api/tasks/recover" `
+  -Body (@{
+    mode        = "upload_checkpoint_auto_resume"
+    providerKey = "123_open"
+    limit       = 2
+  } | ConvertTo-Json) `
+  -ContentType "application/json" | ConvertTo-Json -Depth 12
+```
+
+返回重点字段：
+
+- `matchedCount`
+  - 当前筛选命中的后台补传候选数量
+- `recoveredCount`
+  - 本轮实际成功接管并重跑的任务数量
+- `skippedByLimit`
+  - 因为本轮 `limit` 被保留到下一轮的候选数量
+- `mode / providerKey / limit`
+  - 便于 UI 和脚本确认本轮到底按什么条件执行
+
 恢复检查点示例：
 
 ```json

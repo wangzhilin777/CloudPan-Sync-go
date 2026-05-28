@@ -35,6 +35,21 @@ type RetryOptions struct {
 	Scope string   `json:"scope,omitempty"`
 }
 
+type RecoverOptions struct {
+	Mode        string `json:"mode,omitempty"`
+	ProviderKey string `json:"providerKey,omitempty"`
+	Limit       int    `json:"limit,omitempty"`
+}
+
+type RecoverResult struct {
+	Mode           string `json:"mode,omitempty"`
+	ProviderKey    string `json:"providerKey,omitempty"`
+	Limit          int    `json:"limit,omitempty"`
+	MatchedCount   int    `json:"matchedCount"`
+	RecoveredCount int    `json:"recoveredCount"`
+	SkippedByLimit int    `json:"skippedByLimit"`
+}
+
 type Detail struct {
 	Task            Task                  `json:"task"`
 	Plan            planner.Plan          `json:"plan"`
@@ -928,9 +943,24 @@ func (s *Service) GetProviderSmokeRecord(ctx context.Context, id string) (Provid
 }
 
 func (s *Service) RecoverBlockedTasks(ctx context.Context) (int, error) {
+	result, err := s.RecoverBlockedTasksWithOptions(ctx, RecoverOptions{})
+	if err != nil {
+		return result.RecoveredCount, err
+	}
+	return result.RecoveredCount, nil
+}
+
+func (s *Service) RecoverBlockedTasksWithOptions(ctx context.Context, opts RecoverOptions) (RecoverResult, error) {
+	opts.Mode = strings.TrimSpace(opts.Mode)
+	opts.ProviderKey = strings.TrimSpace(opts.ProviderKey)
+	result := RecoverResult{
+		Mode:        opts.Mode,
+		ProviderKey: opts.ProviderKey,
+		Limit:       opts.Limit,
+	}
 	items, err := s.List(ctx)
 	if err != nil {
-		return 0, err
+		return result, err
 	}
 	candidates := make([]Detail, 0)
 	for _, detail := range items {
@@ -940,6 +970,13 @@ func (s *Service) RecoverBlockedTasks(ctx context.Context) (int, error) {
 		syncRuntimeRetryQueue(&detail.Runtime, detail.Plan.Metadata, detail.Results)
 		applyRetryQueueSummary(&detail.Runtime, detail.Plan.Metadata)
 		if !taskCanAutoRecover(detail) {
+			continue
+		}
+		mode := autoRecoverReason(detail)
+		if opts.Mode != "" && mode != opts.Mode {
+			continue
+		}
+		if opts.ProviderKey != "" && detail.Task.TargetProvider != opts.ProviderKey {
 			continue
 		}
 		candidates = append(candidates, detail)
@@ -968,6 +1005,11 @@ func (s *Service) RecoverBlockedTasks(ctx context.Context) (int, error) {
 		}
 		return candidates[i].Task.ID < candidates[j].Task.ID
 	})
+	result.MatchedCount = len(candidates)
+	if opts.Limit > 0 && len(candidates) > opts.Limit {
+		result.SkippedByLimit = len(candidates) - opts.Limit
+		candidates = candidates[:opts.Limit]
+	}
 	recovered := 0
 	for _, detail := range candidates {
 		retried, err := s.buildRetryDetail(detail, RetryOptions{})
@@ -975,21 +1017,26 @@ func (s *Service) RecoverBlockedTasks(ctx context.Context) (int, error) {
 			if strings.HasPrefix(err.Error(), "retry_cooldown_active:") {
 				continue
 			}
-			return recovered, err
+			result.RecoveredCount = recovered
+			return result, err
 		}
 		if err := rebuildTaskForRetry(ctx, s.store, retried); err != nil {
-			return recovered, err
+			result.RecoveredCount = recovered
+			return result, err
 		}
 		markAutoRecovery(&retried, detail, autoRecoverReason(detail), time.Now().UTC().Format(time.RFC3339))
 		if err := updateTaskDetailState(ctx, s.store, retried); err != nil {
-			return recovered, err
+			result.RecoveredCount = recovered
+			return result, err
 		}
 		if _, _, err := s.Run(ctx, detail.Task.ID); err != nil {
-			return recovered, err
+			result.RecoveredCount = recovered
+			return result, err
 		}
 		recovered++
 	}
-	return recovered, nil
+	result.RecoveredCount = recovered
+	return result, nil
 }
 
 func (s *Service) transitionState(ctx context.Context, id string, allowed []State, target State) (Detail, bool, error) {

@@ -22,6 +22,11 @@ const state = {
   },
   selectedProviderSmokeId: "",
   selectedProviderSmokeMarkdown: "",
+  autoRecoverFilters: {
+    mode: "",
+    providerKey: "",
+    limit: "",
+  },
   treeGroupsCollapsed: {},
   treeFilters: {
     taskDirectory: { query: "", status: "" },
@@ -1652,6 +1657,7 @@ function renderProviders() {
   syncAuthModes();
   syncSourceProfiles();
   syncTargetProfiles();
+  syncAutoRecoverProviders();
   syncExecutionModeHint();
 }
 
@@ -1755,6 +1761,19 @@ function syncSourceProfiles() {
   select.innerHTML = `<option value="">无</option>${profiles
     .map((profile) => `<option value="${profile.id}">${profile.displayName}</option>`)
     .join("")}`;
+}
+
+function syncAutoRecoverProviders() {
+  const select = $("#auto-recover-provider");
+  if (!select) {
+    return;
+  }
+  const current = state.autoRecoverFilters.providerKey || select.value || "";
+  const providerKeys = Array.from(new Set((state.providers || []).map((item) => item?.meta?.key).filter(Boolean))).sort();
+  select.innerHTML = `<option value="">全部 provider</option>${providerKeys
+    .map((key) => `<option value="${key}">${key}</option>`)
+    .join("")}`;
+  setSelectValueIfPresent("#auto-recover-provider", current);
 }
 
 function syncExecutionModeHint() {
@@ -2018,6 +2037,10 @@ function renderStatus() {
   `;
   $("#blocked-actions-summary").innerHTML = renderBlockedActionsSummary(evidence.blockedActions || []);
   wireBlockedActionsSummary();
+  $("#auto-recover-filter-summary").textContent = renderAutoRecoverFilterSummary(
+    filterAutoRecoverItems(evidence.autoRecoverPool || []),
+    evidence.autoRecoverPool || [],
+  );
   $("#auto-recover-summary").innerHTML = renderAutoRecoverSummary(evidence.autoRecoverPool || []);
   wireAutoRecoverSummary();
   $("#protocol-coverage-summary").innerHTML = renderProtocolCoverageSummary(protocolCoverage);
@@ -2133,11 +2156,52 @@ function renderBlockedActionsSummary(items) {
     .join("");
 }
 
+function filterAutoRecoverItems(items, filters = state.autoRecoverFilters) {
+  const mode = String(filters?.mode || "").trim();
+  const providerKey = String(filters?.providerKey || "").trim();
+  const source = Array.isArray(items) ? items : [];
+  return source.filter((item) => {
+    if (mode && String(item?.mode || "").trim() !== mode) {
+      return false;
+    }
+    if (providerKey && String(item?.sampleProvider || "").trim() !== providerKey) {
+      return false;
+    }
+    return true;
+  });
+}
+
+function renderAutoRecoverFilterSummary(visibleItems, allItems) {
+  const total = Array.isArray(allItems) ? allItems.length : 0;
+  const current = Array.isArray(visibleItems) ? visibleItems.length : 0;
+  const mode = String(state.autoRecoverFilters.mode || "").trim();
+  const providerKey = String(state.autoRecoverFilters.providerKey || "").trim();
+  const limit = String(state.autoRecoverFilters.limit || "").trim();
+  const parts = [];
+  if (mode) {
+    parts.push(`mode=${mode}`);
+  }
+  if (providerKey) {
+    parts.push(`provider=${providerKey}`);
+  }
+  if (limit) {
+    parts.push(`limit=${limit}`);
+  }
+  if (!parts.length) {
+    return total ? `当前显示全部 ${current}/${total} 条后台补传候选。` : "显示全部后台补传候选。";
+  }
+  return `当前显示 ${current}/${total} 条后台补传候选，筛选条件：${parts.join(" / ")}。`;
+}
+
 function renderAutoRecoverSummary(items) {
-  if (!Array.isArray(items) || !items.length) {
+  const visibleItems = filterAutoRecoverItems(items);
+  if (!visibleItems.length) {
+    if (Array.isArray(items) && items.length) {
+      return `<div class="directory-empty">当前筛选条件下没有命中的后台补传候选。</div>`;
+    }
     return `<div class="directory-empty">当前没有进入后台补传候选池的任务。</div>`;
   }
-  return items
+  return visibleItems
     .map(
       (item) => `
         <div class="directory-row tree-node">
@@ -2156,6 +2220,16 @@ function renderAutoRecoverSummary(items) {
           <div class="muted">${escapeHTML(stringifyValue(item.advice, "-"))}</div>
           <div class="actions compact">
             <span class="pill">next ${escapeHTML(stringifyValue(item.nextRetryAt, "-"))}</span>
+            <button
+              type="button"
+              class="ghost"
+              data-auto-recover-focus-mode="${escapeHTML(stringifyValue(item.mode, ""))}"
+            >只看该模式</button>
+            <button
+              type="button"
+              class="ghost"
+              data-auto-recover-run-mode="${escapeHTML(stringifyValue(item.mode, ""))}"
+            >执行该模式</button>
             <button
               type="button"
               class="ghost"
@@ -2428,6 +2502,26 @@ function wireAutoRecoverSummary() {
   if (!wrap) {
     return;
   }
+  wrap.querySelectorAll("[data-auto-recover-focus-mode]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const mode = button.dataset.autoRecoverFocusMode || "";
+      state.autoRecoverFilters.mode = mode;
+      setFilterControlValue("#auto-recover-mode", mode);
+      renderStatus();
+      showFlash(`已按 ${mode} 收敛后台补传候选`);
+    });
+  });
+  wrap.querySelectorAll("[data-auto-recover-run-mode]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      try {
+        state.autoRecoverFilters.mode = button.dataset.autoRecoverRunMode || "";
+        setFilterControlValue("#auto-recover-mode", state.autoRecoverFilters.mode);
+        await triggerAutoRecover();
+      } catch (error) {
+        showFlash(error.message, true);
+      }
+    });
+  });
   wrap.querySelectorAll("[data-auto-recover-open-task]").forEach((button) => {
     button.addEventListener("click", async () => {
       try {
@@ -2437,6 +2531,42 @@ function wireAutoRecoverSummary() {
       }
     });
   });
+}
+
+function currentAutoRecoverRequest() {
+  const limitText = String($("#auto-recover-limit")?.value || "").trim();
+  const limit = limitText ? Number(limitText) : 0;
+  return {
+    mode: String($("#auto-recover-mode")?.value || "").trim(),
+    providerKey: String($("#auto-recover-provider")?.value || "").trim(),
+    limit: Number.isFinite(limit) && limit > 0 ? limit : 0,
+  };
+}
+
+async function triggerAutoRecover() {
+  const payload = currentAutoRecoverRequest();
+  state.autoRecoverFilters.mode = payload.mode;
+  state.autoRecoverFilters.providerKey = payload.providerKey;
+  state.autoRecoverFilters.limit = payload.limit ? String(payload.limit) : "";
+  const result = await api("/api/tasks/recover", {
+    method: "POST",
+    body: payload,
+  });
+  await Promise.all([loadTasks(), loadStatus()]);
+  showFlash(
+    `后台补传已执行：matched ${stringifyValue(result.matchedCount, "0")} / recovered ${stringifyValue(result.recoveredCount, "0")} / skipped ${stringifyValue(result.skippedByLimit, "0")}`,
+  );
+}
+
+function resetAutoRecoverFilters() {
+  state.autoRecoverFilters.mode = "";
+  state.autoRecoverFilters.providerKey = "";
+  state.autoRecoverFilters.limit = "";
+  setFilterControlValue("#auto-recover-mode", "");
+  setFilterControlValue("#auto-recover-provider", "");
+  setInputValueIfPresent("#auto-recover-limit", "");
+  renderStatus();
+  showFlash("后台补传筛选已清空");
 }
 
 function focusRuntimeTreeByPath(scope, path, kind = "roots") {
@@ -3025,6 +3155,31 @@ function wireStatus() {
     } catch (error) {
       showFlash(error.message, true);
     }
+  });
+  $("#auto-recover-mode").addEventListener("change", () => {
+    state.autoRecoverFilters.mode = $("#auto-recover-mode").value;
+    renderStatus();
+  });
+  $("#auto-recover-provider").addEventListener("change", () => {
+    state.autoRecoverFilters.providerKey = $("#auto-recover-provider").value;
+    renderStatus();
+  });
+  $("#auto-recover-limit").addEventListener("input", () => {
+    state.autoRecoverFilters.limit = $("#auto-recover-limit").value.trim();
+    $("#auto-recover-filter-summary").textContent = renderAutoRecoverFilterSummary(
+      filterAutoRecoverItems(state.evidence?.autoRecoverPool || []),
+      state.evidence?.autoRecoverPool || [],
+    );
+  });
+  $("#auto-recover-run").addEventListener("click", async () => {
+    try {
+      await triggerAutoRecover();
+    } catch (error) {
+      showFlash(error.message, true);
+    }
+  });
+  $("#auto-recover-reset").addEventListener("click", () => {
+    resetAutoRecoverFilters();
   });
   $("#save-provider-smoke").addEventListener("click", async () => {
     try {

@@ -373,6 +373,21 @@
                 <h3>自动补传候选池</h3>
                 <span class="muted">按后台补传模式聚合当前可自动接管或等待窗口的任务</span>
               </div>
+              <div class="filter-bar">
+                <select id="auto-recover-mode">
+                  <option value="">全部模式</option>
+                  <option value="upload_checkpoint_auto_resume">upload_checkpoint_auto_resume</option>
+                  <option value="retry_queue_auto_retry">retry_queue_auto_retry</option>
+                  <option value="cooldown_elapsed_auto_retry">cooldown_elapsed_auto_retry</option>
+                </select>
+                <select id="auto-recover-provider">
+                  <option value="">全部 provider</option>
+                </select>
+                <input id="auto-recover-limit" type="number" min="1" placeholder="本轮上限，例如 3" />
+                <button type="button" class="ghost" id="auto-recover-run">执行当前筛选</button>
+                <button type="button" class="ghost" id="auto-recover-reset">清空筛选</button>
+              </div>
+              <div id="auto-recover-filter-summary" class="filter-summary muted">显示全部后台补传候选。</div>
               <div id="auto-recover-summary" class="directory-state-list"></div>
               <div class="section-head compact-head">
                 <h3>协议族覆盖</h3>

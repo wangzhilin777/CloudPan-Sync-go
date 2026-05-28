@@ -2644,6 +2644,220 @@ func TestServiceAutoRecoverPoolSummaryAndPriority(t *testing.T) {
 	}
 }
 
+func TestServiceRecoverBlockedTasksWithOptionsFiltersModeProviderAndLimit(t *testing.T) {
+	ctx := context.Background()
+	store, err := sqlitestore.New(ctx, filepath.Join(t.TempDir(), "auto-recover-options.db"))
+	if err != nil {
+		t.Fatalf("new store: %v", err)
+	}
+	defer func() { _ = store.Close() }()
+
+	cooldownUploadCalls := 0
+	checkpointUploadCalls := 0
+	cooldownAdapter := &scriptedAdapter{
+		meta: provider.Provider{
+			Key:              "recover_options_cooldown_target",
+			DisplayName:      "Recover Options Cooldown Target",
+			ProtocolGroup:    "fake",
+			AuthModes:        []string{"manual_token"},
+			FastUploadInputs: []string{"md5", "size"},
+			FallbackModes:    []string{"download_upload"},
+			Status:           "planned",
+		},
+		capability: provider.CapabilitySet{
+			SupportsAuthValidation: true,
+			SupportsUpload:         true,
+		},
+		uploadFunc: func(req provider.UploadRequest) provider.UploadResult {
+			cooldownUploadCalls++
+			if cooldownUploadCalls == 1 {
+				return provider.UploadResult{
+					OperationResult: provider.OperationResult{
+						Status:  "rate_limited",
+						Message: "rate limited",
+						Mode:    "fake_rate_limit",
+					},
+				}
+			}
+			return provider.UploadResult{
+				OperationResult: provider.OperationResult{
+					OK:      true,
+					Status:  "ok",
+					Message: "cooldown recovered",
+					Mode:    "fake_cooldown_ok",
+				},
+			}
+		},
+	}
+	checkpointAdapter := &scriptedAdapter{
+		meta: provider.Provider{
+			Key:              "recover_options_checkpoint_target",
+			DisplayName:      "Recover Options Checkpoint Target",
+			ProtocolGroup:    "fake",
+			AuthModes:        []string{"manual_token"},
+			FastUploadInputs: []string{"md5", "size"},
+			FallbackModes:    []string{"download_upload"},
+			Status:           "planned",
+		},
+		capability: provider.CapabilitySet{
+			SupportsAuthValidation: true,
+			SupportsUpload:         true,
+		},
+		uploadFunc: func(req provider.UploadRequest) provider.UploadResult {
+			checkpointUploadCalls++
+			if req.ResumeUpload != nil {
+				return provider.UploadResult{
+					OperationResult: provider.OperationResult{
+						OK:      true,
+						Status:  "ok",
+						Message: "checkpoint resumed",
+						Mode:    "fake_checkpoint_resume_ok",
+						Payload: map[string]interface{}{
+							"fileId":   req.ResumeUpload.FileID,
+							"uploadId": req.ResumeUpload.UploadID,
+						},
+					},
+				}
+			}
+			return provider.UploadResult{
+				OperationResult: provider.OperationResult{
+					Status:  "provider_request_failed",
+					Message: "checkpoint interrupted",
+					Mode:    "fake_checkpoint_failed",
+					Payload: map[string]interface{}{
+						"fileId":           "recover-options-file",
+						"uploadId":         "recover-options-upload",
+						"nextPartNumber":   2,
+						"failedPartNumber": 2,
+					},
+				},
+			}
+		},
+	}
+
+	registry := provider.NewRegistry(cooldownAdapter, checkpointAdapter)
+	authSvc := auth.NewService(store, registry)
+	svc := NewService(store, registry, authSvc)
+	cooldownProfile, err := authSvc.CreateProfile(ctx, auth.CreateProfileInput{
+		ProviderKey: "recover_options_cooldown_target",
+		AuthMode:    "manual_token",
+		DisplayName: "recover options cooldown target",
+		Token:       "token-cooldown",
+	})
+	if err != nil {
+		t.Fatalf("CreateProfile(cooldown) error = %v", err)
+	}
+	checkpointProfile, err := authSvc.CreateProfile(ctx, auth.CreateProfileInput{
+		ProviderKey: "recover_options_checkpoint_target",
+		AuthMode:    "manual_token",
+		DisplayName: "recover options checkpoint target",
+		Token:       "token-checkpoint",
+	})
+	if err != nil {
+		t.Fatalf("CreateProfile(checkpoint) error = %v", err)
+	}
+
+	cooldownTask, err := svc.Create(ctx, CreateRequest{
+		SourceProvider:  "guangya",
+		TargetProvider:  "recover_options_cooldown_target",
+		TargetProfileID: cooldownProfile.ID,
+		ThresholdMB:     1,
+		RiskOverride: &planner.RiskProfileOverride{
+			CooldownSeconds: intPtrTask(3600),
+		},
+		Entries: []planner.SourceEntry{
+			{Path: "/cooldown.bin", Size: 1024, MD5: "cooldown-md5"},
+		},
+	})
+	if err != nil {
+		t.Fatalf("Create(cooldown) error = %v", err)
+	}
+	if _, ok, err := svc.Run(ctx, cooldownTask.Task.ID); err != nil || !ok {
+		t.Fatalf("Run(cooldown) error=%v ok=%v", err, ok)
+	}
+
+	localFile := filepath.Join(t.TempDir(), "recover-options-checkpoint.bin")
+	if err := os.WriteFile(localFile, []byte("checkpoint"), 0o644); err != nil {
+		t.Fatalf("WriteFile(checkpoint) error = %v", err)
+	}
+	checkpointTask, err := svc.Create(ctx, CreateRequest{
+		SourceProvider:  "guangya",
+		TargetProvider:  "recover_options_checkpoint_target",
+		TargetProfileID: checkpointProfile.ID,
+		ThresholdMB:     1,
+		Entries: []planner.SourceEntry{
+			{Path: "/checkpoint.bin", Size: 2048, MD5: "checkpoint-md5", LocalPath: localFile},
+		},
+	})
+	if err != nil {
+		t.Fatalf("Create(checkpoint) error = %v", err)
+	}
+	if _, ok, err := svc.Run(ctx, checkpointTask.Task.ID); err != nil || !ok {
+		t.Fatalf("Run(checkpoint) error=%v ok=%v", err, ok)
+	}
+
+	cooldownDetail, ok, err := svc.Get(ctx, cooldownTask.Task.ID)
+	if err != nil || !ok {
+		t.Fatalf("Get(cooldown) error=%v ok=%v", err, ok)
+	}
+	cooldownDetail.Results[0].CreatedAt = time.Now().Add(-2 * time.Hour).UTC().Format(time.RFC3339)
+	syncRuntimeRetryQueue(&cooldownDetail.Runtime, cooldownDetail.Plan.Metadata, cooldownDetail.Results)
+	applyRetryQueueSummary(&cooldownDetail.Runtime, cooldownDetail.Plan.Metadata)
+	if err := replaceTaskDetailAndResults(ctx, store, cooldownDetail); err != nil {
+		t.Fatalf("replaceTaskDetailAndResults(cooldown) error = %v", err)
+	}
+
+	result, err := svc.RecoverBlockedTasksWithOptions(ctx, RecoverOptions{
+		Mode:  "upload_checkpoint_auto_resume",
+		Limit: 1,
+	})
+	if err != nil {
+		t.Fatalf("RecoverBlockedTasksWithOptions(checkpoint) error = %v", err)
+	}
+	if result.MatchedCount != 1 || result.RecoveredCount != 1 || result.SkippedByLimit != 0 {
+		t.Fatalf("unexpected checkpoint recover result: %#v", result)
+	}
+
+	afterCheckpoint, ok, err := svc.Get(ctx, checkpointTask.Task.ID)
+	if err != nil || !ok {
+		t.Fatalf("Get(checkpoint) error=%v ok=%v", err, ok)
+	}
+	if afterCheckpoint.Task.State != StateCompleted {
+		t.Fatalf("expected checkpoint task completed, got %s", afterCheckpoint.Task.State)
+	}
+	stillBlocked, ok, err := svc.Get(ctx, cooldownTask.Task.ID)
+	if err != nil || !ok {
+		t.Fatalf("Get(cooldown after checkpoint) error=%v ok=%v", err, ok)
+	}
+	if stillBlocked.Task.State != StateBlocked {
+		t.Fatalf("expected cooldown task to stay blocked, got %s", stillBlocked.Task.State)
+	}
+
+	second, err := svc.RecoverBlockedTasksWithOptions(ctx, RecoverOptions{
+		ProviderKey: "recover_options_cooldown_target",
+		Limit:       1,
+	})
+	if err != nil {
+		t.Fatalf("RecoverBlockedTasksWithOptions(cooldown) error = %v", err)
+	}
+	if second.MatchedCount != 1 || second.RecoveredCount != 1 || second.ProviderKey != "recover_options_cooldown_target" {
+		t.Fatalf("unexpected cooldown recover result: %#v", second)
+	}
+	finalCooldown, ok, err := svc.Get(ctx, cooldownTask.Task.ID)
+	if err != nil || !ok {
+		t.Fatalf("Get(final cooldown) error=%v ok=%v", err, ok)
+	}
+	if finalCooldown.Task.State != StateCompleted {
+		t.Fatalf("expected cooldown task completed, got %s", finalCooldown.Task.State)
+	}
+	if cooldownUploadCalls != 2 {
+		t.Fatalf("expected cooldown upload calls 2, got %d", cooldownUploadCalls)
+	}
+	if checkpointUploadCalls != 2 {
+		t.Fatalf("expected checkpoint upload calls 2, got %d", checkpointUploadCalls)
+	}
+}
+
 func TestServiceRetryBlockedForLocalFileMissingDoesNotResetTask(t *testing.T) {
 	ctx := context.Background()
 	store, err := sqlitestore.New(ctx, filepath.Join(t.TempDir(), "retry-blocked-local.db"))

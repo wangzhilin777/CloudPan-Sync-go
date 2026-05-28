@@ -671,6 +671,130 @@ func TestAppRetrySelectionEmptyReturnsStructuredError(t *testing.T) {
 	}
 }
 
+func TestAppRecoverTasksEndpointReturnsSummary(t *testing.T) {
+	ctx := context.Background()
+	application := mustNewTestApp(t, ctx)
+	sourceAdapter := &appScriptedAdapter{
+		meta: provider.Provider{
+			Key:           "recover_api_source",
+			DisplayName:   "Recover API Source",
+			ProtocolGroup: "fake_source",
+			AuthModes:     []string{"manual_token"},
+			Status:        "planned",
+		},
+		capability: provider.CapabilitySet{
+			SupportsAuthValidation: true,
+		},
+	}
+	uploadCalls := 0
+	targetAdapter := &appScriptedAdapter{
+		meta: provider.Provider{
+			Key:              "recover_api_target",
+			DisplayName:      "Recover API Target",
+			ProtocolGroup:    "fake_target",
+			AuthModes:        []string{"manual_token"},
+			FastUploadInputs: []string{"md5", "size"},
+			FallbackModes:    []string{"download_upload"},
+			Status:           "planned",
+		},
+		capability: provider.CapabilitySet{
+			SupportsAuthValidation: true,
+			SupportsUpload:         true,
+		},
+		uploadFunc: func(req provider.UploadRequest) provider.UploadResult {
+			uploadCalls++
+			if req.ResumeUpload != nil {
+				return provider.UploadResult{
+					OperationResult: provider.OperationResult{
+						OK:      true,
+						Status:  "ok",
+						Message: "resumed",
+						Mode:    "scripted_resume_ok",
+						Payload: map[string]interface{}{
+							"fileId":   req.ResumeUpload.FileID,
+							"uploadId": req.ResumeUpload.UploadID,
+						},
+					},
+				}
+			}
+			return provider.UploadResult{
+				OperationResult: provider.OperationResult{
+					Status:  "provider_request_failed",
+					Message: "resume later",
+					Mode:    "scripted_resume_later",
+					Payload: map[string]interface{}{
+						"fileId":           "recover-api-file",
+						"uploadId":         "recover-api-upload",
+						"nextPartNumber":   2,
+						"failedPartNumber": 2,
+					},
+				},
+			}
+		},
+	}
+	registry := provider.NewRegistry(sourceAdapter, targetAdapter)
+	authSvc := auth.NewService(application.store, registry)
+	taskSvc := task.NewService(application.store, registry, authSvc)
+	application.providers = registry
+	application.auth = authSvc
+	application.tasks = taskSvc
+
+	handler := application.routes()
+
+	profileResp := invokeJSON(t, handler, http.MethodPost, "/api/auth/profiles", map[string]interface{}{
+		"providerKey": "recover_api_target",
+		"authMode":    "manual_token",
+		"displayName": "Recover API Target",
+		"token":       "token-recover-api",
+	})
+	profileID := profileResp.Data.(map[string]interface{})["id"].(string)
+
+	localFile := filepath.Join(t.TempDir(), "recover-api.bin")
+	if err := os.WriteFile(localFile, []byte("recover-api"), 0o644); err != nil {
+		t.Fatalf("WriteFile() error = %v", err)
+	}
+
+	taskResp := invokeJSON(t, handler, http.MethodPost, "/api/tasks", map[string]interface{}{
+		"sourceProvider":  "recover_api_source",
+		"targetProvider":  "recover_api_target",
+		"targetProfileId": profileID,
+		"thresholdMB":     1,
+		"entries": []map[string]interface{}{
+			{"path": "/recover.bin", "size": 1024, "md5": "recover-md5", "localPath": localFile},
+		},
+	})
+	taskID := taskResp.Data.(map[string]interface{})["task"].(map[string]interface{})["id"].(string)
+
+	runResp := invokeJSON(t, handler, http.MethodPost, "/api/tasks/"+taskID+"/run", nil)
+	if got := runResp.Data.(map[string]interface{})["task"].(map[string]interface{})["state"].(string); got != "completed_with_errors" {
+		t.Fatalf("expected completed_with_errors, got %s", got)
+	}
+
+	recoverResp := invokeJSON(t, handler, http.MethodPost, "/api/tasks/recover", map[string]interface{}{
+		"mode":        "upload_checkpoint_auto_resume",
+		"providerKey": "recover_api_target",
+		"limit":       1,
+	})
+	recoverData := recoverResp.Data.(map[string]interface{})
+	if got := int(recoverData["matchedCount"].(float64)); got != 1 {
+		t.Fatalf("expected matchedCount 1, got %d", got)
+	}
+	if got := int(recoverData["recoveredCount"].(float64)); got != 1 {
+		t.Fatalf("expected recoveredCount 1, got %d", got)
+	}
+	if got := recoverData["mode"].(string); got != "upload_checkpoint_auto_resume" {
+		t.Fatalf("expected mode upload_checkpoint_auto_resume, got %s", got)
+	}
+
+	detailResp := invokeJSON(t, handler, http.MethodGet, "/api/tasks/"+taskID, nil)
+	if got := detailResp.Data.(map[string]interface{})["task"].(map[string]interface{})["state"].(string); got != "completed" {
+		t.Fatalf("expected completed after recover endpoint, got %s", got)
+	}
+	if uploadCalls != 2 {
+		t.Fatalf("expected 2 upload calls, got %d", uploadCalls)
+	}
+}
+
 func mustNewTestApp(t *testing.T, ctx context.Context) *App {
 	t.Helper()
 

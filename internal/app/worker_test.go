@@ -6,6 +6,8 @@ import (
 	"log/slog"
 	"testing"
 	"time"
+
+	"cloudpan-sync-go/internal/task"
 )
 
 func TestAutoRetrySchedulerRunsRecoveryOnStartup(t *testing.T) {
@@ -15,12 +17,16 @@ func TestAutoRetrySchedulerRunsRecoveryOnStartup(t *testing.T) {
 	called := make(chan struct{}, 1)
 	app := &App{
 		cfg: Config{
-			AutoRetryTick: time.Hour,
+			AutoRetryTick:       time.Hour,
+			AutoRetryBatchLimit: 2,
 		},
 		logger: slog.New(slog.NewTextHandler(io.Discard, nil)),
-		recoverBlockedTasksFunc: func(context.Context) (int, error) {
+		recoverBlockedTasksFunc: func(_ context.Context, opts task.RecoverOptions) (task.RecoverResult, error) {
+			if opts.Limit != 2 {
+				t.Fatalf("expected auto retry batch limit 2, got %d", opts.Limit)
+			}
 			called <- struct{}{}
-			return 1, nil
+			return task.RecoverResult{RecoveredCount: 1, Limit: opts.Limit}, nil
 		},
 	}
 

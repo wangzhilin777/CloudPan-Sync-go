@@ -358,6 +358,9 @@
   - 当前任务在“只有冷却 / 人工确认 / 授权失效 / 本地文件缺失”时会进入 `blocked`
   - 当前 runtime / probe / status 已回写 `blockedReason` 与 `nextRetryAt`
   - 当前已接入单机 worker 版后台自动补传调度，启动时会先恢复一次，随后按 `CLOUDPAN_AUTO_RETRY_TICK` 自动检查候选任务
+  - 当前自动补传还新增了批次上限控制：
+    - 默认按 `CLOUDPAN_AUTO_RETRY_BATCH_LIMIT` 控制单次 tick 最多接管多少条候选任务
+    - 避免高失败期一次性把整池候选全部打满
   - 当前 `metadata.retrySummary` 已细化为：
     - `retryableNowCount / cooldownCount / pendingManualCount / authExpiredCount / localMissingCount / exhaustedCount`
     - `uploadCheckpointEligible`
@@ -373,6 +376,11 @@
   - 当前 `/api/evidence/runtime` 与 `/api/status/providers` 已新增 `autoRecoverTasks / autoRecoverPool`
     - 可直接看出哪些任务已经进入后台补传候选池
     - 也能看出每种模式的任务数、provider 数、queue 大小、冷却量和 checkpoint 量
+  - 当前还新增 `POST /api/tasks/recover`
+    - 可按 `mode`
+    - 可按 `providerKey`
+    - 可按本轮 `limit`
+    - 便于联调时手动放行一小批后台补传候选，而不是等下一次自动 tick
   - 当前自动恢复会在 runtime / result / provider probe / provider status 中留下 `autoRecovered / autoRecoverReason / autoRecoverCount / autoRecoveredAt / autoRecoverState` 证据，便于判断任务是用户手动重试还是 worker 自动续跑
   - 当前 `retryLimit` 已真正接入重试队列，支持累计次数、剩余次数与 exhausted 阻断
   - 当前 `blockedReason` 已补充统一的 `blockedAction / blockedAdvice`，便于状态矩阵直接给出处理建议

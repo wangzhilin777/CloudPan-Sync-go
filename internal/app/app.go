@@ -26,7 +26,7 @@ type App struct {
 	webIndex  []byte
 	webStatic http.Handler
 
-	recoverBlockedTasksFunc func(context.Context) (int, error)
+	recoverBlockedTasksFunc func(context.Context, task.RecoverOptions) (task.RecoverResult, error)
 }
 
 func New(ctx context.Context, cfg Config) (*App, error) {
@@ -122,21 +122,28 @@ func (a *App) runAutoRetryScheduler(ctx context.Context) {
 }
 
 func (a *App) runAutoRetryOnce(ctx context.Context, reason string) {
-	recovered, err := a.recoverBlockedTasks(ctx)
+	result, err := a.recoverBlockedTasks(ctx, task.RecoverOptions{Limit: a.cfg.AutoRetryBatchLimit})
 	if err != nil {
 		a.logger.Warn("auto retry recovery failed", "reason", reason, "error", err)
 		return
 	}
-	if recovered > 0 {
-		a.logger.Info("auto retry recovered blocked tasks", "reason", reason, "count", recovered)
+	if result.RecoveredCount > 0 {
+		a.logger.Info(
+			"auto retry recovered blocked tasks",
+			"reason", reason,
+			"count", result.RecoveredCount,
+			"matched", result.MatchedCount,
+			"skipped_by_limit", result.SkippedByLimit,
+			"limit", result.Limit,
+		)
 	}
 }
 
-func (a *App) recoverBlockedTasks(ctx context.Context) (int, error) {
+func (a *App) recoverBlockedTasks(ctx context.Context, opts task.RecoverOptions) (task.RecoverResult, error) {
 	if a.recoverBlockedTasksFunc != nil {
-		return a.recoverBlockedTasksFunc(ctx)
+		return a.recoverBlockedTasksFunc(ctx, opts)
 	}
-	return a.tasks.RecoverBlockedTasks(ctx)
+	return a.tasks.RecoverBlockedTasksWithOptions(ctx, opts)
 }
 
 func (a *App) loggingMiddleware(next http.Handler) http.Handler {

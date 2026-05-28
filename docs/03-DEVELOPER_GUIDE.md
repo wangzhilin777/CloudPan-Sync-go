@@ -179,6 +179,7 @@
 - 当前应用内已接入单机 tick 版自动补传调度：
   - 启动时会先扫描一次候选任务
   - 后续按 tick 持续检查后台补传候选池
+  - 默认会受 `CLOUDPAN_AUTO_RETRY_BATCH_LIMIT` 控制，避免单次 tick 把全部候选一次性打满
   - 当前调度优先级固定为：
     - `upload_checkpoint_auto_resume`
     - `retry_queue_auto_retry`
@@ -199,13 +200,18 @@
 - 当前状态页的运行证据摘要还新增了：
   - `自动补传候选池`
   - 会按模式聚合 `taskCount / providerCount / queueItemCount / retryableNowCount / cooldownCount / uploadCheckpointEligible`
+- 当前状态页还支持直接手动触发后台补传：
+  - 可按 `mode`
+  - 可按 `providerKey`
+  - 可按本轮 `limit`
+  - 适合在联调时先只放行一类候选，而不是等下一次 tick
 - 这几个字段主要用来判断：
   - 当前队列是不是“冷却到期后自动重试”
   - 是不是“upload checkpoint 自动续跑”
   - 还是“仍需人工确认 / 刷新授权 / 补回本地文件”
 - 当前还没有做到：
   - 在 UI 里对待补传树做更复杂的筛选和批量操作
-  - 更细粒度的后台补传策略编排
+  - 更细粒度的账号级 / 时间窗级后台补传策略编排
 
 ## 当前风控参数怎么理解
 

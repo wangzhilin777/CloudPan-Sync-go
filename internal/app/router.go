@@ -84,6 +84,12 @@ type retryTaskRequest struct {
 	Scope string   `json:"scope"`
 }
 
+type recoverTasksRequest struct {
+	Mode        string `json:"mode"`
+	ProviderKey string `json:"providerKey"`
+	Limit       int    `json:"limit"`
+}
+
 func (a *App) routes() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", a.handleIndex)
@@ -96,6 +102,7 @@ func (a *App) routes() http.Handler {
 	mux.HandleFunc("/api/auth/profiles/", a.handleAuthProfileByID)
 	mux.HandleFunc("/api/plans/preview", a.handlePlanPreview)
 	mux.HandleFunc("/api/tasks", a.handleTasks)
+	mux.HandleFunc("/api/tasks/recover", a.handleTaskRecovery)
 	mux.HandleFunc("/api/tasks/", a.handleTaskByID)
 	mux.HandleFunc("/api/evidence/runtime", a.handleRuntimeEvidence)
 	mux.HandleFunc("/api/evidence/report", a.handleEvidenceReport)
@@ -515,6 +522,33 @@ func (a *App) handleTaskByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeOK(w, http.StatusOK, item)
+}
+
+func (a *App) handleTaskRecovery(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		writeError(w, http.StatusMethodNotAllowed, "method_not_allowed", "Method not allowed.")
+		return
+	}
+	req := recoverTasksRequest{}
+	if body, readErr := io.ReadAll(r.Body); readErr != nil {
+		handleError(w, readErr)
+		return
+	} else if len(strings.TrimSpace(string(body))) > 0 {
+		if err := decodeJSONFromBytes(body, &req); err != nil {
+			writeError(w, http.StatusBadRequest, "invalid_json", "Invalid JSON payload.")
+			return
+		}
+	}
+	result, err := a.recoverBlockedTasks(r.Context(), task.RecoverOptions{
+		Mode:        req.Mode,
+		ProviderKey: req.ProviderKey,
+		Limit:       req.Limit,
+	})
+	if err != nil {
+		handleServiceError(w, err)
+		return
+	}
+	writeOK(w, http.StatusOK, result)
 }
 
 func (a *App) handleRuntimeEvidence(w http.ResponseWriter, r *http.Request) {
