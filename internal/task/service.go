@@ -3285,6 +3285,8 @@ func buildProviderProbe(detail Detail, profile provider.AuthProfile, results []R
 			"recommendedExecutionMode":       detail.Plan.Metadata["recommendedExecutionMode"],
 			"recommendedExecutionModeReason": detail.Plan.Metadata["recommendedExecutionModeReason"],
 			"scanMode":                       detail.Plan.Metadata["scanMode"],
+			"selectedRoots":                  detail.Plan.Metadata["selectedRoots"],
+			"scanTrace":                      detail.Plan.Metadata["scanTrace"],
 			"riskProfile":                    detail.Plan.Metadata["riskProfile"],
 			"riskOverride":                   detail.Plan.Metadata["riskOverride"],
 			"runtime":                        detail.Runtime,

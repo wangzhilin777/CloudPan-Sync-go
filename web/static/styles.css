@@ -230,6 +230,16 @@ label {
   margin-bottom: 14px;
 }
 
+.path-chip-row {
+  align-items: flex-start;
+}
+
+.path-chip {
+  white-space: normal;
+  text-align: left;
+  word-break: break-all;
+}
+
 .actions.compact button {
   padding-inline: 0.9rem;
 }

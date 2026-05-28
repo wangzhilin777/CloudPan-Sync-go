@@ -87,17 +87,43 @@ function summarizePathList(paths, limit = 6) {
   return `${shown.join(" -> ")}${suffix}`;
 }
 
-function summarizeTracePathList(paths, limit = 8) {
-  if (!Array.isArray(paths) || !paths.length) {
-    return "-";
-  }
-  const items = paths.map((item) => String(item || "").trim()).filter(Boolean);
+function renderRuntimePathChips(title, paths, scope, kind) {
+  const items = Array.isArray(paths) ? paths.map((item) => String(item || "").trim()).filter(Boolean) : [];
   if (!items.length) {
-    return "-";
+    return `
+      <div class="insight-card checkpoint-card">
+        <strong>${escapeHTML(title)}</strong>
+        <span>-</span>
+      </div>
+    `;
   }
-  const shown = items.slice(0, Math.max(limit, 1));
-  const suffix = items.length > shown.length ? ` …(+${items.length - shown.length})` : "";
-  return `${shown.join(" -> ")}${suffix}`;
+  const limit = kind === "scan" ? 8 : 6;
+  const shown = items.slice(0, limit);
+  return `
+    <div class="insight-card checkpoint-card">
+      <strong>${escapeHTML(title)}</strong>
+      <div class="actions compact path-chip-row">
+        ${shown
+          .map(
+            (item) => `
+              <button
+                type="button"
+                class="ghost path-chip"
+                data-runtime-focus-path="${escapeHTML(item)}"
+                data-runtime-focus-scope="${escapeHTML(scope)}"
+                data-runtime-focus-kind="${escapeHTML(kind)}"
+              >${escapeHTML(item)}</button>
+            `,
+          )
+          .join("")}
+      </div>
+      ${
+        items.length > shown.length
+          ? `<div class="muted">还有 ${items.length - shown.length} 项未展开。</div>`
+          : ""
+      }
+    </div>
+  `;
 }
 
 function escapeHTML(value) {
@@ -474,7 +500,7 @@ function renderRetryQueue(items, filters = {}) {
   };
 }
 
-function renderRuntimeCheckpoint(runtime, metadata = null) {
+function renderRuntimeCheckpoint(runtime, metadata = null, scope = "task") {
   if (!runtime || typeof runtime !== "object") {
     return `
       <div class="insight-card checkpoint-card">
@@ -504,20 +530,8 @@ function renderRuntimeCheckpoint(runtime, metadata = null) {
       <strong>处理进度</strong>
       <span>${stringifyValue(runtime.processedCount, "0")} / next ${stringifyValue(runtime.nextSequence, "1")}</span>
     </div>
-    ${
-      metadata && typeof metadata === "object"
-        ? `
-          <div class="insight-card checkpoint-card">
-            <strong>Selected Roots</strong>
-            <span><code>${escapeHTML(summarizePathList(metadata.selectedRoots || []))}</code></span>
-          </div>
-          <div class="insight-card checkpoint-card">
-            <strong>Scan Trace</strong>
-            <span><code>${escapeHTML(summarizeTracePathList(metadata.scanTrace || []))}</code></span>
-          </div>
-        `
-        : ""
-    }
+    ${metadata && typeof metadata === "object" ? renderRuntimePathChips("Selected Roots", metadata.selectedRoots || [], scope, "roots") : ""}
+    ${metadata && typeof metadata === "object" ? renderRuntimePathChips("Scan Trace", metadata.scanTrace || [], scope, "scan") : ""}
     <div class="insight-card checkpoint-card">
       <strong>结果计数</strong>
       <span>done ${stringifyValue(runtime.doneCount, "0")} / skipped ${stringifyValue(runtime.skippedCount, "0")} / failed ${stringifyValue(runtime.failedCount, "0")}</span>
@@ -1672,7 +1686,8 @@ function renderSelectedTask() {
       <span>${stringifyValue(metadata.retrySummary?.blockedAction, "-")}</span>
     </div>
   `;
-  $("#task-runtime").innerHTML = renderRuntimeCheckpoint(runtime, metadata);
+  $("#task-runtime").innerHTML = renderRuntimeCheckpoint(runtime, metadata, "task");
+  wireRuntimePathFocus("task");
   updateTaskRetryQueue(detail);
   $("#task-resolution-guide").innerHTML = renderTaskResolutionGuide(detail);
   updateTaskTreePanels(detail);
@@ -1832,7 +1847,8 @@ function renderStatus() {
   $("#recent-results").innerHTML = renderRecentResultsTable(evidence.recentResults || []);
   $("#recent-probes").innerHTML = renderRecentProbesTable(evidence.recentProbes || []);
   const runtimePayload = recentRuntimePayload();
-  $("#status-runtime-checkpoints").innerHTML = renderRuntimeCheckpoint(runtimePayload?.runtime || runtimePayload);
+  $("#status-runtime-checkpoints").innerHTML = renderRuntimeCheckpoint(runtimePayload?.runtime || runtimePayload, runtimePayload?.runtime || runtimePayload, "status");
+  wireRuntimePathFocus("status");
   updateStatusRetryQueue(runtimePayload);
   updateStatusTreePanels(runtimePayload);
 }
@@ -2108,6 +2124,55 @@ function renderEvidenceReport(report) {
     ` : ""}
     <pre class="result-box">${escapeHTML(report.markdown || "")}</pre>
   `;
+}
+
+function wireRuntimePathFocus(scope) {
+  const wrap = scope === "task" ? $("#task-runtime") : $("#status-runtime-checkpoints");
+  if (!wrap) {
+    return;
+  }
+  wrap.querySelectorAll("[data-runtime-focus-path]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const path = button.dataset.runtimeFocusPath || "";
+      const focusScope = button.dataset.runtimeFocusScope || scope;
+      focusRuntimeTreeByPath(focusScope, path, button.dataset.runtimeFocusKind || "roots");
+    });
+  });
+}
+
+function focusRuntimeTreeByPath(scope, path, kind = "roots") {
+  if (!path) {
+    return;
+  }
+  const normalized = String(path).trim();
+  if (!normalized) {
+    return;
+  }
+  if (scope === "task") {
+    if (kind === "scan") {
+      state.treeFilters.taskDirectory.query = normalized;
+      setFilterControlValue("#task-directory-filter-query", normalized);
+      updateTaskTreePanels(currentSelectedTaskDetail());
+      showFlash("已按扫描轨迹定位任务目录树");
+      return;
+    }
+    state.treeFilters.taskDirectory.query = normalized;
+    setFilterControlValue("#task-directory-filter-query", normalized);
+    updateTaskTreePanels(currentSelectedTaskDetail());
+    showFlash("已按选定根目录定位任务目录树");
+    return;
+  }
+  if (kind === "scan") {
+    state.treeFilters.statusDirectory.query = normalized;
+    setFilterControlValue("#status-directory-filter-query", normalized);
+    updateStatusTreePanels(recentRuntimePayload());
+    showFlash("已按最近扫描轨迹定位状态目录树");
+    return;
+  }
+  state.treeFilters.statusDirectory.query = normalized;
+  setFilterControlValue("#status-directory-filter-query", normalized);
+  updateStatusTreePanels(recentRuntimePayload());
+  showFlash("已按选定根目录定位状态目录树");
 }
 
 function renderProviderSmokeRecords(items) {
