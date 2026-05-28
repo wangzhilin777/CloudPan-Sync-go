@@ -2947,6 +2947,131 @@ func TestServiceRecoverBlockedTasksWithOptionsFiltersModeProviderAndLimit(t *tes
 	}
 }
 
+func TestServiceRecoverBlockedTasksWithOptionsFiltersPathSubset(t *testing.T) {
+	ctx := context.Background()
+	store, err := sqlitestore.New(ctx, filepath.Join(t.TempDir(), "auto-recover-path.db"))
+	if err != nil {
+		t.Fatalf("new store: %v", err)
+	}
+	defer func() { _ = store.Close() }()
+
+	uploadCallsByPath := map[string]int{}
+	adapter := &scriptedAdapter{
+		meta: provider.Provider{
+			Key:              "recover_path_target",
+			DisplayName:      "Recover Path Target",
+			ProtocolGroup:    "fake",
+			AuthModes:        []string{"manual_token"},
+			FastUploadInputs: []string{"md5", "size"},
+			FallbackModes:    []string{"download_upload"},
+			Status:           "planned",
+		},
+		capability: provider.CapabilitySet{
+			SupportsAuthValidation: true,
+			SupportsUpload:         true,
+		},
+		uploadFunc: func(req provider.UploadRequest) provider.UploadResult {
+			uploadCallsByPath[req.Path]++
+			if uploadCallsByPath[req.Path] == 1 {
+				return provider.UploadResult{
+					OperationResult: provider.OperationResult{
+						Status:  "rate_limited",
+						Message: "rate limited",
+						Mode:    "fake_rate_limit",
+					},
+				}
+			}
+			return provider.UploadResult{
+				OperationResult: provider.OperationResult{
+					OK:      true,
+					Status:  "ok",
+					Message: "path recovered",
+					Mode:    "fake_path_ok",
+				},
+			}
+		},
+	}
+
+	registry := provider.NewRegistry(adapter)
+	authSvc := auth.NewService(store, registry)
+	svc := NewService(store, registry, authSvc)
+	profile, err := authSvc.CreateProfile(ctx, auth.CreateProfileInput{
+		ProviderKey: "recover_path_target",
+		AuthMode:    "manual_token",
+		DisplayName: "recover path target",
+		Token:       "token-path",
+	})
+	if err != nil {
+		t.Fatalf("CreateProfile(path) error = %v", err)
+	}
+
+	taskDetail, err := svc.Create(ctx, CreateRequest{
+		SourceProvider:  "guangya",
+		TargetProvider:  "recover_path_target",
+		TargetProfileID: profile.ID,
+		ThresholdMB:     1,
+		RiskOverride: &planner.RiskProfileOverride{
+			CooldownSeconds: intPtrTask(3600),
+		},
+		Entries: []planner.SourceEntry{
+			{Path: "/leaf-a/one.bin", Size: 101, MD5: "leaf-a"},
+			{Path: "/leaf-b/two.bin", Size: 202, MD5: "leaf-b"},
+		},
+	})
+	if err != nil {
+		t.Fatalf("Create(path) error = %v", err)
+	}
+	if _, ok, err := svc.Run(ctx, taskDetail.Task.ID); err != nil || !ok {
+		t.Fatalf("Run(path) error=%v ok=%v", err, ok)
+	}
+
+	blocked, ok, err := svc.Get(ctx, taskDetail.Task.ID)
+	if err != nil || !ok {
+		t.Fatalf("Get(blocked path task) error=%v ok=%v", err, ok)
+	}
+	for idx := range blocked.Results {
+		blocked.Results[idx].CreatedAt = time.Now().Add(-2 * time.Hour).UTC().Format(time.RFC3339)
+	}
+	syncRuntimeRetryQueue(&blocked.Runtime, blocked.Plan.Metadata, blocked.Results)
+	applyRetryQueueSummary(&blocked.Runtime, blocked.Plan.Metadata)
+	if err := replaceTaskDetailAndResults(ctx, store, blocked); err != nil {
+		t.Fatalf("replaceTaskDetailAndResults(path) error = %v", err)
+	}
+
+	result, err := svc.RecoverBlockedTasksWithOptions(ctx, RecoverOptions{
+		ProviderKey: "recover_path_target",
+		Path:        "/leaf-a",
+		Scope:       "selected_retry_subset",
+		Limit:       1,
+	})
+	if err != nil {
+		t.Fatalf("RecoverBlockedTasksWithOptions(path subset) error = %v", err)
+	}
+	if result.MatchedCount != 1 || result.RecoveredCount != 1 || result.Path != "/leaf-a" {
+		t.Fatalf("unexpected path recover result: %#v", result)
+	}
+
+	after, ok, err := svc.Get(ctx, taskDetail.Task.ID)
+	if err != nil || !ok {
+		t.Fatalf("Get(path recovered task) error=%v ok=%v", err, ok)
+	}
+	if after.Task.State != StateCompleted {
+		t.Fatalf("expected path-scoped task completed, got %s", after.Task.State)
+	}
+	if len(after.Results) != 1 {
+		t.Fatalf("expected one result after path-scoped recovery, got %#v", after.Results)
+	}
+	if got := stringValue(after.Results[0].Payload["path"]); got != "/leaf-a/one.bin" {
+		t.Fatalf("expected recovered result path /leaf-a/one.bin, got %s", got)
+	}
+	if got := uploadCallsByPath["/leaf-a/one.bin"]; got != 2 {
+		t.Fatalf("expected /leaf-a/one.bin upload calls 2, got %d", got)
+	}
+	if got := uploadCallsByPath["/leaf-b/two.bin"]; got != 1 {
+		t.Fatalf("expected /leaf-b/two.bin upload calls to remain 1, got %d", got)
+	}
+}
+
 func TestServiceRecoverBlockedTasksRespectsAutoRetryWindow(t *testing.T) {
 	ctx := context.Background()
 	store, err := sqlitestore.New(ctx, filepath.Join(t.TempDir(), "auto-retry-window.db"))

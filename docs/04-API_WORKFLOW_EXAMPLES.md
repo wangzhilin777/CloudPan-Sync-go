@@ -357,6 +357,10 @@ Invoke-RestMethod `
   - 因为本轮 `limit` 被保留到下一轮的候选数量
 - `mode / providerKey / limit`
   - 便于 UI 和脚本确认本轮到底按什么条件执行
+- `retryClass / blockedAction / path / scope`
+  - 便于确认本轮是否只放行了某种失败类型、某个阻塞动作，或某一棵指定子树
+- `path + scope=selected_retry_subset`
+  - 适合只放行当前路径子树，避免把整批失败项一起重建
 
 恢复检查点示例：
 

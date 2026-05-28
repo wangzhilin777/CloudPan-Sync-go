@@ -40,6 +40,8 @@ type RecoverOptions struct {
 	ProviderKey   string `json:"providerKey,omitempty"`
 	RetryClass    string `json:"retryClass,omitempty"`
 	BlockedAction string `json:"blockedAction,omitempty"`
+	Path          string `json:"path,omitempty"`
+	Scope         string `json:"scope,omitempty"`
 	Limit         int    `json:"limit,omitempty"`
 }
 
@@ -48,6 +50,8 @@ type RecoverResult struct {
 	ProviderKey    string `json:"providerKey,omitempty"`
 	RetryClass     string `json:"retryClass,omitempty"`
 	BlockedAction  string `json:"blockedAction,omitempty"`
+	Path           string `json:"path,omitempty"`
+	Scope          string `json:"scope,omitempty"`
 	Limit          int    `json:"limit,omitempty"`
 	MatchedCount   int    `json:"matchedCount"`
 	RecoveredCount int    `json:"recoveredCount"`
@@ -971,11 +975,15 @@ func (s *Service) RecoverBlockedTasksWithOptions(ctx context.Context, opts Recov
 	opts.ProviderKey = strings.TrimSpace(opts.ProviderKey)
 	opts.RetryClass = strings.TrimSpace(opts.RetryClass)
 	opts.BlockedAction = strings.TrimSpace(opts.BlockedAction)
+	opts.Path = normalizeScanPath(opts.Path)
+	opts.Scope = strings.TrimSpace(opts.Scope)
 	result := RecoverResult{
 		Mode:          opts.Mode,
 		ProviderKey:   opts.ProviderKey,
 		RetryClass:    opts.RetryClass,
 		BlockedAction: opts.BlockedAction,
+		Path:          opts.Path,
+		Scope:         opts.Scope,
 		Limit:         opts.Limit,
 	}
 	items, err := s.List(ctx)
@@ -1005,6 +1013,15 @@ func (s *Service) RecoverBlockedTasksWithOptions(ctx context.Context, opts Recov
 		if opts.BlockedAction != "" && !strings.EqualFold(candidate.EffectiveAction, opts.BlockedAction) {
 			continue
 		}
+		if opts.Path != "" {
+			retryEntries, _, _, retryBlockedUntil, retryBlockedReason := selectRetryEntries(detail, RetryOptions{
+				Paths: []string{opts.Path},
+				Scope: recoverSelectionScope(opts.Scope),
+			})
+			if retryBlockedUntil != "" || retryBlockedReason != "" || len(retryEntries) == 0 {
+				continue
+			}
+		}
 		candidates = append(candidates, candidate)
 	}
 	sort.SliceStable(candidates, func(i, j int) bool {
@@ -1018,7 +1035,12 @@ func (s *Service) RecoverBlockedTasksWithOptions(ctx context.Context, opts Recov
 	recovered := 0
 	for _, candidate := range candidates {
 		detail := candidate.Detail
-		retried, err := s.buildRetryDetail(detail, RetryOptions{})
+		retryOpts := RetryOptions{}
+		if opts.Path != "" {
+			retryOpts.Paths = []string{opts.Path}
+			retryOpts.Scope = recoverSelectionScope(opts.Scope)
+		}
+		retried, err := s.buildRetryDetail(detail, retryOpts)
 		if err != nil {
 			if strings.HasPrefix(err.Error(), "retry_cooldown_active:") {
 				continue
@@ -1043,6 +1065,14 @@ func (s *Service) RecoverBlockedTasksWithOptions(ctx context.Context, opts Recov
 	}
 	result.RecoveredCount = recovered
 	return result, nil
+}
+
+func recoverSelectionScope(scope string) string {
+	scope = strings.TrimSpace(scope)
+	if scope == "" {
+		return "selected_retry_subset"
+	}
+	return scope
 }
 
 func retryQueueContainsClass(queue []RetryQueueItem, retryClass string) bool {

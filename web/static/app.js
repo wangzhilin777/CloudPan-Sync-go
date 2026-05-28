@@ -791,6 +791,18 @@ function renderTreeNodes(nodes, options = {}) {
               `
               : ""
           }
+          ${
+            scope === "task"
+              ? `
+                <button
+                  type="button"
+                  class="ghost"
+                  data-tree-auto-recover-path="${escapeHTML(node.path)}"
+                  data-tree-auto-recover-panel="${escapeHTML(panel)}"
+                >后台补传当前路径</button>
+              `
+              : ""
+          }
           <button
             type="button"
             class="ghost"
@@ -865,6 +877,18 @@ function renderTreeNodes(nodes, options = {}) {
                         data-tree-retry-scope="${escapeHTML(scope)}"
                         data-tree-retry-panel="${escapeHTML(panel)}"
                       >重试当前 root</button>
+                    `
+                    : ""
+                }
+                ${
+                  scope === "task"
+                    ? `
+                      <button
+                        type="button"
+                        class="ghost"
+                        data-tree-auto-recover-path="${escapeHTML(rootPath)}"
+                        data-tree-auto-recover-panel="${escapeHTML(panel)}"
+                      >后台补传当前 root</button>
                     `
                     : ""
                 }
@@ -1315,6 +1339,15 @@ function wireTreeGroupToggles(scope, panel) {
     button.addEventListener("click", async () => {
       try {
         await retryTaskPath(button.dataset.treeRetryPath || "");
+      } catch (error) {
+        showFlash(error.message, true);
+      }
+    });
+  });
+  wrap.querySelectorAll("[data-tree-auto-recover-path]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      try {
+        await autoRecoverTaskPath(button.dataset.treeAutoRecoverPath || "");
       } catch (error) {
         showFlash(error.message, true);
       }
@@ -3009,6 +3042,31 @@ async function triggerAutoRecover() {
   await Promise.all([loadTasks(), loadStatus()]);
   showFlash(
     `后台补传已执行：matched ${stringifyValue(result.matchedCount, "0")} / recovered ${stringifyValue(result.recoveredCount, "0")} / skipped ${stringifyValue(result.skippedByLimit, "0")}`,
+  );
+}
+
+async function autoRecoverTaskPath(path) {
+  const detail = currentSelectedTaskDetail();
+  const normalizedPath = normalizeComparePath(path);
+  if (!detail || !detail.task) {
+    throw new Error("请先选择任务");
+  }
+  if (!normalizedPath) {
+    throw new Error("缺少可恢复路径");
+  }
+  const result = await api("/api/tasks/recover", {
+    method: "POST",
+    body: {
+      providerKey: detail.task.targetProvider || "",
+      path: normalizedPath,
+      scope: "selected_retry_subset",
+      limit: 1,
+    },
+  });
+  await Promise.all([loadTasks(), loadStatus()]);
+  showFlash(
+    `后台补传子树已执行：${normalizedPath} / matched ${stringifyValue(result.matchedCount, "0")} / recovered ${stringifyValue(result.recoveredCount, "0")}`,
+    result.recoveredCount <= 0,
   );
 }
 
