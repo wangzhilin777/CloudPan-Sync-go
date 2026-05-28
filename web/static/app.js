@@ -237,6 +237,8 @@ function normalizeRetryQueue(items) {
       attemptCount: Number(item.attemptCount || 0),
       retryLimit: Number(item.retryLimit || 0),
       remainingCount: Number(item.remainingCount || 0),
+      cooldownTier: String(item.cooldownTier || ""),
+      cooldownSeconds: Number(item.cooldownSeconds || 0),
       eligibleAt: String(item.eligibleAt || ""),
       retryable: Boolean(item.retryable),
       blocked: Boolean(item.blocked),
@@ -527,6 +529,7 @@ function renderRetryQueue(items, filters = {}) {
             ${item.strategy ? `<span class="pill">${escapeHTML(item.strategy)}</span>` : ""}
           </div>
           <div class="muted">attempt ${item.attemptCount} / limit ${item.retryLimit || 0} / remaining ${item.remainingCount}</div>
+          ${item.cooldownTier || item.cooldownSeconds ? `<div class="muted">cooldown: <code>${escapeHTML(item.cooldownTier || "custom")}</code> / ${escapeHTML(String(item.cooldownSeconds || 0))}s</div>` : ""}
           ${item.eligibleAt ? `<div class="muted">eligibleAt: <code>${escapeHTML(item.eligibleAt)}</code></div>` : ""}
           ${item.rootPath ? `<div class="muted">root: <code>${escapeHTML(item.rootPath)}</code></div>` : ""}
           ${item.reason ? `<div class="muted">reason: <code>${escapeHTML(item.reason)}</code></div>` : ""}

@@ -3354,9 +3354,10 @@ func buildRetryQueue(metadata map[string]interface{}, results []Result) []RetryQ
 			item.RetryClass = "rate_limited"
 			item.RetryAction = "retry_after_cooldown"
 			item.Retryable = true
-			if cooldownSeconds > 0 {
+			item.CooldownTier, item.CooldownSeconds = resolveCooldownBackoff(item.AttemptCount, cooldownSeconds)
+			if item.CooldownSeconds > 0 {
 				if createdAt, err := time.Parse(time.RFC3339, result.CreatedAt); err == nil {
-					item.EligibleAt = createdAt.Add(time.Duration(cooldownSeconds) * time.Second).UTC().Format(time.RFC3339)
+					item.EligibleAt = createdAt.Add(time.Duration(item.CooldownSeconds) * time.Second).UTC().Format(time.RFC3339)
 				}
 			}
 		case "auth_expired":
@@ -3382,6 +3383,17 @@ func buildRetryQueue(metadata map[string]interface{}, results []Result) []RetryQ
 		queue = append(queue, item)
 	}
 	return queue
+}
+
+func resolveCooldownBackoff(attemptCount, cooldownSeconds int) (string, int) {
+	switch {
+	case attemptCount >= 6:
+		return "extended", maxInt(cooldownSeconds, 1800)
+	case attemptCount >= 3:
+		return "normal", maxInt(cooldownSeconds, 300)
+	default:
+		return "fast", maxInt(cooldownSeconds, 30)
+	}
 }
 
 func buildPendingTree(metadata map[string]interface{}, results []Result) []PendingNode {

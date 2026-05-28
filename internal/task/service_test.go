@@ -1971,6 +1971,12 @@ func TestServiceRetryQueueHonorsCooldownForRateLimitedItems(t *testing.T) {
 	if running.Runtime.RetryQueue[0].RetryClass != "rate_limited" {
 		t.Fatalf("expected retry class rate_limited, got %s", running.Runtime.RetryQueue[0].RetryClass)
 	}
+	if running.Runtime.RetryQueue[0].CooldownTier != "fast" {
+		t.Fatalf("expected cooldown tier fast, got %s", running.Runtime.RetryQueue[0].CooldownTier)
+	}
+	if running.Runtime.RetryQueue[0].CooldownSeconds != 3600 {
+		t.Fatalf("expected cooldown seconds 3600, got %d", running.Runtime.RetryQueue[0].CooldownSeconds)
+	}
 	if running.Runtime.RetryQueue[0].EligibleAt == "" {
 		t.Fatal("expected eligibleAt for rate-limited retry item")
 	}
@@ -2006,6 +2012,57 @@ func TestServiceRetryQueueHonorsCooldownForRateLimitedItems(t *testing.T) {
 	}
 	if !boolValue(retrySummary["autoRecoverEligible"]) {
 		t.Fatalf("expected autoRecoverEligible for cooldown queue, got %#v", retrySummary)
+	}
+}
+
+func TestResolveCooldownBackoffUsesTieredMinimums(t *testing.T) {
+	tests := []struct {
+		name            string
+		attemptCount    int
+		cooldownSeconds int
+		wantTier        string
+		wantSeconds     int
+	}{
+		{
+			name:            "fast tier uses minimum cooldown",
+			attemptCount:    0,
+			cooldownSeconds: 0,
+			wantTier:        "fast",
+			wantSeconds:     30,
+		},
+		{
+			name:            "fast tier preserves larger override",
+			attemptCount:    2,
+			cooldownSeconds: 3600,
+			wantTier:        "fast",
+			wantSeconds:     3600,
+		},
+		{
+			name:            "normal tier raises short cooldown",
+			attemptCount:    3,
+			cooldownSeconds: 45,
+			wantTier:        "normal",
+			wantSeconds:     300,
+		},
+		{
+			name:            "extended tier raises short cooldown",
+			attemptCount:    6,
+			cooldownSeconds: 300,
+			wantTier:        "extended",
+			wantSeconds:     1800,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tier, seconds := resolveCooldownBackoff(tt.attemptCount, tt.cooldownSeconds)
+			if tier != tt.wantTier {
+				t.Fatalf("expected tier %s, got %s", tt.wantTier, tier)
+			}
+			if seconds != tt.wantSeconds {
+				t.Fatalf("expected cooldown seconds %d, got %d", tt.wantSeconds, seconds)
+			}
+		})
 	}
 }
 
