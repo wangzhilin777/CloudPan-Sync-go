@@ -123,9 +123,10 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 
 	runStep(t, runCtx, "status evidence and retry",
 		chromedp.Evaluate(`(() => document.querySelector('button[data-view="status"]')?.click())()`, nil),
-		waitForSelectorCount(`#status-directory-states [data-tree-group-toggle]`, 1),
-		chromedp.Click(`#status-directory-states [data-tree-group-toggle]`, chromedp.ByQuery),
+		waitForSelectorCount(`button[data-tree-bulk-scope="status"][data-tree-bulk-panel="directory"][data-tree-bulk-action="collapse"]`, 1),
+		chromedp.Click(`button[data-tree-bulk-scope="status"][data-tree-bulk-panel="directory"][data-tree-bulk-action="collapse"]`, chromedp.ByQuery),
 		waitForSelectorCount(`#status-directory-states .directory-group.is-collapsed`, 1),
+		waitForLocalStorageContains("cloudpan_console_tree_groups_collapsed", `status:directory:/demo`),
 	)
 }
 
@@ -147,6 +148,17 @@ func waitForSelectorCount(selector string, minCount int) chromedp.ActionFunc {
 	return chromedp.ActionFunc(func(ctx context.Context) error {
 		var matched bool
 		script := fmt.Sprintf(`(() => document.querySelectorAll(%q).length >= %d)()`, selector, minCount)
+		return chromedp.Poll(script, &matched,
+			chromedp.WithPollingInterval(120*time.Millisecond),
+			chromedp.WithPollingTimeout(30*time.Second),
+		).Do(ctx)
+	})
+}
+
+func waitForLocalStorageContains(key string, substring string) chromedp.ActionFunc {
+	return chromedp.ActionFunc(func(ctx context.Context) error {
+		var matched bool
+		script := fmt.Sprintf(`(() => String(localStorage.getItem(%q) || "").includes(%q))()`, key, substring)
 		return chromedp.Poll(script, &matched,
 			chromedp.WithPollingInterval(120*time.Millisecond),
 			chromedp.WithPollingTimeout(30*time.Second),

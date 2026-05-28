@@ -19,9 +19,37 @@ const state = {
   },
 };
 
+const treeGroupsStorageKey = "cloudpan_console_tree_groups_collapsed";
+
 function $(selector) {
   return document.querySelector(selector);
 }
+
+function loadTreeGroupsCollapsed() {
+  try {
+    const raw = localStorage.getItem(treeGroupsStorageKey);
+    if (!raw) {
+      return {};
+    }
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object") {
+      return {};
+    }
+    return Object.fromEntries(Object.entries(parsed).filter(([, value]) => Boolean(value)));
+  } catch (error) {
+    return {};
+  }
+}
+
+function saveTreeGroupsCollapsed() {
+  try {
+    localStorage.setItem(treeGroupsStorageKey, JSON.stringify(state.treeGroupsCollapsed));
+  } catch (error) {
+    // Ignore storage quota / privacy mode failures.
+  }
+}
+
+Object.assign(state.treeGroupsCollapsed, loadTreeGroupsCollapsed());
 
 function formatJSON(value) {
   return JSON.stringify(value, null, 2);
@@ -129,7 +157,51 @@ function isTreeGroupCollapsed(scope, panel, path) {
 }
 
 function setTreeGroupCollapsed(scope, panel, path, collapsed) {
-  state.treeGroupsCollapsed[treeGroupCollapseKey(scope, panel, path)] = collapsed;
+  const key = treeGroupCollapseKey(scope, panel, path);
+  if (collapsed) {
+    state.treeGroupsCollapsed[key] = true;
+  } else {
+    delete state.treeGroupsCollapsed[key];
+  }
+  saveTreeGroupsCollapsed();
+}
+
+function setTreeGroupsCollapsedForPaths(scope, panel, paths, collapsed) {
+  (paths || []).forEach((path) => {
+    setTreeGroupCollapsed(scope, panel, path, collapsed);
+  });
+}
+
+function setTreeGroupsCollapsedForTree(scope, panel, tree, collapsed) {
+  const paths = Array.isArray(tree)
+    ? tree.map((root) => root?.rootPath || root?.path).filter(Boolean)
+    : [];
+  setTreeGroupsCollapsedForPaths(scope, panel, paths, collapsed);
+}
+
+function currentTreeRootsForPanel(scope, panel) {
+  const detail = currentSelectedTaskDetail();
+  const runtimePayload = recentRuntimePayload();
+  const runtime = scope === "task" ? detail?.runtime || detail?.plan?.metadata?.runtime || {} : runtimePayload?.runtime || runtimePayload || {};
+  if (panel === "pending") {
+    return Array.isArray(runtime.pendingTree) ? runtime.pendingTree : [];
+  }
+  return Array.isArray(runtime.directoryStates) ? runtime.directoryStates : [];
+}
+
+function wireTreeBulkActions(scope, panel) {
+  document.querySelectorAll(`[data-tree-bulk-scope="${scope}"][data-tree-bulk-panel="${panel}"]`).forEach((button) => {
+    button.onclick = () => {
+      const collapsed = button.dataset.treeBulkAction === "collapse";
+      const roots = currentTreeRootsForPanel(scope, panel);
+      setTreeGroupsCollapsedForTree(scope, panel, roots, collapsed);
+      if (scope === "task") {
+        updateTaskTreePanels(currentSelectedTaskDetail());
+      } else {
+        updateStatusTreePanels(recentRuntimePayload());
+      }
+    };
+  });
 }
 
 function buildDirectoryStateTree(states) {
@@ -613,6 +685,8 @@ function updateTaskTreePanels(detail) {
   $("#task-pending-filter-summary").textContent = detail
     ? renderTreeFilterSummary(pendingResult, "待补传节点")
     : "等待任务数据...";
+  wireTreeBulkActions("task", "directory");
+  wireTreeBulkActions("task", "pending");
   wireTreeGroupToggles("task", "directory");
   wireTreeGroupToggles("task", "pending");
 }
@@ -637,6 +711,8 @@ function updateStatusTreePanels(runtimePayload) {
   });
   $("#status-directory-filter-summary").textContent = renderTreeFilterSummary(directoryResult, "目录节点");
   $("#status-pending-filter-summary").textContent = renderTreeFilterSummary(pendingResult, "待补传节点");
+  wireTreeBulkActions("status", "directory");
+  wireTreeBulkActions("status", "pending");
   wireTreeGroupToggles("status", "directory");
   wireTreeGroupToggles("status", "pending");
 }
