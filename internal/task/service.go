@@ -145,18 +145,20 @@ type ProviderSmokeMatrixRow struct {
 }
 
 type EvidenceSample struct {
-	ProviderKey       string `json:"providerKey"`
-	TaskID            string `json:"taskId"`
-	SourceProvider    string `json:"sourceProvider"`
-	TargetProvider    string `json:"targetProvider"`
-	TaskState         string `json:"taskState"`
-	CompletionKind    string `json:"completionKind,omitempty"`
-	ExecutionMode     string `json:"executionMode,omitempty"`
-	ScanMode          string `json:"scanMode,omitempty"`
-	BlockedReason     string `json:"blockedReason,omitempty"`
-	LastCompletedPath string `json:"lastCompletedPath,omitempty"`
-	ResultCount       int    `json:"resultCount"`
-	CreatedAt         string `json:"createdAt"`
+	ProviderKey       string   `json:"providerKey"`
+	TaskID            string   `json:"taskId"`
+	SourceProvider    string   `json:"sourceProvider"`
+	TargetProvider    string   `json:"targetProvider"`
+	TaskState         string   `json:"taskState"`
+	CompletionKind    string   `json:"completionKind,omitempty"`
+	ExecutionMode     string   `json:"executionMode,omitempty"`
+	ScanMode          string   `json:"scanMode,omitempty"`
+	SelectedRoots     []string `json:"selectedRoots,omitempty"`
+	ScanTrace         []string `json:"scanTrace,omitempty"`
+	BlockedReason     string   `json:"blockedReason,omitempty"`
+	LastCompletedPath string   `json:"lastCompletedPath,omitempty"`
+	ResultCount       int      `json:"resultCount"`
+	CreatedAt         string   `json:"createdAt"`
 }
 
 type BlockedAction struct {
@@ -1990,16 +1992,18 @@ func buildEvidenceReport(summary EvidenceSummary, statuses []StatusSummary, smok
 	if len(samples) == 0 {
 		b.WriteString("- 当前没有可展示的任务样本。\n")
 	} else {
-		b.WriteString("| Provider | Task | State | Completion | ExecMode | ScanMode | BlockedReason | Last Path |\n")
-		b.WriteString("| --- | --- | --- | --- | --- | --- | --- | --- |\n")
+		b.WriteString("| Provider | Task | State | Completion | ExecMode | ScanMode | Selected Roots | Scan Trace | BlockedReason | Last Path |\n")
+		b.WriteString("| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |\n")
 		for _, item := range samples {
-			fmt.Fprintf(&b, "| %s | %s | %s | %s | %s | %s | %s | %s |\n",
+			fmt.Fprintf(&b, "| %s | %s | %s | %s | %s | %s | %s | %s | %s | %s |\n",
 				markdownCell(firstNonEmpty(item.ProviderKey, "-")),
 				markdownCell(firstNonEmpty(item.TaskID, "-")),
 				markdownCell(firstNonEmpty(item.TaskState, "-")),
 				markdownCell(firstNonEmpty(item.CompletionKind, "-")),
 				markdownCell(firstNonEmpty(item.ExecutionMode, "-")),
 				markdownCell(firstNonEmpty(item.ScanMode, "-")),
+				markdownCell(strings.Join(item.SelectedRoots, " -> ")),
+				markdownCell(strings.Join(item.ScanTrace, " -> ")),
 				markdownCell(firstNonEmpty(item.BlockedReason, "-")),
 				markdownCell(firstNonEmpty(item.LastCompletedPath, "-")),
 			)
@@ -2037,6 +2041,8 @@ func buildEvidenceSamples(details []Detail, limit int) []EvidenceSample {
 	}
 	samples := make([]EvidenceSample, 0, minInt(limit, len(details)))
 	for _, detail := range details {
+		selectedRoots := metadataStringSlice(detail.Plan.Metadata, "selectedRoots")
+		scanTrace := metadataStringSlice(detail.Plan.Metadata, "scanTrace")
 		samples = append(samples, EvidenceSample{
 			ProviderKey:       detail.Task.TargetProvider,
 			TaskID:            detail.Task.ID,
@@ -2046,6 +2052,8 @@ func buildEvidenceSamples(details []Detail, limit int) []EvidenceSample {
 			CompletionKind:    string(detail.Task.CompletionKind),
 			ExecutionMode:     executionModeString(detail.Plan.Metadata),
 			ScanMode:          stringValue(detail.Plan.Metadata["scanMode"]),
+			SelectedRoots:     selectedRoots,
+			ScanTrace:         scanTrace,
 			BlockedReason:     stringValue(detail.Runtime.BlockedReason),
 			LastCompletedPath: detail.Runtime.LastCompletedPath,
 			ResultCount:       len(detail.Results),

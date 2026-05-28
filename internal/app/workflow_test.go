@@ -451,6 +451,9 @@ func TestAppWorkflowMainline(t *testing.T) {
 	if !strings.Contains(reportData["markdown"].(string), "## 真实联调验收") {
 		t.Fatalf("expected report markdown to include acceptance section, got %s", reportData["markdown"].(string))
 	}
+	if !strings.Contains(reportData["markdown"].(string), "Selected Roots") || !strings.Contains(reportData["markdown"].(string), "Scan Trace") {
+		t.Fatalf("expected report markdown to include scan trace context, got %s", reportData["markdown"].(string))
+	}
 	if !strings.Contains(reportData["markdown"].(string), "Missing") {
 		t.Fatalf("expected report markdown to include missing reasons column, got %s", reportData["markdown"].(string))
 	}

@@ -87,6 +87,19 @@ function summarizePathList(paths, limit = 6) {
   return `${shown.join(" -> ")}${suffix}`;
 }
 
+function summarizeTracePathList(paths, limit = 8) {
+  if (!Array.isArray(paths) || !paths.length) {
+    return "-";
+  }
+  const items = paths.map((item) => String(item || "").trim()).filter(Boolean);
+  if (!items.length) {
+    return "-";
+  }
+  const shown = items.slice(0, Math.max(limit, 1));
+  const suffix = items.length > shown.length ? ` …(+${items.length - shown.length})` : "";
+  return `${shown.join(" -> ")}${suffix}`;
+}
+
 function escapeHTML(value) {
   return String(value)
     .replaceAll("&", "&amp;")
@@ -461,7 +474,7 @@ function renderRetryQueue(items, filters = {}) {
   };
 }
 
-function renderRuntimeCheckpoint(runtime) {
+function renderRuntimeCheckpoint(runtime, metadata = null) {
   if (!runtime || typeof runtime !== "object") {
     return `
       <div class="insight-card checkpoint-card">
@@ -491,6 +504,20 @@ function renderRuntimeCheckpoint(runtime) {
       <strong>处理进度</strong>
       <span>${stringifyValue(runtime.processedCount, "0")} / next ${stringifyValue(runtime.nextSequence, "1")}</span>
     </div>
+    ${
+      metadata && typeof metadata === "object"
+        ? `
+          <div class="insight-card checkpoint-card">
+            <strong>Selected Roots</strong>
+            <span><code>${escapeHTML(summarizePathList(metadata.selectedRoots || []))}</code></span>
+          </div>
+          <div class="insight-card checkpoint-card">
+            <strong>Scan Trace</strong>
+            <span><code>${escapeHTML(summarizeTracePathList(metadata.scanTrace || []))}</code></span>
+          </div>
+        `
+        : ""
+    }
     <div class="insight-card checkpoint-card">
       <strong>结果计数</strong>
       <span>done ${stringifyValue(runtime.doneCount, "0")} / skipped ${stringifyValue(runtime.skippedCount, "0")} / failed ${stringifyValue(runtime.failedCount, "0")}</span>
@@ -1645,7 +1672,7 @@ function renderSelectedTask() {
       <span>${stringifyValue(metadata.retrySummary?.blockedAction, "-")}</span>
     </div>
   `;
-  $("#task-runtime").innerHTML = renderRuntimeCheckpoint(runtime);
+  $("#task-runtime").innerHTML = renderRuntimeCheckpoint(runtime, metadata);
   updateTaskRetryQueue(detail);
   $("#task-resolution-guide").innerHTML = renderTaskResolutionGuide(detail);
   updateTaskTreePanels(detail);
