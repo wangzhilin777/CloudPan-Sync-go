@@ -25,6 +25,7 @@ const state = {
   autoRecoverFilters: {
     mode: "",
     providerKey: "",
+    retryClass: "",
     limit: "",
   },
   treeGroupsCollapsed: {},
@@ -2340,6 +2341,7 @@ function renderBlockedActionsSummary(items) {
 function filterAutoRecoverItems(items, filters = state.autoRecoverFilters) {
   const mode = String(filters?.mode || "").trim();
   const providerKey = String(filters?.providerKey || "").trim();
+  const retryClass = String(filters?.retryClass || "").trim();
   const source = Array.isArray(items) ? items : [];
   return source.filter((item) => {
     if (mode && String(item?.mode || "").trim() !== mode) {
@@ -2347,6 +2349,12 @@ function filterAutoRecoverItems(items, filters = state.autoRecoverFilters) {
     }
     if (providerKey && String(item?.sampleProvider || "").trim() !== providerKey) {
       return false;
+    }
+    if (retryClass) {
+      const sampleClasses = Array.isArray(item?.retryClasses) ? item.retryClasses.map((value) => String(value || "").trim()) : [];
+      if (!sampleClasses.includes(retryClass)) {
+        return false;
+      }
     }
     return true;
   });
@@ -2357,6 +2365,7 @@ function renderAutoRecoverFilterSummary(visibleItems, allItems) {
   const current = Array.isArray(visibleItems) ? visibleItems.length : 0;
   const mode = String(state.autoRecoverFilters.mode || "").trim();
   const providerKey = String(state.autoRecoverFilters.providerKey || "").trim();
+  const retryClass = String(state.autoRecoverFilters.retryClass || "").trim();
   const limit = String(state.autoRecoverFilters.limit || "").trim();
   const parts = [];
   if (mode) {
@@ -2364,6 +2373,9 @@ function renderAutoRecoverFilterSummary(visibleItems, allItems) {
   }
   if (providerKey) {
     parts.push(`provider=${providerKey}`);
+  }
+  if (retryClass) {
+    parts.push(`retryClass=${retryClass}`);
   }
   if (limit) {
     parts.push(`limit=${limit}`);
@@ -2397,6 +2409,7 @@ function renderAutoRecoverSummary(items) {
             <span class="pill">ready ${stringifyValue(item.retryableNowCount, "0")}</span>
             <span class="pill">cooldown ${stringifyValue(item.cooldownCount, "0")}</span>
             <span class="pill">checkpoint ${stringifyValue(item.uploadCheckpointEligible, "0")}</span>
+            <span class="pill">classes ${(item.retryClasses || []).join(", ") || "-"}</span>
           </div>
           <div class="muted">${escapeHTML(stringifyValue(item.advice, "-"))}</div>
           <div class="actions compact">
@@ -2720,6 +2733,7 @@ function currentAutoRecoverRequest() {
   return {
     mode: String($("#auto-recover-mode")?.value || "").trim(),
     providerKey: String($("#auto-recover-provider")?.value || "").trim(),
+    retryClass: String($("#auto-recover-retry-class")?.value || "").trim(),
     limit: Number.isFinite(limit) && limit > 0 ? limit : 0,
   };
 }
@@ -2728,6 +2742,7 @@ async function triggerAutoRecover() {
   const payload = currentAutoRecoverRequest();
   state.autoRecoverFilters.mode = payload.mode;
   state.autoRecoverFilters.providerKey = payload.providerKey;
+  state.autoRecoverFilters.retryClass = payload.retryClass;
   state.autoRecoverFilters.limit = payload.limit ? String(payload.limit) : "";
   const result = await api("/api/tasks/recover", {
     method: "POST",
@@ -2742,9 +2757,11 @@ async function triggerAutoRecover() {
 function resetAutoRecoverFilters() {
   state.autoRecoverFilters.mode = "";
   state.autoRecoverFilters.providerKey = "";
+  state.autoRecoverFilters.retryClass = "";
   state.autoRecoverFilters.limit = "";
   setFilterControlValue("#auto-recover-mode", "");
   setFilterControlValue("#auto-recover-provider", "");
+  setFilterControlValue("#auto-recover-retry-class", "");
   setInputValueIfPresent("#auto-recover-limit", "");
   renderStatus();
   showFlash("后台补传筛选已清空");
@@ -3359,6 +3376,10 @@ function wireStatus() {
   });
   $("#auto-recover-provider").addEventListener("change", () => {
     state.autoRecoverFilters.providerKey = $("#auto-recover-provider").value;
+    renderStatus();
+  });
+  $("#auto-recover-retry-class").addEventListener("change", () => {
+    state.autoRecoverFilters.retryClass = $("#auto-recover-retry-class").value;
     renderStatus();
   });
   $("#auto-recover-limit").addEventListener("input", () => {

@@ -87,6 +87,7 @@ type retryTaskRequest struct {
 type recoverTasksRequest struct {
 	Mode        string `json:"mode"`
 	ProviderKey string `json:"providerKey"`
+	RetryClass  string `json:"retryClass"`
 	Limit       int    `json:"limit"`
 }
 
@@ -542,6 +543,7 @@ func (a *App) handleTaskRecovery(w http.ResponseWriter, r *http.Request) {
 	result, err := a.recoverBlockedTasks(r.Context(), task.RecoverOptions{
 		Mode:        req.Mode,
 		ProviderKey: req.ProviderKey,
+		RetryClass:  req.RetryClass,
 		Limit:       req.Limit,
 	})
 	if err != nil {

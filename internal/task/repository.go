@@ -341,6 +341,7 @@ type autoRecoverLaneAccumulator struct {
 	advice                   string
 	taskIDs                  map[string]struct{}
 	providers                map[string]struct{}
+	retryClasses             map[string]struct{}
 	queueItemCount           int
 	retryableNowCount        int
 	cooldownCount            int
@@ -348,6 +349,21 @@ type autoRecoverLaneAccumulator struct {
 	nextRetryAt              string
 	sampleTaskID             string
 	sampleProvider           string
+}
+
+func sortedMapKeys(values map[string]struct{}) []string {
+	if len(values) == 0 {
+		return nil
+	}
+	keys := make([]string, 0, len(values))
+	for key := range values {
+		if strings.TrimSpace(key) == "" {
+			continue
+		}
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	return keys
 }
 
 func summarizeBlockedActions(details []Detail) []BlockedAction {
@@ -440,16 +456,24 @@ func summarizeAutoRecoverPool(details []Detail) ([]AutoRecoverLane, int) {
 		acc, ok := accumulators[mode]
 		if !ok {
 			acc = &autoRecoverLaneAccumulator{
-				mode:      mode,
-				advice:    autoRecoverGuidance(mode),
-				taskIDs:   make(map[string]struct{}),
-				providers: make(map[string]struct{}),
+				mode:         mode,
+				advice:       autoRecoverGuidance(mode),
+				taskIDs:      make(map[string]struct{}),
+				providers:    make(map[string]struct{}),
+				retryClasses: make(map[string]struct{}),
 			}
 			accumulators[mode] = acc
 			order = append(order, mode)
 		}
 		acc.taskIDs[detail.Task.ID] = struct{}{}
 		acc.providers[detail.Task.TargetProvider] = struct{}{}
+		for _, item := range detail.Runtime.RetryQueue {
+			retryClass := strings.TrimSpace(item.RetryClass)
+			if retryClass == "" {
+				continue
+			}
+			acc.retryClasses[retryClass] = struct{}{}
+		}
 		acc.queueItemCount += len(detail.Runtime.RetryQueue)
 		acc.retryableNowCount += summary.RetryableNowCount
 		acc.cooldownCount += summary.CooldownCount
@@ -466,6 +490,7 @@ func summarizeAutoRecoverPool(details []Detail) ([]AutoRecoverLane, int) {
 	items := make([]AutoRecoverLane, 0, len(order))
 	for _, mode := range order {
 		acc := accumulators[mode]
+		retryClasses := sortedMapKeys(acc.retryClasses)
 		items = append(items, AutoRecoverLane{
 			Mode:                     acc.mode,
 			Advice:                   acc.advice,
@@ -475,6 +500,7 @@ func summarizeAutoRecoverPool(details []Detail) ([]AutoRecoverLane, int) {
 			RetryableNowCount:        acc.retryableNowCount,
 			CooldownCount:            acc.cooldownCount,
 			UploadCheckpointEligible: acc.uploadCheckpointEligible,
+			RetryClasses:             retryClasses,
 			NextRetryAt:              acc.nextRetryAt,
 			SampleTaskID:             acc.sampleTaskID,
 			SampleProvider:           acc.sampleProvider,

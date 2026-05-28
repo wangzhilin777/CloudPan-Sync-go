@@ -38,12 +38,14 @@ type RetryOptions struct {
 type RecoverOptions struct {
 	Mode        string `json:"mode,omitempty"`
 	ProviderKey string `json:"providerKey,omitempty"`
+	RetryClass  string `json:"retryClass,omitempty"`
 	Limit       int    `json:"limit,omitempty"`
 }
 
 type RecoverResult struct {
 	Mode           string `json:"mode,omitempty"`
 	ProviderKey    string `json:"providerKey,omitempty"`
+	RetryClass     string `json:"retryClass,omitempty"`
 	Limit          int    `json:"limit,omitempty"`
 	MatchedCount   int    `json:"matchedCount"`
 	RecoveredCount int    `json:"recoveredCount"`
@@ -80,17 +82,18 @@ type EvidenceSummary struct {
 }
 
 type AutoRecoverLane struct {
-	Mode                     string `json:"mode"`
-	Advice                   string `json:"advice,omitempty"`
-	TaskCount                int    `json:"taskCount"`
-	ProviderCount            int    `json:"providerCount"`
-	QueueItemCount           int    `json:"queueItemCount"`
-	RetryableNowCount        int    `json:"retryableNowCount"`
-	CooldownCount            int    `json:"cooldownCount"`
-	UploadCheckpointEligible int    `json:"uploadCheckpointEligible"`
-	NextRetryAt              string `json:"nextRetryAt,omitempty"`
-	SampleTaskID             string `json:"sampleTaskId,omitempty"`
-	SampleProvider           string `json:"sampleProvider,omitempty"`
+	Mode                     string   `json:"mode"`
+	Advice                   string   `json:"advice,omitempty"`
+	TaskCount                int      `json:"taskCount"`
+	ProviderCount            int      `json:"providerCount"`
+	QueueItemCount           int      `json:"queueItemCount"`
+	RetryableNowCount        int      `json:"retryableNowCount"`
+	CooldownCount            int      `json:"cooldownCount"`
+	UploadCheckpointEligible int      `json:"uploadCheckpointEligible"`
+	RetryClasses             []string `json:"retryClasses,omitempty"`
+	NextRetryAt              string   `json:"nextRetryAt,omitempty"`
+	SampleTaskID             string   `json:"sampleTaskId,omitempty"`
+	SampleProvider           string   `json:"sampleProvider,omitempty"`
 }
 
 type EvidenceReport struct {
@@ -953,9 +956,11 @@ func (s *Service) RecoverBlockedTasks(ctx context.Context) (int, error) {
 func (s *Service) RecoverBlockedTasksWithOptions(ctx context.Context, opts RecoverOptions) (RecoverResult, error) {
 	opts.Mode = strings.TrimSpace(opts.Mode)
 	opts.ProviderKey = strings.TrimSpace(opts.ProviderKey)
+	opts.RetryClass = strings.TrimSpace(opts.RetryClass)
 	result := RecoverResult{
 		Mode:        opts.Mode,
 		ProviderKey: opts.ProviderKey,
+		RetryClass:  opts.RetryClass,
 		Limit:       opts.Limit,
 	}
 	items, err := s.List(ctx)
@@ -977,6 +982,9 @@ func (s *Service) RecoverBlockedTasksWithOptions(ctx context.Context, opts Recov
 			continue
 		}
 		if opts.ProviderKey != "" && detail.Task.TargetProvider != opts.ProviderKey {
+			continue
+		}
+		if opts.RetryClass != "" && !retryQueueContainsClass(detail.Runtime.RetryQueue, opts.RetryClass) {
 			continue
 		}
 		candidates = append(candidates, detail)
@@ -1037,6 +1045,19 @@ func (s *Service) RecoverBlockedTasksWithOptions(ctx context.Context, opts Recov
 	}
 	result.RecoveredCount = recovered
 	return result, nil
+}
+
+func retryQueueContainsClass(queue []RetryQueueItem, retryClass string) bool {
+	retryClass = strings.TrimSpace(retryClass)
+	if retryClass == "" {
+		return true
+	}
+	for _, item := range queue {
+		if strings.EqualFold(strings.TrimSpace(item.RetryClass), retryClass) {
+			return true
+		}
+	}
+	return false
 }
 
 func (s *Service) transitionState(ctx context.Context, id string, allowed []State, target State) (Detail, bool, error) {

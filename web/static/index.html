@@ -395,6 +395,14 @@
                 <select id="auto-recover-provider">
                   <option value="">全部 provider</option>
                 </select>
+                <select id="auto-recover-retry-class">
+                  <option value="">全部失败类型</option>
+                  <option value="rate_limited">rate_limited</option>
+                  <option value="pending_manual">pending_manual</option>
+                  <option value="auth_expired">auth_expired</option>
+                  <option value="local_file_missing">local_file_missing</option>
+                  <option value="retry_failed">retry_failed</option>
+                </select>
                 <input id="auto-recover-limit" type="number" min="1" placeholder="本轮上限，例如 3" />
                 <button type="button" class="ghost" id="auto-recover-run">执行当前筛选</button>
                 <button type="button" class="ghost" id="auto-recover-reset">清空筛选</button>
