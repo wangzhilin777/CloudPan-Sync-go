@@ -339,6 +339,31 @@ label {
   padding: 0.62rem 0.95rem;
 }
 
+.hidden {
+  display: none !important;
+}
+
+.recommendation-card {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: center;
+  padding: 14px 16px;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(180, 83, 9, 0.22);
+  background: linear-gradient(135deg, rgba(255, 251, 235, 0.88), rgba(255, 255, 255, 0.76));
+}
+
+.recommendation-card div {
+  display: grid;
+  gap: 6px;
+}
+
+.recommendation-card span {
+  color: var(--muted);
+  line-height: 1.55;
+}
+
 .insight-grid {
   display: grid;
   gap: 12px;

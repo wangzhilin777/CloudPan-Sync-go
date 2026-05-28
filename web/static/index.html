@@ -196,6 +196,13 @@
                 <div id="plan-execution-hint" class="inline-note">
                   默认优先推荐 `leaf_first_lazy`，适合大目录、风控敏感 provider 和按需扫描场景。
                 </div>
+                <div id="plan-recommendation-action" class="recommendation-card hidden">
+                  <div>
+                    <strong id="plan-recommendation-title">等待预览推荐</strong>
+                    <span id="plan-recommendation-reason">生成预览后会显示推荐模式与当前选择是否一致。</span>
+                  </div>
+                  <button type="button" class="ghost" id="apply-recommended-execution">采用推荐模式</button>
+                </div>
                 <label>
                   <span>阈值(MB)</span>
                   <input id="plan-threshold" name="thresholdMB" type="number" min="0" value="10" />

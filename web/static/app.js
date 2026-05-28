@@ -1310,6 +1310,24 @@ function syncExecutionModeHint() {
   hint.textContent = "leaf_first_lazy 是默认优先推荐模式，会按顶层目录顺序逐棵子树推进，只扫描当前真正需要传的目录。";
 }
 
+function updateExecutionRecommendationAction(metadata = {}) {
+  const card = $("#plan-recommendation-action");
+  const button = $("#apply-recommended-execution");
+  const recommended = metadata.recommendedExecutionMode || "";
+  const selected = $("#plan-execution-mode").value;
+  if (!recommended) {
+    card.classList.add("hidden");
+    button.disabled = true;
+    return;
+  }
+  const reason = stringifyValue(metadata.recommendedExecutionModeReason, "暂无推荐原因");
+  card.classList.remove("hidden");
+  $("#plan-recommendation-title").textContent =
+    recommended === selected ? `当前已采用推荐模式：${recommended}` : `建议切换到：${recommended}`;
+  $("#plan-recommendation-reason").textContent = reason;
+  button.disabled = recommended === selected;
+}
+
 function renderTasks() {
   const wrap = $("#tasks-list");
   if (!state.tasks.length) {
@@ -1437,6 +1455,7 @@ function renderSelectedTask() {
 
 function renderPreview() {
   if (!state.preview) {
+    updateExecutionRecommendationAction();
     $("#plan-preview-meta").innerHTML = `
       <div class="insight-card">
         <strong>当前模式</strong>
@@ -1447,6 +1466,7 @@ function renderPreview() {
     return;
   }
   const metadata = state.preview.metadata || {};
+  updateExecutionRecommendationAction(metadata);
   $("#plan-preview-meta").innerHTML = `
     <div class="insight-card">
       <strong>当前模式</strong>
@@ -1759,7 +1779,10 @@ function wireProfiles() {
   $("#profile-provider").addEventListener("change", syncAuthModes);
   $("#plan-source-provider").addEventListener("change", syncSourceProfiles);
   $("#plan-target-provider").addEventListener("change", syncTargetProfiles);
-  $("#plan-execution-mode").addEventListener("change", syncExecutionModeHint);
+  $("#plan-execution-mode").addEventListener("change", () => {
+    syncExecutionModeHint();
+    updateExecutionRecommendationAction(state.preview?.metadata || {});
+  });
 
   $("#refresh-providers").addEventListener("click", async () => {
     try {
@@ -1842,6 +1865,15 @@ function wirePlanner() {
     } catch (error) {
       showFlash(`Risk Override JSON 无法解析：${error.message}`, true);
     }
+  });
+  $("#apply-recommended-execution").addEventListener("click", () => {
+    const recommended = state.preview?.metadata?.recommendedExecutionMode;
+    if (!recommended) {
+      showFlash("请先生成计划预览", true);
+      return;
+    }
+    setSelectValueIfPresent("#plan-execution-mode", recommended);
+    showFlash(`已采用推荐执行模式：${recommended}`);
   });
 
   $("#preview-plan").addEventListener("click", async () => {
