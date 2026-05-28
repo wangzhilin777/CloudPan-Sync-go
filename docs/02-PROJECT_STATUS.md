@@ -364,6 +364,7 @@
   - provider 状态快照聚合
   - `/api/evidence/runtime`
   - `/api/status/providers`
+  - `protocolCoverage` 协议族覆盖矩阵
 - 当前可展示的数据包括：
   - `recentResults`
   - `recentProbes`
@@ -389,8 +390,10 @@
   - `currentRoot`
   - `currentDirectory`
   - `lastCompletedPath`
+  - `protocolCoverage`
 - 当前状态：
   - 已具备联调、排错、演示所需的最小证据链
+  - 现在还能直接看出每个协议族是否已经至少沉淀出一条真实成功样本
 
 ### 7. 前端控制台
 

@@ -220,6 +220,27 @@ func TestAppWorkflowMainline(t *testing.T) {
 	if _, ok := recentProbePayload["runtime"].(map[string]interface{}); !ok {
 		t.Fatalf("expected runtime payload in recent probe, got %#v", recentProbePayload["runtime"])
 	}
+	protocolCoverage := evidenceData["protocolCoverage"].([]interface{})
+	if len(protocolCoverage) == 0 {
+		t.Fatal("expected protocolCoverage in evidence summary")
+	}
+	foundCoverage := false
+	for _, raw := range protocolCoverage {
+		item := raw.(map[string]interface{})
+		if item["protocolGroup"].(string) != "aliyun_123_open" {
+			continue
+		}
+		foundCoverage = true
+		if got := int(item["providerCount"].(float64)); got == 0 {
+			t.Fatalf("expected providerCount for aliyun_123_open, got %#v", item)
+		}
+		if got := int(item["taskCount"].(float64)); got == 0 {
+			t.Fatalf("expected taskCount for aliyun_123_open, got %#v", item)
+		}
+	}
+	if !foundCoverage {
+		t.Fatalf("expected aliyun_123_open in protocolCoverage, got %#v", protocolCoverage)
+	}
 
 	statusResp := invokeJSON(t, handler, http.MethodGet, "/api/status/providers", nil)
 	statusItems := statusResp.Data.(map[string]interface{})["items"].([]interface{})
@@ -237,6 +258,20 @@ func TestAppWorkflowMainline(t *testing.T) {
 			t.Fatal("expected lastTaskState for 123_open")
 		}
 		summary := item["snapshotSummary"].(map[string]interface{})
+		if got := item["protocolGroup"].(string); got != "aliyun_123_open" {
+			t.Fatalf("expected provider protocolGroup aliyun_123_open, got %s", got)
+		}
+		coverage, ok := item["protocolCoverage"].(map[string]interface{})
+		if !ok || coverage == nil {
+			t.Fatalf("expected protocolCoverage on provider status, got %#v", item)
+		}
+		summaryCoverage, ok := summary["protocolCoverage"].(map[string]interface{})
+		if !ok || summaryCoverage == nil {
+			t.Fatalf("expected protocolCoverage in snapshot summary, got %#v", summary)
+		}
+		if got := summaryCoverage["protocolGroup"].(string); got != "aliyun_123_open" {
+			t.Fatalf("expected snapshot protocolCoverage aliyun_123_open, got %s", got)
+		}
 		if got := summary["executionMode"].(string); got != "pre_scan_flat" {
 			t.Fatalf("expected status summary executionMode pre_scan_flat, got %s", got)
 		}

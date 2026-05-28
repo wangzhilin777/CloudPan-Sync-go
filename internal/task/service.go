@@ -42,17 +42,18 @@ type Detail struct {
 }
 
 type EvidenceSummary struct {
-	TotalTasks         int             `json:"totalTasks"`
-	CompletedTasks     int             `json:"completedTasks"`
-	BlockedTasks       int             `json:"blockedTasks"`
-	FailedResultCount  int             `json:"failedResultCount"`
-	DoneResultCount    int             `json:"doneResultCount"`
-	SkippedResultCount int             `json:"skippedResultCount"`
-	PendingResultCount int             `json:"pendingResultCount"`
-	RiskHitCount       int             `json:"riskHitCount"`
-	BlockedActions     []BlockedAction `json:"blockedActions,omitempty"`
-	RecentResults      []Result        `json:"recentResults"`
-	RecentProbes       []ProviderProbe `json:"recentProbes"`
+	TotalTasks         int                `json:"totalTasks"`
+	CompletedTasks     int                `json:"completedTasks"`
+	BlockedTasks       int                `json:"blockedTasks"`
+	FailedResultCount  int                `json:"failedResultCount"`
+	DoneResultCount    int                `json:"doneResultCount"`
+	SkippedResultCount int                `json:"skippedResultCount"`
+	PendingResultCount int                `json:"pendingResultCount"`
+	RiskHitCount       int                `json:"riskHitCount"`
+	BlockedActions     []BlockedAction    `json:"blockedActions,omitempty"`
+	ProtocolCoverage   []ProtocolCoverage `json:"protocolCoverage,omitempty"`
+	RecentResults      []Result           `json:"recentResults"`
+	RecentProbes       []ProviderProbe    `json:"recentProbes"`
 }
 
 type BlockedAction struct {
@@ -66,15 +67,17 @@ type BlockedAction struct {
 }
 
 type StatusSummary struct {
-	ProviderKey     string                 `json:"providerKey"`
-	ProfileCount    int                    `json:"profileCount"`
-	TaskCount       int                    `json:"taskCount"`
-	CompletedCount  int                    `json:"completedCount"`
-	BlockedCount    int                    `json:"blockedCount"`
-	LastTaskState   string                 `json:"lastTaskState,omitempty"`
-	LatestProbe     string                 `json:"latestProbe,omitempty"`
-	LastObservedAt  string                 `json:"lastObservedAt,omitempty"`
-	SnapshotSummary map[string]interface{} `json:"snapshotSummary,omitempty"`
+	ProviderKey      string                 `json:"providerKey"`
+	ProtocolGroup    string                 `json:"protocolGroup,omitempty"`
+	ProfileCount     int                    `json:"profileCount"`
+	TaskCount        int                    `json:"taskCount"`
+	CompletedCount   int                    `json:"completedCount"`
+	BlockedCount     int                    `json:"blockedCount"`
+	ProtocolCoverage *ProtocolCoverage      `json:"protocolCoverage,omitempty"`
+	LastTaskState    string                 `json:"lastTaskState,omitempty"`
+	LatestProbe      string                 `json:"latestProbe,omitempty"`
+	LastObservedAt   string                 `json:"lastObservedAt,omitempty"`
+	SnapshotSummary  map[string]interface{} `json:"snapshotSummary,omitempty"`
 }
 
 type Service struct {
@@ -647,7 +650,7 @@ func (s *Service) buildRetryDetail(detail Detail) (Detail, error) {
 }
 
 func (s *Service) RuntimeEvidence(ctx context.Context) (EvidenceSummary, error) {
-	return taskEvidenceSummary(ctx, s.store)
+	return taskEvidenceSummary(ctx, s.store, s.registry.List())
 }
 
 func (s *Service) ProviderStatuses(ctx context.Context) ([]StatusSummary, error) {

@@ -16,6 +16,21 @@ type ProviderStatus struct {
 	CreatedAt   string                 `json:"createdAt"`
 }
 
+type ProtocolCoverage struct {
+	ProtocolGroup        string   `json:"protocolGroup"`
+	ProviderCount        int      `json:"providerCount"`
+	ProviderKeys         []string `json:"providerKeys,omitempty"`
+	TaskCount            int      `json:"taskCount"`
+	CompletedTaskCount   int      `json:"completedTaskCount"`
+	RealSuccessTaskCount int      `json:"realSuccessTaskCount"`
+	HasRealSuccessSample bool     `json:"hasRealSuccessSample"`
+	SampleTaskID         string   `json:"sampleTaskId,omitempty"`
+	SampleProviderKey    string   `json:"sampleProviderKey,omitempty"`
+	SampleTaskState      string   `json:"sampleTaskState,omitempty"`
+	SampleCompletionKind string   `json:"sampleCompletionKind,omitempty"`
+	LastObservedAt       string   `json:"lastObservedAt,omitempty"`
+}
+
 type State string
 
 const (

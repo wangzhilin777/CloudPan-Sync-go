@@ -397,7 +397,7 @@ func summarizeBlockedActions(details []Detail) []BlockedAction {
 	return items
 }
 
-func taskEvidenceSummary(ctx context.Context, store *sqlitestore.Store) (EvidenceSummary, error) {
+func taskEvidenceSummary(ctx context.Context, store *sqlitestore.Store, providers []provider.Entry) (EvidenceSummary, error) {
 	var summary EvidenceSummary
 	if err := store.DB().QueryRowContext(ctx, `SELECT COUNT(1) FROM tasks`).Scan(&summary.TotalTasks); err != nil {
 		return summary, err
@@ -464,6 +464,11 @@ func taskEvidenceSummary(ctx context.Context, store *sqlitestore.Store) (Evidenc
 	}
 	summary.RecentResults = results
 	summary.RecentProbes = probes
+	coverage, _, err := protocolCoverageSummary(providers, details)
+	if err != nil {
+		return summary, err
+	}
+	summary.ProtocolCoverage = coverage
 	return summary, nil
 }
 
@@ -472,9 +477,13 @@ func providerStatusSummary(ctx context.Context, store *sqlitestore.Store, provid
 	if err != nil {
 		return nil, err
 	}
+	_, coverageByGroup, err := protocolCoverageSummary(providers, allDetails)
+	if err != nil {
+		return nil, err
+	}
 	items := make([]StatusSummary, 0, len(providers))
 	for _, entry := range providers {
-		item := StatusSummary{ProviderKey: entry.Meta.Key}
+		item := StatusSummary{ProviderKey: entry.Meta.Key, ProtocolGroup: protocolGroupForProvider(entry)}
 		if err := store.DB().QueryRowContext(ctx, `SELECT COUNT(1) FROM auth_profiles WHERE provider_key = ?`, entry.Meta.Key).Scan(&item.ProfileCount); err != nil {
 			return nil, err
 		}
@@ -505,11 +514,109 @@ func providerStatusSummary(ctx context.Context, store *sqlitestore.Store, provid
 		if item.SnapshotSummary == nil {
 			item.SnapshotSummary = map[string]interface{}{}
 		}
+		if coverage, ok := coverageByGroup[protocolGroupForProvider(entry)]; ok {
+			coverageCopy := coverage
+			item.ProtocolCoverage = &coverageCopy
+			item.SnapshotSummary["protocolCoverage"] = coverageCopy
+		}
 		item.SnapshotSummary["blockedCount"] = item.BlockedCount
 		item.SnapshotSummary["blockedActions"] = summarizeBlockedActions(blockedDetails)
 		items = append(items, item)
 	}
 	return items, nil
+}
+
+func protocolCoverageSummary(providers []provider.Entry, details []Detail) ([]ProtocolCoverage, map[string]ProtocolCoverage, error) {
+	if len(providers) == 0 {
+		return nil, map[string]ProtocolCoverage{}, nil
+	}
+
+	type coverageState struct {
+		row          ProtocolCoverage
+		providerSeen map[string]struct{}
+		sampleTaken  bool
+	}
+
+	states := make(map[string]*coverageState)
+	order := make([]string, 0)
+	for _, entry := range providers {
+		group := protocolGroupForProvider(entry)
+		state, ok := states[group]
+		if !ok {
+			state = &coverageState{
+				row: ProtocolCoverage{
+					ProtocolGroup: group,
+				},
+				providerSeen: make(map[string]struct{}),
+			}
+			states[group] = state
+			order = append(order, group)
+		}
+		if _, ok := state.providerSeen[entry.Meta.Key]; ok {
+			continue
+		}
+		state.providerSeen[entry.Meta.Key] = struct{}{}
+		state.row.ProviderCount++
+		state.row.ProviderKeys = append(state.row.ProviderKeys, entry.Meta.Key)
+	}
+
+	for _, detail := range details {
+		entry, ok := providerEntryByKey(providers, detail.Task.TargetProvider)
+		if !ok {
+			continue
+		}
+		group := protocolGroupForProvider(entry)
+		state, ok := states[group]
+		if !ok {
+			continue
+		}
+		state.row.TaskCount++
+		if detail.Task.State == StateCompleted || detail.Task.State == StateCompletedWithErrors {
+			state.row.CompletedTaskCount++
+		}
+		if detail.Task.CompletionKind != CompletionKindRealTransfer {
+			continue
+		}
+		state.row.RealSuccessTaskCount++
+		if !state.sampleTaken {
+			state.sampleTaken = true
+			state.row.SampleTaskID = detail.Task.ID
+			state.row.SampleProviderKey = detail.Task.TargetProvider
+			state.row.SampleTaskState = string(detail.Task.State)
+			state.row.SampleCompletionKind = string(detail.Task.CompletionKind)
+			state.row.LastObservedAt = detail.Task.UpdatedAt
+		}
+	}
+
+	rows := make([]ProtocolCoverage, 0, len(order))
+	coverageByGroup := make(map[string]ProtocolCoverage, len(order))
+	for _, group := range order {
+		state := states[group]
+		state.row.HasRealSuccessSample = state.row.RealSuccessTaskCount > 0
+		if len(state.row.ProviderKeys) == 0 {
+			state.row.ProviderKeys = nil
+		}
+		rows = append(rows, state.row)
+		coverageByGroup[group] = state.row
+	}
+	return rows, coverageByGroup, nil
+}
+
+func providerEntryByKey(entries []provider.Entry, key string) (provider.Entry, bool) {
+	for _, entry := range entries {
+		if entry.Meta.Key == key {
+			return entry, true
+		}
+	}
+	return provider.Entry{}, false
+}
+
+func protocolGroupForProvider(entry provider.Entry) string {
+	group := strings.TrimSpace(entry.Meta.ProtocolGroup)
+	if group == "" {
+		return entry.Meta.Key
+	}
+	return group
 }
 
 func getTaskItems(ctx context.Context, store *sqlitestore.Store, taskID string) ([]Item, error) {

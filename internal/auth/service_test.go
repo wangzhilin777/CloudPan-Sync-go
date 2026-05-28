@@ -17,9 +17,21 @@ func TestServiceCreateAndValidateProfile(t *testing.T) {
 	}
 	defer func() { _ = store.Close() }()
 
-	svc := NewService(store, provider.NewRegistry(provider.DefaultCatalog()...))
+	registry := provider.NewRegistry(provider.StaticAdapter{
+		MetaInfo: provider.Provider{
+			Key:           "auth_demo",
+			DisplayName:   "Auth Demo",
+			ProtocolGroup: "demo",
+			AuthModes:     []string{"manual_token"},
+			Status:        "planned",
+		},
+		CapabilityInfo: provider.CapabilitySet{
+			SupportsAuthValidation: true,
+		},
+	})
+	svc := NewService(store, registry)
 	profile, err := svc.CreateProfile(ctx, CreateProfileInput{
-		ProviderKey: "guangya",
+		ProviderKey: "auth_demo",
 		AuthMode:    "manual_token",
 		DisplayName: "demo",
 		Token:       "token-1",

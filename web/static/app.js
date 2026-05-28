@@ -1507,9 +1507,12 @@ function renderStatus() {
     pendingResultCount: 0,
     riskHitCount: 0,
     blockedActions: [],
+    protocolCoverage: [],
     recentResults: [],
     recentProbes: [],
   };
+  const protocolCoverage = Array.isArray(evidence.protocolCoverage) ? evidence.protocolCoverage : [];
+  const protocolCoverageWithSamples = protocolCoverage.filter((item) => item?.hasRealSuccessSample).length;
   $("#evidence-summary").innerHTML = `
     <div class="metric"><span>Total Tasks</span><strong>${evidence.totalTasks}</strong></div>
     <div class="metric"><span>Completed</span><strong>${evidence.completedTasks}</strong></div>
@@ -1519,18 +1522,23 @@ function renderStatus() {
     <div class="metric"><span>Pending Manual</span><strong>${evidence.pendingResultCount}</strong></div>
     <div class="metric"><span>Failed Results</span><strong>${evidence.failedResultCount}</strong></div>
     <div class="metric"><span>Risk Hits</span><strong>${evidence.riskHitCount}</strong></div>
+    <div class="metric"><span>Protocol Groups</span><strong>${protocolCoverage.length}</strong></div>
+    <div class="metric"><span>Sampled Groups</span><strong>${protocolCoverageWithSamples}</strong></div>
   `;
   $("#blocked-actions-summary").innerHTML = renderBlockedActionsSummary(evidence.blockedActions || []);
   wireBlockedActionsSummary();
+  $("#protocol-coverage-summary").innerHTML = renderProtocolCoverageSummary(protocolCoverage);
 
   $("#status-table").innerHTML = `
     <table>
       <thead>
         <tr>
           <th>Provider</th>
+          <th>Protocol Group</th>
           <th>Profiles</th>
           <th>Tasks</th>
           <th>Completed</th>
+          <th>Coverage</th>
           <th>Execution Mode</th>
           <th>Scan Mode</th>
           <th>Risk Mode</th>
@@ -1547,9 +1555,11 @@ function renderStatus() {
             (item) => `
               <tr>
                 <td>${item.providerKey}</td>
+                <td>${item.protocolGroup || "-"}</td>
                 <td>${item.profileCount}</td>
                 <td>${item.taskCount}</td>
                 <td>${item.completedCount}</td>
+                <td>${item.protocolCoverage ? `${stringifyValue(item.protocolCoverage.realSuccessTaskCount, "0")}/${stringifyValue(item.protocolCoverage.providerCount, "0")}` : "-"}</td>
                 <td>${stringifyValue(item.snapshotSummary?.executionMode)}</td>
                 <td>${stringifyValue(item.snapshotSummary?.scanMode)}</td>
                 <td>${stringifyValue(item.snapshotSummary?.riskProfile?.mode)}</td>
@@ -1614,6 +1624,32 @@ function renderBlockedActionsSummary(items) {
     .join("");
 }
 
+function renderProtocolCoverageSummary(items) {
+  if (!Array.isArray(items) || !items.length) {
+    return `<div class="directory-empty">当前没有协议族覆盖数据。</div>`;
+  }
+  return items
+    .map(
+      (item) => `
+        <div class="directory-row tree-node">
+          <div class="directory-row-header">
+            <strong>${escapeHTML(stringifyValue(item.protocolGroup))}</strong>
+            <code>${escapeHTML(item.hasRealSuccessSample ? "sampled" : "pending")}</code>
+          </div>
+          <div class="directory-metrics">
+            <span class="pill">providers ${stringifyValue(item.providerCount, "0")}</span>
+            <span class="pill">tasks ${stringifyValue(item.taskCount, "0")}</span>
+            <span class="pill">completed ${stringifyValue(item.completedTaskCount, "0")}</span>
+            <span class="pill">real ${stringifyValue(item.realSuccessTaskCount, "0")}</span>
+          </div>
+          <div class="muted">providers: ${escapeHTML((item.providerKeys || []).join(", ") || "-")}</div>
+          <div class="muted">sample: ${escapeHTML(stringifyValue(item.sampleProviderKey, "-"))} / ${escapeHTML(stringifyValue(item.sampleTaskId, "-"))}</div>
+        </div>
+      `,
+    )
+    .join("");
+}
+
 function renderSnapshotSummary(summary) {
   if (!summary || typeof summary !== "object") {
     return "-";
@@ -1629,6 +1665,7 @@ function renderSnapshotSummary(summary) {
       <div><strong>blockedTop</strong> <code>${escapeHTML(stringifyValue(blockedActions[0]?.action, "-"))}</code></div>
       <div><strong>nextRetryAt</strong> <code>${escapeHTML(stringifyValue(retrySummary.nextRetryAt, "-"))}</code></div>
       <div><strong>queueSize</strong> <code>${escapeHTML(stringifyValue(retrySummary.queueSize, "0"))}</code></div>
+      <div><strong>protocolCoverage</strong> <code>${escapeHTML(stringifyValue(summary.protocolCoverage?.protocolGroup, "-"))} / ${escapeHTML(stringifyValue(summary.protocolCoverage?.realSuccessTaskCount, "0"))}</code></div>
     `;
   }
   return Object.entries(summary)

@@ -136,6 +136,237 @@ func TestServiceCreateRunRetryTask(t *testing.T) {
 	}
 }
 
+func TestServiceProtocolCoverageSummary(t *testing.T) {
+	ctx := context.Background()
+	store, err := sqlitestore.New(ctx, filepath.Join(t.TempDir(), "protocol-coverage.db"))
+	if err != nil {
+		t.Fatalf("new store: %v", err)
+	}
+	defer func() { _ = store.Close() }()
+
+	sourceAdapter := &scriptedAdapter{
+		meta: provider.Provider{
+			Key:           "coverage_source",
+			DisplayName:   "Coverage Source",
+			ProtocolGroup: "coverage_source_group",
+			AuthModes:     []string{"manual_token"},
+			Status:        "planned",
+		},
+		capability: provider.CapabilitySet{
+			SupportsAuthValidation: true,
+			SupportsList:           true,
+		},
+	}
+	target123Adapter := &scriptedAdapter{
+		meta: provider.Provider{
+			Key:                "coverage_target_123",
+			DisplayName:        "Coverage Target 123",
+			ProtocolGroup:      "aliyun_123_open",
+			AuthModes:          []string{"manual_token"},
+			FastUploadInputs:   []string{"md5", "size"},
+			FallbackModes:      []string{"download_upload"},
+			ConflictPolicies:   []provider.ConflictPolicy{provider.ConflictPolicyOverwriteExisting, provider.ConflictPolicyAutoRenameNew},
+			SupportsOverwrite:  true,
+			SupportsAutoRename: true,
+			Status:             "planned",
+		},
+		capability: provider.CapabilitySet{
+			SupportsAuthValidation: true,
+			SupportsMetadata:       true,
+			SupportsFastUpload:     true,
+			SupportsUpload:         true,
+		},
+		metadataFunc: func(req provider.MetadataRequest) provider.MetadataResult {
+			return provider.MetadataResult{
+				OperationResult: provider.OperationResult{
+					OK:      true,
+					Status:  "exists",
+					Message: "scripted existing target",
+					Mode:    "scripted_metadata",
+				},
+				Entry: map[string]interface{}{
+					"exists": true,
+					"path":   req.Path,
+					"name":   inferNameForTest(req.Path),
+				},
+			}
+		},
+		uploadFunc: func(req provider.UploadRequest) provider.UploadResult {
+			return provider.UploadResult{
+				OperationResult: provider.OperationResult{
+					OK:      true,
+					Status:  "ok",
+					Message: "uploaded",
+					Mode:    "scripted_upload",
+				},
+			}
+		},
+	}
+	targetQuarkAdapter := &scriptedAdapter{
+		meta: provider.Provider{
+			Key:                "coverage_target_quark",
+			DisplayName:        "Coverage Target Quark",
+			ProtocolGroup:      "quark_uc",
+			AuthModes:          []string{"manual_token"},
+			FastUploadInputs:   []string{"md5", "size"},
+			FallbackModes:      []string{"download_upload"},
+			ConflictPolicies:   []provider.ConflictPolicy{provider.ConflictPolicyOverwriteExisting, provider.ConflictPolicyAutoRenameNew},
+			SupportsOverwrite:  true,
+			SupportsAutoRename: true,
+			Status:             "planned",
+		},
+		capability: provider.CapabilitySet{
+			SupportsAuthValidation: true,
+			SupportsMetadata:       true,
+			SupportsFastUpload:     true,
+			SupportsUpload:         true,
+		},
+		metadataFunc: func(req provider.MetadataRequest) provider.MetadataResult {
+			return provider.MetadataResult{
+				OperationResult: provider.OperationResult{
+					OK:      true,
+					Status:  "exists",
+					Message: "scripted existing target",
+					Mode:    "scripted_metadata",
+				},
+				Entry: map[string]interface{}{
+					"exists": true,
+					"path":   req.Path,
+					"name":   inferNameForTest(req.Path),
+				},
+			}
+		},
+		uploadFunc: func(req provider.UploadRequest) provider.UploadResult {
+			return provider.UploadResult{
+				OperationResult: provider.OperationResult{
+					OK:      true,
+					Status:  "ok",
+					Message: "uploaded",
+					Mode:    "scripted_upload",
+				},
+			}
+		},
+	}
+
+	registry := provider.NewRegistry(sourceAdapter, target123Adapter, targetQuarkAdapter)
+	authSvc := auth.NewService(store, registry)
+	svc := NewService(store, registry, authSvc)
+	target123Profile, err := authSvc.CreateProfile(ctx, auth.CreateProfileInput{
+		ProviderKey: "coverage_target_123",
+		AuthMode:    "manual_token",
+		DisplayName: "coverage target 123",
+		Token:       "token-123",
+	})
+	if err != nil {
+		t.Fatalf("CreateProfile(target123) error = %v", err)
+	}
+	targetQuarkProfile, err := authSvc.CreateProfile(ctx, auth.CreateProfileInput{
+		ProviderKey: "coverage_target_quark",
+		AuthMode:    "manual_token",
+		DisplayName: "coverage target quark",
+		Token:       "token-quark",
+	})
+	if err != nil {
+		t.Fatalf("CreateProfile(targetQuark) error = %v", err)
+	}
+
+	firstTask, err := svc.Create(ctx, CreateRequest{
+		SourceProvider:  "coverage_source",
+		TargetProvider:  "coverage_target_123",
+		TargetProfileID: target123Profile.ID,
+		ThresholdMB:     10,
+		Entries: []planner.SourceEntry{
+			{Path: "/aliyun/sample.bin", Size: 1024, MD5: "md5-aliyun"},
+		},
+	})
+	if err != nil {
+		t.Fatalf("Create(first task) error = %v", err)
+	}
+	if _, _, err := svc.Run(ctx, firstTask.Task.ID); err != nil {
+		t.Fatalf("Run(first task) error = %v", err)
+	}
+
+	secondTask, err := svc.Create(ctx, CreateRequest{
+		SourceProvider:  "coverage_source",
+		TargetProvider:  "coverage_target_quark",
+		TargetProfileID: targetQuarkProfile.ID,
+		ThresholdMB:     10,
+		Entries: []planner.SourceEntry{
+			{Path: "/quark/sample.bin", Size: 1024, MD5: "md5-quark"},
+		},
+	})
+	if err != nil {
+		t.Fatalf("Create(second task) error = %v", err)
+	}
+	if _, _, err := svc.Run(ctx, secondTask.Task.ID); err != nil {
+		t.Fatalf("Run(second task) error = %v", err)
+	}
+
+	evidence, err := svc.RuntimeEvidence(ctx)
+	if err != nil {
+		t.Fatalf("RuntimeEvidence() error = %v", err)
+	}
+	if len(evidence.ProtocolCoverage) < 3 {
+		t.Fatalf("expected protocol coverage for all groups, got %#v", evidence.ProtocolCoverage)
+	}
+	coverageByGroup := make(map[string]ProtocolCoverage, len(evidence.ProtocolCoverage))
+	for _, item := range evidence.ProtocolCoverage {
+		coverageByGroup[item.ProtocolGroup] = item
+	}
+	aliyunCoverage, ok := coverageByGroup["aliyun_123_open"]
+	if !ok {
+		t.Fatalf("expected aliyun_123_open coverage, got %#v", evidence.ProtocolCoverage)
+	}
+	if !aliyunCoverage.HasRealSuccessSample || aliyunCoverage.RealSuccessTaskCount != 1 || aliyunCoverage.ProviderCount != 1 {
+		t.Fatalf("unexpected aliyun coverage: %#v", aliyunCoverage)
+	}
+	if aliyunCoverage.SampleProviderKey != "coverage_target_123" {
+		t.Fatalf("expected aliyun sample provider, got %#v", aliyunCoverage)
+	}
+	quarkCoverage, ok := coverageByGroup["quark_uc"]
+	if !ok {
+		t.Fatalf("expected quark_uc coverage, got %#v", evidence.ProtocolCoverage)
+	}
+	if !quarkCoverage.HasRealSuccessSample || quarkCoverage.RealSuccessTaskCount != 1 || quarkCoverage.ProviderCount != 1 {
+		t.Fatalf("unexpected quark coverage: %#v", quarkCoverage)
+	}
+	if quarkCoverage.SampleProviderKey != "coverage_target_quark" {
+		t.Fatalf("expected quark sample provider, got %#v", quarkCoverage)
+	}
+
+	statuses, err := svc.ProviderStatuses(ctx)
+	if err != nil {
+		t.Fatalf("ProviderStatuses() error = %v", err)
+	}
+	var found123, foundQuark bool
+	for _, item := range statuses {
+		switch item.ProviderKey {
+		case "coverage_target_123":
+			found123 = true
+			if item.ProtocolGroup != "aliyun_123_open" {
+				t.Fatalf("expected protocol group aliyun_123_open, got %s", item.ProtocolGroup)
+			}
+			if item.ProtocolCoverage == nil || !item.ProtocolCoverage.HasRealSuccessSample {
+				t.Fatalf("expected protocol coverage on provider status, got %#v", item.ProtocolCoverage)
+			}
+			if _, ok := item.SnapshotSummary["protocolCoverage"]; !ok {
+				t.Fatalf("expected protocolCoverage in snapshot summary, got %#v", item.SnapshotSummary)
+			}
+		case "coverage_target_quark":
+			foundQuark = true
+			if item.ProtocolGroup != "quark_uc" {
+				t.Fatalf("expected protocol group quark_uc, got %s", item.ProtocolGroup)
+			}
+			if item.ProtocolCoverage == nil || !item.ProtocolCoverage.HasRealSuccessSample {
+				t.Fatalf("expected protocol coverage on provider status, got %#v", item.ProtocolCoverage)
+			}
+		}
+	}
+	if !found123 || !foundQuark {
+		t.Fatalf("expected both target providers in status list, got %#v", statuses)
+	}
+}
+
 func TestServiceRuntimeHandlesFallbackAndConflictDowngrade(t *testing.T) {
 	ctx := context.Background()
 	store, err := sqlitestore.New(ctx, filepath.Join(t.TempDir(), "runtime.db"))
