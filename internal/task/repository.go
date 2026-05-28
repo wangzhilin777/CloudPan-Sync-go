@@ -367,6 +367,13 @@ func sortedMapKeys(values map[string]struct{}) []string {
 	return keys
 }
 
+func firstStringValue(values []string) string {
+	if len(values) == 0 {
+		return ""
+	}
+	return strings.TrimSpace(values[0])
+}
+
 func summarizeBlockedActions(details []Detail) []BlockedAction {
 	if len(details) == 0 {
 		return nil
@@ -435,6 +442,7 @@ func summarizeAutoRecoverPool(details []Detail) ([]AutoRecoverLane, int) {
 	accumulators := make(map[string]*autoRecoverLaneAccumulator)
 	order := make([]string, 0)
 	totalTasks := 0
+	candidates := make([]recoverCandidate, 0)
 	for _, detail := range details {
 		if detail.Task.State != StateBlocked && detail.Task.State != StateCompletedWithErrors {
 			continue
@@ -442,52 +450,59 @@ func summarizeAutoRecoverPool(details []Detail) ([]AutoRecoverLane, int) {
 		ensureRuntimeState(&detail)
 		syncRuntimeRetryQueue(&detail.Runtime, detail.Plan.Metadata, detail.Results)
 		applyRetryQueueSummary(&detail.Runtime, detail.Plan.Metadata)
-		summary := summarizeRetryQueue(detail.Runtime.RetryQueue)
-		if !shouldIncludeAutoRecoverPool(detail, summary) {
+		candidate := buildRecoverCandidate(detail)
+		if !shouldIncludeAutoRecoverPool(detail, candidate.Summary) {
 			continue
 		}
-		mode := autoRecoverReason(detail)
-		if mode == "" {
-			mode = summary.AutoRecoverMode
-		}
-		if mode == "" {
+		if candidate.Mode == "" {
 			continue
 		}
+		candidates = append(candidates, candidate)
+	}
+	sort.SliceStable(candidates, func(i, j int) bool {
+		return recoverCandidateLess(candidates[i], candidates[j])
+	})
+	for _, candidate := range candidates {
+		detail := candidate.Detail
 		totalTasks++
-		acc, ok := accumulators[mode]
+		acc, ok := accumulators[candidate.Mode]
 		if !ok {
 			acc = &autoRecoverLaneAccumulator{
-				mode:           mode,
-				advice:         autoRecoverGuidance(mode),
+				mode:           candidate.Mode,
+				advice:         autoRecoverGuidance(candidate.Mode),
 				taskIDs:        make(map[string]struct{}),
 				providers:      make(map[string]struct{}),
 				retryClasses:   make(map[string]struct{}),
 				blockedActions: make(map[string]struct{}),
 			}
-			accumulators[mode] = acc
-			order = append(order, mode)
+			accumulators[candidate.Mode] = acc
+			order = append(order, candidate.Mode)
 		}
 		acc.taskIDs[detail.Task.ID] = struct{}{}
 		acc.providers[detail.Task.TargetProvider] = struct{}{}
-		if blockedAction := strings.TrimSpace(effectiveBlockedAction(detail)); blockedAction != "" {
+		if blockedAction := strings.TrimSpace(candidate.EffectiveAction); blockedAction != "" {
 			acc.blockedActions[blockedAction] = struct{}{}
 		}
-		for _, item := range detail.Runtime.RetryQueue {
-			retryClass := strings.TrimSpace(item.RetryClass)
-			if retryClass == "" {
-				continue
-			}
+		if retryClass := strings.TrimSpace(candidate.PrimaryRetryClass); retryClass != "" {
 			acc.retryClasses[retryClass] = struct{}{}
+		} else {
+			for _, item := range detail.Runtime.RetryQueue {
+				retryClass := strings.TrimSpace(item.RetryClass)
+				if retryClass == "" {
+					continue
+				}
+				acc.retryClasses[retryClass] = struct{}{}
+			}
 		}
 		acc.queueItemCount += len(detail.Runtime.RetryQueue)
-		acc.retryableNowCount += summary.RetryableNowCount
-		acc.cooldownCount += summary.CooldownCount
-		acc.uploadCheckpointEligible += summary.UploadCheckpointEligible
+		acc.retryableNowCount += candidate.Summary.RetryableNowCount
+		acc.cooldownCount += candidate.Summary.CooldownCount
+		acc.uploadCheckpointEligible += candidate.Summary.UploadCheckpointEligible
 		if acc.sampleTaskID == "" {
 			acc.sampleTaskID = detail.Task.ID
 			acc.sampleProvider = detail.Task.TargetProvider
 		}
-		nextRetryAt := strings.TrimSpace(summary.NextRetryAt)
+		nextRetryAt := strings.TrimSpace(candidate.Summary.NextRetryAt)
 		if nextRetryAt != "" && (acc.nextRetryAt == "" || nextRetryAt < acc.nextRetryAt) {
 			acc.nextRetryAt = nextRetryAt
 		}
@@ -508,30 +523,37 @@ func summarizeAutoRecoverPool(details []Detail) ([]AutoRecoverLane, int) {
 			UploadCheckpointEligible: acc.uploadCheckpointEligible,
 			RetryClasses:             retryClasses,
 			BlockedActions:           blockedActions,
+			PrimaryRetryClass:        firstStringValue(retryClasses),
+			PrimaryBlockedAction:     firstStringValue(blockedActions),
 			NextRetryAt:              acc.nextRetryAt,
 			SampleTaskID:             acc.sampleTaskID,
 			SampleProvider:           acc.sampleProvider,
 		})
 	}
 	sort.SliceStable(items, func(i, j int) bool {
-		leftPriority := autoRecoverModePriority(items[i].Mode)
-		rightPriority := autoRecoverModePriority(items[j].Mode)
-		if leftPriority != rightPriority {
-			return leftPriority < rightPriority
+		left := recoverCandidate{
+			Mode:              items[i].Mode,
+			EffectiveAction:   items[i].PrimaryBlockedAction,
+			PrimaryRetryClass: items[i].PrimaryRetryClass,
+			Detail: Detail{
+				Task: Task{ID: items[i].SampleTaskID},
+				Runtime: RuntimeState{
+					NextRetryAt: items[i].NextRetryAt,
+				},
+			},
 		}
-		if items[i].TaskCount != items[j].TaskCount {
-			return items[i].TaskCount > items[j].TaskCount
+		right := recoverCandidate{
+			Mode:              items[j].Mode,
+			EffectiveAction:   items[j].PrimaryBlockedAction,
+			PrimaryRetryClass: items[j].PrimaryRetryClass,
+			Detail: Detail{
+				Task: Task{ID: items[j].SampleTaskID},
+				Runtime: RuntimeState{
+					NextRetryAt: items[j].NextRetryAt,
+				},
+			},
 		}
-		if items[i].NextRetryAt != items[j].NextRetryAt {
-			if items[i].NextRetryAt == "" {
-				return true
-			}
-			if items[j].NextRetryAt == "" {
-				return false
-			}
-			return items[i].NextRetryAt < items[j].NextRetryAt
-		}
-		return items[i].Mode < items[j].Mode
+		return recoverCandidateLess(left, right)
 	})
 	return items, totalTasks
 }

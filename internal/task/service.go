@@ -94,6 +94,8 @@ type AutoRecoverLane struct {
 	UploadCheckpointEligible int      `json:"uploadCheckpointEligible"`
 	RetryClasses             []string `json:"retryClasses,omitempty"`
 	BlockedActions           []string `json:"blockedActions,omitempty"`
+	PrimaryRetryClass        string   `json:"primaryRetryClass,omitempty"`
+	PrimaryBlockedAction     string   `json:"primaryBlockedAction,omitempty"`
 	NextRetryAt              string   `json:"nextRetryAt,omitempty"`
 	SampleTaskID             string   `json:"sampleTaskId,omitempty"`
 	SampleProvider           string   `json:"sampleProvider,omitempty"`
@@ -563,6 +565,14 @@ type pendingTreeBuilderNode struct {
 	children map[string]*pendingTreeBuilderNode
 }
 
+type recoverCandidate struct {
+	Detail            Detail
+	Mode              string
+	EffectiveAction   string
+	PrimaryRetryClass string
+	Summary           retryQueueSummary
+}
+
 func (s *Service) inspectTargetState(entry provider.Entry, profile provider.AuthProfile, sourceEntries []planner.SourceEntry, path string, size int64) targetInspection {
 	if !entry.Capability.SupportsMetadata {
 		return targetInspection{Decision: "create", Reason: "target_metadata_unsupported"}
@@ -972,7 +982,7 @@ func (s *Service) RecoverBlockedTasksWithOptions(ctx context.Context, opts Recov
 	if err != nil {
 		return result, err
 	}
-	candidates := make([]Detail, 0)
+	candidates := make([]recoverCandidate, 0)
 	for _, detail := range items {
 		if detail.Task.State != StateBlocked && detail.Task.State != StateCompletedWithErrors {
 			continue
@@ -982,8 +992,8 @@ func (s *Service) RecoverBlockedTasksWithOptions(ctx context.Context, opts Recov
 		if !taskCanAutoRecover(detail) {
 			continue
 		}
-		mode := autoRecoverReason(detail)
-		if opts.Mode != "" && mode != opts.Mode {
+		candidate := buildRecoverCandidate(detail)
+		if opts.Mode != "" && candidate.Mode != opts.Mode {
 			continue
 		}
 		if opts.ProviderKey != "" && detail.Task.TargetProvider != opts.ProviderKey {
@@ -992,34 +1002,13 @@ func (s *Service) RecoverBlockedTasksWithOptions(ctx context.Context, opts Recov
 		if opts.RetryClass != "" && !retryQueueContainsClass(detail.Runtime.RetryQueue, opts.RetryClass) {
 			continue
 		}
-		if opts.BlockedAction != "" && !detailMatchesBlockedAction(detail, opts.BlockedAction) {
+		if opts.BlockedAction != "" && !strings.EqualFold(candidate.EffectiveAction, opts.BlockedAction) {
 			continue
 		}
-		candidates = append(candidates, detail)
+		candidates = append(candidates, candidate)
 	}
 	sort.SliceStable(candidates, func(i, j int) bool {
-		leftMode := autoRecoverReason(candidates[i])
-		rightMode := autoRecoverReason(candidates[j])
-		leftPriority := autoRecoverModePriority(leftMode)
-		rightPriority := autoRecoverModePriority(rightMode)
-		if leftPriority != rightPriority {
-			return leftPriority < rightPriority
-		}
-		leftNextRetryAt := strings.TrimSpace(candidates[i].Runtime.NextRetryAt)
-		rightNextRetryAt := strings.TrimSpace(candidates[j].Runtime.NextRetryAt)
-		if leftNextRetryAt != rightNextRetryAt {
-			if leftNextRetryAt == "" {
-				return true
-			}
-			if rightNextRetryAt == "" {
-				return false
-			}
-			return leftNextRetryAt < rightNextRetryAt
-		}
-		if candidates[i].Task.UpdatedAt != candidates[j].Task.UpdatedAt {
-			return candidates[i].Task.UpdatedAt < candidates[j].Task.UpdatedAt
-		}
-		return candidates[i].Task.ID < candidates[j].Task.ID
+		return recoverCandidateLess(candidates[i], candidates[j])
 	})
 	result.MatchedCount = len(candidates)
 	if opts.Limit > 0 && len(candidates) > opts.Limit {
@@ -1027,7 +1016,8 @@ func (s *Service) RecoverBlockedTasksWithOptions(ctx context.Context, opts Recov
 		candidates = candidates[:opts.Limit]
 	}
 	recovered := 0
-	for _, detail := range candidates {
+	for _, candidate := range candidates {
+		detail := candidate.Detail
 		retried, err := s.buildRetryDetail(detail, RetryOptions{})
 		if err != nil {
 			if strings.HasPrefix(err.Error(), "retry_cooldown_active:") {
@@ -1074,6 +1064,118 @@ func detailMatchesBlockedAction(detail Detail, blockedAction string) bool {
 		return true
 	}
 	return strings.EqualFold(strings.TrimSpace(effectiveBlockedAction(detail)), blockedAction)
+}
+
+func buildRecoverCandidate(detail Detail) recoverCandidate {
+	mode := autoRecoverReason(detail)
+	summary := summarizeRetryQueue(detail.Runtime.RetryQueue)
+	if mode == "" {
+		mode = summary.AutoRecoverMode
+	}
+	return recoverCandidate{
+		Detail:            detail,
+		Mode:              mode,
+		EffectiveAction:   strings.TrimSpace(effectiveBlockedAction(detail)),
+		PrimaryRetryClass: primaryRetryClass(detail.Runtime.RetryQueue),
+		Summary:           summary,
+	}
+}
+
+func primaryRetryClass(queue []RetryQueueItem) string {
+	if len(queue) == 0 {
+		return ""
+	}
+	priorities := map[string]int{
+		"retry_failed":       0,
+		"rate_limited":       1,
+		"auth_expired":       2,
+		"local_file_missing": 3,
+		"pending_manual":     4,
+	}
+	bestClass := ""
+	bestPriority := 99
+	for _, item := range queue {
+		retryClass := strings.TrimSpace(item.RetryClass)
+		if retryClass == "" {
+			continue
+		}
+		priority, ok := priorities[retryClass]
+		if !ok {
+			priority = 50
+		}
+		if bestClass == "" || priority < bestPriority || (priority == bestPriority && retryClass < bestClass) {
+			bestClass = retryClass
+			bestPriority = priority
+		}
+	}
+	return bestClass
+}
+
+func retryClassPriority(retryClass string) int {
+	switch strings.TrimSpace(retryClass) {
+	case "retry_failed":
+		return 0
+	case "rate_limited":
+		return 1
+	case "auth_expired":
+		return 2
+	case "local_file_missing":
+		return 3
+	case "pending_manual":
+		return 4
+	default:
+		return 9
+	}
+}
+
+func blockedActionPriority(action string) int {
+	switch strings.TrimSpace(action) {
+	case "wait_for_cooldown":
+		return 0
+	case "review_and_reset_retry_strategy":
+		return 1
+	case "refresh_auth_profile":
+		return 2
+	case "restore_local_source_file":
+		return 3
+	case "manual_confirmation_required":
+		return 4
+	default:
+		return 9
+	}
+}
+
+func recoverCandidateLess(left, right recoverCandidate) bool {
+	leftModePriority := autoRecoverModePriority(left.Mode)
+	rightModePriority := autoRecoverModePriority(right.Mode)
+	if leftModePriority != rightModePriority {
+		return leftModePriority < rightModePriority
+	}
+	leftClassPriority := retryClassPriority(left.PrimaryRetryClass)
+	rightClassPriority := retryClassPriority(right.PrimaryRetryClass)
+	if leftClassPriority != rightClassPriority {
+		return leftClassPriority < rightClassPriority
+	}
+	leftActionPriority := blockedActionPriority(left.EffectiveAction)
+	rightActionPriority := blockedActionPriority(right.EffectiveAction)
+	if leftActionPriority != rightActionPriority {
+		return leftActionPriority < rightActionPriority
+	}
+	leftNextRetryAt := strings.TrimSpace(left.Detail.Runtime.NextRetryAt)
+	rightNextRetryAt := strings.TrimSpace(right.Detail.Runtime.NextRetryAt)
+	if leftNextRetryAt != rightNextRetryAt {
+		if leftNextRetryAt == "" {
+			return true
+		}
+		if rightNextRetryAt == "" {
+			return false
+		}
+		return leftNextRetryAt < rightNextRetryAt
+	}
+	if left.Detail.Task.UpdatedAt != right.Detail.Task.UpdatedAt {
+		return left.Detail.Task.UpdatedAt < right.Detail.Task.UpdatedAt
+	}
+	return left.Detail.Task.ID < right.Detail.Task.ID
 }
 
 func effectiveBlockedAction(detail Detail) string {

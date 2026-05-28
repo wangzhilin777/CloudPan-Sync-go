@@ -2646,12 +2646,18 @@ func TestServiceAutoRecoverPoolSummaryAndPriority(t *testing.T) {
 	if checkpointLane.TaskCount != 1 || checkpointLane.UploadCheckpointEligible != 1 {
 		t.Fatalf("unexpected checkpoint lane: %#v", checkpointLane)
 	}
+	if checkpointLane.PrimaryRetryClass != "retry_failed" {
+		t.Fatalf("expected checkpoint primaryRetryClass retry_failed, got %#v", checkpointLane)
+	}
 	if len(checkpointLane.RetryClasses) != 1 || checkpointLane.RetryClasses[0] != "retry_failed" {
 		t.Fatalf("expected checkpoint lane retryClasses [retry_failed], got %#v", checkpointLane.RetryClasses)
 	}
 	cooldownLane := autoRecoverLaneByMode(evidence.AutoRecoverPool, "cooldown_elapsed_auto_retry")
 	if cooldownLane.TaskCount != 1 || cooldownLane.CooldownCount != 1 {
 		t.Fatalf("unexpected cooldown lane: %#v", cooldownLane)
+	}
+	if cooldownLane.PrimaryRetryClass != "rate_limited" || cooldownLane.PrimaryBlockedAction != "wait_for_cooldown" {
+		t.Fatalf("expected cooldown primary fields rate_limited/wait_for_cooldown, got %#v", cooldownLane)
 	}
 	if len(cooldownLane.RetryClasses) != 1 || cooldownLane.RetryClasses[0] != "rate_limited" {
 		t.Fatalf("expected cooldown lane retryClasses [rate_limited], got %#v", cooldownLane.RetryClasses)
