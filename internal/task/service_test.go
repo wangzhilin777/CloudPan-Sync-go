@@ -1174,6 +1174,96 @@ func TestServiceRuntimeBuildsPendingRelayTreeByRootAndDirectory(t *testing.T) {
 	}
 }
 
+func TestServicePendingTreeRespectsSelectedRootOrderWithPreScanFlat(t *testing.T) {
+	ctx := context.Background()
+	store, err := sqlitestore.New(ctx, filepath.Join(t.TempDir(), "pending-tree-order.db"))
+	if err != nil {
+		t.Fatalf("new store: %v", err)
+	}
+	defer func() { _ = store.Close() }()
+
+	adapter := &scriptedAdapter{
+		meta: provider.Provider{
+			Key:              "pending_tree_order_target",
+			DisplayName:      "Pending Tree Order Target",
+			ProtocolGroup:    "fake",
+			AuthModes:        []string{"manual_token"},
+			FastUploadInputs: []string{"md5", "size"},
+			FallbackModes:    []string{"download_upload"},
+			Status:           "planned",
+		},
+		capability: provider.CapabilitySet{
+			SupportsAuthValidation: true,
+			SupportsUpload:         true,
+		},
+		uploadFunc: func(req provider.UploadRequest) provider.UploadResult {
+			if strings.HasPrefix(req.Path, "/1/") || strings.HasPrefix(req.Path, "/2/") {
+				return provider.UploadResult{
+					OperationResult: provider.OperationResult{
+						Status:  "pending_manual_requires_confirmation",
+						Message: "pending manual",
+						Mode:    "fake_pending",
+					},
+				}
+			}
+			return provider.UploadResult{
+				OperationResult: provider.OperationResult{
+					OK:      true,
+					Status:  "ok",
+					Message: "ok",
+					Mode:    "fake_ok",
+				},
+			}
+		},
+	}
+
+	registry := provider.NewRegistry(adapter)
+	authSvc := auth.NewService(store, registry)
+	svc := NewService(store, registry, authSvc)
+	profile, err := authSvc.CreateProfile(ctx, auth.CreateProfileInput{
+		ProviderKey: "pending_tree_order_target",
+		AuthMode:    "manual_token",
+		DisplayName: "pending tree order target",
+		Token:       "token-1",
+	})
+	if err != nil {
+		t.Fatalf("CreateProfile() error = %v", err)
+	}
+
+	detail, err := svc.Create(ctx, CreateRequest{
+		SourceProvider:  "guangya",
+		TargetProvider:  "pending_tree_order_target",
+		TargetProfileID: profile.ID,
+		ThresholdMB:     1,
+		SelectedRoots:   []string{"/1", "/2"},
+		ExecutionMode:   planner.ExecutionModePreScanFlat,
+		Entries: []planner.SourceEntry{
+			{Path: "/2/22/c.bin", Size: 12 * 1024 * 1024},
+			{Path: "/1/11/111/a.bin", Size: 10 * 1024 * 1024},
+		},
+	})
+	if err != nil {
+		t.Fatalf("Create() error = %v", err)
+	}
+
+	running, ok, err := svc.Run(ctx, detail.Task.ID)
+	if err != nil {
+		t.Fatalf("Run() error = %v", err)
+	}
+	if !ok {
+		t.Fatal("expected task to exist")
+	}
+	if len(running.Runtime.PendingTree) != 2 {
+		t.Fatalf("expected 2 pending root nodes, got %d", len(running.Runtime.PendingTree))
+	}
+	if running.Runtime.PendingTree[0].Path != "/1" {
+		t.Fatalf("expected selected root /1 to stay first, got %s", running.Runtime.PendingTree[0].Path)
+	}
+	if running.Runtime.PendingTree[1].Path != "/2" {
+		t.Fatalf("expected selected root /2 to stay second, got %s", running.Runtime.PendingTree[1].Path)
+	}
+}
+
 func TestServiceRetryNarrowsToPendingRelayEntriesAndReplaysOnlyPendingItems(t *testing.T) {
 	ctx := context.Background()
 	store, err := sqlitestore.New(ctx, filepath.Join(t.TempDir(), "retry-pending.db"))

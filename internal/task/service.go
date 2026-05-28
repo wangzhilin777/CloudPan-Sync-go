@@ -2807,7 +2807,6 @@ func buildPendingTree(metadata map[string]interface{}, results []Result) []Pendi
 
 	roots := metadataStringSlice(metadata, "selectedRoots")
 	rootBuilders := make(map[string]*pendingTreeBuilderNode)
-	rootOrder := make([]string, 0)
 
 	ensureNode := func(parent *pendingTreeBuilderNode, path, name, nodeType, rootPath string) *pendingTreeBuilderNode {
 		if parent.children == nil {
@@ -2853,7 +2852,6 @@ func buildPendingTree(metadata map[string]interface{}, results []Result) []Pendi
 				children: make(map[string]*pendingTreeBuilderNode),
 			}
 			rootBuilders[rootKey] = rootBuilder
-			rootOrder = append(rootOrder, rootKey)
 		}
 		rootBuilder.node.ItemCount++
 
@@ -2869,11 +2867,46 @@ func buildPendingTree(metadata map[string]interface{}, results []Result) []Pendi
 		fileNode.node.ProviderStatus = stringValue(result.Payload["providerStatus"])
 	}
 
+	rootOrder := orderedPendingRootKeys(rootBuilders, roots)
 	tree := make([]PendingNode, 0, len(rootOrder))
 	for _, rootKey := range rootOrder {
 		tree = append(tree, finalizePendingNode(rootBuilders[rootKey]))
 	}
 	return tree
+}
+
+func orderedPendingRootKeys(rootBuilders map[string]*pendingTreeBuilderNode, selectedRoots []string) []string {
+	if len(rootBuilders) == 0 {
+		return nil
+	}
+	ordered := make([]string, 0, len(rootBuilders))
+	seen := make(map[string]bool, len(rootBuilders))
+	for _, root := range selectedRoots {
+		rootKey := normalizeScanPath(root)
+		if _, ok := rootBuilders[rootKey]; ok && !seen[rootKey] {
+			ordered = append(ordered, rootKey)
+			seen[rootKey] = true
+		}
+	}
+	remaining := make([]string, 0)
+	for rootKey := range rootBuilders {
+		if seen[rootKey] {
+			continue
+		}
+		remaining = append(remaining, rootKey)
+	}
+	sort.SliceStable(remaining, func(i, j int) bool {
+		left := remaining[i]
+		right := remaining[j]
+		leftDepth := pendingPathDepth(left)
+		rightDepth := pendingPathDepth(right)
+		if leftDepth != rightDepth {
+			return leftDepth < rightDepth
+		}
+		return left < right
+	})
+	ordered = append(ordered, remaining...)
+	return ordered
 }
 
 func finalizePendingNode(node *pendingTreeBuilderNode) PendingNode {

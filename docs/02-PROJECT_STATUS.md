@@ -338,6 +338,7 @@
     - `candidate_only`
     - `probe_only`
   - 当前已支持把 `pending_manual` 类结果聚合成待补传树，并回写到 runtime / probe / provider status
+  - 待补传树的根节点顺序会优先遵循 `selectedRoots`，避免结果返回顺序打乱用户勾选顺序
   - 当前已支持在 `Retry` 时自动缩小到待补传子集，并按新 plan 继续执行
   - 当前 `Retry` 新任务已保留 `retryUploadCheckpoints` 元数据，并把首个恢复检查点带回 runtime 视图
   - 当前 `Retry` 运行时已会把恢复检查点继续传给 provider upload request，供真实 provider 复用 `uploadId / fileId / nextPartNumber`
