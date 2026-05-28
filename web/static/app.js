@@ -145,6 +145,23 @@ function renderRuntimePathChips(title, paths, scope, kind) {
   `;
 }
 
+function renderRiskResolutionSummary(resolution) {
+  if (!resolution || typeof resolution !== "object") {
+    return "-";
+  }
+  const providerKey = stringifyValue(resolution.providerKey, "-");
+  const reasons = Array.isArray(resolution.calibrationReasons) ? resolution.calibrationReasons.filter(Boolean) : [];
+  const overrideFields = Array.isArray(resolution.overrideFields) ? resolution.overrideFields.filter(Boolean) : [];
+  const parts = [`provider ${providerKey}`];
+  if (reasons.length) {
+    parts.push(`校准 ${reasons.join(" / ")}`);
+  }
+  if (overrideFields.length) {
+    parts.push(`override ${overrideFields.join(", ")}`);
+  }
+  return parts.join(" | ");
+}
+
 function escapeHTML(value) {
   return String(value)
     .replaceAll("&", "&amp;")
@@ -2034,6 +2051,10 @@ function renderSelectedTask() {
       <span>${stringifyValue(metadata.riskProfile?.requestIntervalMs, "0")}ms / dir ${stringifyValue(metadata.riskProfile?.directoryIntervalMs, "0")}ms / retry ${stringifyValue(metadata.riskProfile?.retryLimit, "0")}</span>
     </div>
     <div class="insight-card">
+      <strong>风险模板解释</strong>
+      <span>${escapeHTML(renderRiskResolutionSummary(metadata.riskProfileResolution))}</span>
+    </div>
+    <div class="insight-card">
       <strong>重试范围</strong>
       <span>${metadata.retryPendingOnly ? `pending_only (${Array.isArray(metadata.retryPendingPaths) ? metadata.retryPendingPaths.length : 0} items)` : "full_task"}</span>
     </div>
@@ -2118,6 +2139,10 @@ function renderPreview() {
     <div class="insight-card">
       <strong>风险节流</strong>
       <span>${stringifyValue(metadata.riskProfile?.requestIntervalMs, "0")}ms / dir ${stringifyValue(metadata.riskProfile?.directoryIntervalMs, "0")}ms / retry ${stringifyValue(metadata.riskProfile?.retryLimit, "0")}</span>
+    </div>
+    <div class="insight-card">
+      <strong>风险模板解释</strong>
+      <span>${escapeHTML(renderRiskResolutionSummary(metadata.riskProfileResolution))}</span>
     </div>
   `;
   $("#plan-preview").textContent = formatJSON(state.preview);

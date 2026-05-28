@@ -144,7 +144,14 @@ $preview | ConvertTo-Json -Depth 10
   - `recommendedExecutionMode`
   - `recommendedExecutionModeReason`
   - `executionOrder`
-  - `riskProfile`
+- `riskProfile`
+- `riskProfileResolution`
+  - 可直接看到：
+    - `base`
+    - `calibrated`
+    - `applied`
+    - `calibrationReasons`
+    - `overrideFields`
 - 当目录较大或 provider 风控敏感时，通常会优先推荐 `leaf_first_lazy`。
 
 ## 7. 创建任务

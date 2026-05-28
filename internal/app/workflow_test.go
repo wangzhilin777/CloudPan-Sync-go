@@ -97,6 +97,14 @@ func TestAppWorkflowMainline(t *testing.T) {
 	if got := int(riskProfile["requestIntervalMs"].(float64)); got != 1111 {
 		t.Fatalf("expected preview risk requestIntervalMs 1111, got %d", got)
 	}
+	riskResolution := metadata["riskProfileResolution"].(map[string]interface{})
+	if got := riskResolution["providerKey"].(string); got != "123_open" {
+		t.Fatalf("expected preview risk providerKey 123_open, got %s", got)
+	}
+	overrideFields := riskResolution["overrideFields"].([]interface{})
+	if len(overrideFields) < 3 {
+		t.Fatalf("expected preview override fields, got %#v", overrideFields)
+	}
 
 	localFile := filepath.Join(t.TempDir(), "existing.bin")
 	if err := os.WriteFile(localFile, []byte("workflow"), 0o644); err != nil {
@@ -136,6 +144,10 @@ func TestAppWorkflowMainline(t *testing.T) {
 	createdRiskProfile := createdMetadata["riskProfile"].(map[string]interface{})
 	if got := int(createdRiskProfile["directoryIntervalMs"].(float64)); got != 2222 {
 		t.Fatalf("expected task risk directoryIntervalMs 2222, got %d", got)
+	}
+	createdResolution := createdMetadata["riskProfileResolution"].(map[string]interface{})
+	if got := createdResolution["providerKey"].(string); got != "123_open" {
+		t.Fatalf("expected task risk providerKey 123_open, got %s", got)
 	}
 
 	pauseResp := invokeJSON(t, handler, http.MethodPost, "/api/tasks/"+taskID+"/pause", nil)

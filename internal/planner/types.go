@@ -36,6 +36,17 @@ type RiskProfileOverride struct {
 	RiskKeywords        []string `json:"riskKeywords,omitempty"`
 }
 
+type RiskProfileResolution struct {
+	ProviderKey        string               `json:"providerKey"`
+	Mode               RiskMode             `json:"mode"`
+	Base               RiskProfile          `json:"base"`
+	Calibrated         RiskProfile          `json:"calibrated"`
+	Applied            RiskProfile          `json:"applied"`
+	CalibrationReasons []string             `json:"calibrationReasons,omitempty"`
+	Override           *RiskProfileOverride `json:"override,omitempty"`
+	OverrideFields     []string             `json:"overrideFields,omitempty"`
+}
+
 type ExecutionMode string
 
 const (

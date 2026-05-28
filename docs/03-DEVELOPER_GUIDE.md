@@ -233,7 +233,14 @@
   - `retryLimit`
   - `riskKeywords`
 - 当前 planner 会把最终生效的风险配置写进 `metadata.riskProfile`。
+- 当前 planner 还会把风险解释链写进 `metadata.riskProfileResolution`：
+  - `base`
+  - `calibrated`
+  - `applied`
+  - `calibrationReasons`
+  - `overrideFields`
 - 默认 `riskProfile` 会先按 `safe / balanced / fast` 取基线，再按目标 provider 做保守度校准；`custom` 模式则保留为调用方完全手动控制。
+- 当前控制台的预览区和任务详情区也会直接展示这条“风险模板解释”，便于看清楚到底是 provider 校准还是任务 override 改了最终节流值。
 - 当前 runtime 如果命中风险关键词，还会在结果和运行时证据里写回：
   - `riskHit`
   - `riskHitCount`

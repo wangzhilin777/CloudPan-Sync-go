@@ -97,6 +97,16 @@ func TestBuildPreviewIncludesRiskProfileDefaults(t *testing.T) {
 	if len(riskProfile.RiskKeywords) == 0 {
 		t.Fatal("expected provider risk keywords")
 	}
+	resolution, ok := plan.Metadata["riskProfileResolution"].(RiskProfileResolution)
+	if !ok {
+		t.Fatalf("expected riskProfileResolution metadata, got %#v", plan.Metadata["riskProfileResolution"])
+	}
+	if resolution.ProviderKey != "189cloud" || resolution.Mode != RiskModeSafe {
+		t.Fatalf("unexpected risk profile resolution: %+v", resolution)
+	}
+	if resolution.Applied.RequestIntervalMS != riskProfile.RequestIntervalMS {
+		t.Fatalf("expected applied risk profile to match riskProfile metadata, got %+v vs %+v", resolution.Applied, riskProfile)
+	}
 }
 
 func TestBuildPreviewCalibratesRiskProfileByProvider(t *testing.T) {
@@ -245,6 +255,19 @@ func TestBuildPreviewAppliesRiskOverride(t *testing.T) {
 	}
 	if len(riskProfile.RiskKeywords) != 2 || riskProfile.RiskKeywords[0] != "rate_limited" {
 		t.Fatalf("expected override risk keywords, got %#v", riskProfile.RiskKeywords)
+	}
+	resolution, ok := plan.Metadata["riskProfileResolution"].(RiskProfileResolution)
+	if !ok {
+		t.Fatalf("expected riskProfileResolution metadata, got %#v", plan.Metadata["riskProfileResolution"])
+	}
+	if len(resolution.CalibrationReasons) == 0 {
+		t.Fatalf("expected calibration reasons, got %+v", resolution)
+	}
+	if len(resolution.OverrideFields) != 6 {
+		t.Fatalf("expected 6 override fields, got %#v", resolution.OverrideFields)
+	}
+	if resolution.Applied.RetryLimit != 1 || resolution.Applied.PageSize != 88 {
+		t.Fatalf("expected applied risk profile to reflect override, got %+v", resolution.Applied)
 	}
 }
 

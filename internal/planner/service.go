@@ -53,7 +53,8 @@ func BuildPreview(registry *provider.Registry, req PreviewRequest) (Plan, error)
 	if err != nil {
 		return Plan{}, err
 	}
-	riskProfile := applyRiskProfileOverride(defaultRiskProfile(target.Meta.Key, req.RiskMode), req.RiskOverride)
+	riskResolution := resolveRiskProfile(target.Meta.Key, req.RiskMode, req.RiskOverride)
+	riskProfile := riskResolution.Applied
 	recommendedMode, recommendedReason := recommendExecutionMode(req, riskProfile)
 	orderedEntries := orderEntriesByMode(req.Entries, executionMode)
 
@@ -90,6 +91,7 @@ func BuildPreview(registry *provider.Registry, req PreviewRequest) (Plan, error)
 			"recommendedExecutionModeReason": recommendedReason,
 			"executionOrder":                 executionOrderForMode(executionMode),
 			"riskProfile":                    riskProfile,
+			"riskProfileResolution":          riskResolution,
 			"riskOverride":                   req.RiskOverride,
 		},
 	}, nil
@@ -191,6 +193,23 @@ func defaultRiskProfile(providerKey string, mode RiskMode) RiskProfile {
 	return applyProviderRiskCalibration(providerKey, profile)
 }
 
+func resolveRiskProfile(providerKey string, mode RiskMode, override *RiskProfileOverride) RiskProfileResolution {
+	normalizedMode := normalizeRiskMode(mode)
+	base := baseRiskProfile(normalizedMode, providerKey)
+	calibrated, calibrationReasons := applyProviderRiskCalibrationWithReasons(providerKey, base)
+	applied, overrideFields := applyRiskProfileOverrideWithFields(calibrated, override)
+	return RiskProfileResolution{
+		ProviderKey:        providerKey,
+		Mode:               normalizedMode,
+		Base:               base,
+		Calibrated:         calibrated,
+		Applied:            applied,
+		CalibrationReasons: calibrationReasons,
+		Override:           override,
+		OverrideFields:     overrideFields,
+	}
+}
+
 func baseRiskProfile(mode RiskMode, providerKey string) RiskProfile {
 	keywords := providerRiskKeywords(providerKey)
 	switch normalizeRiskMode(mode) {
@@ -238,9 +257,15 @@ func baseRiskProfile(mode RiskMode, providerKey string) RiskProfile {
 }
 
 func applyProviderRiskCalibration(providerKey string, profile RiskProfile) RiskProfile {
+	profile, _ = applyProviderRiskCalibrationWithReasons(providerKey, profile)
+	return profile
+}
+
+func applyProviderRiskCalibrationWithReasons(providerKey string, profile RiskProfile) (RiskProfile, []string) {
 	if profile.Mode == RiskModeCustom {
-		return profile
+		return profile, nil
 	}
+	reasons := make([]string, 0, 3)
 	switch providerKey {
 	case "baidu_netdisk":
 		profile.RequestIntervalMS = max(profile.RequestIntervalMS, 1800)
@@ -248,34 +273,41 @@ func applyProviderRiskCalibration(providerKey string, profile RiskProfile) RiskP
 		profile.DirectoryIntervalMS = max(profile.DirectoryIntervalMS, 3000)
 		profile.CooldownSeconds = max(profile.CooldownSeconds, 45)
 		profile.RetryLimit = minPositive(profile.RetryLimit, 2)
+		reasons = append(reasons, "百度网盘按更保守的请求/目录间隔收敛，并降低重试上限。")
 	case "quark", "uc":
 		profile.RequestIntervalMS = max(profile.RequestIntervalMS, 1400)
 		profile.PageSize = minPositive(profile.PageSize, 120)
 		profile.DirectoryIntervalMS = max(profile.DirectoryIntervalMS, 2200)
 		profile.CooldownSeconds = max(profile.CooldownSeconds, 40)
+		reasons = append(reasons, "Quark / UC 风控更敏感，默认提高请求间隔并缩小分页。")
 	case "189cloud":
 		profile.RequestIntervalMS = max(profile.RequestIntervalMS, 1200)
 		profile.PageSize = minPositive(profile.PageSize, 150)
 		profile.DirectoryIntervalMS = max(profile.DirectoryIntervalMS, 2000)
 		profile.CooldownSeconds = max(profile.CooldownSeconds, 35)
+		reasons = append(reasons, "天翼云盘默认保守控制分页和目录推进节奏。")
 	case "115_open":
 		profile.RequestIntervalMS = max(profile.RequestIntervalMS, 1000)
 		profile.PageSize = minPositive(profile.PageSize, 200)
 		profile.DirectoryIntervalMS = max(profile.DirectoryIntervalMS, 1800)
 		profile.CooldownSeconds = max(profile.CooldownSeconds, 30)
+		reasons = append(reasons, "115 默认保守控制列表频率与目录节流。")
 	case "guangya":
 		profile.RequestIntervalMS = max(profile.RequestIntervalMS, 900)
 		profile.PageSize = minPositive(profile.PageSize, 180)
 		profile.DirectoryIntervalMS = max(profile.DirectoryIntervalMS, 1600)
 		profile.CooldownSeconds = max(profile.CooldownSeconds, 25)
+		reasons = append(reasons, "光鸭链路默认按中保守模板限制目录节奏。")
 	case "xunlei", "pikpak":
 		profile.RequestIntervalMS = max(profile.RequestIntervalMS, 700)
 		profile.PageSize = minPositive(profile.PageSize, 250)
 		profile.DirectoryIntervalMS = max(profile.DirectoryIntervalMS, 1000)
+		reasons = append(reasons, "迅雷 / PikPak 保留较快节奏，但仍限制分页和目录切换频率。")
 	case "aliyundrive_open", "123_open":
 		profile.PageSize = minPositive(profile.PageSize, 500)
+		reasons = append(reasons, "阿里云盘 / 123Open 允许更大的分页预算，适合较平滑的列表推进。")
 	}
-	return profile
+	return profile, reasons
 }
 
 func minPositive(current int, limit int) int {
@@ -298,28 +330,40 @@ func normalizeRiskMode(mode RiskMode) RiskMode {
 }
 
 func applyRiskProfileOverride(base RiskProfile, override *RiskProfileOverride) RiskProfile {
+	base, _ = applyRiskProfileOverrideWithFields(base, override)
+	return base
+}
+
+func applyRiskProfileOverrideWithFields(base RiskProfile, override *RiskProfileOverride) (RiskProfile, []string) {
 	if override == nil {
-		return base
+		return base, nil
 	}
+	fields := make([]string, 0, 6)
 	if override.RequestIntervalMS != nil && *override.RequestIntervalMS >= 0 {
 		base.RequestIntervalMS = *override.RequestIntervalMS
+		fields = append(fields, "requestIntervalMs")
 	}
 	if override.PageSize != nil && *override.PageSize >= 0 {
 		base.PageSize = *override.PageSize
+		fields = append(fields, "pageSize")
 	}
 	if override.DirectoryIntervalMS != nil && *override.DirectoryIntervalMS >= 0 {
 		base.DirectoryIntervalMS = *override.DirectoryIntervalMS
+		fields = append(fields, "directoryIntervalMs")
 	}
 	if override.CooldownSeconds != nil && *override.CooldownSeconds >= 0 {
 		base.CooldownSeconds = *override.CooldownSeconds
+		fields = append(fields, "cooldownSeconds")
 	}
 	if override.RetryLimit != nil && *override.RetryLimit >= 0 {
 		base.RetryLimit = *override.RetryLimit
+		fields = append(fields, "retryLimit")
 	}
 	if len(override.RiskKeywords) > 0 {
 		base.RiskKeywords = append([]string(nil), override.RiskKeywords...)
+		fields = append(fields, "riskKeywords")
 	}
-	return base
+	return base, fields
 }
 
 func normalizeExecutionMode(mode ExecutionMode) (ExecutionMode, error) {
