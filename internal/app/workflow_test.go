@@ -519,6 +519,98 @@ func TestAppWorkflowMainline(t *testing.T) {
 	}
 }
 
+func TestAppRetrySelectedDirectorySubsetKeepsChosenSubtree(t *testing.T) {
+	ctx := context.Background()
+	application := mustNewTestApp(t, ctx)
+	targetAdapter := &appScriptedAdapter{
+		meta: provider.Provider{
+			Key:           "guangya",
+			DisplayName:   "Retry Directory Target",
+			ProtocolGroup: "fake_target",
+			AuthModes:     []string{"manual_token"},
+			Status:        "planned",
+		},
+		capability: provider.CapabilitySet{
+			SupportsAuthValidation: true,
+			SupportsUpload:         true,
+			SupportsFastUpload:     true,
+		},
+		uploadFunc: func(req provider.UploadRequest) provider.UploadResult {
+			return provider.UploadResult{
+				OperationResult: provider.OperationResult{
+					OK:      true,
+					Status:  "ok",
+					Message: "selected directory ok",
+					Mode:    "fake_selected_directory_ok",
+				},
+			}
+		},
+	}
+	adapters := provider.DefaultCatalog()
+	adapters = append(adapters, targetAdapter)
+	registry := provider.NewRegistry(adapters...)
+	authSvc := auth.NewService(application.store, registry)
+	taskSvc := task.NewService(application.store, registry, authSvc)
+	application.providers = registry
+	application.auth = authSvc
+	application.tasks = taskSvc
+	handler := application.routes()
+
+	profileResp := invokeJSON(t, handler, http.MethodPost, "/api/auth/profiles", map[string]interface{}{
+		"providerKey": "guangya",
+		"authMode":    "manual_token",
+		"displayName": "Retry Directory Target",
+		"token":       "token-retry-directory",
+	})
+	profileID := profileResp.Data.(map[string]interface{})["id"].(string)
+
+	taskResp := invokeJSON(t, handler, http.MethodPost, "/api/tasks", map[string]interface{}{
+		"sourceProvider":  "baidu_netdisk",
+		"targetProvider":  "guangya",
+		"targetProfileId": profileID,
+		"thresholdMB":     1,
+		"selectedRoots":   []string{"/1", "/2"},
+		"entries": []map[string]interface{}{
+			{"path": "/1/11/a.bin", "size": 512},
+			{"path": "/1/12/b.bin", "size": 768},
+			{"path": "/2/21/c.bin", "size": 1024},
+		},
+	})
+	taskID := taskResp.Data.(map[string]interface{})["task"].(map[string]interface{})["id"].(string)
+
+	runResp := invokeJSON(t, handler, http.MethodPost, "/api/tasks/"+taskID+"/run", nil)
+	if got := runResp.Data.(map[string]interface{})["task"].(map[string]interface{})["state"].(string); got != "completed" && got != "completed_with_errors" {
+		t.Fatalf("expected completed or completed_with_errors, got %s", got)
+	}
+
+	retryResp := invokeJSON(t, handler, http.MethodPost, "/api/tasks/"+taskID+"/retry", map[string]interface{}{
+		"paths": []string{"/1/11"},
+		"scope": "selected_directory_subset",
+	})
+	retryData := retryResp.Data.(map[string]interface{})
+	if got := retryData["task"].(map[string]interface{})["state"].(string); got != "ready" {
+		t.Fatalf("expected ready after directory retry, got %s", got)
+	}
+	retriedPlan := retryData["plan"].(map[string]interface{})
+	if got := len(retriedPlan["items"].([]interface{})); got != 1 {
+		t.Fatalf("expected retry to keep only 1 directory item, got %d", got)
+	}
+	if got := retriedPlan["items"].([]interface{})[0].(map[string]interface{})["path"].(string); got != "/1/11/a.bin" {
+		t.Fatalf("expected selected directory item /1/11/a.bin, got %s", got)
+	}
+	retryMetadata := retriedPlan["metadata"].(map[string]interface{})
+	if retryMode, _ := retryMetadata["retryMode"].(string); retryMode != "selected_directory_subset" {
+		t.Fatalf("expected retryMode selected_directory_subset, got %s", retryMode)
+	}
+	if retryPendingOnly, _ := retryMetadata["retryPendingOnly"].(bool); retryPendingOnly {
+		t.Fatalf("expected retryPendingOnly false, got %#v", retryMetadata["retryPendingOnly"])
+	}
+	selectedPaths, ok := retryMetadata["retrySelectedPaths"].([]interface{})
+	if !ok || len(selectedPaths) != 1 || selectedPaths[0].(string) != "/1/11" {
+		t.Fatalf("expected retrySelectedPaths [/1/11], got %#v", retryMetadata["retrySelectedPaths"])
+	}
+}
+
 func TestAppProviderUploadEndpoint(t *testing.T) {
 	ctx := context.Background()
 	application := mustNewTestApp(t, ctx)

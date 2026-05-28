@@ -1613,6 +1613,23 @@ function buildCreatePayloadFromTaskPath(detail, path) {
   return payload;
 }
 
+function buildCreatePayloadFromTaskPaths(detail, paths) {
+  const payload = buildCreatePayloadFromTask(detail);
+  const normalizedPaths = Array.from(new Set((Array.isArray(paths) ? paths : []).map((path) => normalizeComparePath(path)).filter(Boolean)));
+  if (!payload || !normalizedPaths.length) {
+    return payload;
+  }
+  const narrowedEntries = (payload.entries || []).filter((entry) =>
+    normalizedPaths.some((path) => pathMatchesSubtree(entry?.path, path)),
+  );
+  const narrowedRoots = (payload.selectedRoots || []).filter((root) =>
+    normalizedPaths.some((path) => pathMatchesSubtree(path, root) || pathMatchesSubtree(root, path)),
+  );
+  payload.selectedRoots = narrowedRoots.length ? narrowedRoots : normalizedPaths;
+  payload.entries = narrowedEntries.length ? narrowedEntries : payload.entries;
+  return payload;
+}
+
 function prefillWizardFromTask(detail) {
   if (!detail || !detail.task || !detail.plan) {
     return;
@@ -1904,6 +1921,31 @@ function prefillWizardFromTaskPath(detail, path) {
   $("#plan-entries").value = JSON.stringify(payload.entries || [], null, 2);
   syncExecutionModeHint();
   showFlash(`已按 ${path} 重建向导范围`);
+}
+
+function prefillWizardFromTaskPaths(detail, paths, label = "当前筛选") {
+  const payload = buildCreatePayloadFromTaskPaths(detail, paths);
+  if (!payload) {
+    showFlash("请先选择任务", true);
+    return;
+  }
+  activateTab("wizard");
+  setSelectValueIfPresent("#plan-source-provider", payload.sourceProvider);
+  syncSourceProfiles();
+  setSelectValueIfPresent("#plan-source-profile", payload.sourceProfileId || "");
+  setSelectValueIfPresent("#plan-target-provider", payload.targetProvider);
+  syncTargetProfiles();
+  setSelectValueIfPresent("#plan-target-profile", payload.targetProfileId || "");
+  setSelectValueIfPresent("#plan-execution-mode", payload.executionMode || "leaf_first_lazy");
+  setSelectValueIfPresent("#plan-risk-mode", payload.riskMode || "balanced");
+  setSelectValueIfPresent("#plan-conflict-policy", payload.conflictPolicy || "auto_rename_new");
+  setInputValueIfPresent("#plan-threshold", payload.thresholdMB || 0);
+  hydrateRiskOverrideForm(payload.riskOverride || null);
+  $("#plan-risk-override").value = payload.riskOverride ? JSON.stringify(payload.riskOverride, null, 2) : "";
+  $("#plan-selected-roots").value = JSON.stringify(payload.selectedRoots || ["/"], null, 2);
+  $("#plan-entries").value = JSON.stringify(payload.entries || [], null, 2);
+  syncExecutionModeHint();
+  showFlash(`已按${label}重建向导范围`);
 }
 
 function syncAuthModes() {
@@ -3668,6 +3710,9 @@ async function runTaskActionForTask(taskId, action, body = undefined) {
 }
 
 function visibleSelectionPaths(scope, source) {
+  if (source === "directory_tree" || source === "selected_directory_subset") {
+    return visibleTreePaths(scope, "directory");
+  }
   if (source === "pending_tree" || source === "selected_pending_subset") {
     return visibleTreePaths(scope, "pending");
   }
@@ -3675,12 +3720,39 @@ function visibleSelectionPaths(scope, source) {
 }
 
 function recoverScopeFromSource(source) {
+  if (source === "directory_tree" || source === "selected_directory_subset") {
+    return "selected_directory_subset";
+  }
   return source === "pending_tree" || source === "selected_pending_subset" ? "selected_pending_subset" : "selected_retry_subset";
 }
 
+function taskContextByScope(scope) {
+  return scope === "task"
+    ? {
+        taskId: state.selectedTaskId,
+        providerKey: currentSelectedTaskDetail()?.task?.targetProvider || "",
+        detail: currentSelectedTaskDetail(),
+      }
+    : currentStatusTaskContext();
+}
+
+function prefillWizardFromVisibleSelection(scope, source) {
+  const context = taskContextByScope(scope);
+  if (!context?.detail) {
+    showFlash(scope === "task" ? "请先选择任务" : "当前状态样本没有可用任务", true);
+    return;
+  }
+  const paths = visibleSelectionPaths(scope, source);
+  if (!paths.length) {
+    showFlash("当前筛选结果里没有可用于重建向导的路径", true);
+    return;
+  }
+  prefillWizardFromTaskPaths(context.detail, paths, "当前筛选");
+}
+
 async function retryVisibleSelection(scope, source) {
-  const taskId = scope === "task" ? state.selectedTaskId : currentStatusTaskContext()?.taskId;
-  if (!taskId) {
+  const context = taskContextByScope(scope);
+  if (!context?.taskId) {
     showFlash(scope === "task" ? "请先选择任务" : "当前状态样本没有可用任务", true);
     return;
   }
@@ -3689,20 +3761,14 @@ async function retryVisibleSelection(scope, source) {
     showFlash("当前筛选结果里没有可重试的路径", true);
     return;
   }
-  const ok = await runTaskActionForTask(taskId, "retry", { paths, scope: recoverScopeFromSource(source) });
+  const ok = await runTaskActionForTask(context.taskId, "retry", { paths, scope: recoverScopeFromSource(source) });
   if (ok) {
     showFlash(`已按当前筛选重建 ${paths.length} 条路径的 retry 范围`);
   }
 }
 
 async function autoRecoverVisibleSelection(scope, source) {
-  const context =
-    scope === "task"
-      ? {
-          taskId: state.selectedTaskId,
-          providerKey: currentSelectedTaskDetail()?.task?.targetProvider || "",
-        }
-      : currentStatusTaskContext();
+  const context = taskContextByScope(scope);
   if (!context || !context.taskId) {
     showFlash(scope === "task" ? "请先选择任务" : "当前状态样本没有可用任务", true);
     return;
@@ -3764,6 +3830,9 @@ function wireTasks() {
   $("#task-resume").addEventListener("click", () => runTaskAction("resume"));
   $("#task-retry").addEventListener("click", () => runTaskAction("retry"));
   $("#task-retry-visible-queue").addEventListener("click", () => retryVisibleSelection("task", "selected_retry_subset"));
+  $("#task-directory-prefill-visible").addEventListener("click", () => prefillWizardFromVisibleSelection("task", "directory_tree"));
+  $("#task-retry-visible-directory").addEventListener("click", () => retryVisibleSelection("task", "selected_directory_subset"));
+  $("#task-pending-prefill-visible").addEventListener("click", () => prefillWizardFromVisibleSelection("task", "pending_tree"));
   $("#task-retry-visible-pending").addEventListener("click", () => retryVisibleSelection("task", "selected_pending_subset"));
   $("#task-auto-recover-visible-queue").addEventListener("click", () => autoRecoverVisibleSelection("task", "retry_queue"));
   $("#task-auto-recover-visible-pending").addEventListener("click", () => autoRecoverVisibleSelection("task", "pending_tree"));
@@ -3812,7 +3881,10 @@ function wireStatus() {
     resetAutoRecoverFilters();
   });
   $("#status-retry-visible-queue").addEventListener("click", () => retryVisibleSelection("status", "selected_retry_subset"));
+  $("#status-directory-prefill-visible").addEventListener("click", () => prefillWizardFromVisibleSelection("status", "directory_tree"));
+  $("#status-retry-visible-directory").addEventListener("click", () => retryVisibleSelection("status", "selected_directory_subset"));
   $("#status-auto-recover-visible-queue").addEventListener("click", () => autoRecoverVisibleSelection("status", "retry_queue"));
+  $("#status-pending-prefill-visible").addEventListener("click", () => prefillWizardFromVisibleSelection("status", "pending_tree"));
   $("#status-retry-visible-pending").addEventListener("click", () => retryVisibleSelection("status", "selected_pending_subset"));
   $("#status-auto-recover-visible-pending").addEventListener("click", () => autoRecoverVisibleSelection("status", "pending_tree"));
   $("#save-provider-smoke").addEventListener("click", async () => {

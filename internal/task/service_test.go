@@ -1684,6 +1684,97 @@ func TestServiceRetryWithOptionsSelectedPendingSubsetKeepsOnlyChosenPaths(t *tes
 	}
 }
 
+func TestServiceRetryWithOptionsSelectedDirectorySubsetKeepsOnlyChosenSubtree(t *testing.T) {
+	ctx := context.Background()
+	store, err := sqlitestore.New(ctx, filepath.Join(t.TempDir(), "retry-selected-directory.db"))
+	if err != nil {
+		t.Fatalf("new store: %v", err)
+	}
+	defer func() { _ = store.Close() }()
+
+	adapter := &scriptedAdapter{
+		meta: provider.Provider{
+			Key:              "retry_selected_directory_target",
+			DisplayName:      "Retry Selected Directory Target",
+			ProtocolGroup:    "fake",
+			AuthModes:        []string{"manual_token"},
+			FastUploadInputs: []string{"md5", "size"},
+			FallbackModes:    []string{"download_upload"},
+			Status:           "planned",
+		},
+		capability: provider.CapabilitySet{
+			SupportsAuthValidation: true,
+			SupportsUpload:         true,
+		},
+		uploadFunc: func(req provider.UploadRequest) provider.UploadResult {
+			return provider.UploadResult{
+				OperationResult: provider.OperationResult{
+					OK:      true,
+					Status:  "ok",
+					Message: "selected directory resolved",
+					Mode:    "fake_selected_directory_ok",
+				},
+			}
+		},
+	}
+
+	registry := provider.NewRegistry(adapter)
+	authSvc := auth.NewService(store, registry)
+	svc := NewService(store, registry, authSvc)
+	profile, err := authSvc.CreateProfile(ctx, auth.CreateProfileInput{
+		ProviderKey: "retry_selected_directory_target",
+		AuthMode:    "manual_token",
+		DisplayName: "retry selected directory target",
+		Token:       "token-1",
+	})
+	if err != nil {
+		t.Fatalf("CreateProfile() error = %v", err)
+	}
+
+	detail, err := svc.Create(ctx, CreateRequest{
+		SourceProvider:  "guangya",
+		TargetProvider:  "retry_selected_directory_target",
+		TargetProfileID: profile.ID,
+		ThresholdMB:     1,
+		SelectedRoots:   []string{"/1", "/2"},
+		Entries: []planner.SourceEntry{
+			{Path: "/1/11/a.bin", Size: 10 * 1024},
+			{Path: "/1/12/b.bin", Size: 11 * 1024},
+			{Path: "/2/21/c.bin", Size: 12 * 1024},
+		},
+	})
+	if err != nil {
+		t.Fatalf("Create() error = %v", err)
+	}
+
+	if _, ok, err := svc.Run(ctx, detail.Task.ID); err != nil || !ok {
+		t.Fatalf("Run() error=%v ok=%v", err, ok)
+	}
+
+	retried, ok, err := svc.RetryWithOptions(ctx, detail.Task.ID, RetryOptions{
+		Paths: []string{"/1/11"},
+		Scope: "selected_directory_subset",
+	})
+	if err != nil || !ok {
+		t.Fatalf("RetryWithOptions() error=%v ok=%v", err, ok)
+	}
+	if len(retried.Plan.Items) != 1 || retried.Plan.Items[0].Path != "/1/11/a.bin" {
+		t.Fatalf("expected selected directory retry to keep only /1/11/a.bin, got %#v", retried.Plan.Items)
+	}
+	if len(retried.SourceEntries) != 1 || retried.SourceEntries[0].Path != "/1/11/a.bin" {
+		t.Fatalf("expected selected directory entries to keep only /1/11/a.bin, got %#v", retried.SourceEntries)
+	}
+	if retryMode, _ := retried.Plan.Metadata["retryMode"].(string); retryMode != "selected_directory_subset" {
+		t.Fatalf("expected retryMode selected_directory_subset, got %#v", retried.Plan.Metadata["retryMode"])
+	}
+	if retryPendingOnly, _ := retried.Plan.Metadata["retryPendingOnly"].(bool); retryPendingOnly {
+		t.Fatalf("expected retryPendingOnly false for selected_directory_subset, got %#v", retried.Plan.Metadata["retryPendingOnly"])
+	}
+	if selectedPaths, ok := retried.Plan.Metadata["retrySelectedPaths"].([]string); !ok || len(selectedPaths) != 1 || selectedPaths[0] != "/1/11" {
+		t.Fatalf("expected retrySelectedPaths [/1/11], got %#v", retried.Plan.Metadata["retrySelectedPaths"])
+	}
+}
+
 func TestServiceRetryWithOptionsSelectedRetrySubsetKeepsOnlyChosenPaths(t *testing.T) {
 	ctx := context.Background()
 	store, err := sqlitestore.New(ctx, filepath.Join(t.TempDir(), "retry-selected-queue.db"))

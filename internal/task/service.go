@@ -822,7 +822,7 @@ func (s *Service) buildRetryDetail(detail Detail, opts RetryOptions) (Detail, er
 			plan.Metadata = map[string]interface{}{}
 		}
 		plan.Metadata["retryPendingOnly"] = true
-		if retryMode == "retry_queue" || retryMode == "selected_retry_subset" {
+		if retryMode == "retry_queue" || retryMode == "selected_retry_subset" || retryMode == "selected_directory_subset" {
 			plan.Metadata["retryPendingOnly"] = false
 		}
 		plan.Metadata["retryMode"] = retryMode
@@ -2948,6 +2948,14 @@ func selectRetryEntries(detail Detail, opts RetryOptions) ([]planner.SourceEntry
 }
 
 func selectRetryEntriesForSelection(detail Detail, selectedPaths []string, scope string) ([]planner.SourceEntry, []string, string, string, string) {
+	if strings.TrimSpace(scope) == "selected_directory_subset" {
+		selectedEntries, selectedEntryPaths := selectedDirectoryEntries(detail, selectedPaths)
+		if len(selectedEntries) == 0 {
+			return nil, nil, "", "", "retry_selection_empty"
+		}
+		return selectedEntries, selectedEntryPaths, "selected_directory_subset", "", ""
+	}
+
 	pendingEntries, pendingPaths := pendingRetryEntries(detail)
 	selectedPendingEntries := make([]planner.SourceEntry, 0, len(pendingEntries))
 	selectedPendingPaths := make([]string, 0, len(pendingPaths))
@@ -3036,6 +3044,46 @@ func selectRetryEntriesForSelection(detail Detail, selectedPaths []string, scope
 		mode = scope
 	}
 	return filtered, eligiblePaths, mode, "", ""
+}
+
+func selectedDirectoryEntries(detail Detail, selectedPaths []string) ([]planner.SourceEntry, []string) {
+	if len(selectedPaths) == 0 {
+		return nil, nil
+	}
+	selectedEntries := make([]planner.SourceEntry, 0)
+	selectedEntryPaths := make([]string, 0)
+	seen := make(map[string]struct{})
+	appendEntry := func(entry planner.SourceEntry) {
+		normalized := normalizeScanPath(entry.Path)
+		if normalized == "" || normalized == "/" {
+			return
+		}
+		if _, ok := seen[normalized]; ok {
+			return
+		}
+		seen[normalized] = struct{}{}
+		entry.Path = normalized
+		selectedEntries = append(selectedEntries, entry)
+		selectedEntryPaths = append(selectedEntryPaths, normalized)
+	}
+	for _, entry := range detail.SourceEntries {
+		if pathMatchesSelection(entry.Path, selectedPaths) {
+			appendEntry(entry)
+		}
+	}
+	if len(selectedEntries) > 0 {
+		return selectedEntries, selectedEntryPaths
+	}
+	for _, item := range detail.Plan.Items {
+		if !pathMatchesSelection(item.Path, selectedPaths) {
+			continue
+		}
+		appendEntry(planner.SourceEntry{
+			Path: item.Path,
+			Size: item.Size,
+		})
+	}
+	return selectedEntries, selectedEntryPaths
 }
 
 func pendingRetryPaths(results []Result) []string {

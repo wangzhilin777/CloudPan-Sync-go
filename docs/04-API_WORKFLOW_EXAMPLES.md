@@ -327,6 +327,9 @@ Invoke-RestMethod `
   - 表示这次 retry 来自待补传树当前筛选结果
 - `scope=selected_retry_subset`
   - 表示这次 retry 来自重试队列当前筛选结果
+- `scope=selected_directory_subset`
+  - 表示这次 retry 来自目录树当前筛选结果
+  - 适合把某个目录子树直接缩成独立执行子集，而不必先等它进入 pending / retry queue
 - 任务元数据会额外保留：
   - `metadata.retryScope`
   - `metadata.retrySelectedPaths`
