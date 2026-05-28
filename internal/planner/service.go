@@ -186,6 +186,13 @@ func pathDepth(path string) int {
 }
 
 func defaultRiskProfile(providerKey string, mode RiskMode) RiskProfile {
+	normalizedMode := normalizeRiskMode(mode)
+	profile := baseRiskProfile(normalizedMode, providerKey)
+	return applyProviderRiskCalibration(providerKey, profile)
+}
+
+func baseRiskProfile(mode RiskMode, providerKey string) RiskProfile {
+	keywords := providerRiskKeywords(providerKey)
 	switch normalizeRiskMode(mode) {
 	case RiskModeSafe:
 		return RiskProfile{
@@ -195,7 +202,7 @@ func defaultRiskProfile(providerKey string, mode RiskMode) RiskProfile {
 			DirectoryIntervalMS: 2500,
 			CooldownSeconds:     30,
 			RetryLimit:          2,
-			RiskKeywords:        providerRiskKeywords(providerKey),
+			RiskKeywords:        keywords,
 		}
 	case RiskModeFast:
 		return RiskProfile{
@@ -205,7 +212,7 @@ func defaultRiskProfile(providerKey string, mode RiskMode) RiskProfile {
 			DirectoryIntervalMS: 300,
 			CooldownSeconds:     5,
 			RetryLimit:          5,
-			RiskKeywords:        providerRiskKeywords(providerKey),
+			RiskKeywords:        keywords,
 		}
 	case RiskModeCustom:
 		return RiskProfile{
@@ -215,7 +222,7 @@ func defaultRiskProfile(providerKey string, mode RiskMode) RiskProfile {
 			DirectoryIntervalMS: 0,
 			CooldownSeconds:     0,
 			RetryLimit:          0,
-			RiskKeywords:        providerRiskKeywords(providerKey),
+			RiskKeywords:        keywords,
 		}
 	default:
 		return RiskProfile{
@@ -225,9 +232,60 @@ func defaultRiskProfile(providerKey string, mode RiskMode) RiskProfile {
 			DirectoryIntervalMS: 1000,
 			CooldownSeconds:     15,
 			RetryLimit:          3,
-			RiskKeywords:        providerRiskKeywords(providerKey),
+			RiskKeywords:        keywords,
 		}
 	}
+}
+
+func applyProviderRiskCalibration(providerKey string, profile RiskProfile) RiskProfile {
+	if profile.Mode == RiskModeCustom {
+		return profile
+	}
+	switch providerKey {
+	case "baidu_netdisk":
+		profile.RequestIntervalMS = max(profile.RequestIntervalMS, 1800)
+		profile.PageSize = minPositive(profile.PageSize, 100)
+		profile.DirectoryIntervalMS = max(profile.DirectoryIntervalMS, 3000)
+		profile.CooldownSeconds = max(profile.CooldownSeconds, 45)
+		profile.RetryLimit = minPositive(profile.RetryLimit, 2)
+	case "quark", "uc":
+		profile.RequestIntervalMS = max(profile.RequestIntervalMS, 1400)
+		profile.PageSize = minPositive(profile.PageSize, 120)
+		profile.DirectoryIntervalMS = max(profile.DirectoryIntervalMS, 2200)
+		profile.CooldownSeconds = max(profile.CooldownSeconds, 40)
+	case "189cloud":
+		profile.RequestIntervalMS = max(profile.RequestIntervalMS, 1200)
+		profile.PageSize = minPositive(profile.PageSize, 150)
+		profile.DirectoryIntervalMS = max(profile.DirectoryIntervalMS, 2000)
+		profile.CooldownSeconds = max(profile.CooldownSeconds, 35)
+	case "115_open":
+		profile.RequestIntervalMS = max(profile.RequestIntervalMS, 1000)
+		profile.PageSize = minPositive(profile.PageSize, 200)
+		profile.DirectoryIntervalMS = max(profile.DirectoryIntervalMS, 1800)
+		profile.CooldownSeconds = max(profile.CooldownSeconds, 30)
+	case "guangya":
+		profile.RequestIntervalMS = max(profile.RequestIntervalMS, 900)
+		profile.PageSize = minPositive(profile.PageSize, 180)
+		profile.DirectoryIntervalMS = max(profile.DirectoryIntervalMS, 1600)
+		profile.CooldownSeconds = max(profile.CooldownSeconds, 25)
+	case "xunlei", "pikpak":
+		profile.RequestIntervalMS = max(profile.RequestIntervalMS, 700)
+		profile.PageSize = minPositive(profile.PageSize, 250)
+		profile.DirectoryIntervalMS = max(profile.DirectoryIntervalMS, 1000)
+	case "aliyundrive_open", "123_open":
+		profile.PageSize = minPositive(profile.PageSize, 500)
+	}
+	return profile
+}
+
+func minPositive(current int, limit int) int {
+	if current <= 0 {
+		return current
+	}
+	if limit <= 0 || current < limit {
+		return current
+	}
+	return limit
 }
 
 func normalizeRiskMode(mode RiskMode) RiskMode {

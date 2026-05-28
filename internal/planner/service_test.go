@@ -99,6 +99,111 @@ func TestBuildPreviewIncludesRiskProfileDefaults(t *testing.T) {
 	}
 }
 
+func TestBuildPreviewCalibratesRiskProfileByProvider(t *testing.T) {
+	registry := provider.NewRegistry(provider.DefaultCatalog()...)
+	tests := []struct {
+		name              string
+		targetProvider    string
+		riskMode          RiskMode
+		wantRequestMin    int
+		wantPageMax       int
+		wantDirectoryMin  int
+		wantCooldownMin   int
+		wantRetryLimitMax int
+		wantKeyword       string
+	}{
+		{
+			name:              "baidu safe is conservative",
+			targetProvider:    "baidu_netdisk",
+			riskMode:          RiskModeSafe,
+			wantRequestMin:    1800,
+			wantPageMax:       100,
+			wantDirectoryMin:  3000,
+			wantCooldownMin:   45,
+			wantRetryLimitMax: 2,
+			wantKeyword:       "hit_risk_control",
+		},
+		{
+			name:             "quark balanced slows down risky web auth",
+			targetProvider:   "quark",
+			riskMode:         RiskModeBalanced,
+			wantRequestMin:   1400,
+			wantPageMax:      120,
+			wantDirectoryMin: 2200,
+			wantCooldownMin:  40,
+			wantKeyword:      "captcha",
+		},
+		{
+			name:             "aliyun fast keeps larger page budget",
+			targetProvider:   "aliyundrive_open",
+			riskMode:         RiskModeFast,
+			wantRequestMin:   250,
+			wantPageMax:      500,
+			wantDirectoryMin: 300,
+			wantCooldownMin:  5,
+			wantKeyword:      "flow_limit",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			plan, err := BuildPreview(registry, PreviewRequest{
+				SourceProvider: "guangya",
+				TargetProvider: tt.targetProvider,
+				RiskMode:       tt.riskMode,
+				Entries:        []SourceEntry{{Path: "/a.bin", Size: 10}},
+			})
+			if err != nil {
+				t.Fatalf("BuildPreview() error = %v", err)
+			}
+			riskProfile, ok := plan.Metadata["riskProfile"].(RiskProfile)
+			if !ok {
+				t.Fatalf("expected riskProfile metadata, got %#v", plan.Metadata["riskProfile"])
+			}
+			if riskProfile.RequestIntervalMS < tt.wantRequestMin {
+				t.Fatalf("expected request interval >= %d, got %d", tt.wantRequestMin, riskProfile.RequestIntervalMS)
+			}
+			if riskProfile.PageSize > tt.wantPageMax {
+				t.Fatalf("expected page size <= %d, got %d", tt.wantPageMax, riskProfile.PageSize)
+			}
+			if riskProfile.DirectoryIntervalMS < tt.wantDirectoryMin {
+				t.Fatalf("expected directory interval >= %d, got %d", tt.wantDirectoryMin, riskProfile.DirectoryIntervalMS)
+			}
+			if riskProfile.CooldownSeconds < tt.wantCooldownMin {
+				t.Fatalf("expected cooldown >= %d, got %d", tt.wantCooldownMin, riskProfile.CooldownSeconds)
+			}
+			if tt.wantRetryLimitMax > 0 && riskProfile.RetryLimit > tt.wantRetryLimitMax {
+				t.Fatalf("expected retryLimit <= %d, got %d", tt.wantRetryLimitMax, riskProfile.RetryLimit)
+			}
+			if !containsString(riskProfile.RiskKeywords, tt.wantKeyword) {
+				t.Fatalf("expected keyword %q in %#v", tt.wantKeyword, riskProfile.RiskKeywords)
+			}
+		})
+	}
+}
+
+func TestBuildPreviewCustomRiskModeSkipsProviderCalibration(t *testing.T) {
+	registry := provider.NewRegistry(provider.DefaultCatalog()...)
+	plan, err := BuildPreview(registry, PreviewRequest{
+		SourceProvider: "guangya",
+		TargetProvider: "baidu_netdisk",
+		RiskMode:       RiskModeCustom,
+		Entries:        []SourceEntry{{Path: "/a.bin", Size: 10}},
+	})
+	if err != nil {
+		t.Fatalf("BuildPreview() error = %v", err)
+	}
+	riskProfile, ok := plan.Metadata["riskProfile"].(RiskProfile)
+	if !ok {
+		t.Fatalf("expected riskProfile metadata, got %#v", plan.Metadata["riskProfile"])
+	}
+	if riskProfile.RequestIntervalMS != 0 || riskProfile.PageSize != 0 || riskProfile.DirectoryIntervalMS != 0 || riskProfile.CooldownSeconds != 0 || riskProfile.RetryLimit != 0 {
+		t.Fatalf("expected custom mode to keep zero baseline before override, got %+v", riskProfile)
+	}
+	if !containsString(riskProfile.RiskKeywords, "hit_risk_control") {
+		t.Fatalf("expected provider risk keywords to remain in custom mode, got %#v", riskProfile.RiskKeywords)
+	}
+}
+
 func TestBuildPreviewAppliesRiskOverride(t *testing.T) {
 	registry := provider.NewRegistry(provider.DefaultCatalog()...)
 	plan, err := BuildPreview(registry, PreviewRequest{
@@ -186,4 +291,13 @@ func TestBuildPreviewRejectsInvalidExecutionMode(t *testing.T) {
 
 func intPtr(value int) *int {
 	return &value
+}
+
+func containsString(values []string, expected string) bool {
+	for _, value := range values {
+		if value == expected {
+			return true
+		}
+	}
+	return false
 }

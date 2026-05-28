@@ -281,9 +281,12 @@
     - `riskHit`
     - `riskHitCount`
     - `lastRiskStatus`
+  - 默认模板已从单一档位扩展为“档位基线 + provider 校准”：
+    - 对 `baidu_netdisk / quark / uc / 189cloud / 115_open / guangya` 等风控更敏感链路自动降低 pageSize、加大请求/目录间隔和冷却时间
+    - `custom` 模式仍保留给调用方完全手动覆盖
   - 目前仍缺少：
     - 更完整的表单化任务级覆盖入口
-    - 真实 provider 校准后的更细默认模板
+    - 更多真实样本反推后的细分账号级模板
   - 这部分已经明确纳入 Go 版主线能力，而不是只在单个 provider 中零散处理
 
 ### 5. Task 队列与运行时
