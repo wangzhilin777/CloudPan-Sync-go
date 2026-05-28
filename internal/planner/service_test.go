@@ -184,6 +184,9 @@ func TestBuildPreviewCalibratesRiskProfileByProvider(t *testing.T) {
 			if tt.wantRetryLimitMax > 0 && riskProfile.RetryLimit > tt.wantRetryLimitMax {
 				t.Fatalf("expected retryLimit <= %d, got %d", tt.wantRetryLimitMax, riskProfile.RetryLimit)
 			}
+			if riskProfile.MaxConcurrent <= 0 {
+				t.Fatalf("expected maxConcurrent > 0, got %d", riskProfile.MaxConcurrent)
+			}
 			if !containsString(riskProfile.RiskKeywords, tt.wantKeyword) {
 				t.Fatalf("expected keyword %q in %#v", tt.wantKeyword, riskProfile.RiskKeywords)
 			}
@@ -226,6 +229,9 @@ func TestBuildPreviewAppliesRiskOverride(t *testing.T) {
 			DirectoryIntervalMS: intPtr(2200),
 			CooldownSeconds:     intPtr(45),
 			RetryLimit:          intPtr(1),
+			MaxConcurrent:       intPtr(1),
+			AutoRetryStartHour:  intPtr(1),
+			AutoRetryEndHour:    intPtr(7),
 			RiskKeywords:        []string{"rate_limited", "captcha"},
 		},
 		Entries: []SourceEntry{{Path: "/a.bin", Size: 10}},
@@ -253,6 +259,12 @@ func TestBuildPreviewAppliesRiskOverride(t *testing.T) {
 	if riskProfile.RetryLimit != 1 {
 		t.Fatalf("expected retryLimit 1, got %d", riskProfile.RetryLimit)
 	}
+	if riskProfile.MaxConcurrent != 1 {
+		t.Fatalf("expected maxConcurrent 1, got %d", riskProfile.MaxConcurrent)
+	}
+	if riskProfile.AutoRetryStartHour != 1 || riskProfile.AutoRetryEndHour != 7 {
+		t.Fatalf("expected auto retry window 1-7, got %+v", riskProfile)
+	}
 	if len(riskProfile.RiskKeywords) != 2 || riskProfile.RiskKeywords[0] != "rate_limited" {
 		t.Fatalf("expected override risk keywords, got %#v", riskProfile.RiskKeywords)
 	}
@@ -263,8 +275,8 @@ func TestBuildPreviewAppliesRiskOverride(t *testing.T) {
 	if len(resolution.CalibrationReasons) == 0 {
 		t.Fatalf("expected calibration reasons, got %+v", resolution)
 	}
-	if len(resolution.OverrideFields) != 6 {
-		t.Fatalf("expected 6 override fields, got %#v", resolution.OverrideFields)
+	if len(resolution.OverrideFields) != 9 {
+		t.Fatalf("expected 9 override fields, got %#v", resolution.OverrideFields)
 	}
 	if resolution.Applied.RetryLimit != 1 || resolution.Applied.PageSize != 88 {
 		t.Fatalf("expected applied risk profile to reflect override, got %+v", resolution.Applied)

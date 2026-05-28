@@ -67,6 +67,9 @@ func TestAppWorkflowMainline(t *testing.T) {
 			"requestIntervalMs":   1111,
 			"directoryIntervalMs": 2222,
 			"retryLimit":          2,
+			"maxConcurrent":       1,
+			"autoRetryStartHour":  1,
+			"autoRetryEndHour":    7,
 			"riskKeywords":        []string{"rate_limited"},
 		},
 		"executionMode":  "pre_scan_flat",
@@ -102,7 +105,7 @@ func TestAppWorkflowMainline(t *testing.T) {
 		t.Fatalf("expected preview risk providerKey 123_open, got %s", got)
 	}
 	overrideFields := riskResolution["overrideFields"].([]interface{})
-	if len(overrideFields) < 3 {
+	if len(overrideFields) < 5 {
 		t.Fatalf("expected preview override fields, got %#v", overrideFields)
 	}
 
@@ -121,6 +124,9 @@ func TestAppWorkflowMainline(t *testing.T) {
 			"requestIntervalMs":   1111,
 			"directoryIntervalMs": 2222,
 			"retryLimit":          2,
+			"maxConcurrent":       1,
+			"autoRetryStartHour":  1,
+			"autoRetryEndHour":    7,
 			"riskKeywords":        []string{"rate_limited"},
 		},
 		"executionMode":  "pre_scan_flat",
@@ -144,6 +150,9 @@ func TestAppWorkflowMainline(t *testing.T) {
 	createdRiskProfile := createdMetadata["riskProfile"].(map[string]interface{})
 	if got := int(createdRiskProfile["directoryIntervalMs"].(float64)); got != 2222 {
 		t.Fatalf("expected task risk directoryIntervalMs 2222, got %d", got)
+	}
+	if got := int(createdRiskProfile["maxConcurrent"].(float64)); got != 1 {
+		t.Fatalf("expected task risk maxConcurrent 1, got %d", got)
 	}
 	createdResolution := createdMetadata["riskProfileResolution"].(map[string]interface{})
 	if got := createdResolution["providerKey"].(string); got != "123_open" {

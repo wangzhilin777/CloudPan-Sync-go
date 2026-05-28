@@ -1545,8 +1545,17 @@ func riskOverrideFromMetadata(values map[string]interface{}) *planner.RiskProfil
 		if value, ok := intPointerFromRaw(typed["retryLimit"]); ok {
 			override.RetryLimit = value
 		}
+		if value, ok := intPointerFromRaw(typed["maxConcurrent"]); ok {
+			override.MaxConcurrent = value
+		}
+		if value, ok := intPointerFromRaw(typed["autoRetryStartHour"]); ok {
+			override.AutoRetryStartHour = value
+		}
+		if value, ok := intPointerFromRaw(typed["autoRetryEndHour"]); ok {
+			override.AutoRetryEndHour = value
+		}
 		override.RiskKeywords = metadataStringSlice(map[string]interface{}{"keywords": typed["riskKeywords"]}, "keywords")
-		if override.RequestIntervalMS == nil && override.PageSize == nil && override.DirectoryIntervalMS == nil && override.CooldownSeconds == nil && override.RetryLimit == nil && len(override.RiskKeywords) == 0 {
+		if override.RequestIntervalMS == nil && override.PageSize == nil && override.DirectoryIntervalMS == nil && override.CooldownSeconds == nil && override.RetryLimit == nil && override.MaxConcurrent == nil && override.AutoRetryStartHour == nil && override.AutoRetryEndHour == nil && len(override.RiskKeywords) == 0 {
 			return nil
 		}
 		return &override
@@ -2850,6 +2859,9 @@ func riskProfileFromRaw(raw interface{}) planner.RiskProfile {
 			DirectoryIntervalMS: intNumber(typed["directoryIntervalMs"]),
 			CooldownSeconds:     intNumber(typed["cooldownSeconds"]),
 			RetryLimit:          intNumber(typed["retryLimit"]),
+			MaxConcurrent:       intNumber(typed["maxConcurrent"]),
+			AutoRetryStartHour:  intNumber(typed["autoRetryStartHour"]),
+			AutoRetryEndHour:    intNumber(typed["autoRetryEndHour"]),
 			RiskKeywords:        metadataStringSlice(map[string]interface{}{"keywords": typed["riskKeywords"]}, "keywords"),
 		}
 	default:
@@ -3213,9 +3225,13 @@ func summarizeRetryQueue(queue []RetryQueueItem) retryQueueSummary {
 }
 
 func runtimeCanAutoRetry(runtime RuntimeState) bool {
+	return runtimeCanAutoRetryWithRisk(runtime, planner.RiskProfile{})
+}
+
+func runtimeCanAutoRetryWithRisk(runtime RuntimeState, riskProfile planner.RiskProfile) bool {
 	summary := summarizeRetryQueue(runtime.RetryQueue)
 	if !summary.ShouldBlock {
-		return summary.CanAutoRetry && len(runtime.RetryQueue) > 0
+		return summary.CanAutoRetry && len(runtime.RetryQueue) > 0 && autoRetryAllowedNow(riskProfile, time.Now().UTC())
 	}
 	if summary.BlockedReason != "retry_queue_waiting_for_cooldown" {
 		return false
@@ -3230,22 +3246,51 @@ func runtimeCanAutoRetry(runtime RuntimeState) bool {
 	if time.Now().UTC().Before(nextRetryAt) {
 		return false
 	}
-	return summary.CanAutoRetry
+	return summary.CanAutoRetry && autoRetryAllowedNow(riskProfile, time.Now().UTC())
 }
 
 func taskCanAutoRecover(detail Detail) bool {
+	riskProfile := riskProfileFromMetadata(detail.Plan.Metadata)
 	switch detail.Task.State {
 	case StateBlocked:
-		return runtimeCanAutoRetry(detail.Runtime)
+		return runtimeCanAutoRetryWithRisk(detail.Runtime, riskProfile)
 	case StateCompletedWithErrors:
 		summary := summarizeRetryQueue(detail.Runtime.RetryQueue)
 		if summary.ShouldBlock {
 			return false
 		}
-		return retryQueueCanAutoResumeUploads(detail.Runtime.RetryQueue)
+		return retryQueueCanAutoResumeUploads(detail.Runtime.RetryQueue) && autoRetryAllowedNow(riskProfile, time.Now().UTC())
 	default:
 		return false
 	}
+}
+
+func autoRetryAllowedNow(riskProfile planner.RiskProfile, now time.Time) bool {
+	start := riskProfile.AutoRetryStartHour
+	end := riskProfile.AutoRetryEndHour
+	if start <= 0 && end <= 0 {
+		return true
+	}
+	if start < 0 {
+		start = 0
+	}
+	if end < 0 {
+		end = 0
+	}
+	if start > 23 {
+		start = 23
+	}
+	if end > 24 {
+		end = 24
+	}
+	currentHour := now.UTC().Hour()
+	if start == end {
+		return true
+	}
+	if start < end {
+		return currentHour >= start && currentHour < end
+	}
+	return currentHour >= start || currentHour < end
 }
 
 func retryQueueCanAutoResumeUploads(queue []RetryQueueItem) bool {

@@ -62,6 +62,9 @@ func TestHandleIndexServesHTML(t *testing.T) {
 	if !strings.Contains(body, `id="auto-recover-run"`) {
 		t.Fatalf("expected auto recover controls in html body, got %q", body)
 	}
+	if !strings.Contains(body, `id="risk-max-concurrent"`) {
+		t.Fatalf("expected risk concurrency input in html body, got %q", body)
+	}
 }
 
 func TestRoutesServeStaticAssets(t *testing.T) {

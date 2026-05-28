@@ -152,6 +152,9 @@ $preview | ConvertTo-Json -Depth 10
     - `applied`
     - `calibrationReasons`
     - `overrideFields`
+- `riskProfile.maxConcurrent`
+- `riskProfile.autoRetryStartHour`
+- `riskProfile.autoRetryEndHour`
 - 当目录较大或 provider 风控敏感时，通常会优先推荐 `leaf_first_lazy`。
 
 ## 7. 创建任务

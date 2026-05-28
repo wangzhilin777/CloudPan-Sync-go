@@ -24,6 +24,9 @@ type RiskProfile struct {
 	DirectoryIntervalMS int      `json:"directoryIntervalMs"`
 	CooldownSeconds     int      `json:"cooldownSeconds"`
 	RetryLimit          int      `json:"retryLimit"`
+	MaxConcurrent       int      `json:"maxConcurrent,omitempty"`
+	AutoRetryStartHour  int      `json:"autoRetryStartHour,omitempty"`
+	AutoRetryEndHour    int      `json:"autoRetryEndHour,omitempty"`
 	RiskKeywords        []string `json:"riskKeywords,omitempty"`
 }
 
@@ -33,6 +36,9 @@ type RiskProfileOverride struct {
 	DirectoryIntervalMS *int     `json:"directoryIntervalMs,omitempty"`
 	CooldownSeconds     *int     `json:"cooldownSeconds,omitempty"`
 	RetryLimit          *int     `json:"retryLimit,omitempty"`
+	MaxConcurrent       *int     `json:"maxConcurrent,omitempty"`
+	AutoRetryStartHour  *int     `json:"autoRetryStartHour,omitempty"`
+	AutoRetryEndHour    *int     `json:"autoRetryEndHour,omitempty"`
 	RiskKeywords        []string `json:"riskKeywords,omitempty"`
 }
 

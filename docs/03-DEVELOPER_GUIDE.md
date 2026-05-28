@@ -231,6 +231,9 @@
   - `directoryIntervalMs`
   - `cooldownSeconds`
   - `retryLimit`
+  - `maxConcurrent`
+  - `autoRetryStartHour`
+  - `autoRetryEndHour`
   - `riskKeywords`
 - 当前 planner 会把最终生效的风险配置写进 `metadata.riskProfile`。
 - 当前 planner 还会把风险解释链写进 `metadata.riskProfileResolution`：
@@ -246,6 +249,9 @@
   - `riskHitCount`
   - `lastRiskStatus`
 - 当前 runtime 还会按 `requestIntervalMs / directoryIntervalMs` 执行基础节流，并在被节流的 result payload 写入 `throttle` 证据。
+- 当前单机自动补传调度还会尊重 `autoRetryStartHour / autoRetryEndHour`：
+  - 不在时间窗内时，任务仍可手动 Retry
+  - 但后台 worker 不会自动接管
 
 ### 启动服务
 

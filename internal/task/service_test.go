@@ -2858,6 +2858,155 @@ func TestServiceRecoverBlockedTasksWithOptionsFiltersModeProviderAndLimit(t *tes
 	}
 }
 
+func TestServiceRecoverBlockedTasksRespectsAutoRetryWindow(t *testing.T) {
+	ctx := context.Background()
+	store, err := sqlitestore.New(ctx, filepath.Join(t.TempDir(), "auto-retry-window.db"))
+	if err != nil {
+		t.Fatalf("new store: %v", err)
+	}
+	defer func() { _ = store.Close() }()
+
+	uploadCalls := 0
+	adapter := &scriptedAdapter{
+		meta: provider.Provider{
+			Key:              "auto_retry_window_target",
+			DisplayName:      "Auto Retry Window Target",
+			ProtocolGroup:    "fake",
+			AuthModes:        []string{"manual_token"},
+			FastUploadInputs: []string{"md5", "size"},
+			FallbackModes:    []string{"download_upload"},
+			Status:           "planned",
+		},
+		capability: provider.CapabilitySet{
+			SupportsAuthValidation: true,
+			SupportsUpload:         true,
+		},
+		uploadFunc: func(req provider.UploadRequest) provider.UploadResult {
+			uploadCalls++
+			if uploadCalls == 1 {
+				return provider.UploadResult{
+					OperationResult: provider.OperationResult{
+						Status:  "rate_limited",
+						Message: "rate limited",
+						Mode:    "fake_rate_limit",
+					},
+				}
+			}
+			return provider.UploadResult{
+				OperationResult: provider.OperationResult{
+					OK:      true,
+					Status:  "ok",
+					Message: "recovered inside window",
+					Mode:    "fake_window_ok",
+				},
+			}
+		},
+	}
+
+	registry := provider.NewRegistry(adapter)
+	authSvc := auth.NewService(store, registry)
+	svc := NewService(store, registry, authSvc)
+	profile, err := authSvc.CreateProfile(ctx, auth.CreateProfileInput{
+		ProviderKey: "auto_retry_window_target",
+		AuthMode:    "manual_token",
+		DisplayName: "auto retry window target",
+		Token:       "token-window",
+	})
+	if err != nil {
+		t.Fatalf("CreateProfile() error = %v", err)
+	}
+
+	nowHour := time.Now().UTC().Hour()
+	blockedStart := (nowHour + 2) % 24
+	blockedEnd := (nowHour + 3) % 24
+	created, err := svc.Create(ctx, CreateRequest{
+		SourceProvider:  "guangya",
+		TargetProvider:  "auto_retry_window_target",
+		TargetProfileID: profile.ID,
+		ThresholdMB:     1,
+		RiskOverride: &planner.RiskProfileOverride{
+			CooldownSeconds:    intPtrTask(3600),
+			AutoRetryStartHour: intPtrTask(blockedStart),
+			AutoRetryEndHour:   intPtrTask(blockedEnd),
+		},
+		Entries: []planner.SourceEntry{
+			{Path: "/window.bin", Size: 1024, MD5: "window-md5"},
+		},
+	})
+	if err != nil {
+		t.Fatalf("Create() error = %v", err)
+	}
+	firstRun, ok, err := svc.Run(ctx, created.Task.ID)
+	if err != nil || !ok {
+		t.Fatalf("Run() error=%v ok=%v", err, ok)
+	}
+	if firstRun.Task.State != StateBlocked {
+		t.Fatalf("expected blocked after first run, got %s", firstRun.Task.State)
+	}
+
+	detail, ok, err := svc.Get(ctx, created.Task.ID)
+	if err != nil || !ok {
+		t.Fatalf("Get() error=%v ok=%v", err, ok)
+	}
+	detail.Results[0].CreatedAt = time.Now().Add(-2 * time.Hour).UTC().Format(time.RFC3339)
+	syncRuntimeRetryQueue(&detail.Runtime, detail.Plan.Metadata, detail.Results)
+	applyRetryQueueSummary(&detail.Runtime, detail.Plan.Metadata)
+	if err := replaceTaskDetailAndResults(ctx, store, detail); err != nil {
+		t.Fatalf("replaceTaskDetailAndResults() error = %v", err)
+	}
+
+	recovered, err := svc.RecoverBlockedTasks(ctx)
+	if err != nil {
+		t.Fatalf("RecoverBlockedTasks() error = %v", err)
+	}
+	if recovered != 0 {
+		t.Fatalf("expected recovered count 0 outside auto retry window, got %d", recovered)
+	}
+	afterBlocked, ok, err := svc.Get(ctx, created.Task.ID)
+	if err != nil || !ok {
+		t.Fatalf("Get(after blocked) error=%v ok=%v", err, ok)
+	}
+	if afterBlocked.Task.State != StateBlocked {
+		t.Fatalf("expected task to stay blocked outside auto retry window, got %s", afterBlocked.Task.State)
+	}
+
+	allowedStart := nowHour
+	allowedEnd := (nowHour + 2) % 24
+	if allowedEnd == allowedStart {
+		allowedEnd = (allowedStart + 1) % 24
+	}
+	detail.Plan.Metadata["riskProfile"] = planner.RiskProfile{
+		Mode:                planner.RiskModeBalanced,
+		RequestIntervalMS:   800,
+		PageSize:            300,
+		DirectoryIntervalMS: 1000,
+		CooldownSeconds:     0,
+		RetryLimit:          3,
+		MaxConcurrent:       1,
+		AutoRetryStartHour:  allowedStart,
+		AutoRetryEndHour:    allowedEnd,
+		RiskKeywords:        []string{"rate_limit"},
+	}
+	if err := replaceTaskDetailAndResults(ctx, store, detail); err != nil {
+		t.Fatalf("replaceTaskDetailAndResults(allowed) error = %v", err)
+	}
+
+	recovered, err = svc.RecoverBlockedTasks(ctx)
+	if err != nil {
+		t.Fatalf("RecoverBlockedTasks(allowed) error = %v", err)
+	}
+	if recovered != 1 {
+		t.Fatalf("expected recovered count 1 inside auto retry window, got %d", recovered)
+	}
+	finalDetail, ok, err := svc.Get(ctx, created.Task.ID)
+	if err != nil || !ok {
+		t.Fatalf("Get(final) error=%v ok=%v", err, ok)
+	}
+	if finalDetail.Task.State != StateCompleted {
+		t.Fatalf("expected completed after allowed window recovery, got %s", finalDetail.Task.State)
+	}
+}
+
 func TestServiceRetryBlockedForLocalFileMissingDoesNotResetTask(t *testing.T) {
 	ctx := context.Background()
 	store, err := sqlitestore.New(ctx, filepath.Join(t.TempDir(), "retry-blocked-local.db"))

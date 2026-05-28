@@ -173,6 +173,18 @@
                       <input id="risk-retry-limit" type="number" min="0" placeholder="例如 2" />
                     </label>
                     <label>
+                      <span>最大并发</span>
+                      <input id="risk-max-concurrent" type="number" min="0" placeholder="例如 1" />
+                    </label>
+                    <label>
+                      <span>自动补传开始时段</span>
+                      <input id="risk-auto-retry-start-hour" type="number" min="0" max="23" placeholder="例如 1" />
+                    </label>
+                    <label>
+                      <span>自动补传结束时段</span>
+                      <input id="risk-auto-retry-end-hour" type="number" min="0" max="24" placeholder="例如 7" />
+                    </label>
+                    <label>
                       <span>风险关键词</span>
                       <input id="risk-keywords" type="text" placeholder="rate_limit,captcha,forbidden" />
                     </label>

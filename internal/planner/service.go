@@ -221,6 +221,7 @@ func baseRiskProfile(mode RiskMode, providerKey string) RiskProfile {
 			DirectoryIntervalMS: 2500,
 			CooldownSeconds:     30,
 			RetryLimit:          2,
+			MaxConcurrent:       1,
 			RiskKeywords:        keywords,
 		}
 	case RiskModeFast:
@@ -231,6 +232,7 @@ func baseRiskProfile(mode RiskMode, providerKey string) RiskProfile {
 			DirectoryIntervalMS: 300,
 			CooldownSeconds:     5,
 			RetryLimit:          5,
+			MaxConcurrent:       4,
 			RiskKeywords:        keywords,
 		}
 	case RiskModeCustom:
@@ -241,6 +243,7 @@ func baseRiskProfile(mode RiskMode, providerKey string) RiskProfile {
 			DirectoryIntervalMS: 0,
 			CooldownSeconds:     0,
 			RetryLimit:          0,
+			MaxConcurrent:       0,
 			RiskKeywords:        keywords,
 		}
 	default:
@@ -251,6 +254,7 @@ func baseRiskProfile(mode RiskMode, providerKey string) RiskProfile {
 			DirectoryIntervalMS: 1000,
 			CooldownSeconds:     15,
 			RetryLimit:          3,
+			MaxConcurrent:       2,
 			RiskKeywords:        keywords,
 		}
 	}
@@ -273,38 +277,45 @@ func applyProviderRiskCalibrationWithReasons(providerKey string, profile RiskPro
 		profile.DirectoryIntervalMS = max(profile.DirectoryIntervalMS, 3000)
 		profile.CooldownSeconds = max(profile.CooldownSeconds, 45)
 		profile.RetryLimit = minPositive(profile.RetryLimit, 2)
+		profile.MaxConcurrent = minPositive(profile.MaxConcurrent, 1)
 		reasons = append(reasons, "百度网盘按更保守的请求/目录间隔收敛，并降低重试上限。")
 	case "quark", "uc":
 		profile.RequestIntervalMS = max(profile.RequestIntervalMS, 1400)
 		profile.PageSize = minPositive(profile.PageSize, 120)
 		profile.DirectoryIntervalMS = max(profile.DirectoryIntervalMS, 2200)
 		profile.CooldownSeconds = max(profile.CooldownSeconds, 40)
+		profile.MaxConcurrent = minPositive(profile.MaxConcurrent, 1)
 		reasons = append(reasons, "Quark / UC 风控更敏感，默认提高请求间隔并缩小分页。")
 	case "189cloud":
 		profile.RequestIntervalMS = max(profile.RequestIntervalMS, 1200)
 		profile.PageSize = minPositive(profile.PageSize, 150)
 		profile.DirectoryIntervalMS = max(profile.DirectoryIntervalMS, 2000)
 		profile.CooldownSeconds = max(profile.CooldownSeconds, 35)
+		profile.MaxConcurrent = minPositive(profile.MaxConcurrent, 1)
 		reasons = append(reasons, "天翼云盘默认保守控制分页和目录推进节奏。")
 	case "115_open":
 		profile.RequestIntervalMS = max(profile.RequestIntervalMS, 1000)
 		profile.PageSize = minPositive(profile.PageSize, 200)
 		profile.DirectoryIntervalMS = max(profile.DirectoryIntervalMS, 1800)
 		profile.CooldownSeconds = max(profile.CooldownSeconds, 30)
+		profile.MaxConcurrent = minPositive(profile.MaxConcurrent, 1)
 		reasons = append(reasons, "115 默认保守控制列表频率与目录节流。")
 	case "guangya":
 		profile.RequestIntervalMS = max(profile.RequestIntervalMS, 900)
 		profile.PageSize = minPositive(profile.PageSize, 180)
 		profile.DirectoryIntervalMS = max(profile.DirectoryIntervalMS, 1600)
 		profile.CooldownSeconds = max(profile.CooldownSeconds, 25)
+		profile.MaxConcurrent = minPositive(profile.MaxConcurrent, 1)
 		reasons = append(reasons, "光鸭链路默认按中保守模板限制目录节奏。")
 	case "xunlei", "pikpak":
 		profile.RequestIntervalMS = max(profile.RequestIntervalMS, 700)
 		profile.PageSize = minPositive(profile.PageSize, 250)
 		profile.DirectoryIntervalMS = max(profile.DirectoryIntervalMS, 1000)
+		profile.MaxConcurrent = minPositive(profile.MaxConcurrent, 2)
 		reasons = append(reasons, "迅雷 / PikPak 保留较快节奏，但仍限制分页和目录切换频率。")
 	case "aliyundrive_open", "123_open":
 		profile.PageSize = minPositive(profile.PageSize, 500)
+		profile.MaxConcurrent = minPositive(profile.MaxConcurrent, 3)
 		reasons = append(reasons, "阿里云盘 / 123Open 允许更大的分页预算，适合较平滑的列表推进。")
 	}
 	return profile, reasons
@@ -358,6 +369,18 @@ func applyRiskProfileOverrideWithFields(base RiskProfile, override *RiskProfileO
 	if override.RetryLimit != nil && *override.RetryLimit >= 0 {
 		base.RetryLimit = *override.RetryLimit
 		fields = append(fields, "retryLimit")
+	}
+	if override.MaxConcurrent != nil && *override.MaxConcurrent >= 0 {
+		base.MaxConcurrent = *override.MaxConcurrent
+		fields = append(fields, "maxConcurrent")
+	}
+	if override.AutoRetryStartHour != nil && *override.AutoRetryStartHour >= 0 {
+		base.AutoRetryStartHour = *override.AutoRetryStartHour
+		fields = append(fields, "autoRetryStartHour")
+	}
+	if override.AutoRetryEndHour != nil && *override.AutoRetryEndHour >= 0 {
+		base.AutoRetryEndHour = *override.AutoRetryEndHour
+		fields = append(fields, "autoRetryEndHour")
 	}
 	if len(override.RiskKeywords) > 0 {
 		base.RiskKeywords = append([]string(nil), override.RiskKeywords...)

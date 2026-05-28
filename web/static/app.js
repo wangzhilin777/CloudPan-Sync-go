@@ -162,6 +162,18 @@ function renderRiskResolutionSummary(resolution) {
   return parts.join(" | ");
 }
 
+function renderRiskWindow(profile) {
+  if (!profile || typeof profile !== "object") {
+    return "-";
+  }
+  const start = Number(profile.autoRetryStartHour || 0);
+  const end = Number(profile.autoRetryEndHour || 0);
+  if (start <= 0 && end <= 0) {
+    return "always_on";
+  }
+  return `${start}:00-${end}:00 UTC`;
+}
+
 function escapeHTML(value) {
   return String(value)
     .replaceAll("&", "&amp;")
@@ -1344,6 +1356,9 @@ function collectRiskOverrideFromForm() {
     ["#risk-page-size", "pageSize"],
     ["#risk-cooldown-seconds", "cooldownSeconds"],
     ["#risk-retry-limit", "retryLimit"],
+    ["#risk-max-concurrent", "maxConcurrent"],
+    ["#risk-auto-retry-start-hour", "autoRetryStartHour"],
+    ["#risk-auto-retry-end-hour", "autoRetryEndHour"],
   ];
   numberFields.forEach(([selector, key]) => {
     const value = optionalNumberValue(selector);
@@ -1368,6 +1383,9 @@ function hydrateRiskOverrideForm(value) {
   $("#risk-page-size").value = override.pageSize ?? "";
   $("#risk-cooldown-seconds").value = override.cooldownSeconds ?? "";
   $("#risk-retry-limit").value = override.retryLimit ?? "";
+  $("#risk-max-concurrent").value = override.maxConcurrent ?? "";
+  $("#risk-auto-retry-start-hour").value = override.autoRetryStartHour ?? "";
+  $("#risk-auto-retry-end-hour").value = override.autoRetryEndHour ?? "";
   $("#risk-keywords").value = Array.isArray(override.riskKeywords) ? override.riskKeywords.join(",") : "";
 }
 
@@ -2048,11 +2066,15 @@ function renderSelectedTask() {
     </div>
     <div class="insight-card">
       <strong>风险节流</strong>
-      <span>${stringifyValue(metadata.riskProfile?.requestIntervalMs, "0")}ms / dir ${stringifyValue(metadata.riskProfile?.directoryIntervalMs, "0")}ms / retry ${stringifyValue(metadata.riskProfile?.retryLimit, "0")}</span>
+      <span>${stringifyValue(metadata.riskProfile?.requestIntervalMs, "0")}ms / dir ${stringifyValue(metadata.riskProfile?.directoryIntervalMs, "0")}ms / retry ${stringifyValue(metadata.riskProfile?.retryLimit, "0")} / conc ${stringifyValue(metadata.riskProfile?.maxConcurrent, "0")}</span>
     </div>
     <div class="insight-card">
       <strong>风险模板解释</strong>
       <span>${escapeHTML(renderRiskResolutionSummary(metadata.riskProfileResolution))}</span>
+    </div>
+    <div class="insight-card">
+      <strong>自动补传时间窗</strong>
+      <span>${escapeHTML(renderRiskWindow(metadata.riskProfile))}</span>
     </div>
     <div class="insight-card">
       <strong>重试范围</strong>
@@ -2138,11 +2160,15 @@ function renderPreview() {
     </div>
     <div class="insight-card">
       <strong>风险节流</strong>
-      <span>${stringifyValue(metadata.riskProfile?.requestIntervalMs, "0")}ms / dir ${stringifyValue(metadata.riskProfile?.directoryIntervalMs, "0")}ms / retry ${stringifyValue(metadata.riskProfile?.retryLimit, "0")}</span>
+      <span>${stringifyValue(metadata.riskProfile?.requestIntervalMs, "0")}ms / dir ${stringifyValue(metadata.riskProfile?.directoryIntervalMs, "0")}ms / retry ${stringifyValue(metadata.riskProfile?.retryLimit, "0")} / conc ${stringifyValue(metadata.riskProfile?.maxConcurrent, "0")}</span>
     </div>
     <div class="insight-card">
       <strong>风险模板解释</strong>
       <span>${escapeHTML(renderRiskResolutionSummary(metadata.riskProfileResolution))}</span>
+    </div>
+    <div class="insight-card">
+      <strong>自动补传时间窗</strong>
+      <span>${escapeHTML(renderRiskWindow(metadata.riskProfile))}</span>
     </div>
   `;
   $("#plan-preview").textContent = formatJSON(state.preview);
@@ -3177,7 +3203,7 @@ function buildPlanPayload() {
 }
 
 function wirePlanner() {
-  ["#risk-request-interval", "#risk-directory-interval", "#risk-page-size", "#risk-cooldown-seconds", "#risk-retry-limit", "#risk-keywords"].forEach(
+  ["#risk-request-interval", "#risk-directory-interval", "#risk-page-size", "#risk-cooldown-seconds", "#risk-retry-limit", "#risk-max-concurrent", "#risk-auto-retry-start-hour", "#risk-auto-retry-end-hour", "#risk-keywords"].forEach(
     (selector) => {
       $(selector).addEventListener("input", syncRiskOverrideJSON);
     },
