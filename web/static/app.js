@@ -2480,9 +2480,16 @@ function renderAutoRecoverSummary(items) {
             <span class="pill">ready ${stringifyValue(item.retryableNowCount, "0")}</span>
             <span class="pill">cooldown ${stringifyValue(item.cooldownCount, "0")}</span>
             <span class="pill">checkpoint ${stringifyValue(item.uploadCheckpointEligible, "0")}</span>
+            <span class="pill">primary class ${stringifyValue(item.primaryRetryClass, "-")}</span>
+            <span class="pill">primary action ${stringifyValue(item.primaryBlockedAction, "-")}</span>
             <span class="pill">classes ${(item.retryClasses || []).join(", ") || "-"}</span>
             <span class="pill">actions ${(item.blockedActions || []).join(", ") || "-"}</span>
           </div>
+          ${
+            item.primaryRetryClass || item.primaryBlockedAction
+              ? `<div class="muted">主失败口径：retryClass <code>${escapeHTML(stringifyValue(item.primaryRetryClass, "-"))}</code> / blockedAction <code>${escapeHTML(stringifyValue(item.primaryBlockedAction, "-"))}</code></div>`
+              : ""
+          }
           <div class="muted">${escapeHTML(stringifyValue(item.advice, "-"))}</div>
           <div class="actions compact">
             <span class="pill">next ${escapeHTML(stringifyValue(item.nextRetryAt, "-"))}</span>
@@ -2491,6 +2498,24 @@ function renderAutoRecoverSummary(items) {
               class="ghost"
               data-auto-recover-focus-mode="${escapeHTML(stringifyValue(item.mode, ""))}"
             >只看该模式</button>
+            ${
+              item.primaryRetryClass
+                ? `<button
+              type="button"
+              class="ghost"
+              data-auto-recover-focus-retry-class="${escapeHTML(stringifyValue(item.primaryRetryClass, ""))}"
+            >只看主重试类型</button>`
+                : ""
+            }
+            ${
+              item.primaryBlockedAction
+                ? `<button
+              type="button"
+              class="ghost"
+              data-auto-recover-focus-primary-blocked-action="${escapeHTML(stringifyValue(item.primaryBlockedAction, ""))}"
+            >只看主阻塞动作</button>`
+                : ""
+            }
             ${
               Array.isArray(item.blockedActions) && item.blockedActions.length
                 ? `<button
@@ -2501,12 +2526,52 @@ function renderAutoRecoverSummary(items) {
                 : ""
             }
             ${
+              item.primaryRetryClass || item.primaryBlockedAction
+                ? `<button
+              type="button"
+              class="ghost"
+              data-auto-recover-focus-lane-mode="${escapeHTML(stringifyValue(item.mode, ""))}"
+              data-auto-recover-focus-lane-retry-class="${escapeHTML(stringifyValue(item.primaryRetryClass, ""))}"
+              data-auto-recover-focus-lane-blocked-action="${escapeHTML(stringifyValue(item.primaryBlockedAction, ""))}"
+            >只看该 lane</button>`
+                : ""
+            }
+            ${
               Array.isArray(item.blockedActions) && item.blockedActions.length
                 ? `<button
               type="button"
               class="ghost"
               data-auto-recover-run-blocked-action="${escapeHTML(stringifyValue(item.blockedActions[0], ""))}"
             >执行该阻塞动作</button>`
+                : ""
+            }
+            ${
+              item.primaryRetryClass
+                ? `<button
+              type="button"
+              class="ghost"
+              data-auto-recover-run-retry-class="${escapeHTML(stringifyValue(item.primaryRetryClass, ""))}"
+            >执行主重试类型</button>`
+                : ""
+            }
+            ${
+              item.primaryBlockedAction
+                ? `<button
+              type="button"
+              class="ghost"
+              data-auto-recover-run-primary-blocked-action="${escapeHTML(stringifyValue(item.primaryBlockedAction, ""))}"
+            >执行主阻塞动作</button>`
+                : ""
+            }
+            ${
+              item.primaryRetryClass || item.primaryBlockedAction
+                ? `<button
+              type="button"
+              class="ghost"
+              data-auto-recover-run-lane-mode="${escapeHTML(stringifyValue(item.mode, ""))}"
+              data-auto-recover-run-lane-retry-class="${escapeHTML(stringifyValue(item.primaryRetryClass, ""))}"
+              data-auto-recover-run-lane-blocked-action="${escapeHTML(stringifyValue(item.primaryBlockedAction, ""))}"
+            >执行该 lane</button>`
                 : ""
             }
             <button
@@ -2524,6 +2589,33 @@ function renderAutoRecoverSummary(items) {
       `,
     )
     .join("");
+}
+
+function applyAutoRecoverFilters(nextFilters, options = {}) {
+  const filters = nextFilters && typeof nextFilters === "object" ? nextFilters : {};
+  if (Object.prototype.hasOwnProperty.call(filters, "mode")) {
+    state.autoRecoverFilters.mode = String(filters.mode || "");
+    setFilterControlValue("#auto-recover-mode", state.autoRecoverFilters.mode);
+  }
+  if (Object.prototype.hasOwnProperty.call(filters, "providerKey")) {
+    state.autoRecoverFilters.providerKey = String(filters.providerKey || "");
+    setFilterControlValue("#auto-recover-provider", state.autoRecoverFilters.providerKey);
+  }
+  if (Object.prototype.hasOwnProperty.call(filters, "retryClass")) {
+    state.autoRecoverFilters.retryClass = String(filters.retryClass || "");
+    setFilterControlValue("#auto-recover-retry-class", state.autoRecoverFilters.retryClass);
+  }
+  if (Object.prototype.hasOwnProperty.call(filters, "blockedAction")) {
+    state.autoRecoverFilters.blockedAction = String(filters.blockedAction || "");
+    setFilterControlValue("#auto-recover-blocked-action", state.autoRecoverFilters.blockedAction);
+  }
+  if (Object.prototype.hasOwnProperty.call(filters, "limit")) {
+    state.autoRecoverFilters.limit = String(filters.limit || "");
+    setInputValueIfPresent("#auto-recover-limit", state.autoRecoverFilters.limit);
+  }
+  if (options.render !== false) {
+    renderStatus();
+  }
 }
 
 function renderProtocolCoverageSummary(items) {
@@ -2789,26 +2881,64 @@ function wireAutoRecoverSummary() {
   wrap.querySelectorAll("[data-auto-recover-focus-mode]").forEach((button) => {
     button.addEventListener("click", () => {
       const mode = button.dataset.autoRecoverFocusMode || "";
-      state.autoRecoverFilters.mode = mode;
-      setFilterControlValue("#auto-recover-mode", mode);
-      renderStatus();
+      applyAutoRecoverFilters({ mode });
       showFlash(`已按 ${mode} 收敛后台补传候选`);
+    });
+  });
+  wrap.querySelectorAll("[data-auto-recover-focus-retry-class]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const retryClass = button.dataset.autoRecoverFocusRetryClass || "";
+      applyAutoRecoverFilters({ retryClass });
+      showFlash(`已按主失败类型 ${retryClass} 收敛后台补传候选`);
+    });
+  });
+  wrap.querySelectorAll("[data-auto-recover-focus-primary-blocked-action]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const blockedAction = button.dataset.autoRecoverFocusPrimaryBlockedAction || "";
+      applyAutoRecoverFilters({ blockedAction });
+      showFlash(`已按主阻塞动作 ${blockedAction} 收敛后台补传候选`);
     });
   });
   wrap.querySelectorAll("[data-auto-recover-focus-blocked-action]").forEach((button) => {
     button.addEventListener("click", () => {
       const blockedAction = button.dataset.autoRecoverFocusBlockedAction || "";
-      state.autoRecoverFilters.blockedAction = blockedAction;
-      setFilterControlValue("#auto-recover-blocked-action", blockedAction);
-      renderStatus();
+      applyAutoRecoverFilters({ blockedAction });
       showFlash(`已按 ${blockedAction} 收敛后台补传候选`);
+    });
+  });
+  wrap.querySelectorAll("[data-auto-recover-focus-lane-mode]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const mode = button.dataset.autoRecoverFocusLaneMode || "";
+      const retryClass = button.dataset.autoRecoverFocusLaneRetryClass || "";
+      const blockedAction = button.dataset.autoRecoverFocusLaneBlockedAction || "";
+      applyAutoRecoverFilters({ mode, retryClass, blockedAction });
+      showFlash(`已按 lane 收敛后台补传候选：${[mode, retryClass, blockedAction].filter(Boolean).join(" / ")}`);
     });
   });
   wrap.querySelectorAll("[data-auto-recover-run-mode]").forEach((button) => {
     button.addEventListener("click", async () => {
       try {
-        state.autoRecoverFilters.mode = button.dataset.autoRecoverRunMode || "";
-        setFilterControlValue("#auto-recover-mode", state.autoRecoverFilters.mode);
+        applyAutoRecoverFilters({ mode: button.dataset.autoRecoverRunMode || "" }, { render: false });
+        await triggerAutoRecover();
+      } catch (error) {
+        showFlash(error.message, true);
+      }
+    });
+  });
+  wrap.querySelectorAll("[data-auto-recover-run-retry-class]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      try {
+        applyAutoRecoverFilters({ retryClass: button.dataset.autoRecoverRunRetryClass || "" }, { render: false });
+        await triggerAutoRecover();
+      } catch (error) {
+        showFlash(error.message, true);
+      }
+    });
+  });
+  wrap.querySelectorAll("[data-auto-recover-run-primary-blocked-action]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      try {
+        applyAutoRecoverFilters({ blockedAction: button.dataset.autoRecoverRunPrimaryBlockedAction || "" }, { render: false });
         await triggerAutoRecover();
       } catch (error) {
         showFlash(error.message, true);
@@ -2818,8 +2948,24 @@ function wireAutoRecoverSummary() {
   wrap.querySelectorAll("[data-auto-recover-run-blocked-action]").forEach((button) => {
     button.addEventListener("click", async () => {
       try {
-        state.autoRecoverFilters.blockedAction = button.dataset.autoRecoverRunBlockedAction || "";
-        setFilterControlValue("#auto-recover-blocked-action", state.autoRecoverFilters.blockedAction);
+        applyAutoRecoverFilters({ blockedAction: button.dataset.autoRecoverRunBlockedAction || "" }, { render: false });
+        await triggerAutoRecover();
+      } catch (error) {
+        showFlash(error.message, true);
+      }
+    });
+  });
+  wrap.querySelectorAll("[data-auto-recover-run-lane-mode]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      try {
+        applyAutoRecoverFilters(
+          {
+            mode: button.dataset.autoRecoverRunLaneMode || "",
+            retryClass: button.dataset.autoRecoverRunLaneRetryClass || "",
+            blockedAction: button.dataset.autoRecoverRunLaneBlockedAction || "",
+          },
+          { render: false },
+        );
         await triggerAutoRecover();
       } catch (error) {
         showFlash(error.message, true);
