@@ -58,24 +58,28 @@ type EvidenceSummary struct {
 }
 
 type EvidenceReport struct {
-	GeneratedAt string           `json:"generatedAt"`
-	Title       string           `json:"title"`
-	Note        string           `json:"note,omitempty"`
-	Markdown    string           `json:"markdown"`
-	Summary     EvidenceSummary  `json:"summary"`
-	Statuses    []StatusSummary  `json:"statuses"`
-	Samples     []EvidenceSample `json:"samples"`
+	GeneratedAt    string                   `json:"generatedAt"`
+	Title          string                   `json:"title"`
+	Note           string                   `json:"note,omitempty"`
+	Markdown       string                   `json:"markdown"`
+	Summary        EvidenceSummary          `json:"summary"`
+	Statuses       []StatusSummary          `json:"statuses"`
+	SmokeSummaries []ProviderSmokeSummary   `json:"smokeSummaries,omitempty"`
+	SmokeMatrix    []ProviderSmokeMatrixRow `json:"smokeMatrix,omitempty"`
+	Samples        []EvidenceSample         `json:"samples"`
 }
 
 type EvidenceReportRecord struct {
-	ID          string           `json:"id"`
-	GeneratedAt string           `json:"generatedAt"`
-	Title       string           `json:"title"`
-	Note        string           `json:"note,omitempty"`
-	Markdown    string           `json:"markdown"`
-	Summary     EvidenceSummary  `json:"summary"`
-	Statuses    []StatusSummary  `json:"statuses"`
-	Samples     []EvidenceSample `json:"samples"`
+	ID             string                   `json:"id"`
+	GeneratedAt    string                   `json:"generatedAt"`
+	Title          string                   `json:"title"`
+	Note           string                   `json:"note,omitempty"`
+	Markdown       string                   `json:"markdown"`
+	Summary        EvidenceSummary          `json:"summary"`
+	Statuses       []StatusSummary          `json:"statuses"`
+	SmokeSummaries []ProviderSmokeSummary   `json:"smokeSummaries,omitempty"`
+	SmokeMatrix    []ProviderSmokeMatrixRow `json:"smokeMatrix,omitempty"`
+	Samples        []EvidenceSample         `json:"samples"`
 }
 
 type ProviderSmokeRecord struct {
@@ -107,6 +111,33 @@ type ProviderSmokeSummary struct {
 	SampleCategory       string   `json:"sampleCategory,omitempty"`
 	LatestSmokeAt        string   `json:"latestSmokeAt,omitempty"`
 	HasRealSuccessSample bool     `json:"hasRealSuccessSample"`
+}
+
+type ProviderSmokeMatrixRow struct {
+	ProtocolGroup                string   `json:"protocolGroup"`
+	SmokeCount                   int      `json:"smokeCount"`
+	SuccessCount                 int      `json:"successCount"`
+	FailureCount                 int      `json:"failureCount"`
+	ProviderCount                int      `json:"providerCount"`
+	ProviderKeys                 []string `json:"providerKeys,omitempty"`
+	SampleRecordID               string   `json:"sampleRecordId,omitempty"`
+	SampleTitle                  string   `json:"sampleTitle,omitempty"`
+	SampleProviderKey            string   `json:"sampleProviderKey,omitempty"`
+	SampleCategory               string   `json:"sampleCategory,omitempty"`
+	SampleResult                 string   `json:"sampleResult,omitempty"`
+	LatestSmokeAt                string   `json:"latestSmokeAt,omitempty"`
+	HasRealSuccessSample         bool     `json:"hasRealSuccessSample"`
+	CoverageTaskCount            int      `json:"coverageTaskCount"`
+	CoverageCompletedTaskCount   int      `json:"coverageCompletedTaskCount"`
+	CoverageRealSuccessTaskCount int      `json:"coverageRealSuccessTaskCount"`
+	CoverageProviderCount        int      `json:"coverageProviderCount"`
+	CoverageProviderKeys         []string `json:"coverageProviderKeys,omitempty"`
+	CoverageHasRealSuccessSample bool     `json:"coverageHasRealSuccessSample"`
+	CoverageSampleTaskID         string   `json:"coverageSampleTaskId,omitempty"`
+	CoverageSampleProviderKey    string   `json:"coverageSampleProviderKey,omitempty"`
+	CoverageSampleTaskState      string   `json:"coverageSampleTaskState,omitempty"`
+	CoverageSampleCompletionKind string   `json:"coverageSampleCompletionKind,omitempty"`
+	CoverageLastObservedAt       string   `json:"coverageLastObservedAt,omitempty"`
 }
 
 type EvidenceSample struct {
@@ -747,6 +778,26 @@ func (s *Service) ProviderStatuses(ctx context.Context) ([]StatusSummary, error)
 	return providerStatusSummary(ctx, s.store, s.registry.List())
 }
 
+func (s *Service) ProviderSmokeSummary(ctx context.Context) ([]ProviderSmokeSummary, error) {
+	records, err := s.ListProviderSmokeRecords(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return summarizeProviderSmokeRecords(records), nil
+}
+
+func (s *Service) ProviderSmokeMatrix(ctx context.Context) ([]ProviderSmokeMatrixRow, error) {
+	summary, err := s.RuntimeEvidence(ctx)
+	if err != nil {
+		return nil, err
+	}
+	smokeSummaries, err := s.ProviderSmokeSummary(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return buildProviderSmokeMatrix(summary, smokeSummaries), nil
+}
+
 func (s *Service) EvidenceReport(ctx context.Context) (EvidenceReport, error) {
 	summary, err := s.RuntimeEvidence(ctx)
 	if err != nil {
@@ -756,11 +807,16 @@ func (s *Service) EvidenceReport(ctx context.Context) (EvidenceReport, error) {
 	if err != nil {
 		return EvidenceReport{}, err
 	}
+	smokeSummaries, err := s.ProviderSmokeSummary(ctx)
+	if err != nil {
+		return EvidenceReport{}, err
+	}
+	smokeMatrix := buildProviderSmokeMatrix(summary, smokeSummaries)
 	details, err := s.List(ctx)
 	if err != nil {
 		return EvidenceReport{}, err
 	}
-	return buildEvidenceReport(summary, statuses, buildEvidenceSamples(details, 12), time.Now().UTC().Format(time.RFC3339), "", ""), nil
+	return buildEvidenceReport(summary, statuses, smokeSummaries, smokeMatrix, buildEvidenceSamples(details, 12), time.Now().UTC().Format(time.RFC3339), "", ""), nil
 }
 
 func (s *Service) SaveEvidenceReport(ctx context.Context, title, note string) (EvidenceReportRecord, error) {
@@ -768,7 +824,7 @@ func (s *Service) SaveEvidenceReport(ctx context.Context, title, note string) (E
 	if err != nil {
 		return EvidenceReportRecord{}, err
 	}
-	return saveEvidenceReport(ctx, s.store, buildEvidenceReport(report.Summary, report.Statuses, report.Samples, report.GeneratedAt, title, note))
+	return saveEvidenceReport(ctx, s.store, buildEvidenceReport(report.Summary, report.Statuses, report.SmokeSummaries, report.SmokeMatrix, report.Samples, report.GeneratedAt, title, note))
 }
 
 func (s *Service) ListEvidenceReports(ctx context.Context) ([]EvidenceReportRecord, error) {
@@ -818,14 +874,6 @@ func (s *Service) ListProviderSmokeRecords(ctx context.Context) ([]ProviderSmoke
 
 func (s *Service) GetProviderSmokeRecord(ctx context.Context, id string) (ProviderSmokeRecord, bool, error) {
 	return getProviderSmokeRecord(ctx, s.store, id)
-}
-
-func (s *Service) ProviderSmokeSummary(ctx context.Context) ([]ProviderSmokeSummary, error) {
-	records, err := s.ListProviderSmokeRecords(ctx)
-	if err != nil {
-		return nil, err
-	}
-	return summarizeProviderSmokeRecords(records), nil
 }
 
 func (s *Service) RecoverBlockedTasks(ctx context.Context) (int, error) {
@@ -1832,7 +1880,7 @@ func normalizeEvidenceReportTitle(title string) string {
 	return title
 }
 
-func buildEvidenceReport(summary EvidenceSummary, statuses []StatusSummary, samples []EvidenceSample, generatedAt string, title string, note string) EvidenceReport {
+func buildEvidenceReport(summary EvidenceSummary, statuses []StatusSummary, smokeSummaries []ProviderSmokeSummary, smokeMatrix []ProviderSmokeMatrixRow, samples []EvidenceSample, generatedAt string, title string, note string) EvidenceReport {
 	title = normalizeEvidenceReportTitle(title)
 	note = strings.TrimSpace(note)
 	var b strings.Builder
@@ -1891,6 +1939,27 @@ func buildEvidenceReport(summary EvidenceSummary, statuses []StatusSummary, samp
 			)
 		}
 	}
+	b.WriteString("\n## 真实样本矩阵\n\n")
+	if len(smokeMatrix) == 0 {
+		b.WriteString("- 当前没有真实样本矩阵数据。\n")
+	} else {
+		b.WriteString("| ProtocolGroup | Smoke | Coverage | Sample | Latest Smoke |\n")
+		b.WriteString("| --- | --- | --- | --- | --- |\n")
+		for _, item := range smokeMatrix {
+			fmt.Fprintf(&b, "| %s | %d/%d | %d/%d/%d | %s / %s / %s | %s |\n",
+				markdownCell(firstNonEmpty(item.ProtocolGroup, "-")),
+				item.SuccessCount,
+				item.FailureCount,
+				item.CoverageRealSuccessTaskCount,
+				item.CoverageTaskCount,
+				item.CoverageCompletedTaskCount,
+				markdownCell(firstNonEmpty(item.SampleTitle, "-")),
+				markdownCell(firstNonEmpty(item.SampleProviderKey, "-")),
+				markdownCell(firstNonEmpty(item.SampleCategory, "-")),
+				markdownCell(firstNonEmpty(item.LatestSmokeAt, "-")),
+			)
+		}
+	}
 	b.WriteString("\n## 代表任务样本\n\n")
 	if len(samples) == 0 {
 		b.WriteString("- 当前没有可展示的任务样本。\n")
@@ -1924,13 +1993,15 @@ func buildEvidenceReport(summary EvidenceSummary, statuses []StatusSummary, samp
 		}
 	}
 	return EvidenceReport{
-		GeneratedAt: generatedAt,
-		Title:       title,
-		Note:        note,
-		Markdown:    strings.TrimSpace(b.String()),
-		Summary:     summary,
-		Statuses:    statuses,
-		Samples:     samples,
+		GeneratedAt:    generatedAt,
+		Title:          title,
+		Note:           note,
+		Markdown:       strings.TrimSpace(b.String()),
+		Summary:        summary,
+		Statuses:       statuses,
+		SmokeSummaries: smokeSummaries,
+		SmokeMatrix:    smokeMatrix,
+		Samples:        samples,
 	}
 }
 
@@ -2122,6 +2193,65 @@ func summarizeProviderSmokeRecords(records []ProviderSmokeRecord) []ProviderSmok
 			state.row.ProviderKeys = nil
 		}
 		rows = append(rows, state.row)
+	}
+	return rows
+}
+
+func buildProviderSmokeMatrix(summary EvidenceSummary, smokeSummaries []ProviderSmokeSummary) []ProviderSmokeMatrixRow {
+	if len(smokeSummaries) == 0 && len(summary.ProtocolCoverage) == 0 {
+		return nil
+	}
+	type matrixState struct {
+		row ProviderSmokeMatrixRow
+	}
+	states := make(map[string]*matrixState)
+	order := make([]string, 0)
+	ensure := func(group string) *matrixState {
+		group = strings.TrimSpace(group)
+		if group == "" {
+			group = "unknown"
+		}
+		state, ok := states[group]
+		if ok {
+			return state
+		}
+		state = &matrixState{row: ProviderSmokeMatrixRow{ProtocolGroup: group}}
+		states[group] = state
+		order = append(order, group)
+		return state
+	}
+	for _, item := range smokeSummaries {
+		state := ensure(item.ProtocolGroup)
+		state.row.SmokeCount = item.SmokeCount
+		state.row.SuccessCount = item.SuccessCount
+		state.row.FailureCount = item.FailureCount
+		state.row.ProviderCount = item.ProviderCount
+		state.row.ProviderKeys = append([]string(nil), item.ProviderKeys...)
+		state.row.SampleRecordID = item.SampleRecordID
+		state.row.SampleTitle = item.SampleTitle
+		state.row.SampleProviderKey = item.SampleProviderKey
+		state.row.SampleCategory = item.SampleCategory
+		state.row.SampleResult = item.SampleResult
+		state.row.LatestSmokeAt = item.LatestSmokeAt
+		state.row.HasRealSuccessSample = item.HasRealSuccessSample
+	}
+	for _, coverage := range summary.ProtocolCoverage {
+		state := ensure(coverage.ProtocolGroup)
+		state.row.CoverageTaskCount = coverage.TaskCount
+		state.row.CoverageCompletedTaskCount = coverage.CompletedTaskCount
+		state.row.CoverageRealSuccessTaskCount = coverage.RealSuccessTaskCount
+		state.row.CoverageProviderCount = coverage.ProviderCount
+		state.row.CoverageProviderKeys = append([]string(nil), coverage.ProviderKeys...)
+		state.row.CoverageHasRealSuccessSample = coverage.HasRealSuccessSample
+		state.row.CoverageSampleTaskID = coverage.SampleTaskID
+		state.row.CoverageSampleProviderKey = coverage.SampleProviderKey
+		state.row.CoverageSampleTaskState = coverage.SampleTaskState
+		state.row.CoverageSampleCompletionKind = coverage.SampleCompletionKind
+		state.row.CoverageLastObservedAt = coverage.LastObservedAt
+	}
+	rows := make([]ProviderSmokeMatrixRow, 0, len(order))
+	for _, group := range order {
+		rows = append(rows, states[group].row)
 	}
 	return rows
 }

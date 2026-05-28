@@ -13,6 +13,7 @@ const state = {
   selectedReportId: "",
   providerSmokes: [],
   providerSmokeSummary: [],
+  providerSmokeMatrix: [],
   selectedProviderSmokeId: "",
   selectedProviderSmokeMarkdown: "",
   treeGroupsCollapsed: {},
@@ -1710,6 +1711,7 @@ function renderStatus() {
   $("#report-history").innerHTML = renderReportHistory(state.reportHistory || []);
   hydrateReportForm(currentReport);
   $("#provider-smoke-summary").innerHTML = renderProviderSmokeSummary(state.providerSmokeSummary || []);
+  $("#provider-smoke-matrix").innerHTML = renderProviderSmokeMatrix(state.providerSmokeMatrix || []);
   $("#provider-smoke-records").innerHTML = renderProviderSmokeRecords(state.providerSmokes || []);
   $("#provider-smoke-markdown").innerHTML = renderProviderSmokeMarkdown(state.selectedProviderSmokeMarkdown);
 
@@ -1956,13 +1958,14 @@ async function loadTasks() {
 }
 
 async function loadStatus() {
-  const [evidence, statuses, report, history, smokes, smokeSummary] = await Promise.all([
+  const [evidence, statuses, report, history, smokes, smokeSummary, smokeMatrix] = await Promise.all([
     api("/api/evidence/runtime"),
     api("/api/status/providers"),
     api("/api/evidence/report"),
     api("/api/evidence/reports"),
     api("/api/provider-smokes"),
     api("/api/provider-smokes/summary"),
+    api("/api/provider-smokes/matrix"),
   ]);
   state.evidence = evidence;
   state.statuses = statuses.items || [];
@@ -1970,6 +1973,7 @@ async function loadStatus() {
   state.reportHistory = history.items || [];
   state.providerSmokes = smokes.items || [];
   state.providerSmokeSummary = smokeSummary.items || [];
+  state.providerSmokeMatrix = smokeMatrix.items || [];
   if (state.selectedProviderSmokeId && !state.providerSmokes.some((item) => item.id === state.selectedProviderSmokeId)) {
     state.selectedProviderSmokeId = "";
     state.selectedProviderSmokeMarkdown = "";
@@ -2097,6 +2101,32 @@ function renderProviderSmokeSummary(items) {
           <div class="muted">providers: ${escapeHTML((item.providerKeys || []).join(", ") || "-")}</div>
           <div class="muted">sample: ${escapeHTML(stringifyValue(item.sampleTitle, "-"))} / ${escapeHTML(stringifyValue(item.sampleProviderKey, "-"))} / ${escapeHTML(stringifyValue(item.sampleCategory, "-"))}</div>
           <div class="muted">latestSmokeAt: <code>${escapeHTML(stringifyValue(item.latestSmokeAt, "-"))}</code></div>
+        </div>
+      `,
+    )
+    .join("");
+}
+
+function renderProviderSmokeMatrix(items) {
+  if (!Array.isArray(items) || !items.length) {
+    return `<div class="directory-empty">暂无真实样本矩阵。</div>`;
+  }
+  return items
+    .map(
+      (item) => `
+        <div class="directory-row tree-node">
+          <div class="directory-row-header">
+            <strong>${escapeHTML(stringifyValue(item.protocolGroup, "-"))}</strong>
+            <code>${escapeHTML(stringifyValue(item.sampleRecordId || item.coverageSampleTaskId, "-"))}</code>
+          </div>
+          <div class="directory-metrics">
+            <span class="pill">smoke ${stringifyValue(item.smokeCount, "0")}</span>
+            <span class="pill">coverage ${stringifyValue(item.coverageRealSuccessTaskCount, "0")}/${stringifyValue(item.coverageTaskCount, "0")}</span>
+            <span class="pill">${item.hasRealSuccessSample || item.coverageHasRealSuccessSample ? "sampled" : "pending"}</span>
+          </div>
+          <div class="muted">smoke sample: ${escapeHTML(stringifyValue(item.sampleTitle, "-"))} / ${escapeHTML(stringifyValue(item.sampleProviderKey, "-"))} / ${escapeHTML(stringifyValue(item.sampleCategory, "-"))}</div>
+          <div class="muted">coverage sample: ${escapeHTML(stringifyValue(item.coverageSampleProviderKey, "-"))} / ${escapeHTML(stringifyValue(item.coverageSampleTaskState, "-"))} / ${escapeHTML(stringifyValue(item.coverageSampleCompletionKind, "-"))}</div>
+          <div class="muted">latest smoke: <code>${escapeHTML(stringifyValue(item.latestSmokeAt, "-"))}</code> / coverage observed: <code>${escapeHTML(stringifyValue(item.coverageLastObservedAt, "-"))}</code></div>
         </div>
       `,
     )

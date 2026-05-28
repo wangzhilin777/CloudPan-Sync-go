@@ -368,6 +368,8 @@
   - `/api/evidence/runtime`
   - `/api/status/providers`
   - `protocolCoverage` 协议族覆盖矩阵
+  - `providerSmokeSummary` 真实样本聚合
+  - `providerSmokeMatrix` 真实样本矩阵
 - 当前可展示的数据包括：
   - `recentResults`
   - `recentProbes`
@@ -428,6 +430,7 @@
   - 按路径 / 状态 / reason 的树筛选
   - 按 retry class / retry state 的重试队列筛选
   - 运行中的任务可在当前 item 完成后协作式暂停，并在恢复后继续后续 item
+  - 真实 provider smoke 记录的协议组聚合与真实样本矩阵展示
   - 从重试队列一键定位待补传树或收敛到同类失败项
     - 从 blocked 聚合摘要一键跳到样本任务或当前阻塞动作
     - 从任务详情 blocked 引导卡片一键收敛当前任务问题子集
@@ -464,7 +467,7 @@
 - 还缺：
   - 真实登录态续期
   - 更细粒度断点续传
-  - 真实样本矩阵与验收记录
+  - 更多真实验收记录与边界覆盖
 
 ### 2. UI 自动化 smoke 仍可继续增强
 

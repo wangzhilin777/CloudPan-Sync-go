@@ -406,9 +406,24 @@ func TestAppWorkflowMainline(t *testing.T) {
 		t.Fatal("expected smoke summary hasRealSuccessSample true")
 	}
 
+	smokeMatrixResp := invokeJSON(t, handler, http.MethodGet, "/api/provider-smokes/matrix", nil)
+	smokeMatrix := smokeMatrixResp.Data.(map[string]interface{})["items"].([]interface{})
+	if len(smokeMatrix) == 0 {
+		t.Fatal("expected smoke matrix items")
+	}
+	if got := smokeMatrix[0].(map[string]interface{})["protocolGroup"].(string); got != "aliyun_123_open" {
+		t.Fatalf("expected smoke matrix protocolGroup aliyun_123_open, got %s", got)
+	}
+	if got := smokeMatrix[0].(map[string]interface{})["coverageRealSuccessTaskCount"].(float64); got == 0 {
+		t.Fatal("expected smoke matrix coverageRealSuccessTaskCount to be non-zero")
+	}
+
 	smokeMarkdown := invokeText(t, handler, http.MethodGet, "/api/provider-smokes/"+smokeID+"?format=markdown", nil)
 	if !strings.Contains(smokeMarkdown, "工作流真实 smoke") {
 		t.Fatalf("expected smoke markdown title, got %s", smokeMarkdown)
+	}
+	if !strings.Contains(reportData["markdown"].(string), "## 真实样本矩阵") {
+		t.Fatalf("expected report markdown to include smoke matrix section, got %s", reportData["markdown"].(string))
 	}
 
 	retryResp := invokeJSON(t, handler, http.MethodPost, "/api/tasks/"+taskID+"/retry", nil)

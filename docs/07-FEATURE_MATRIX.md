@@ -30,10 +30,10 @@
 | 同步执行模型 | 已支持 `leaf_first_lazy`、`pre_scan_flat`、按需扫描骨架、fallback、目录状态持久化、断点继续当前子树、目标端 metadata 预检查、`create / overwrite / skip` 判定闭环、待补传树聚合、待补传子集重试、失败重试队列分类、`blocked` 运行态、单机 worker 自动补传调度、启动即恢复扫描、`retryLimit` 次数耗尽阻断、`fast_upload` 预检后直回退、upload-session 级自动续跑、协作式运行中暂停、自动恢复证据留痕 | 部分完成 | 任务级执行模式、runtime checkpoint、待补传树与目录树展示已接入 planner / task / evidence / UI，`retry` 已支持 pending-only 重建，并识别 rate-limit cooldown、retry limit、冷却自动恢复与 upload checkpoint 自动续跑 | 更完整目录树交互、更细后台补传策略 |
 | 风控与频率策略 | 已支持 `safe / balanced / fast / custom` 基线、provider 校准默认模板、任务级 `riskOverride`、风控命中证据、runtime 基础节流和 `throttle` 证据 | 部分完成 | 已接入 planner / task metadata / runtime evidence / UI，运行时会按 `requestIntervalMs / directoryIntervalMs` 控制 item 间隔，控制台已提供表单化参数配置 | 真实样本反推的账号级模板、更细 provider 级限流 |
 | Task Runtime | 创建、查询、运行、暂停、恢复、重试、结果落库，结果证据包含 `fastCheck / fallbackUsed / fallbackFrom / upload / uploadedParts / failedPartNumber / nextPartNumber`，并能区分 `completionKind`；runtime / retry queue / status 已可展示 `uploadCheckpoint`，`Retry` 会保留 `retryUploadCheckpoints`，并支持 `providerData` 级恢复线索透传 | 已完成 | 后续将挂接执行模型和风控策略 | 真实上传链路接入后补更细运行态 |
-| Runtime Evidence | 最近结果、最近探针、状态快照、状态矩阵 API、协议族覆盖矩阵、验收报告生成与历史保存、真实 provider smoke 记录与协议组聚合矩阵、smoke Markdown 导出与分类 | 已完成 | 无 | 真实联调样本沉淀 |
-| 控制台前端 | 登录、授权、任务向导、任务列表详情、状态矩阵/证据、执行模式可视化、目录状态展示、目录树/待补传树筛选与叶子视角、目录树按 root 分组收起/展开并持久化、重试队列分类视图、上传恢复检查点展示、协议族覆盖展示、验收报告保存/历史查看/下载、真实 provider smoke 记录登记/查看/协议组聚合/Markdown 下载/分类选择、表单化风控覆盖入口 | 已完成 | 异常场景提示可继续增强 | 更产品化视觉与更细交互 |
+| Runtime Evidence | 最近结果、最近探针、状态快照、状态矩阵 API、协议族覆盖矩阵、验收报告生成与历史保存、真实 provider smoke 记录与协议组聚合矩阵、真实样本矩阵、smoke Markdown 导出与分类 | 已完成 | 无 | 真实联调样本沉淀 |
+| 控制台前端 | 登录、授权、任务向导、任务列表详情、状态矩阵/证据、执行模式可视化、目录状态展示、目录树/待补传树筛选与叶子视角、目录树按 root 分组收起/展开并持久化、重试队列分类视图、上传恢复检查点展示、协议族覆盖展示、验收报告保存/历史查看/下载、真实 provider smoke 记录登记/查看/协议组聚合/真实样本矩阵/Markdown 下载/分类选择、表单化风控覆盖入口 | 已完成 | 异常场景提示可继续增强 | 更产品化视觉与更细交互 |
 | 单元测试 | auth、planner、task、provider、workflow、web、UI smoke | 已完成 | 持续补样本 | 真实 provider 契约覆盖继续加深 |
-| Provider 真实实现 | 10 家 provider 已全部接入真实 `ValidateAuth / List / Metadata / CreateDir / FastUploadCheck / Upload` 主链路；`aliyundrive_open / quark / uc / guangya` 已具备 multipart 或分片级恢复证据，`xunlei / pikpak / 115_open / baidu_netdisk / 189cloud` 已具备整对象上传 checkpoint 证据 | 部分完成 | 继续沉淀真实账号样本、限流/风控样本和 provider 边界异常 | 更细粒度断点续传、登录态续期、真实样本矩阵 |
+| Provider 真实实现 | 10 家 provider 已全部接入真实 `ValidateAuth / List / Metadata / CreateDir / FastUploadCheck / Upload` 主链路；`aliyundrive_open / quark / uc / guangya` 已具备 multipart 或分片级恢复证据，`xunlei / pikpak / 115_open / baidu_netdisk / 189cloud` 已具备整对象上传 checkpoint 证据 | 部分完成 | 继续沉淀真实账号样本、限流/风控样本和 provider 边界异常 | 更细粒度断点续传、登录态续期、更多真实验收样本 |
 | 真实联调验收 | 模板、流程、文档已具备 | 部分完成 | 首批真实样本沉淀中 | 每个协议族至少一条真实成功样本 |
 
 ## 当前已经能直接演示的能力

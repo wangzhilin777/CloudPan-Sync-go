@@ -97,6 +97,7 @@ func (a *App) routes() http.Handler {
 	mux.HandleFunc("/api/evidence/reports", a.handleEvidenceReports)
 	mux.HandleFunc("/api/evidence/reports/", a.handleEvidenceReportByID)
 	mux.HandleFunc("/api/provider-smokes", a.handleProviderSmokeRecords)
+	mux.HandleFunc("/api/provider-smokes/matrix", a.handleProviderSmokeMatrix)
 	mux.HandleFunc("/api/provider-smokes/summary", a.handleProviderSmokeSummary)
 	mux.HandleFunc("/api/provider-smokes/", a.handleProviderSmokeRecordByID)
 	mux.HandleFunc("/api/status/providers", a.handleProviderStatuses)
@@ -634,6 +635,19 @@ func (a *App) handleProviderSmokeSummary(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	items, err := a.tasks.ProviderSmokeSummary(r.Context())
+	if err != nil {
+		handleError(w, err)
+		return
+	}
+	writeOK(w, http.StatusOK, map[string]interface{}{"items": items})
+}
+
+func (a *App) handleProviderSmokeMatrix(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		writeError(w, http.StatusMethodNotAllowed, "method_not_allowed", "Method not allowed.")
+		return
+	}
+	items, err := a.tasks.ProviderSmokeMatrix(r.Context())
 	if err != nil {
 		handleError(w, err)
 		return
