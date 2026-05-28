@@ -10,8 +10,10 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"testing"
+	"time"
 
 	"cloudpan-sync-go/internal/auth"
 	"cloudpan-sync-go/internal/provider"
@@ -955,6 +957,118 @@ func TestAppRecoverTasksEndpointReportsProviderBudgetSkips(t *testing.T) {
 	}
 	if completed != 1 || pendingRecover != 1 {
 		t.Fatalf("expected one completed and one blocked task, got %#v", states)
+	}
+}
+
+func TestAppRecoverTasksEndpointSupportsMultiplePaths(t *testing.T) {
+	ctx := context.Background()
+	application := mustNewTestApp(t, ctx)
+
+	uploadCallsByPath := map[string]int{}
+	targetAdapter := &appScriptedAdapter{
+		meta: provider.Provider{
+			Key:              "recover_paths_api_target",
+			DisplayName:      "Recover Paths API Target",
+			ProtocolGroup:    "fake_target",
+			AuthModes:        []string{"manual_token"},
+			FastUploadInputs: []string{"md5", "size"},
+			FallbackModes:    []string{"download_upload"},
+			Status:           "planned",
+		},
+		capability: provider.CapabilitySet{
+			SupportsAuthValidation: true,
+			SupportsUpload:         true,
+		},
+		uploadFunc: func(req provider.UploadRequest) provider.UploadResult {
+			uploadCallsByPath[req.Path]++
+			if uploadCallsByPath[req.Path] == 1 {
+				return provider.UploadResult{
+					OperationResult: provider.OperationResult{
+						Status:  "rate_limited",
+						Message: "rate limited",
+						Mode:    "scripted_rate_limit",
+					},
+				}
+			}
+			return provider.UploadResult{
+				OperationResult: provider.OperationResult{
+					OK:      true,
+					Status:  "ok",
+					Message: "paths recovered",
+					Mode:    "scripted_paths_ok",
+				},
+			}
+		},
+	}
+
+	registry := provider.NewRegistry(targetAdapter)
+	authSvc := auth.NewService(application.store, registry)
+	taskSvc := task.NewService(application.store, registry, authSvc)
+	application.providers = registry
+	application.auth = authSvc
+	application.tasks = taskSvc
+	handler := application.routes()
+
+	profileResp := invokeJSON(t, handler, http.MethodPost, "/api/auth/profiles", map[string]interface{}{
+		"providerKey": "recover_paths_api_target",
+		"authMode":    "manual_token",
+		"displayName": "Recover Paths API Target",
+		"token":       "token-recover-paths-api",
+	})
+	profileID := profileResp.Data.(map[string]interface{})["id"].(string)
+
+	taskResp := invokeJSON(t, handler, http.MethodPost, "/api/tasks", map[string]interface{}{
+		"sourceProvider":  "recover_paths_api_source",
+		"targetProvider":  "recover_paths_api_target",
+		"targetProfileId": profileID,
+		"thresholdMB":     1,
+		"entries": []map[string]interface{}{
+			{"path": "/leaf-a/one.bin", "size": 101, "md5": "leaf-a"},
+			{"path": "/leaf-b/two.bin", "size": 202, "md5": "leaf-b"},
+			{"path": "/leaf-c/three.bin", "size": 303, "md5": "leaf-c"},
+		},
+	})
+	taskID := taskResp.Data.(map[string]interface{})["task"].(map[string]interface{})["id"].(string)
+
+	runResp := invokeJSON(t, handler, http.MethodPost, "/api/tasks/"+taskID+"/run", nil)
+	if got := runResp.Data.(map[string]interface{})["task"].(map[string]interface{})["state"].(string); got != "blocked" {
+		t.Fatalf("expected blocked, got %s", got)
+	}
+	if _, err := application.store.DB().ExecContext(ctx, `UPDATE task_results SET created_at = ? WHERE task_id = ?`,
+		time.Now().Add(-2*time.Hour).UTC().Format(time.RFC3339), taskID,
+	); err != nil {
+		t.Fatalf("update task_results created_at error = %v", err)
+	}
+
+	recoverResp := invokeJSON(t, handler, http.MethodPost, "/api/tasks/recover", map[string]interface{}{
+		"providerKey": "recover_paths_api_target",
+		"paths":       []string{"/leaf-a", "/leaf-c"},
+		"scope":       "selected_retry_subset",
+		"limit":       1,
+	})
+	recoverData := recoverResp.Data.(map[string]interface{})
+	if got := int(recoverData["matchedCount"].(float64)); got != 1 {
+		t.Fatalf("expected matchedCount 1, got %d", got)
+	}
+	if got := int(recoverData["recoveredCount"].(float64)); got != 1 {
+		t.Fatalf("expected recoveredCount 1, got %d", got)
+	}
+
+	detailResp := invokeJSON(t, handler, http.MethodGet, "/api/tasks/"+taskID, nil)
+	results := detailResp.Data.(map[string]interface{})["results"].([]interface{})
+	if len(results) != 2 {
+		t.Fatalf("expected 2 recovered results, got %#v", results)
+	}
+	paths := []string{
+		results[0].(map[string]interface{})["payload"].(map[string]interface{})["path"].(string),
+		results[1].(map[string]interface{})["payload"].(map[string]interface{})["path"].(string),
+	}
+	sort.Strings(paths)
+	if paths[0] != "/leaf-a/one.bin" || paths[1] != "/leaf-c/three.bin" {
+		t.Fatalf("expected recovered paths [/leaf-a/one.bin /leaf-c/three.bin], got %#v", paths)
+	}
+	if got := uploadCallsByPath["/leaf-b/two.bin"]; got != 1 {
+		t.Fatalf("expected /leaf-b/two.bin upload calls to remain 1, got %d", got)
 	}
 }
 

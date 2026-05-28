@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"testing"
 	"time"
@@ -3068,6 +3069,131 @@ func TestServiceRecoverBlockedTasksWithOptionsFiltersPathSubset(t *testing.T) {
 	}
 	if got := uploadCallsByPath["/leaf-a/one.bin"]; got != 2 {
 		t.Fatalf("expected /leaf-a/one.bin upload calls 2, got %d", got)
+	}
+	if got := uploadCallsByPath["/leaf-b/two.bin"]; got != 1 {
+		t.Fatalf("expected /leaf-b/two.bin upload calls to remain 1, got %d", got)
+	}
+}
+
+func TestServiceRecoverBlockedTasksWithOptionsSupportsMultiplePaths(t *testing.T) {
+	ctx := context.Background()
+	store, err := sqlitestore.New(ctx, filepath.Join(t.TempDir(), "auto-recover-paths.db"))
+	if err != nil {
+		t.Fatalf("new store: %v", err)
+	}
+	defer func() { _ = store.Close() }()
+
+	uploadCallsByPath := map[string]int{}
+	adapter := &scriptedAdapter{
+		meta: provider.Provider{
+			Key:              "recover_paths_target",
+			DisplayName:      "Recover Paths Target",
+			ProtocolGroup:    "fake",
+			AuthModes:        []string{"manual_token"},
+			FastUploadInputs: []string{"md5", "size"},
+			FallbackModes:    []string{"download_upload"},
+			Status:           "planned",
+		},
+		capability: provider.CapabilitySet{
+			SupportsAuthValidation: true,
+			SupportsUpload:         true,
+		},
+		uploadFunc: func(req provider.UploadRequest) provider.UploadResult {
+			uploadCallsByPath[req.Path]++
+			if uploadCallsByPath[req.Path] == 1 {
+				return provider.UploadResult{
+					OperationResult: provider.OperationResult{
+						Status:  "rate_limited",
+						Message: "rate limited",
+						Mode:    "fake_rate_limit",
+					},
+				}
+			}
+			return provider.UploadResult{
+				OperationResult: provider.OperationResult{
+					OK:      true,
+					Status:  "ok",
+					Message: "paths recovered",
+					Mode:    "fake_paths_ok",
+				},
+			}
+		},
+	}
+
+	registry := provider.NewRegistry(adapter)
+	authSvc := auth.NewService(store, registry)
+	svc := NewService(store, registry, authSvc)
+	profile, err := authSvc.CreateProfile(ctx, auth.CreateProfileInput{
+		ProviderKey: "recover_paths_target",
+		AuthMode:    "manual_token",
+		DisplayName: "recover paths target",
+		Token:       "token-paths",
+	})
+	if err != nil {
+		t.Fatalf("CreateProfile(paths) error = %v", err)
+	}
+
+	taskDetail, err := svc.Create(ctx, CreateRequest{
+		SourceProvider:  "guangya",
+		TargetProvider:  "recover_paths_target",
+		TargetProfileID: profile.ID,
+		ThresholdMB:     1,
+		RiskOverride: &planner.RiskProfileOverride{
+			CooldownSeconds: intPtrTask(3600),
+		},
+		Entries: []planner.SourceEntry{
+			{Path: "/leaf-a/one.bin", Size: 101, MD5: "leaf-a"},
+			{Path: "/leaf-b/two.bin", Size: 202, MD5: "leaf-b"},
+			{Path: "/leaf-c/three.bin", Size: 303, MD5: "leaf-c"},
+		},
+	})
+	if err != nil {
+		t.Fatalf("Create(paths) error = %v", err)
+	}
+	if _, ok, err := svc.Run(ctx, taskDetail.Task.ID); err != nil || !ok {
+		t.Fatalf("Run(paths) error=%v ok=%v", err, ok)
+	}
+
+	blocked, ok, err := svc.Get(ctx, taskDetail.Task.ID)
+	if err != nil || !ok {
+		t.Fatalf("Get(blocked paths task) error=%v ok=%v", err, ok)
+	}
+	for idx := range blocked.Results {
+		blocked.Results[idx].CreatedAt = time.Now().Add(-2 * time.Hour).UTC().Format(time.RFC3339)
+	}
+	syncRuntimeRetryQueue(&blocked.Runtime, blocked.Plan.Metadata, blocked.Results)
+	applyRetryQueueSummary(&blocked.Runtime, blocked.Plan.Metadata)
+	if err := replaceTaskDetailAndResults(ctx, store, blocked); err != nil {
+		t.Fatalf("replaceTaskDetailAndResults(paths) error = %v", err)
+	}
+
+	result, err := svc.RecoverBlockedTasksWithOptions(ctx, RecoverOptions{
+		ProviderKey: "recover_paths_target",
+		Paths:       []string{"/leaf-a", "/leaf-c"},
+		Scope:       "selected_retry_subset",
+		Limit:       1,
+	})
+	if err != nil {
+		t.Fatalf("RecoverBlockedTasksWithOptions(paths subset) error = %v", err)
+	}
+	if result.MatchedCount != 1 || result.RecoveredCount != 1 || result.Path != "/leaf-a" {
+		t.Fatalf("unexpected paths recover result: %#v", result)
+	}
+
+	after, ok, err := svc.Get(ctx, taskDetail.Task.ID)
+	if err != nil || !ok {
+		t.Fatalf("Get(paths recovered task) error=%v ok=%v", err, ok)
+	}
+	if len(after.Results) != 2 {
+		t.Fatalf("expected two recovered results after multi-path recover, got %#v", after.Results)
+	}
+	recoveredPaths := []string{
+		stringValue(after.Results[0].Payload["path"]),
+		stringValue(after.Results[1].Payload["path"]),
+	}
+	sort.Strings(recoveredPaths)
+	if recoveredPaths[0] != "/leaf-a/one.bin" || recoveredPaths[1] != "/leaf-c/three.bin" {
+		t.Fatalf("expected recovered paths [/leaf-a/one.bin /leaf-c/three.bin], got %#v", recoveredPaths)
 	}
 	if got := uploadCallsByPath["/leaf-b/two.bin"]; got != 1 {
 		t.Fatalf("expected /leaf-b/two.bin upload calls to remain 1, got %d", got)

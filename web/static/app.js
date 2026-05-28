@@ -3650,6 +3650,33 @@ async function retryVisibleSelection(source) {
   }
 }
 
+async function autoRecoverVisibleSelection(source) {
+  const detail = currentSelectedTaskDetail();
+  if (!detail || !detail.task) {
+    showFlash("请先选择任务", true);
+    return;
+  }
+  const paths = source === "pending_tree" ? visibleTreePaths("task", "pending") : visibleRetryPaths("task");
+  if (!paths.length) {
+    showFlash("当前筛选结果里没有可后台补传的路径", true);
+    return;
+  }
+  const result = await api("/api/tasks/recover", {
+    method: "POST",
+    body: {
+      providerKey: detail.task.targetProvider || "",
+      paths,
+      scope: source === "pending_tree" ? "selected_pending_subset" : "selected_retry_subset",
+      limit: 1,
+    },
+  });
+  await Promise.all([loadTasks(), loadStatus()]);
+  showFlash(
+    `后台补传筛选已执行：paths ${paths.length} / matched ${stringifyValue(result.matchedCount, "0")} / recovered ${stringifyValue(result.recoveredCount, "0")}`,
+    result.recoveredCount <= 0,
+  );
+}
+
 async function retryTaskPath(path) {
   const normalizedPath = normalizeComparePath(path);
   if (!normalizedPath) {
@@ -3681,6 +3708,8 @@ function wireTasks() {
   $("#task-retry").addEventListener("click", () => runTaskAction("retry"));
   $("#task-retry-visible-queue").addEventListener("click", () => retryVisibleSelection("selected_retry_subset"));
   $("#task-retry-visible-pending").addEventListener("click", () => retryVisibleSelection("selected_pending_subset"));
+  $("#task-auto-recover-visible-queue").addEventListener("click", () => autoRecoverVisibleSelection("retry_queue"));
+  $("#task-auto-recover-visible-pending").addEventListener("click", () => autoRecoverVisibleSelection("pending_tree"));
 }
 
 function wireStatus() {

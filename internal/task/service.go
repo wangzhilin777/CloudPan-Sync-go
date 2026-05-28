@@ -40,6 +40,7 @@ type RecoverOptions struct {
 	ProviderKey   string `json:"providerKey,omitempty"`
 	RetryClass    string `json:"retryClass,omitempty"`
 	BlockedAction string `json:"blockedAction,omitempty"`
+	Paths         []string `json:"paths,omitempty"`
 	Path          string `json:"path,omitempty"`
 	Scope         string `json:"scope,omitempty"`
 	Limit         int    `json:"limit,omitempty"`
@@ -976,7 +977,8 @@ func (s *Service) RecoverBlockedTasksWithOptions(ctx context.Context, opts Recov
 	opts.ProviderKey = strings.TrimSpace(opts.ProviderKey)
 	opts.RetryClass = strings.TrimSpace(opts.RetryClass)
 	opts.BlockedAction = strings.TrimSpace(opts.BlockedAction)
-	opts.Path = normalizeScanPath(opts.Path)
+	opts.Paths = normalizeRecoverSelectionPaths(opts.Paths, opts.Path)
+	opts.Path = firstRecoverSelectionPath(opts.Paths)
 	opts.Scope = strings.TrimSpace(opts.Scope)
 	result := RecoverResult{
 		Mode:          opts.Mode,
@@ -1014,9 +1016,9 @@ func (s *Service) RecoverBlockedTasksWithOptions(ctx context.Context, opts Recov
 		if opts.BlockedAction != "" && !strings.EqualFold(candidate.EffectiveAction, opts.BlockedAction) {
 			continue
 		}
-		if opts.Path != "" {
+		if len(opts.Paths) > 0 {
 			retryEntries, _, _, retryBlockedUntil, retryBlockedReason := selectRetryEntries(detail, RetryOptions{
-				Paths: []string{opts.Path},
+				Paths: opts.Paths,
 				Scope: recoverSelectionScope(opts.Scope),
 			})
 			if retryBlockedUntil != "" || retryBlockedReason != "" || len(retryEntries) == 0 {
@@ -1045,8 +1047,8 @@ func (s *Service) RecoverBlockedTasksWithOptions(ctx context.Context, opts Recov
 			continue
 		}
 		retryOpts := RetryOptions{}
-		if opts.Path != "" {
-			retryOpts.Paths = []string{opts.Path}
+		if len(opts.Paths) > 0 {
+			retryOpts.Paths = opts.Paths
 			retryOpts.Scope = recoverSelectionScope(opts.Scope)
 		}
 		retried, err := s.buildRetryDetail(detail, retryOpts)
@@ -1083,6 +1085,25 @@ func recoverSelectionScope(scope string) string {
 		return "selected_retry_subset"
 	}
 	return scope
+}
+
+func normalizeRecoverSelectionPaths(paths []string, singlePath string) []string {
+	selected := normalizeSelectionPaths(paths)
+	if len(selected) > 0 {
+		return selected
+	}
+	singlePath = normalizeScanPath(singlePath)
+	if singlePath == "" {
+		return nil
+	}
+	return []string{singlePath}
+}
+
+func firstRecoverSelectionPath(paths []string) string {
+	if len(paths) == 0 {
+		return ""
+	}
+	return normalizeScanPath(paths[0])
 }
 
 func recoverProviderBudget(detail Detail) int {

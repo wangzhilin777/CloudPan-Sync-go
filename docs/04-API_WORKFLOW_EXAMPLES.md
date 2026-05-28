@@ -347,6 +347,21 @@ Invoke-RestMethod `
   -ContentType "application/json" | ConvertTo-Json -Depth 12
 ```
 
+按当前筛选结果只放行多棵子树示例：
+
+```powershell
+Invoke-RestMethod `
+  -Method Post `
+  -Uri "$base/api/tasks/recover" `
+  -Body (@{
+    providerKey = "123_open"
+    paths       = @("/demo/leaf-a", "/demo/leaf-c")
+    scope       = "selected_retry_subset"
+    limit       = 1
+  } | ConvertTo-Json -Depth 8) `
+  -ContentType "application/json" | ConvertTo-Json -Depth 12
+```
+
 返回重点字段：
 
 - `matchedCount`
@@ -363,6 +378,10 @@ Invoke-RestMethod `
   - 便于确认本轮是否只放行了某种失败类型、某个阻塞动作，或某一棵指定子树
 - `path + scope=selected_retry_subset`
   - 适合只放行当前路径子树，避免把整批失败项一起重建
+- `paths + scope=selected_retry_subset`
+  - 适合按当前 retry 队列筛选结果，一次只放行多棵指定子树
+- `paths + scope=selected_pending_subset`
+  - 适合按当前待补传树筛选结果，一次只放行多棵指定子树
 
 恢复检查点示例：
 
