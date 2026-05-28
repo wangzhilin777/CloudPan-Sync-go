@@ -691,11 +691,13 @@ func (a Cloud189FamilyAdapter) Upload(req UploadRequest) UploadResult {
 			"md5":                actualMD5,
 			"conflictAction":     conflictAction,
 		}
+		cloud189ApplyWholeObjectProgress(commonPayload, "", nil, info.Size(), false)
 		putStatus, putPayload, putErr := cloud189UploadBinaryToURL(context.Background(), localPath, fileUploadURL, uploadFileID)
 		commonPayload["binaryUploadResponse"] = putPayload
 		commonPayload["uploadPutStatus"] = putStatus
 		commonPayload["usedBinaryFallback"] = true
 		if putErr != nil {
+			cloud189ApplyWholeObjectProgress(commonPayload, "", putPayload, info.Size(), false)
 			return UploadResult{
 				OperationResult: OperationResult{
 					Status:  normalizeCloud189RequestErrorStatus(putErr),
@@ -706,6 +708,7 @@ func (a Cloud189FamilyAdapter) Upload(req UploadRequest) UploadResult {
 				ConflictAction: conflictAction,
 			}
 		}
+		cloud189ApplyWholeObjectProgress(commonPayload, "", putPayload, info.Size(), true)
 		_, statusPayload, statusErr := cloud189SignedJSON(context.Background(), session, authSession, http.MethodGet, session.UploadStatusEndpoint, map[string]string{
 			"uploadFileId": strconv.FormatInt(uploadFileID, 10),
 			"resumePolicy": "1",
@@ -764,6 +767,7 @@ func (a Cloud189FamilyAdapter) Upload(req UploadRequest) UploadResult {
 		commonPayload["fileId"] = firstNonEmptyString(map[string]interface{}{
 			"fileId": commitPayload.FileID,
 		}, "fileId")
+		cloud189ApplyWholeObjectProgress(commonPayload, commitPayload.FileID, putPayload, info.Size(), true)
 		verifyOK := strings.ToLower(strings.TrimSpace(commitPayload.MD5)) == "" || strings.ToLower(strings.TrimSpace(commitPayload.MD5)) == actualMD5
 		commonPayload["verifyMode"] = "commit_response_xml_after_binary_put"
 		commonPayload["verifyOk"] = verifyOK
@@ -930,10 +934,12 @@ func (a Cloud189FamilyAdapter) resumeCloud189BinaryUpload(req UploadRequest, ses
 		"resumedUpload":        true,
 		"providerData":         cloneMap(resume.ProviderData),
 	}
+	cloud189ApplyWholeObjectProgress(commonPayload, "", nil, req.Size, false)
 	putStatus, putPayload, putErr := cloud189UploadBinaryToURL(context.Background(), localPath, fileUploadURL, uploadFileID)
 	commonPayload["binaryUploadResponse"] = putPayload
 	commonPayload["uploadPutStatus"] = putStatus
 	if putErr != nil {
+		cloud189ApplyWholeObjectProgress(commonPayload, "", putPayload, req.Size, false)
 		return &UploadResult{
 			OperationResult: OperationResult{
 				Status:  normalizeCloud189RequestErrorStatus(putErr),
@@ -944,6 +950,7 @@ func (a Cloud189FamilyAdapter) resumeCloud189BinaryUpload(req UploadRequest, ses
 			ConflictAction: conflictAction,
 		}
 	}
+	cloud189ApplyWholeObjectProgress(commonPayload, "", putPayload, req.Size, true)
 	_, statusPayload, statusErr := cloud189SignedJSON(context.Background(), session, authSession, http.MethodGet, session.UploadStatusEndpoint, map[string]string{
 		"uploadFileId": strconv.FormatInt(uploadFileID, 10),
 		"resumePolicy": "1",
@@ -1000,6 +1007,7 @@ func (a Cloud189FamilyAdapter) resumeCloud189BinaryUpload(req UploadRequest, ses
 		"rawXml":     commitPayload.RawXML,
 	}
 	commonPayload["fileId"] = commitPayload.FileID
+	cloud189ApplyWholeObjectProgress(commonPayload, commitPayload.FileID, putPayload, req.Size, true)
 	verifyOK := strings.ToLower(strings.TrimSpace(commitPayload.MD5)) == "" || strings.ToLower(strings.TrimSpace(commitPayload.MD5)) == actualMD5
 	commonPayload["verifyMode"] = "commit_response_xml_after_binary_put"
 	commonPayload["verifyOk"] = verifyOK
@@ -1021,6 +1029,34 @@ func (a Cloud189FamilyAdapter) resumeCloud189BinaryUpload(req UploadRequest, ses
 		},
 		ConflictAction: conflictAction,
 	}
+}
+
+func cloud189ApplyWholeObjectProgress(payload map[string]interface{}, fileID string, uploadPayload map[string]interface{}, size int64, completed bool) {
+	payload["partCount"] = 1
+	if strings.TrimSpace(fileID) != "" {
+		payload["fileId"] = fileID
+	}
+	if completed {
+		objectSize := int64MapValue(uploadPayload, "objectSize")
+		if objectSize <= 0 {
+			objectSize = size
+		}
+		payload["uploadedPartCount"] = 1
+		payload["uploadedParts"] = []map[string]interface{}{
+			{
+				"partNumber": 1,
+				"status":     int64MapValue(uploadPayload, "status"),
+				"size":       objectSize,
+			},
+		}
+		payload["failedPartNumber"] = 0
+		payload["nextPartNumber"] = 2
+		return
+	}
+	payload["uploadedPartCount"] = 0
+	payload["failedPartNumber"] = 1
+	payload["nextPartNumber"] = 1
+	delete(payload, "uploadedParts")
 }
 
 func (a Cloud189FamilyAdapter) newCloud189Session(profile AuthProfile) (cloud189Session, error) {
@@ -1601,8 +1637,9 @@ func cloud189UploadBinaryToURL(ctx context.Context, localPath string, uploadURL 
 		}
 	}
 	payload := map[string]interface{}{
-		"status":  statusCode,
-		"headers": headerMap,
+		"status":     statusCode,
+		"headers":    headerMap,
+		"objectSize": int64(len(fileBytes)),
 	}
 	if statusCode < 200 || statusCode >= 300 {
 		return statusCode, payload, fmt.Errorf("cloud189 binary put returned HTTP %d", statusCode)

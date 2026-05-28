@@ -169,11 +169,82 @@ func TestBaiduFamilyAdapterUploadsBinaryFile(t *testing.T) {
 	if stringMapValue(result.Payload, "verifyMode") != "metadata_by_file_id" {
 		t.Fatalf("expected metadata_by_file_id verification, got %+v", result.Payload)
 	}
+	if intMapValue(result.Payload, "uploadedPartCount") != 1 {
+		t.Fatalf("expected uploadedPartCount 1, got %+v", result.Payload)
+	}
+	if intMapValue(result.Payload, "failedPartNumber") != 0 {
+		t.Fatalf("expected failedPartNumber 0, got %+v", result.Payload)
+	}
+	if intMapValue(result.Payload, "nextPartNumber") != 2 {
+		t.Fatalf("expected nextPartNumber 2, got %+v", result.Payload)
+	}
+	if uploadedPartEvidenceLen(result.Payload["uploadedParts"]) != 1 {
+		t.Fatalf("expected one uploaded part evidence, got %+v", result.Payload)
+	}
+}
+
+func TestBaiduFamilyAdapterRecordsWholeObjectCheckpointOnTmpfileFailure(t *testing.T) {
+	server, state := newBaiduFamilyTestServer(t)
+	state.failTmpfileOnce = true
+	t.Cleanup(server.Close)
+
+	originalClient := providerHTTPClient
+	providerHTTPClient = server.Client()
+	t.Cleanup(func() { providerHTTPClient = originalClient })
+
+	registry := NewRegistry(DefaultCatalog()...)
+	entry, ok := registry.Get("baidu_netdisk")
+	if !ok {
+		t.Fatal("expected baidu_netdisk entry")
+	}
+	profile := AuthProfile{
+		ProviderKey: "baidu_netdisk",
+		Token:       "token-live",
+		Extra: map[string]string{
+			"apiEndpoint": server.URL,
+			"pcsEndpoint": server.URL,
+		},
+	}
+
+	tmpDir := t.TempDir()
+	localPath := filepath.Join(tmpDir, "upload.bin")
+	if err := os.WriteFile(localPath, []byte("hello-baidu-upload"), 0o600); err != nil {
+		t.Fatalf("write local file: %v", err)
+	}
+
+	result := entry.Adapter.Upload(UploadRequest{
+		Profile:        profile,
+		Path:           "/docs/upload.bin",
+		Name:           "upload.bin",
+		ParentID:       "/docs",
+		LocalPath:      localPath,
+		ConflictPolicy: ConflictPolicyOverwriteExisting,
+		Strategy:       "download_upload",
+	})
+	if result.OK {
+		t.Fatalf("expected tmpfile failure, got %+v", result)
+	}
+	if stringMapValue(result.Payload, "uploadId") != "upload-1" {
+		t.Fatalf("expected uploadId evidence, got %+v", result.Payload)
+	}
+	if intMapValue(result.Payload, "partCount") != 1 {
+		t.Fatalf("expected partCount 1, got %+v", result.Payload)
+	}
+	if intMapValue(result.Payload, "uploadedPartCount") != 0 {
+		t.Fatalf("expected uploadedPartCount 0, got %+v", result.Payload)
+	}
+	if intMapValue(result.Payload, "failedPartNumber") != 1 {
+		t.Fatalf("expected failedPartNumber 1, got %+v", result.Payload)
+	}
+	if intMapValue(result.Payload, "nextPartNumber") != 1 {
+		t.Fatalf("expected nextPartNumber 1, got %+v", result.Payload)
+	}
 }
 
 type baiduFamilyTestState struct {
 	lastCreatedPath string
 	lastTmpfileBody []byte
+	failTmpfileOnce bool
 }
 
 func newBaiduFamilyTestServer(t *testing.T) (*httptest.Server, *baiduFamilyTestState) {
@@ -310,6 +381,11 @@ func newBaiduFamilyTestServer(t *testing.T) (*httptest.Server, *baiduFamilyTestS
 				"uploadid": "upload-1",
 			})
 		case r.Method == http.MethodPost && r.URL.Path == baiduPCSUploadPath && r.URL.Query().Get("method") == "upload":
+			if state.failTmpfileOnce {
+				state.failTmpfileOnce = false
+				http.Error(w, "temporary tmpfile failure", http.StatusInternalServerError)
+				return
+			}
 			mediaType, params, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
 			if err != nil {
 				t.Fatalf("parse multipart content type: %v", err)

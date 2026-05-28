@@ -501,6 +501,7 @@ func (a BaiduFamilyAdapter) Upload(req UploadRequest) UploadResult {
 			ConflictAction: conflictAction,
 		}
 	}
+	baiduApplyWholeObjectProgress(commonPayload, "", localMD5, info.Size(), false)
 
 	tmpfileStatus, tmpfilePayload, tmpfileErr := postBaiduTmpfile(context.Background(), session, remotePath, uploadID, localPath)
 	commonPayload["tmpfileResponse"] = tmpfilePayload
@@ -526,6 +527,7 @@ func (a BaiduFamilyAdapter) Upload(req UploadRequest) UploadResult {
 			ConflictAction: conflictAction,
 		}
 	}
+	baiduApplyWholeObjectProgress(commonPayload, "", localMD5, info.Size(), true)
 
 	createStatus, createPayload, createErr := postBaiduForm(context.Background(), session, "create", map[string]string{
 		"path":       remotePath,
@@ -538,6 +540,7 @@ func (a BaiduFamilyAdapter) Upload(req UploadRequest) UploadResult {
 	commonPayload["createResponse"] = createPayload
 	fileID := firstNonEmptyString(createPayload, "fs_id", "fsid")
 	commonPayload["fileId"] = fileID
+	baiduApplyWholeObjectProgress(commonPayload, fileID, localMD5, info.Size(), true)
 	if createErr != nil {
 		return UploadResult{
 			OperationResult: OperationResult{
@@ -568,7 +571,6 @@ func (a BaiduFamilyAdapter) Upload(req UploadRequest) UploadResult {
 	commonPayload["verifyMode"] = verifyMode
 	commonPayload["verifyOk"] = verifyOK
 	commonPayload["usedBinaryFallback"] = false
-	commonPayload["partCount"] = int64(1)
 	message := "Baidu Netdisk binary upload completed through precreate + superfile2 tmpfile + create."
 	if conflictNote != "" {
 		message += " " + conflictNote
@@ -583,6 +585,30 @@ func (a BaiduFamilyAdapter) Upload(req UploadRequest) UploadResult {
 		},
 		ConflictAction: conflictAction,
 	}
+}
+
+func baiduApplyWholeObjectProgress(payload map[string]interface{}, fileID string, md5 string, size int64, completed bool) {
+	payload["partCount"] = 1
+	if strings.TrimSpace(fileID) != "" {
+		payload["fileId"] = fileID
+	}
+	if completed {
+		payload["uploadedPartCount"] = 1
+		payload["uploadedParts"] = []map[string]interface{}{
+			{
+				"partNumber": 1,
+				"md5":        strings.ToLower(strings.TrimSpace(md5)),
+				"size":       size,
+			},
+		}
+		payload["failedPartNumber"] = 0
+		payload["nextPartNumber"] = 2
+		return
+	}
+	payload["uploadedPartCount"] = 0
+	payload["failedPartNumber"] = 1
+	payload["nextPartNumber"] = 1
+	delete(payload, "uploadedParts")
 }
 
 func (a BaiduFamilyAdapter) newBaiduSession(profile AuthProfile) (baiduSession, error) {

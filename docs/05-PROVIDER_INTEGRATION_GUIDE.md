@@ -227,6 +227,8 @@
     - 已接入真实 `List / Metadata / CreateDir`
     - `Upload` 已接入真实 `precreate -> superfile2 tmpfile -> create -> verify`
     - `overwrite_existing` 会诚实降级为 `auto_rename_new`
+    - tmpfile 上传失败时会按统一 upload checkpoint 口径回填 `partCount=1 / failedPartNumber=1 / nextPartNumber=1`
+    - tmpfile 上传成功后会回填 `uploadedPartCount / uploadedParts / md5 / size`
   - 当前约束：
     - 目前先落单分片 tmpfile 主链路
     - 仍未扩展到多分片并行或更复杂断点续传
@@ -269,6 +271,8 @@
     - hash 命中时会直接走 provider 侧复用，并由 commit XML 回包确认
     - hash miss 时会继续走 `fileUploadUrl PUT + getUploadFileStatus + fileCommitUrl`
     - task retry 时已可复用失败结果里保留的 `uploadFileId + fileUploadUrl + fileCommitUrl`，不再重复 `createUploadFile`
+    - binary PUT 失败时会按统一 upload checkpoint 口径回填 `partCount=1 / failedPartNumber=1 / nextPartNumber=1`
+    - binary PUT 成功后会回填 `uploadedPartCount / uploadedParts / objectSize / status`
   - 当前约束：
     - shareCode/accessCode 当前只提供只读目录链路，不能直接写目录
     - `CreateDir` 仍依赖账号级 `AccessToken / Signature / Date`

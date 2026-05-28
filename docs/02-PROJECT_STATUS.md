@@ -131,6 +131,7 @@
     - 当前真实上传链路为 `precreate -> superfile2 tmpfile -> create -> verify`
     - `overwrite_existing` 会诚实降级为 `auto_rename_new`
     - 上传完成后优先按 `fileId` 校验，再回退到父目录按路径确认
+    - 单分片 tmpfile 上传失败/成功会按统一 upload checkpoint 口径回填 `uploadId / partCount / uploadedParts / failedPartNumber / nextPartNumber`
   - `115_open` 已接入真实 `ValidateAuth / List / Metadata / CreateDir / FastUploadCheck`
     - `Upload` 已接入真实 `upload/init` 主链路、`sign_check` follow-up、`get_token` 上传会话获取与 OSS binary fallback
     - hash 命中时可直接完成 rapid 路径并校验
@@ -145,6 +146,7 @@
     - hash 命中时可直接走 provider 侧复用并由 commit XML 确认
     - hash miss 时会继续走 binary PUT fallback，并由状态轮询与 commit XML 回包做校验
     - 失败重试时已可复用既有 `uploadFileId + fileUploadUrl + fileCommitUrl`，避免重复 `createUploadFile`
+    - binary PUT fallback 失败/成功会按统一 upload checkpoint 口径回填 `uploadId / partCount / uploadedParts / failedPartNumber / nextPartNumber`
   - `guangya` 已接入真实 `ValidateAuth / List / Metadata / CreateDir / FastUploadCheck`
     - 当前目录链路基于 Guangya live HTTP API
     - `FastUploadCheck` 已接入真实库存预检与 GCID follow-up / 任务清理

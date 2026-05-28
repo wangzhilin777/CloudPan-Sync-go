@@ -217,6 +217,18 @@ func TestCloud189FamilyAdapterUploadHashMissFallsBackToBinary(t *testing.T) {
 	if stringMapValue(result.Payload, "verifyMode") != "commit_response_xml_after_binary_put" {
 		t.Fatalf("expected commit_response_xml_after_binary_put, got %+v", result.Payload)
 	}
+	if intMapValue(result.Payload, "uploadedPartCount") != 1 {
+		t.Fatalf("expected uploadedPartCount 1, got %+v", result.Payload)
+	}
+	if intMapValue(result.Payload, "failedPartNumber") != 0 {
+		t.Fatalf("expected failedPartNumber 0, got %+v", result.Payload)
+	}
+	if intMapValue(result.Payload, "nextPartNumber") != 2 {
+		t.Fatalf("expected nextPartNumber 2, got %+v", result.Payload)
+	}
+	if uploadedPartEvidenceLen(result.Payload["uploadedParts"]) != 1 {
+		t.Fatalf("expected one uploaded part evidence, got %+v", result.Payload)
+	}
 	verifyPayload, _ := result.Payload["verifyPayload"].(map[string]interface{})
 	if stringMapValue(verifyPayload, "fileId") != "file-fallback-189" {
 		t.Fatalf("expected file-fallback-189 verify payload, got %+v", verifyPayload)
@@ -269,6 +281,15 @@ func TestCloud189FamilyAdapterResumesCachedBinaryUploadSession(t *testing.T) {
 	if int64MapValue(providerData, "uploadFileId") != 18902 {
 		t.Fatalf("expected cached uploadFileId 18902, got %+v", providerData)
 	}
+	if intMapValue(first.Payload, "uploadedPartCount") != 0 {
+		t.Fatalf("expected failed upload uploadedPartCount 0, got %+v", first.Payload)
+	}
+	if intMapValue(first.Payload, "failedPartNumber") != 1 {
+		t.Fatalf("expected failedPartNumber 1, got %+v", first.Payload)
+	}
+	if intMapValue(first.Payload, "nextPartNumber") != 1 {
+		t.Fatalf("expected nextPartNumber 1, got %+v", first.Payload)
+	}
 
 	second := entry.Adapter.Upload(UploadRequest{
 		Profile:        cloud189WritableProfile(server.URL),
@@ -289,6 +310,15 @@ func TestCloud189FamilyAdapterResumesCachedBinaryUploadSession(t *testing.T) {
 	}
 	if !boolMapValue(second.Payload, "resumedUpload") {
 		t.Fatalf("expected resumedUpload true, got %+v", second.Payload)
+	}
+	if intMapValue(second.Payload, "uploadedPartCount") != 1 {
+		t.Fatalf("expected resumed uploadedPartCount 1, got %+v", second.Payload)
+	}
+	if intMapValue(second.Payload, "nextPartNumber") != 2 {
+		t.Fatalf("expected resumed nextPartNumber 2, got %+v", second.Payload)
+	}
+	if uploadedPartEvidenceLen(second.Payload["uploadedParts"]) != 1 {
+		t.Fatalf("expected resumed uploaded part evidence, got %+v", second.Payload)
 	}
 	if state.createUploadCount != 1 {
 		t.Fatalf("expected create upload only once, got %+v", state)
