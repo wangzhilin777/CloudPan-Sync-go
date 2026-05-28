@@ -327,6 +327,7 @@
                   <option value="blocked">blocked</option>
                   <option value="completed">completed</option>
                 </select>
+                <button type="button" class="ghost" id="task-directory-filter-clear">清空筛选</button>
               </div>
               <div id="task-directory-filter-summary" class="filter-summary muted">等待任务数据...</div>
               <div id="task-directory-states" class="directory-state-list"></div>
@@ -344,6 +345,7 @@
                   <input id="task-pending-filter-leaf-only" type="checkbox" />
                   <span>仅叶子节点</span>
                 </label>
+                <button type="button" class="ghost" id="task-pending-filter-clear">清空筛选</button>
               </div>
               <div id="task-pending-filter-summary" class="filter-summary muted">等待任务数据...</div>
               <div id="task-pending-tree" class="directory-state-list"></div>
@@ -394,6 +396,17 @@
                 <span class="muted">真实样本矩阵，合并 smoke 记录与协议族 coverage</span>
               </div>
               <div id="provider-smoke-matrix" class="directory-state-list"></div>
+              <div class="filter-bar">
+                <input id="provider-smoke-records-filter-query" type="text" placeholder="筛选记录标题 / provider / note" />
+                <input id="provider-smoke-records-filter-group" type="text" placeholder="筛选 protocolGroup" />
+                <select id="provider-smoke-records-filter-result">
+                  <option value="">全部结果</option>
+                  <option value="success">success</option>
+                  <option value="failure">failure</option>
+                </select>
+                <button type="button" class="ghost" id="provider-smoke-records-filter-clear">清空筛选</button>
+              </div>
+              <div id="provider-smoke-records-filter-summary" class="filter-summary muted">等待 smoke 记录...</div>
               <div class="filter-bar">
                 <input id="provider-smoke-provider-key" type="text" placeholder="providerKey，例如 123_open" />
                 <input id="provider-smoke-protocol-group" type="text" placeholder="protocolGroup，例如 aliyun_123_open" />
@@ -486,6 +499,7 @@
                   <option value="blocked">blocked</option>
                   <option value="completed">completed</option>
                 </select>
+                <button type="button" class="ghost" id="status-directory-filter-clear">清空筛选</button>
               </div>
               <div id="status-directory-filter-summary" class="filter-summary muted">等待状态数据...</div>
               <div id="status-directory-states" class="directory-state-list"></div>
@@ -505,6 +519,7 @@
                   <input id="status-pending-filter-leaf-only" type="checkbox" />
                   <span>仅叶子节点</span>
                 </label>
+                <button type="button" class="ghost" id="status-pending-filter-clear">清空筛选</button>
               </div>
               <div id="status-pending-filter-summary" class="filter-summary muted">等待状态数据...</div>
               <div id="status-pending-tree" class="directory-state-list"></div>

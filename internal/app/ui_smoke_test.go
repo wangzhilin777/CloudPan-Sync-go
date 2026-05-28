@@ -154,6 +154,13 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 		waitForText(`#provider-smoke-matrix`, "accepted"),
 		waitForText(`#provider-smoke-matrix`, "aliyun_123_open"),
 		waitForText(`#provider-smoke-records`, "UI Smoke Provider Smoke"),
+		chromedp.Click(`#provider-smoke-matrix [data-provider-smoke-focus-group]`, chromedp.ByQuery),
+		waitForText(`#provider-smoke-records-filter-summary`, "当前显示"),
+		chromedp.Click(`#provider-smoke-matrix [data-provider-smoke-draft]`, chromedp.ByQuery),
+		waitForValue(`#provider-smoke-protocol-group`, "aliyun_123_open"),
+		waitForValueContains(`#provider-smoke-note`, "协议组"),
+		chromedp.Click(`#provider-smoke-records-filter-clear`, chromedp.ByID),
+		waitForText(`#provider-smoke-records-filter-summary`, "显示全部"),
 		chromedp.Click(`#provider-smoke-records [data-provider-smoke-view]`, chromedp.ByQuery),
 		waitForText(`#provider-smoke-markdown`, "UI Smoke Provider Smoke"),
 	)
@@ -188,6 +195,34 @@ func waitForLocalStorageContains(key string, substring string) chromedp.ActionFu
 	return chromedp.ActionFunc(func(ctx context.Context) error {
 		var matched bool
 		script := fmt.Sprintf(`(() => String(localStorage.getItem(%q) || "").includes(%q))()`, key, substring)
+		return chromedp.Poll(script, &matched,
+			chromedp.WithPollingInterval(120*time.Millisecond),
+			chromedp.WithPollingTimeout(30*time.Second),
+		).Do(ctx)
+	})
+}
+
+func waitForValue(selector string, expected string) chromedp.ActionFunc {
+	return chromedp.ActionFunc(func(ctx context.Context) error {
+		var matched bool
+		script := fmt.Sprintf(`(() => {
+			const el = document.querySelector(%q);
+			return !!el && el.value === %q;
+		})()`, selector, expected)
+		return chromedp.Poll(script, &matched,
+			chromedp.WithPollingInterval(120*time.Millisecond),
+			chromedp.WithPollingTimeout(30*time.Second),
+		).Do(ctx)
+	})
+}
+
+func waitForValueContains(selector string, substring string) chromedp.ActionFunc {
+	return chromedp.ActionFunc(func(ctx context.Context) error {
+		var matched bool
+		script := fmt.Sprintf(`(() => {
+			const el = document.querySelector(%q);
+			return !!el && String(el.value || "").includes(%q);
+		})()`, selector, substring)
 		return chromedp.Poll(script, &matched,
 			chromedp.WithPollingInterval(120*time.Millisecond),
 			chromedp.WithPollingTimeout(30*time.Second),

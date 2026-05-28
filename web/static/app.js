@@ -15,6 +15,11 @@ const state = {
   providerSmokeSummary: [],
   providerSmokeMatrix: [],
   providerSmokeMatrixFilter: "all",
+  providerSmokeRecordFilters: {
+    query: "",
+    protocolGroup: "",
+    result: "",
+  },
   selectedProviderSmokeId: "",
   selectedProviderSmokeMarkdown: "",
   treeGroupsCollapsed: {},
@@ -72,6 +77,15 @@ function stringifyValue(value, fallback = "-") {
     return JSON.stringify(value);
   }
   return String(value);
+}
+
+function firstNonEmpty(...values) {
+  for (const value of values) {
+    if (value !== undefined && value !== null && String(value).trim() !== "") {
+      return String(value).trim();
+    }
+  }
+  return "";
 }
 
 function summarizePathList(paths, limit = 6) {
@@ -391,6 +405,15 @@ function renderTreeFilterSummary(result, label) {
     return `显示全部 ${result.visibleNodes} 个${label}。`;
   }
   return `当前显示 ${result.visibleNodes} / ${result.totalNodes} 个${label}。`;
+}
+
+function resetTreeFilterSection(section) {
+  if (!state.treeFilters[section]) {
+    return;
+  }
+  Object.keys(state.treeFilters[section]).forEach((key) => {
+    state.treeFilters[section][key] = typeof state.treeFilters[section][key] === "boolean" ? false : "";
+  });
 }
 
 function filterRetryQueue(items, filters = {}) {
@@ -1785,6 +1808,8 @@ function renderStatus() {
   $("#report-history").innerHTML = renderReportHistory(state.reportHistory || []);
   hydrateReportForm(currentReport);
   $("#provider-smoke-matrix").innerHTML = renderProviderSmokeMatrix(state.providerSmokeMatrix || []);
+  const smokeRecordResult = filterProviderSmokeRecords(state.providerSmokes || [], state.providerSmokeRecordFilters);
+  $("#provider-smoke-records-filter-summary").textContent = renderProviderSmokeRecordSummary(smokeRecordResult);
   $("#provider-smoke-records").innerHTML = renderProviderSmokeRecords(state.providerSmokes || []);
   $("#provider-smoke-markdown").innerHTML = renderProviderSmokeMarkdown(state.selectedProviderSmokeMarkdown);
 
@@ -2171,10 +2196,11 @@ function focusRuntimeTreeByPath(scope, path, kind = "roots") {
 }
 
 function renderProviderSmokeRecords(items) {
-  if (!Array.isArray(items) || !items.length) {
+  const result = filterProviderSmokeRecords(items, state.providerSmokeRecordFilters);
+  if (!result.totalItems) {
     return `<div class="directory-empty">暂无真实 provider smoke 记录。</div>`;
   }
-  return items
+  return result.items
     .map(
       (item) => `
         <div class="directory-row tree-node ${item.id === state.selectedProviderSmokeId ? "active" : ""}">
@@ -2200,6 +2226,39 @@ function renderProviderSmokeRecords(items) {
       `,
     )
     .join("");
+}
+
+function filterProviderSmokeRecords(items, filters = {}) {
+  const records = Array.isArray(items) ? items : [];
+  const query = String(filters.query || "").trim().toLowerCase();
+  const protocolGroup = String(filters.protocolGroup || "").trim().toLowerCase();
+  const result = String(filters.result || "").trim().toLowerCase();
+  const filterActive = Boolean(query || protocolGroup || result);
+  const visible = records.filter((item) => {
+    const matchesQuery = includesFilterText(
+      [item.title, item.providerKey, item.note, Array.isArray(item.operations) ? item.operations.join(",") : ""],
+      query,
+    );
+    const matchesGroup = includesFilterText([item.protocolGroup], protocolGroup);
+    const matchesResult = includesFilterText([item.result], result);
+    return matchesQuery && matchesGroup && matchesResult;
+  });
+  return {
+    items: visible,
+    totalItems: records.length,
+    visibleItems: visible.length,
+    filterActive,
+  };
+}
+
+function renderProviderSmokeRecordSummary(result) {
+  if (!result.totalItems) {
+    return "当前没有 smoke 记录。";
+  }
+  if (!result.filterActive) {
+    return `显示全部 ${result.visibleItems} 条 smoke 记录。`;
+  }
+  return `当前显示 ${result.visibleItems} / ${result.totalItems} 条 smoke 记录。`;
 }
 
 function renderProviderSmokeSummary(items) {
@@ -2347,6 +2406,8 @@ function renderProviderSmokeMatrix(items) {
           <div class="actions compact">
             ${item.sampleRecordId ? `<button type="button" class="ghost" data-provider-smoke-open-record="${escapeHTML(stringifyValue(item.sampleRecordId))}">打开 smoke 样本</button>` : ""}
             ${item.coverageSampleTaskId ? `<button type="button" class="ghost" data-provider-smoke-open-task="${escapeHTML(stringifyValue(item.coverageSampleTaskId))}">打开任务样本</button>` : ""}
+            <button type="button" class="ghost" data-provider-smoke-draft="${escapeHTML(stringifyValue(item.protocolGroup))}">预填 smoke 表单</button>
+            <button type="button" class="ghost" data-provider-smoke-focus-group="${escapeHTML(stringifyValue(item.protocolGroup))}">只看该组记录</button>
             <button type="button" class="ghost" data-provider-smoke-filter-status="${escapeHTML(item.accepted ? "accepted" : item.acceptanceStatus || "pending")}">只看此类</button>
           </div>
           <div class="muted">latest smoke: <code>${escapeHTML(stringifyValue(item.latestSmokeAt, "-"))}</code> / coverage observed: <code>${escapeHTML(stringifyValue(item.coverageLastObservedAt, "-"))}</code></div>
@@ -2384,6 +2445,7 @@ function hydrateProviderSmokeForm(record) {
   const providerKeyInput = $("#provider-smoke-provider-key");
   const protocolGroupInput = $("#provider-smoke-protocol-group");
   const authModeInput = $("#provider-smoke-auth-mode");
+  const categoryInput = $("#provider-smoke-category");
   const resultInput = $("#provider-smoke-result");
   const titleInput = $("#provider-smoke-title");
   const noteInput = $("#provider-smoke-note");
@@ -2391,10 +2453,47 @@ function hydrateProviderSmokeForm(record) {
   if (providerKeyInput) providerKeyInput.value = record.providerKey || "";
   if (protocolGroupInput) protocolGroupInput.value = record.protocolGroup || "";
   if (authModeInput) authModeInput.value = record.authMode || "";
+  if (categoryInput) categoryInput.value = record.category || "";
   if (resultInput) resultInput.value = record.result || "success";
   if (titleInput) titleInput.value = record.title || "";
   if (noteInput) noteInput.value = record.note || "";
   if (operationsInput) operationsInput.value = Array.isArray(record.operations) ? record.operations.join(",") : "";
+}
+
+function draftProviderSmokeFromMatrix(item) {
+  const protocolGroup = String(item?.protocolGroup || "").trim();
+  const providerKey = firstNonEmpty(
+    String(item?.sampleProviderKey || "").trim(),
+    String(item?.coverageSampleProviderKey || "").trim(),
+    Array.isArray(item?.providerKeys) ? String(item.providerKeys[0] || "").trim() : "",
+    Array.isArray(item?.coverageProviderKeys) ? String(item.coverageProviderKeys[0] || "").trim() : "",
+  );
+  const status = item?.accepted ? "accepted" : String(item?.acceptanceStatus || "pending");
+  const missing = Array.isArray(item?.acceptanceMissing) ? item.acceptanceMissing.filter(Boolean) : [];
+  const noteParts = [
+    protocolGroup ? `协议组：${protocolGroup}` : "",
+    providerKey ? `建议 provider：${providerKey}` : "",
+    missing.length ? `缺口：${missing.join(", ")}` : "",
+    item?.acceptanceAdvice ? `建议：${item.acceptanceAdvice}` : "",
+  ].filter(Boolean);
+  return {
+    providerKey,
+    protocolGroup,
+    authMode: "",
+    category: "",
+    result: "success",
+    title: protocolGroup ? `${protocolGroup} ${status} smoke` : "provider smoke",
+    note: noteParts.join("；"),
+    operations: [],
+  };
+}
+
+function focusProviderSmokeRecordsByGroup(protocolGroup) {
+  const normalized = String(protocolGroup || "").trim();
+  state.providerSmokeRecordFilters.protocolGroup = normalized;
+  setFilterControlValue("#provider-smoke-records-filter-group", normalized);
+  renderStatus();
+  showFlash(normalized ? `已按 ${normalized} 收敛 smoke 记录` : "已清空 smoke 记录协议组筛选");
 }
 
 async function loadProviderSmokeMarkdown(id) {
@@ -2792,6 +2891,24 @@ function wireStatus() {
       }
       return;
     }
+    const draftButton = event.target.closest("[data-provider-smoke-draft]");
+    if (draftButton) {
+      const protocolGroup = draftButton.dataset.providerSmokeDraft || "";
+      const row = (state.providerSmokeMatrix || []).find((item) => item.protocolGroup === protocolGroup);
+      if (!row) {
+        showFlash("未找到对应协议组的验收矩阵项", true);
+        return;
+      }
+      hydrateProviderSmokeForm(draftProviderSmokeFromMatrix(row));
+      focusProviderSmokeRecordsByGroup(protocolGroup);
+      showFlash("已按验收矩阵预填 smoke 表单");
+      return;
+    }
+    const focusGroupButton = event.target.closest("[data-provider-smoke-focus-group]");
+    if (focusGroupButton) {
+      focusProviderSmokeRecordsByGroup(focusGroupButton.dataset.providerSmokeFocusGroup || "");
+      return;
+    }
     const filterStatusButton = event.target.closest("[data-provider-smoke-filter-status]");
     if (filterStatusButton) {
       setProviderSmokeMatrixFilter(filterStatusButton.dataset.providerSmokeFilterStatus || "all");
@@ -2833,6 +2950,59 @@ function wireTreeFilters() {
   bindTextFilter("#status-retry-filter-query", "statusRetry", "query", () => updateStatusRetryQueue(recentRuntimePayload()));
   bindTextFilter("#status-retry-filter-class", "statusRetry", "retryClass", () => updateStatusRetryQueue(recentRuntimePayload()));
   bindTextFilter("#status-retry-filter-state", "statusRetry", "retryState", () => updateStatusRetryQueue(recentRuntimePayload()));
+
+  $("#task-directory-filter-clear").addEventListener("click", () => {
+    resetTreeFilterSection("taskDirectory");
+    setFilterControlValue("#task-directory-filter-query", "");
+    setFilterControlValue("#task-directory-filter-status", "");
+    rerenderTask();
+    showFlash("已清空任务目录树筛选");
+  });
+  $("#task-pending-filter-clear").addEventListener("click", () => {
+    resetTreeFilterSection("taskPending");
+    setFilterControlValue("#task-pending-filter-query", "");
+    setFilterControlValue("#task-pending-filter-reason", "");
+    setFilterControlValue("#task-pending-filter-leaf-only", false);
+    rerenderTask();
+    showFlash("已清空任务待补传筛选");
+  });
+  $("#status-directory-filter-clear").addEventListener("click", () => {
+    resetTreeFilterSection("statusDirectory");
+    setFilterControlValue("#status-directory-filter-query", "");
+    setFilterControlValue("#status-directory-filter-status", "");
+    rerenderStatus();
+    showFlash("已清空状态目录树筛选");
+  });
+  $("#status-pending-filter-clear").addEventListener("click", () => {
+    resetTreeFilterSection("statusPending");
+    setFilterControlValue("#status-pending-filter-query", "");
+    setFilterControlValue("#status-pending-filter-reason", "");
+    setFilterControlValue("#status-pending-filter-leaf-only", false);
+    rerenderStatus();
+    showFlash("已清空状态待补传筛选");
+  });
+  $("#provider-smoke-records-filter-query").addEventListener("input", (event) => {
+    state.providerSmokeRecordFilters.query = event.target.value;
+    renderStatus();
+  });
+  $("#provider-smoke-records-filter-group").addEventListener("input", (event) => {
+    state.providerSmokeRecordFilters.protocolGroup = event.target.value;
+    renderStatus();
+  });
+  $("#provider-smoke-records-filter-result").addEventListener("change", (event) => {
+    state.providerSmokeRecordFilters.result = event.target.value;
+    renderStatus();
+  });
+  $("#provider-smoke-records-filter-clear").addEventListener("click", () => {
+    state.providerSmokeRecordFilters.query = "";
+    state.providerSmokeRecordFilters.protocolGroup = "";
+    state.providerSmokeRecordFilters.result = "";
+    setFilterControlValue("#provider-smoke-records-filter-query", "");
+    setFilterControlValue("#provider-smoke-records-filter-group", "");
+    setFilterControlValue("#provider-smoke-records-filter-result", "");
+    renderStatus();
+    showFlash("已清空 smoke 记录筛选");
+  });
 }
 
 async function init() {
