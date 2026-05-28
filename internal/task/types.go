@@ -82,6 +82,11 @@ type RuntimeState struct {
 	BlockedAction     string            `json:"blockedAction,omitempty"`
 	BlockedAdvice     string            `json:"blockedAdvice,omitempty"`
 	NextRetryAt       string            `json:"nextRetryAt,omitempty"`
+	AutoRecovered     bool              `json:"autoRecovered,omitempty"`
+	AutoRecoverReason string            `json:"autoRecoverReason,omitempty"`
+	AutoRecoverCount  int               `json:"autoRecoverCount,omitempty"`
+	AutoRecoveredAt   string            `json:"autoRecoveredAt,omitempty"`
+	AutoRecoverState  string            `json:"autoRecoverState,omitempty"`
 	ProcessedCount    int               `json:"processedCount"`
 	DoneCount         int               `json:"doneCount"`
 	SkippedCount      int               `json:"skippedCount"`

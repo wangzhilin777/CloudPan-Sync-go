@@ -147,8 +147,12 @@
   - evidence 级 `blockedTasks`
   - evidence/provider 级 `blockedActions`
   - provider 级 `blockedCount`
+- 当前后台自动恢复证据已支持：
+  - runtime 级 `autoRecovered / autoRecoverReason / autoRecoverCount / autoRecoveredAt / autoRecoverState`
+  - result 级 `autoRecovery`
+  - provider probe / status 级自动恢复摘要
 - 当前要避免误解：
-  - 这表示“待补传结构已经可见，而且已具备 pending-only retry、`blocked` 运行态、retry-limit 阻断、冷却到期自动恢复，以及 upload-session checkpoint 的最小自动续跑闭环”
+  - 这表示“待补传结构已经可见，而且已具备 pending-only retry、`blocked` 运行态、retry-limit 阻断、冷却到期自动恢复、upload-session checkpoint 的最小自动续跑闭环，以及自动恢复证据留痕”
   - 不表示“后台补传队列调度已经全部完成”
 
 ### 3. 直接调试 provider 能力

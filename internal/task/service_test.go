@@ -1480,8 +1480,57 @@ func TestServiceRecoverBlockedTasksAutoResumesUploadCheckpointQueue(t *testing.T
 	if finalDetail.Task.State != StateCompleted {
 		t.Fatalf("expected completed after auto resume recovery, got %s", finalDetail.Task.State)
 	}
+	if !finalDetail.Runtime.AutoRecovered {
+		t.Fatalf("expected runtime auto recovery evidence, got %#v", finalDetail.Runtime)
+	}
+	if finalDetail.Runtime.AutoRecoverReason != "upload_checkpoint_auto_resume" {
+		t.Fatalf("expected upload checkpoint auto recovery reason, got %q", finalDetail.Runtime.AutoRecoverReason)
+	}
+	if finalDetail.Runtime.AutoRecoverCount != 1 {
+		t.Fatalf("expected auto recover count 1, got %d", finalDetail.Runtime.AutoRecoverCount)
+	}
+	if finalDetail.Runtime.AutoRecoverState != string(StateCompletedWithErrors) {
+		t.Fatalf("expected auto recover source state completed_with_errors, got %q", finalDetail.Runtime.AutoRecoverState)
+	}
 	if len(finalDetail.Results) != 1 || finalDetail.Results[0].Mode != "fake_resume_ok" {
 		t.Fatalf("expected resumed result, got %#v", finalDetail.Results)
+	}
+	autoRecoveryPayload, ok := finalDetail.Results[0].Payload["autoRecovery"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("expected result auto recovery payload, got %#v", finalDetail.Results[0].Payload)
+	}
+	if stringValue(autoRecoveryPayload["reason"]) != "upload_checkpoint_auto_resume" {
+		t.Fatalf("expected result auto recovery reason, got %#v", autoRecoveryPayload)
+	}
+	if intNumber(autoRecoveryPayload["count"]) != 1 {
+		t.Fatalf("expected result auto recover count 1, got %#v", autoRecoveryPayload)
+	}
+	evidence, err := svc.RuntimeEvidence(ctx)
+	if err != nil {
+		t.Fatalf("RuntimeEvidence() error = %v", err)
+	}
+	if len(evidence.RecentProbes) == 0 {
+		t.Fatal("expected recent provider probe after auto recovery")
+	}
+	if stringValue(evidence.RecentProbes[0].Payload["autoRecoverReason"]) != "upload_checkpoint_auto_resume" {
+		t.Fatalf("expected probe auto recovery reason, got %#v", evidence.RecentProbes[0].Payload)
+	}
+	statuses, err := svc.ProviderStatuses(ctx)
+	if err != nil {
+		t.Fatalf("ProviderStatuses() error = %v", err)
+	}
+	var foundStatus bool
+	for _, status := range statuses {
+		if status.ProviderKey != "recover_upload_session_target" {
+			continue
+		}
+		foundStatus = true
+		if stringValue(status.SnapshotSummary["autoRecoverReason"]) != "upload_checkpoint_auto_resume" {
+			t.Fatalf("expected status auto recovery reason, got %#v", status.SnapshotSummary)
+		}
+	}
+	if !foundStatus {
+		t.Fatal("expected provider status for recover_upload_session_target")
 	}
 	if uploadCalls != 2 {
 		t.Fatalf("expected 2 upload attempts total, got %d", uploadCalls)

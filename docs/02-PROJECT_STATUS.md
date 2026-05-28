@@ -351,6 +351,7 @@
   - 当前任务在“只有冷却 / 人工确认 / 授权失效 / 本地文件缺失”时会进入 `blocked`
   - 当前 runtime / probe / status 已回写 `blockedReason` 与 `nextRetryAt`
   - 当前已接入单机 worker 版后台自动补传调度，启动时会先恢复一次，随后按 `CLOUDPAN_AUTO_RETRY_TICK` 自动恢复冷却到期的 `blocked` 任务
+  - 当前自动恢复会在 runtime / result / provider probe / provider status 中留下 `autoRecovered / autoRecoverReason / autoRecoverCount / autoRecoveredAt / autoRecoverState` 证据，便于判断任务是用户手动重试还是 worker 自动续跑
   - 当前 `retryLimit` 已真正接入重试队列，支持累计次数、剩余次数与 exhausted 阻断
   - 当前 `blockedReason` 已补充统一的 `blockedAction / blockedAdvice`，便于状态矩阵直接给出处理建议
   - 当前 `/api/evidence/runtime` 与 `/api/status/providers` 已补充 `blockedTasks / blockedActions` 聚合摘要，便于快速定位最需要人工处理的动作
@@ -380,6 +381,11 @@
   - `pendingTree`
   - `riskHitCount`
   - `lastRiskStatus`
+  - `autoRecovered`
+  - `autoRecoverReason`
+  - `autoRecoverCount`
+  - `autoRecoveredAt`
+  - `autoRecoverState`
   - `currentRoot`
   - `currentDirectory`
   - `lastCompletedPath`

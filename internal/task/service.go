@@ -294,6 +294,9 @@ func (s *Service) Run(ctx context.Context, id string) (Detail, bool, error) {
 		if riskProfile, ok := detail.Plan.Metadata["riskProfile"]; ok {
 			result.Payload["riskProfile"] = riskProfile
 		}
+		if autoRecovery := runtimeAutoRecoveryPayload(detail.Runtime); autoRecovery != nil {
+			result.Payload["autoRecovery"] = autoRecovery
+		}
 		if conflictAction != "" {
 			result.Payload["conflictAction"] = conflictAction
 		}
@@ -674,6 +677,10 @@ func (s *Service) RecoverBlockedTasks(ctx context.Context) (int, error) {
 			return recovered, err
 		}
 		if err := rebuildTaskForRetry(ctx, s.store, retried); err != nil {
+			return recovered, err
+		}
+		markAutoRecovery(&retried, detail, autoRecoverReason(detail), time.Now().UTC().Format(time.RFC3339))
+		if err := updateTaskDetailState(ctx, s.store, retried); err != nil {
 			return recovered, err
 		}
 		if _, _, err := s.Run(ctx, detail.Task.ID); err != nil {
@@ -2018,6 +2025,65 @@ func applyRetryQueueSummary(runtime *RuntimeState, metadata map[string]interface
 	}
 }
 
+func autoRecoverReason(detail Detail) string {
+	if detail.Task.State == StateCompletedWithErrors && retryQueueCanAutoResumeUploads(detail.Runtime.RetryQueue) {
+		return "upload_checkpoint_auto_resume"
+	}
+	summary := summarizeRetryQueue(detail.Runtime.RetryQueue)
+	if summary.BlockedReason == "retry_queue_waiting_for_cooldown" {
+		return "cooldown_elapsed_auto_retry"
+	}
+	if summary.CanAutoRetry {
+		return "retry_queue_auto_retry"
+	}
+	return "auto_retry"
+}
+
+func markAutoRecovery(detail *Detail, source Detail, reason, recoveredAt string) {
+	if detail == nil {
+		return
+	}
+	if recoveredAt == "" {
+		recoveredAt = time.Now().UTC().Format(time.RFC3339)
+	}
+	count := source.Runtime.AutoRecoverCount + 1
+	detail.Runtime.AutoRecovered = true
+	detail.Runtime.AutoRecoverReason = reason
+	detail.Runtime.AutoRecoverCount = count
+	detail.Runtime.AutoRecoveredAt = recoveredAt
+	detail.Runtime.AutoRecoverState = string(source.Task.State)
+	if detail.Plan.Metadata == nil {
+		detail.Plan.Metadata = map[string]interface{}{}
+	}
+	detail.Plan.Metadata["autoRecovery"] = map[string]interface{}{
+		"recovered":   true,
+		"reason":      reason,
+		"count":       count,
+		"recoveredAt": recoveredAt,
+		"sourceState": string(source.Task.State),
+	}
+}
+
+func runtimeAutoRecoveryPayload(runtime RuntimeState) map[string]interface{} {
+	if !runtime.AutoRecovered {
+		return nil
+	}
+	payload := map[string]interface{}{
+		"recovered": true,
+		"count":     runtime.AutoRecoverCount,
+	}
+	if runtime.AutoRecoverReason != "" {
+		payload["reason"] = runtime.AutoRecoverReason
+	}
+	if runtime.AutoRecoveredAt != "" {
+		payload["recoveredAt"] = runtime.AutoRecoveredAt
+	}
+	if runtime.AutoRecoverState != "" {
+		payload["sourceState"] = runtime.AutoRecoverState
+	}
+	return payload
+}
+
 func syncRuntimeUploadCheckpoint(runtime *RuntimeState, results []Result) {
 	if runtime == nil {
 		return
@@ -2489,6 +2555,12 @@ func buildProviderProbe(detail Detail, profile provider.AuthProfile, results []R
 			"retrySummary":                   detail.Plan.Metadata["retrySummary"],
 			"riskHitCount":                   detail.Runtime.RiskHitCount,
 			"lastRiskStatus":                 detail.Runtime.LastRiskStatus,
+			"autoRecovered":                  detail.Runtime.AutoRecovered,
+			"autoRecoverReason":              detail.Runtime.AutoRecoverReason,
+			"autoRecoverCount":               detail.Runtime.AutoRecoverCount,
+			"autoRecoveredAt":                detail.Runtime.AutoRecoveredAt,
+			"autoRecoverState":               detail.Runtime.AutoRecoverState,
+			"autoRecovery":                   detail.Plan.Metadata["autoRecovery"],
 			"currentRoot":                    detail.Runtime.CurrentRoot,
 			"currentDirectory":               detail.Runtime.CurrentDirectory,
 			"lastCompletedPath":              detail.Runtime.LastCompletedPath,
