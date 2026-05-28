@@ -508,7 +508,7 @@ func (a GuangyaFamilyAdapter) Upload(req UploadRequest) UploadResult {
 		return UploadResult{
 			OperationResult: OperationResult{
 				Status:  "pending_manual_requires_confirmation",
-				Message: "Guangya pending_manual items still require a verified binary upload chain.",
+				Message: "Guangya pending_manual items require manual confirmation before upload.",
 				Mode:    "guangya_family_real_upload",
 			},
 		}
@@ -616,8 +616,8 @@ func (a GuangyaFamilyAdapter) Upload(req UploadRequest) UploadResult {
 	if localPath == "" {
 		return UploadResult{
 			OperationResult: OperationResult{
-				Status:  "missing_binary_upload_runtime",
-				Message: "Guangya download_upload still requires a verified binary upload runtime and readable local file in the current Go build.",
+				Status:  "local_file_missing",
+				Message: "Guangya download_upload requires a readable local file path.",
 				Mode:    "guangya_family_real_upload",
 				Payload: payload,
 			},

@@ -152,8 +152,8 @@ func TestGuangyaFamilyAdapterFastCheckGCIDMissCleansTaskAndUploadPreflightIsHone
 	if upload.OK {
 		t.Fatalf("expected honest preflight-only upload result, got %+v", upload)
 	}
-	if upload.Status != "missing_binary_upload_runtime" {
-		t.Fatalf("expected missing_binary_upload_runtime, got %+v", upload)
+	if upload.Status != "local_file_missing" {
+		t.Fatalf("expected local_file_missing, got %+v", upload)
 	}
 }
 
@@ -277,6 +277,36 @@ func TestGuangyaFamilyAdapterUploadSmallBinaryUsesUploadInfo(t *testing.T) {
 	}
 	if stringMapValue(result.Payload, "drive.verifyMode") != "metadata_by_file_id" {
 		t.Fatalf("expected verify by metadata, got %+v", result.Payload)
+	}
+}
+
+func TestGuangyaFamilyAdapterUploadRequiresLocalFileForDownloadUpload(t *testing.T) {
+	server, _ := newGuangyaTestServer(t)
+	t.Cleanup(server.Close)
+
+	originalClient := providerHTTPClient
+	providerHTTPClient = server.Client()
+	t.Cleanup(func() { providerHTTPClient = originalClient })
+
+	registry := NewRegistry(DefaultCatalog()...)
+	entry, ok := registry.Get("guangya")
+	if !ok {
+		t.Fatal("expected guangya entry")
+	}
+	profile := guangyaTestProfile(server.URL)
+
+	result := entry.Adapter.Upload(UploadRequest{
+		Profile:  profile,
+		ParentID: "parent-gy",
+		Path:     "/missing-local.bin",
+		Name:     "missing-local.bin",
+		Strategy: "download_upload",
+	})
+	if result.OK || result.Status != "local_file_missing" {
+		t.Fatalf("expected local_file_missing, got %+v", result)
+	}
+	if strings.Contains(result.Message, "runtime") {
+		t.Fatalf("did not expect stale runtime message, got %q", result.Message)
 	}
 }
 
