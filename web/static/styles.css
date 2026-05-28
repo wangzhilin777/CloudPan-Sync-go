@@ -564,7 +564,12 @@ tr.active td {
 }
 
 .tree-node {
+  display: grid;
   gap: 10px;
+}
+
+.tree-node.is-collapsed {
+  background: rgba(247, 249, 246, 0.94);
 }
 
 .directory-children {
@@ -573,6 +578,10 @@ tr.active td {
   margin-left: 18px;
   padding-left: 14px;
   border-left: 2px solid rgba(15, 118, 110, 0.12);
+}
+
+.directory-children.is-collapsed {
+  display: none;
 }
 
 .directory-row-header {

@@ -34,10 +34,10 @@ const state = {
   },
   treeGroupsCollapsed: {},
   treeFilters: {
-    taskDirectory: { query: "", status: "", leafOnly: false },
+    taskDirectory: { query: "", status: "", leafOnly: false, problemOnly: false },
     taskPending: { query: "", reason: "", leafOnly: false },
     taskRetry: { query: "", retryClass: "", retryState: "" },
-    statusDirectory: { query: "", status: "", leafOnly: false },
+    statusDirectory: { query: "", status: "", leafOnly: false, problemOnly: false },
     statusPending: { query: "", reason: "", leafOnly: false },
     statusRetry: { query: "", retryClass: "", retryState: "" },
   },
@@ -376,6 +376,99 @@ function countTreeNodes(nodes) {
   return nodes.reduce((total, node) => total + 1 + countTreeNodes(node.children || []), 0);
 }
 
+function countTreeLeafNodes(nodes, mode = "directory") {
+  if (!Array.isArray(nodes) || !nodes.length) {
+    return 0;
+  }
+  return nodes.reduce((total, node) => {
+    const children = Array.isArray(node.children) ? node.children : [];
+    if (!children.length) {
+      return total + 1;
+    }
+    if (mode === "pending" && node.nodeType === "file") {
+      return total + 1;
+    }
+    return total + countTreeLeafNodes(children, mode);
+  }, 0);
+}
+
+function deepestTreePath(nodes, fallback = "") {
+  let bestPath = String(fallback || "");
+  let bestDepth = bestPath ? inferPathDepth(bestPath) : -1;
+  const visit = (items) => {
+    (items || []).forEach((node) => {
+      const path = String(node?.path || "").trim();
+      const depth = inferPathDepth(path);
+      if (path && depth >= bestDepth) {
+        bestDepth = depth;
+        bestPath = path;
+      }
+      if (Array.isArray(node?.children) && node.children.length) {
+        visit(node.children);
+      }
+    });
+  };
+  visit(nodes);
+  return bestPath;
+}
+
+function inferPathDepth(path) {
+  const normalized = normalizeComparePath(path);
+  if (!normalized || normalized === "/") {
+    return 0;
+  }
+  return normalized.split("/").filter(Boolean).length;
+}
+
+function parentTreePath(path) {
+  const normalized = normalizeComparePath(path);
+  if (!normalized || normalized === "/") {
+    return "";
+  }
+  const parts = normalized.split("/").filter(Boolean);
+  if (parts.length <= 1) {
+    return "/";
+  }
+  return `/${parts.slice(0, -1).join("/")}`;
+}
+
+function directoryNodeHasProblem(node) {
+  if (!node || typeof node !== "object") {
+    return false;
+  }
+  const status = String(node.status || "").trim().toLowerCase();
+  if (status === "blocked" || status === "running" || status === "pending") {
+    return true;
+  }
+  const failedItems = Number(node.failedItems || 0);
+  const totalItems = Number(node.itemCount || node.totalItems || 0);
+  const processedItems = Number(node.processedItems || 0);
+  return failedItems > 0 || processedItems < totalItems;
+}
+
+function summarizeVisibleTree(result, mode = "directory") {
+  const nodes = Array.isArray(result?.nodes) ? result.nodes : [];
+  const rootCount = nodes.length;
+  const leafCount = countTreeLeafNodes(nodes, mode);
+  const deepestPath = deepestTreePath(nodes, "");
+  const maxDepth = inferPathDepth(deepestPath);
+  let problemCount = 0;
+  if (mode === "directory") {
+    const visit = (items) => {
+      (items || []).forEach((node) => {
+        if (directoryNodeHasProblem(node)) {
+          problemCount += 1;
+        }
+        if (Array.isArray(node.children) && node.children.length) {
+          visit(node.children);
+        }
+      });
+    };
+    visit(nodes);
+  }
+  return { rootCount, leafCount, deepestPath, maxDepth, problemCount };
+}
+
 function includesFilterText(values, text) {
   if (!text) {
     return true;
@@ -388,7 +481,8 @@ function filterDirectoryTree(states, filters = {}) {
   const query = String(filters.query || "").trim().toLowerCase();
   const status = String(filters.status || "").trim().toLowerCase();
   const leafOnly = Boolean(filters.leafOnly);
-  const filterActive = Boolean(query || status || leafOnly);
+  const problemOnly = Boolean(filters.problemOnly);
+  const filterActive = Boolean(query || status || leafOnly || problemOnly);
   const prune = (nodes) =>
     nodes.flatMap((node) => {
       const children = prune(node.children || []);
@@ -396,7 +490,8 @@ function filterDirectoryTree(states, filters = {}) {
       const selfMatch =
         includesFilterText([node.path, node.name, node.rootPath, node.lastItemPath], query) &&
         includesFilterText([node.status], status) &&
-        (!leafOnly || isLeaf);
+        (!leafOnly || isLeaf) &&
+        (!problemOnly || directoryNodeHasProblem(node));
       if (!selfMatch && !children.length) {
         return [];
       }
@@ -441,14 +536,24 @@ function filterPendingTree(nodes, filters = {}) {
   };
 }
 
-function renderTreeFilterSummary(result, label) {
+function renderTreeFilterSummary(result, label, mode = "directory") {
   if (!result.totalNodes) {
     return `暂无${label}。`;
   }
+  const summary = summarizeVisibleTree(result, mode);
+  const suffix = [
+    `roots ${summary.rootCount}`,
+    `leaf ${summary.leafCount}`,
+    `maxDepth ${summary.maxDepth}`,
+    mode === "directory" ? `problem ${summary.problemCount}` : "",
+    summary.deepestPath ? `deepest ${summary.deepestPath}` : "",
+  ]
+    .filter(Boolean)
+    .join(" / ");
   if (!result.filterActive) {
-    return `显示全部 ${result.visibleNodes} 个${label}。`;
+    return `显示全部 ${result.visibleNodes} 个${label}。${suffix}`;
   }
-  return `当前显示 ${result.visibleNodes} / ${result.totalNodes} 个${label}。`;
+  return `当前显示 ${result.visibleNodes} / ${result.totalNodes} 个${label}。${suffix}`;
 }
 
 function resetTreeFilterSection(section) {
@@ -732,12 +837,20 @@ function renderTreeNodes(nodes, options = {}) {
   }
 
   const renderNode = (node) => {
+    const childrenList = Array.isArray(node.children) ? node.children : [];
+    const hasChildren = childrenList.length > 0;
+    const collapsed = hasChildren && isTreeGroupCollapsed(scope, panel, node.path);
+    const leafCount = countTreeLeafNodes(hasChildren ? childrenList : [node], mode);
+    const descendantCount = countTreeNodes(childrenList);
+    const parentPath = parentTreePath(node.path);
     const metrics =
       mode === "pending"
         ? `
             <div class="directory-metrics">
               <span class="pill">${escapeHTML(node.nodeType)}</span>
               <span class="pill">pending ${node.itemCount}</span>
+              <span class="pill">leaf ${leafCount}</span>
+              ${descendantCount ? `<span class="pill">children ${descendantCount}</span>` : ""}
               ${node.providerStatus ? `<span class="pill">${escapeHTML(node.providerStatus)}</span>` : ""}
             </div>
             ${
@@ -753,24 +866,40 @@ function renderTreeNodes(nodes, options = {}) {
               <span class="pill">done ${node.doneItems}</span>
               <span class="pill">skipped ${node.skippedItems}</span>
               <span class="pill">failed ${node.failedItems}</span>
+              <span class="pill">leaf ${leafCount}</span>
+              ${descendantCount ? `<span class="pill">children ${descendantCount}</span>` : ""}
             </div>
             <div class="muted">last item: <code>${escapeHTML(stringifyValue(node.lastItemPath, "-"))}</code></div>
           `;
 
-    const children = node.children.length
-      ? `<div class="directory-children">${node.children.map((child) => renderNode(child)).join("")}</div>`
+    const children = hasChildren
+      ? `<div class="directory-children ${collapsed ? "is-collapsed" : ""}">${childrenList.map((child) => renderNode(child)).join("")}</div>`
       : "";
-    const syncTargetPanel = panel === "directory" ? "pending" : "directory";
     const syncLabel = panel === "directory" ? "待补传树" : "目录树";
 
     return `
-      <div class="directory-row tree-node">
+      <div class="directory-row tree-node ${collapsed ? "is-collapsed" : ""}">
         <div class="directory-row-header">
           <strong>${escapeHTML(node.name || node.path)}</strong>
           <code>${escapeHTML(node.path)}</code>
         </div>
         ${metrics}
         <div class="actions compact">
+          ${
+            hasChildren
+              ? `
+                <button
+                  type="button"
+                  class="ghost tree-group-toggle"
+                  data-tree-group-toggle
+                  data-tree-group-scope="${escapeHTML(scope)}"
+                  data-tree-group-panel="${escapeHTML(panel)}"
+                  data-tree-group-path="${escapeHTML(node.path)}"
+                  aria-expanded="${collapsed ? "false" : "true"}"
+                >${collapsed ? "展开子树" : "收起子树"}</button>
+              `
+              : ""
+          }
           ${
             scope === "task"
               ? `
@@ -806,6 +935,26 @@ function renderTreeNodes(nodes, options = {}) {
                   data-tree-auto-recover-path="${escapeHTML(node.path)}"
                   data-tree-auto-recover-panel="${escapeHTML(panel)}"
                 >后台补传当前路径</button>
+              `
+              : ""
+          }
+          <button
+            type="button"
+            class="ghost"
+            data-tree-copy-path="${escapeHTML(node.path)}"
+            data-tree-copy-scope="${escapeHTML(scope)}"
+            data-tree-copy-panel="${escapeHTML(panel)}"
+          >复制当前子树</button>
+          ${
+            parentPath
+              ? `
+                <button
+                  type="button"
+                  class="ghost"
+                  data-tree-parent-path="${escapeHTML(node.path)}"
+                  data-tree-parent-scope="${escapeHTML(scope)}"
+                  data-tree-parent-panel="${escapeHTML(panel)}"
+                >只看父级</button>
               `
               : ""
           }
@@ -985,10 +1134,10 @@ function updateTaskTreePanels(detail) {
     panel: "pending",
   });
   $("#task-directory-filter-summary").textContent = detail
-    ? renderTreeFilterSummary(directoryResult, "目录节点")
+    ? renderTreeFilterSummary(directoryResult, "目录节点", "directory")
     : "等待任务数据...";
   $("#task-pending-filter-summary").textContent = detail
-    ? renderTreeFilterSummary(pendingResult, "待补传节点")
+    ? renderTreeFilterSummary(pendingResult, "待补传节点", "pending")
     : "等待任务数据...";
   wireTreeBulkActions("task", "directory");
   wireTreeBulkActions("task", "pending");
@@ -1014,8 +1163,8 @@ function updateStatusTreePanels(runtimePayload) {
     scope: "status",
     panel: "pending",
   });
-  $("#status-directory-filter-summary").textContent = renderTreeFilterSummary(directoryResult, "目录节点");
-  $("#status-pending-filter-summary").textContent = renderTreeFilterSummary(pendingResult, "待补传节点");
+  $("#status-directory-filter-summary").textContent = renderTreeFilterSummary(directoryResult, "目录节点", "directory");
+  $("#status-pending-filter-summary").textContent = renderTreeFilterSummary(pendingResult, "待补传节点", "pending");
   wireTreeBulkActions("status", "directory");
   wireTreeBulkActions("status", "pending");
   wireTreeGroupToggles("status", "directory");
@@ -1064,25 +1213,25 @@ function flattenVisibleTreePaths(nodes, mode) {
   return Array.from(new Set(paths));
 }
 
-function visibleTreePaths(scope, panel) {
+function currentVisibleTreeNodes(scope, panel) {
   const detail = currentSelectedTaskDetail();
   const runtimePayload = recentRuntimePayload();
   if (scope === "task") {
     const runtime = detail?.runtime || detail?.plan?.metadata?.runtime || {};
     if (panel === "pending") {
-      const result = filterPendingTree(runtime.pendingTree || [], state.treeFilters.taskPending);
-      return flattenVisibleTreePaths(result.nodes, "pending");
+      return filterPendingTree(runtime.pendingTree || [], state.treeFilters.taskPending).nodes;
     }
-    const result = filterDirectoryTree(runtime.directoryStates || [], state.treeFilters.taskDirectory);
-    return flattenVisibleTreePaths(result.nodes, "directory");
+    return filterDirectoryTree(runtime.directoryStates || [], state.treeFilters.taskDirectory).nodes;
   }
   const runtime = runtimePayload?.runtime || runtimePayload || {};
   if (panel === "pending") {
-    const result = filterPendingTree(runtime.pendingTree || [], state.treeFilters.statusPending);
-    return flattenVisibleTreePaths(result.nodes, "pending");
+    return filterPendingTree(runtime.pendingTree || [], state.treeFilters.statusPending).nodes;
   }
-  const result = filterDirectoryTree(runtime.directoryStates || [], state.treeFilters.statusDirectory);
-  return flattenVisibleTreePaths(result.nodes, "directory");
+  return filterDirectoryTree(runtime.directoryStates || [], state.treeFilters.statusDirectory).nodes;
+}
+
+function visibleTreePaths(scope, panel) {
+  return flattenVisibleTreePaths(currentVisibleTreeNodes(scope, panel), panel === "pending" ? "pending" : "directory");
 }
 
 function visibleRetryPaths(scope) {
@@ -1094,6 +1243,51 @@ function visibleRetryPaths(scope) {
   return Array.from(new Set((result.items || []).map((item) => item.path).filter(Boolean)));
 }
 
+function findTreeNodeByPath(nodes, path) {
+  const normalizedPath = normalizeComparePath(path);
+  if (!normalizedPath) {
+    return null;
+  }
+  const visit = (items) => {
+    for (const node of items || []) {
+      if (normalizeComparePath(node?.path) === normalizedPath) {
+        return node;
+      }
+      if (Array.isArray(node?.children) && node.children.length) {
+        const found = visit(node.children);
+        if (found) {
+          return found;
+        }
+      }
+    }
+    return null;
+  };
+  return visit(nodes);
+}
+
+function flattenTreeNodePaths(node, mode = "directory") {
+  if (!node || !node.path) {
+    return [];
+  }
+  const paths = [];
+  const visit = (current) => {
+    if (!current || !current.path) {
+      return;
+    }
+    const children = Array.isArray(current.children) ? current.children : [];
+    if (mode === "pending") {
+      if (current.nodeType === "file" || !children.length) {
+        paths.push(current.path);
+      }
+    } else {
+      paths.push(current.path);
+    }
+    children.forEach(visit);
+  };
+  visit(node);
+  return Array.from(new Set(paths));
+}
+
 async function copyVisibleTreePaths(scope, panel) {
   const paths = visibleTreePaths(scope, panel);
   if (!paths.length) {
@@ -1102,6 +1296,32 @@ async function copyVisibleTreePaths(scope, panel) {
   }
   await copyTextToClipboard(paths.join("\n"));
   showFlash(`已复制 ${paths.length} 条${panel === "pending" ? "待补传" : "目录"}路径`);
+}
+
+async function copyTreeNodePaths(scope, panel, path) {
+  const nodes = currentVisibleTreeNodes(scope, panel);
+  const node = findTreeNodeByPath(nodes, path);
+  if (!node) {
+    showFlash("当前筛选结果里未找到对应子树", true);
+    return;
+  }
+  const paths = flattenTreeNodePaths(node, panel === "pending" ? "pending" : "directory");
+  if (!paths.length) {
+    showFlash("当前子树没有可复制的路径", true);
+    return;
+  }
+  await copyTextToClipboard(paths.join("\n"));
+  showFlash(`已复制 ${paths.length} 条${panel === "pending" ? "待补传" : "目录"}子树路径`);
+}
+
+function focusTreeParentPath(scope, panel, path) {
+  const parentPath = parentTreePath(path);
+  if (!parentPath) {
+    showFlash("当前已经是最上层路径", true);
+    return;
+  }
+  focusTreePanelByPath(scope, panel, parentPath);
+  showFlash(`已按父级路径 ${parentPath} 收敛${panel === "pending" ? "待补传树" : "目录树"}`);
 }
 
 function setFilterControlValue(selector, value) {
@@ -1376,6 +1596,28 @@ function wireTreeGroupToggles(scope, panel) {
       } catch (error) {
         showFlash(error.message, true);
       }
+    });
+  });
+  wrap.querySelectorAll("[data-tree-copy-path]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      try {
+        await copyTreeNodePaths(
+          button.dataset.treeCopyScope || scope,
+          button.dataset.treeCopyPanel || panel,
+          button.dataset.treeCopyPath || "",
+        );
+      } catch (error) {
+        showFlash(error.message, true);
+      }
+    });
+  });
+  wrap.querySelectorAll("[data-tree-parent-path]").forEach((button) => {
+    button.addEventListener("click", () => {
+      focusTreeParentPath(
+        button.dataset.treeParentScope || scope,
+        button.dataset.treeParentPanel || panel,
+        button.dataset.treeParentPath || "",
+      );
     });
   });
 }
@@ -4212,6 +4454,7 @@ function wireTreeFilters() {
   bindTextFilter("#task-directory-filter-query", "taskDirectory", "query", rerenderTask);
   bindTextFilter("#task-directory-filter-status", "taskDirectory", "status", rerenderTask);
   bindCheckboxFilter("#task-directory-filter-leaf-only", "taskDirectory", "leafOnly", rerenderTask);
+  bindCheckboxFilter("#task-directory-filter-problem-only", "taskDirectory", "problemOnly", rerenderTask);
   bindTextFilter("#task-pending-filter-query", "taskPending", "query", rerenderTask);
   bindTextFilter("#task-pending-filter-reason", "taskPending", "reason", rerenderTask);
   bindCheckboxFilter("#task-pending-filter-leaf-only", "taskPending", "leafOnly", rerenderTask);
@@ -4222,6 +4465,7 @@ function wireTreeFilters() {
   bindTextFilter("#status-directory-filter-query", "statusDirectory", "query", rerenderStatus);
   bindTextFilter("#status-directory-filter-status", "statusDirectory", "status", rerenderStatus);
   bindCheckboxFilter("#status-directory-filter-leaf-only", "statusDirectory", "leafOnly", rerenderStatus);
+  bindCheckboxFilter("#status-directory-filter-problem-only", "statusDirectory", "problemOnly", rerenderStatus);
   bindTextFilter("#status-pending-filter-query", "statusPending", "query", rerenderStatus);
   bindTextFilter("#status-pending-filter-reason", "statusPending", "reason", rerenderStatus);
   bindCheckboxFilter("#status-pending-filter-leaf-only", "statusPending", "leafOnly", rerenderStatus);
@@ -4234,6 +4478,7 @@ function wireTreeFilters() {
     setFilterControlValue("#task-directory-filter-query", "");
     setFilterControlValue("#task-directory-filter-status", "");
     setFilterControlValue("#task-directory-filter-leaf-only", false);
+    setFilterControlValue("#task-directory-filter-problem-only", false);
     rerenderTask();
     showFlash("已清空任务目录树筛选");
   });
@@ -4250,6 +4495,7 @@ function wireTreeFilters() {
     setFilterControlValue("#status-directory-filter-query", "");
     setFilterControlValue("#status-directory-filter-status", "");
     setFilterControlValue("#status-directory-filter-leaf-only", false);
+    setFilterControlValue("#status-directory-filter-problem-only", false);
     rerenderStatus();
     showFlash("已清空状态目录树筛选");
   });
