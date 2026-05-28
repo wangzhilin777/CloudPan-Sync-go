@@ -2126,6 +2126,7 @@ function renderProviderSmokeMatrix(items) {
           </div>
           <div class="muted">smoke sample: ${escapeHTML(stringifyValue(item.sampleTitle, "-"))} / ${escapeHTML(stringifyValue(item.sampleProviderKey, "-"))} / ${escapeHTML(stringifyValue(item.sampleCategory, "-"))}</div>
           <div class="muted">coverage sample: ${escapeHTML(stringifyValue(item.coverageSampleProviderKey, "-"))} / ${escapeHTML(stringifyValue(item.coverageSampleTaskState, "-"))} / ${escapeHTML(stringifyValue(item.coverageSampleCompletionKind, "-"))}</div>
+          ${Array.isArray(item.acceptanceMissing) && item.acceptanceMissing.length ? `<div class="muted">missing: ${escapeHTML(item.acceptanceMissing.join(", "))}</div>` : ""}
           <div class="muted">latest smoke: <code>${escapeHTML(stringifyValue(item.latestSmokeAt, "-"))}</code> / coverage observed: <code>${escapeHTML(stringifyValue(item.coverageLastObservedAt, "-"))}</code></div>
         </div>
       `,

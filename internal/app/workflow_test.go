@@ -426,6 +426,20 @@ func TestAppWorkflowMainline(t *testing.T) {
 	if got := smokeMatrix[0].(map[string]interface{})["accepted"].(bool); !got {
 		t.Fatal("expected smoke matrix accepted true")
 	}
+	foundMissing := false
+	for _, raw := range smokeMatrix {
+		item := raw.(map[string]interface{})
+		if item["acceptanceStatus"].(string) == "pending" {
+			if got := len(item["acceptanceMissing"].([]interface{})); got == 0 {
+				t.Fatal("expected pending smoke matrix row to include missing reasons")
+			}
+			foundMissing = true
+			break
+		}
+	}
+	if !foundMissing {
+		t.Fatal("expected at least one pending smoke matrix row")
+	}
 
 	smokeMarkdown := invokeText(t, handler, http.MethodGet, "/api/provider-smokes/"+smokeID+"?format=markdown", nil)
 	if !strings.Contains(smokeMarkdown, "工作流真实 smoke") {
@@ -436,6 +450,9 @@ func TestAppWorkflowMainline(t *testing.T) {
 	}
 	if !strings.Contains(reportData["markdown"].(string), "## 真实联调验收") {
 		t.Fatalf("expected report markdown to include acceptance section, got %s", reportData["markdown"].(string))
+	}
+	if !strings.Contains(reportData["markdown"].(string), "Missing") {
+		t.Fatalf("expected report markdown to include missing reasons column, got %s", reportData["markdown"].(string))
 	}
 
 	retryResp := invokeJSON(t, handler, http.MethodPost, "/api/tasks/"+taskID+"/retry", nil)

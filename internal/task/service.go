@@ -140,6 +140,7 @@ type ProviderSmokeMatrixRow struct {
 	CoverageLastObservedAt       string   `json:"coverageLastObservedAt,omitempty"`
 	Accepted                     bool     `json:"accepted"`
 	AcceptanceStatus             string   `json:"acceptanceStatus,omitempty"`
+	AcceptanceMissing            []string `json:"acceptanceMissing,omitempty"`
 }
 
 type EvidenceSample struct {
@@ -1953,12 +1954,13 @@ func buildEvidenceReport(summary EvidenceSummary, statuses []StatusSummary, smok
 		}
 		fmt.Fprintf(&b, "- 已验收协议组: %d / %d\n", acceptedCount, len(smokeMatrix))
 		b.WriteString("\n## 真实联调验收\n\n")
-		b.WriteString("| ProtocolGroup | Acceptance | Smoke | Coverage | Sample | Latest Smoke |\n")
-		b.WriteString("| --- | --- | --- | --- | --- | --- |\n")
+		b.WriteString("| ProtocolGroup | Acceptance | Missing | Smoke | Coverage | Sample | Latest Smoke |\n")
+		b.WriteString("| --- | --- | --- | --- | --- | --- | --- |\n")
 		for _, item := range smokeMatrix {
-			fmt.Fprintf(&b, "| %s | %s | %d/%d | %d/%d/%d | %s / %s / %s | %s |\n",
+			fmt.Fprintf(&b, "| %s | %s | %s | %d/%d | %d/%d/%d | %s / %s / %s | %s |\n",
 				markdownCell(firstNonEmpty(item.ProtocolGroup, "-")),
 				markdownCell(firstNonEmpty(item.AcceptanceStatus, "-")),
+				markdownCell(strings.Join(item.AcceptanceMissing, ", ")),
 				item.SuccessCount,
 				item.FailureCount,
 				item.CoverageRealSuccessTaskCount,
@@ -2261,6 +2263,13 @@ func buildProviderSmokeMatrix(summary EvidenceSummary, smokeSummaries []Provider
 		state.row.CoverageLastObservedAt = coverage.LastObservedAt
 	}
 	for _, state := range states {
+		missing := make([]string, 0, 2)
+		if !state.row.HasRealSuccessSample {
+			missing = append(missing, "real_smoke_success_missing")
+		}
+		if state.row.CoverageTaskCount == 0 {
+			missing = append(missing, "task_coverage_missing")
+		}
 		switch {
 		case state.row.HasRealSuccessSample && state.row.CoverageTaskCount > 0:
 			state.row.Accepted = true
@@ -2269,6 +2278,9 @@ func buildProviderSmokeMatrix(summary EvidenceSummary, smokeSummaries []Provider
 			state.row.AcceptanceStatus = "in_progress"
 		default:
 			state.row.AcceptanceStatus = "pending"
+		}
+		if len(missing) > 0 {
+			state.row.AcceptanceMissing = missing
 		}
 	}
 	rows := make([]ProviderSmokeMatrixRow, 0, len(order))

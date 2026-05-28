@@ -3281,4 +3281,21 @@ func TestServiceProviderSmokeRecords(t *testing.T) {
 	if summary[0].SampleCategory != "browse_only" {
 		t.Fatalf("expected smoke summary sample category browse_only, got %s", summary[0].SampleCategory)
 	}
+
+	matrix, err := svc.ProviderSmokeMatrix(ctx)
+	if err != nil {
+		t.Fatalf("ProviderSmokeMatrix() error = %v", err)
+	}
+	if len(matrix) == 0 {
+		t.Fatal("expected smoke matrix")
+	}
+	if matrix[0].AcceptanceStatus != "in_progress" {
+		t.Fatalf("expected smoke matrix in_progress status, got %s", matrix[0].AcceptanceStatus)
+	}
+	if len(matrix[0].AcceptanceMissing) == 0 {
+		t.Fatal("expected smoke matrix missing reasons")
+	}
+	if matrix[0].AcceptanceMissing[0] != "task_coverage_missing" {
+		t.Fatalf("expected task_coverage_missing reason, got %#v", matrix[0].AcceptanceMissing)
+	}
 }
