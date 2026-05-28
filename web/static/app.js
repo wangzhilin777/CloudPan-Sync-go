@@ -1645,14 +1645,8 @@ function renderSelectedTask() {
       <strong>执行模式</strong>
       <span>${stringifyValue(metadata.executionMode)}</span>
     </div>
-    <div class="insight-card">
-      <strong>Selected Roots</strong>
-      <span><code>${escapeHTML(summarizePathList(metadata.selectedRoots || []))}</code></span>
-    </div>
-    <div class="insight-card">
-      <strong>Scan Trace</strong>
-      <span><code>${escapeHTML(summarizePathList(metadata.scanTrace || []))}</code></span>
-    </div>
+    ${renderRuntimePathChips("Selected Roots", metadata.selectedRoots || [], "task", "roots")}
+    ${renderRuntimePathChips("Scan Trace", metadata.scanTrace || [], "task", "scan")}
     <div class="insight-card">
       <strong>推荐模式</strong>
       <span>${stringifyValue(metadata.recommendedExecutionMode)}</span>
@@ -1687,6 +1681,7 @@ function renderSelectedTask() {
     </div>
   `;
   $("#task-runtime").innerHTML = renderRuntimeCheckpoint(runtime, metadata, "task");
+  wireRuntimePathFocus("task", "#task-summary");
   wireRuntimePathFocus("task");
   updateTaskRetryQueue(detail);
   $("#task-resolution-guide").innerHTML = renderTaskResolutionGuide(detail);
@@ -2126,8 +2121,8 @@ function renderEvidenceReport(report) {
   `;
 }
 
-function wireRuntimePathFocus(scope) {
-  const wrap = scope === "task" ? $("#task-runtime") : $("#status-runtime-checkpoints");
+function wireRuntimePathFocus(scope, selector = null) {
+  const wrap = selector ? $(selector) : scope === "task" ? $("#task-runtime") : $("#status-runtime-checkpoints");
   if (!wrap) {
     return;
   }
@@ -2689,35 +2684,6 @@ function wireStatus() {
       if (state.selectedReportId) {
         $("#report-history").querySelector(`[data-report-view="${state.selectedReportId}"]`)?.focus?.();
       }
-    } catch (error) {
-      showFlash(error.message, true);
-    }
-  });
-  $("#save-provider-smoke").addEventListener("click", async () => {
-    try {
-      const payload = {
-        providerKey: $("#provider-smoke-provider-key").value.trim(),
-        protocolGroup: $("#provider-smoke-protocol-group").value.trim(),
-        authMode: $("#provider-smoke-auth-mode").value.trim(),
-        result: $("#provider-smoke-result").value,
-        title: $("#provider-smoke-title").value.trim(),
-        note: $("#provider-smoke-note").value.trim(),
-        operations: $("#provider-smoke-operations").value
-          .split(",")
-          .map((item) => item.trim())
-          .filter(Boolean),
-        environment: {
-          os: navigator.platform || "",
-          userAgent: navigator.userAgent || "",
-        },
-      };
-      const record = await api("/api/provider-smokes", {
-        method: "POST",
-        body: payload,
-      });
-      hydrateProviderSmokeForm(record);
-      showFlash("Provider smoke 记录已保存");
-      await loadStatus();
     } catch (error) {
       showFlash(error.message, true);
     }

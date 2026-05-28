@@ -438,6 +438,7 @@
   - 按 retry class / retry state 的重试队列筛选
   - 运行中的任务可在当前 item 完成后协作式暂停，并在恢复后继续后续 item
   - 任务预览和任务详情都能直接看见 `Selected Roots`，运行后还能查看 `Scan Trace`
+  - 任务摘要里的 `Selected Roots` / `Scan Trace` 也做成了可点击路径芯片，方便直接跳到目录树并沿叶子优先顺序排查
   - `Selected Roots` 和 `Scan Trace` 里的路径按钮可直接定位目录树，任务页和状态页都能用，方便按顺序排查执行轨迹
   - 验收报告里的代表任务样本也会带上 `Selected Roots` 和 `Scan Trace`，方便离线分享
   - 真实 provider smoke 记录的协议组聚合与真实样本矩阵展示

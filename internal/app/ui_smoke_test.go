@@ -111,6 +111,8 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 		waitForText(`#task-runtime`, "SELECTED ROOTS"),
 		waitForText(`#task-detail`, `"state": "ready"`),
 		waitForText(`#task-directory-states`, "/demo"),
+		chromedp.Click(`#task-summary [data-runtime-focus-kind="roots"]`, chromedp.ByQuery),
+		waitForText(`#task-directory-filter-summary`, "当前显示"),
 	)
 
 	runStep(t, runCtx, "pause resume run task",
