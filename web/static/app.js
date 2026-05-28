@@ -719,6 +719,14 @@ function renderRuntimeCheckpoint(runtime, metadata = null, scope = "task") {
       <span>${stringifyValue(runtime.executionState)}</span>
     </div>
     <div class="insight-card checkpoint-card">
+      <strong>暂停请求</strong>
+      <span>${runtime.pauseRequested ? "waiting_current_item" : "-"}</span>
+    </div>
+    <div class="insight-card checkpoint-card">
+      <strong>请求时间</strong>
+      <span>${stringifyValue(runtime.pauseRequestedAt, "-")}</span>
+    </div>
+    <div class="insight-card checkpoint-card">
       <strong>当前根目录</strong>
       <span><code>${escapeHTML(stringifyValue(runtime.currentRoot, "-"))}</code></span>
     </div>

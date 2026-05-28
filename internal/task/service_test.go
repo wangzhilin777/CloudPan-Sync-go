@@ -1360,8 +1360,14 @@ func TestServicePauseStopsRunningTaskBetweenItemsAndResumeContinues(t *testing.T
 	if !ok {
 		t.Fatal("expected task to exist for pause")
 	}
-	if paused.Task.State != StatePaused {
-		t.Fatalf("expected paused task state, got %s", paused.Task.State)
+	if paused.Task.State != StateRunning {
+		t.Fatalf("expected running task state while pause is pending, got %s", paused.Task.State)
+	}
+	if paused.Runtime.ExecutionState != "pause_requested" {
+		t.Fatalf("expected runtime pause_requested, got %s", paused.Runtime.ExecutionState)
+	}
+	if !paused.Runtime.PauseRequested {
+		t.Fatal("expected pauseRequested true while first upload is still running")
 	}
 
 	close(releaseFirstUpload)
@@ -1379,6 +1385,9 @@ func TestServicePauseStopsRunningTaskBetweenItemsAndResumeContinues(t *testing.T
 	}
 	if running.Runtime.ExecutionState != "paused" {
 		t.Fatalf("expected runtime paused, got %s", running.Runtime.ExecutionState)
+	}
+	if running.Runtime.PauseRequested {
+		t.Fatal("expected pauseRequested cleared after task reaches paused state")
 	}
 	if running.Runtime.ProcessedCount != 1 {
 		t.Fatalf("expected processed count 1 after pause, got %d", running.Runtime.ProcessedCount)
@@ -1400,6 +1409,9 @@ func TestServicePauseStopsRunningTaskBetweenItemsAndResumeContinues(t *testing.T
 	if resumed.Task.State != StateReady {
 		t.Fatalf("expected ready after resume, got %s", resumed.Task.State)
 	}
+	if resumed.Runtime.ExecutionState != "ready_to_resume" {
+		t.Fatalf("expected ready_to_resume after resume, got %s", resumed.Runtime.ExecutionState)
+	}
 
 	finished, ok, err := svc.Run(ctx, detail.Task.ID)
 	if err != nil {
@@ -1416,6 +1428,142 @@ func TestServicePauseStopsRunningTaskBetweenItemsAndResumeContinues(t *testing.T
 	}
 	if uploadCalls[0] != "/a.bin" || uploadCalls[1] != "/b.bin" {
 		t.Fatalf("expected upload order [/a.bin /b.bin], got %#v", uploadCalls)
+	}
+}
+
+func TestServiceResumeCancelsPauseRequestWhileTaskStillRunning(t *testing.T) {
+	ctx := context.Background()
+	store, err := sqlitestore.New(ctx, filepath.Join(t.TempDir(), "pause-request-cancel.db"))
+	if err != nil {
+		t.Fatalf("new store: %v", err)
+	}
+	defer func() { _ = store.Close() }()
+
+	startedFirstUpload := make(chan struct{})
+	releaseFirstUpload := make(chan struct{})
+	startedSecondUpload := make(chan struct{}, 1)
+	adapter := &scriptedAdapter{
+		meta: provider.Provider{
+			Key:              "pause_request_cancel_target",
+			DisplayName:      "Pause Request Cancel Target",
+			ProtocolGroup:    "fake",
+			AuthModes:        []string{"manual_token"},
+			FastUploadInputs: []string{"md5", "size"},
+			FallbackModes:    []string{"download_upload"},
+			Status:           "planned",
+		},
+		capability: provider.CapabilitySet{
+			SupportsAuthValidation: true,
+			SupportsUpload:         true,
+		},
+		uploadFunc: func(req provider.UploadRequest) provider.UploadResult {
+			if req.Path == "/a.bin" {
+				close(startedFirstUpload)
+				<-releaseFirstUpload
+			}
+			if req.Path == "/b.bin" {
+				startedSecondUpload <- struct{}{}
+			}
+			return provider.UploadResult{
+				OperationResult: provider.OperationResult{
+					OK:      true,
+					Status:  "ok",
+					Message: "ok",
+					Mode:    "fake_ok",
+				},
+			}
+		},
+	}
+
+	registry := provider.NewRegistry(adapter)
+	authSvc := auth.NewService(store, registry)
+	svc := NewService(store, registry, authSvc)
+	profile, err := authSvc.CreateProfile(ctx, auth.CreateProfileInput{
+		ProviderKey: "pause_request_cancel_target",
+		AuthMode:    "manual_token",
+		DisplayName: "pause request cancel target",
+		Token:       "token-1",
+	})
+	if err != nil {
+		t.Fatalf("CreateProfile() error = %v", err)
+	}
+
+	detail, err := svc.Create(ctx, CreateRequest{
+		SourceProvider:  "guangya",
+		TargetProvider:  "pause_request_cancel_target",
+		TargetProfileID: profile.ID,
+		ThresholdMB:     1,
+		Entries: []planner.SourceEntry{
+			{Path: "/a.bin", Size: 10 * 1024 * 1024, MD5: "md5-a"},
+			{Path: "/b.bin", Size: 10 * 1024 * 1024, MD5: "md5-b"},
+		},
+	})
+	if err != nil {
+		t.Fatalf("Create() error = %v", err)
+	}
+
+	runErrCh := make(chan error, 1)
+	runResultCh := make(chan Detail, 1)
+	go func() {
+		running, _, runErr := svc.Run(ctx, detail.Task.ID)
+		if runErr != nil {
+			runErrCh <- runErr
+			return
+		}
+		runResultCh <- running
+	}()
+
+	select {
+	case <-startedFirstUpload:
+	case <-time.After(5 * time.Second):
+		t.Fatal("expected first upload to start")
+	}
+
+	paused, ok, err := svc.Pause(ctx, detail.Task.ID)
+	if err != nil {
+		t.Fatalf("Pause() error = %v", err)
+	}
+	if !ok {
+		t.Fatal("expected task to exist for pause request")
+	}
+	if paused.Task.State != StateRunning || paused.Runtime.ExecutionState != "pause_requested" || !paused.Runtime.PauseRequested {
+		t.Fatalf("expected running/pause_requested state, got task=%s runtime=%#v", paused.Task.State, paused.Runtime)
+	}
+
+	resumed, ok, err := svc.Resume(ctx, detail.Task.ID)
+	if err != nil {
+		t.Fatalf("Resume() while pause requested error = %v", err)
+	}
+	if !ok {
+		t.Fatal("expected task to exist for resume")
+	}
+	if resumed.Task.State != StateRunning {
+		t.Fatalf("expected running after canceling pause request, got %s", resumed.Task.State)
+	}
+	if resumed.Runtime.ExecutionState != "running" || resumed.Runtime.PauseRequested {
+		t.Fatalf("expected running runtime after canceling pause request, got %#v", resumed.Runtime)
+	}
+
+	close(releaseFirstUpload)
+
+	var finished Detail
+	select {
+	case err := <-runErrCh:
+		t.Fatalf("Run() error = %v", err)
+	case finished = <-runResultCh:
+	case <-time.After(5 * time.Second):
+		t.Fatal("expected run to finish after canceling pause request")
+	}
+	if finished.Task.State != StateCompleted {
+		t.Fatalf("expected completed after canceling pause request, got %s", finished.Task.State)
+	}
+	if finished.Runtime.ExecutionState != "completed" || finished.Runtime.PauseRequested {
+		t.Fatalf("expected completed runtime without pending pause, got %#v", finished.Runtime)
+	}
+	select {
+	case <-startedSecondUpload:
+	case <-time.After(5 * time.Second):
+		t.Fatal("expected second upload to proceed after pause request was canceled")
 	}
 }
 
