@@ -120,6 +120,7 @@
     - `POST /upload/v1/oss/file/upload_async_result`
   - `123_open` 当前约束：
     - 先落单分片上传主链路
+    - `fast_upload` 已接入 `file/create` 的 provider 侧复用命中；命中返回 `rapidUpload=true`，未命中返回 `hash_miss` 并交给 runtime fallback
     - `overwrite_existing` 诚实降级为 `auto_rename_new`
     - 上传后优先按 `fileId` 校验，校验失败再回退为父目录按文件名确认
 

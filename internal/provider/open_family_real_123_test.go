@@ -177,9 +177,104 @@ func TestOpenFamilyAdapterUploads123OpenFileWithOverwriteDowngrade(t *testing.T)
 	}
 }
 
+func TestOpenFamilyAdapterFastUploads123OpenFileWhenProviderReusesHash(t *testing.T) {
+	server, state := newPan123OpenTestServer(t)
+	state.reuseCreate = true
+	t.Cleanup(server.Close)
+
+	originalClient := providerHTTPClient
+	providerHTTPClient = server.Client()
+	t.Cleanup(func() { providerHTTPClient = originalClient })
+
+	registry := NewRegistry(DefaultCatalog()...)
+	entry, ok := registry.Get("123_open")
+	if !ok {
+		t.Fatal("expected 123_open entry")
+	}
+	profile := AuthProfile{
+		ProviderKey: "123_open",
+		Token:       "token-live",
+		Extra: map[string]string{
+			"apiEndpoint": server.URL,
+		},
+	}
+
+	result := entry.Adapter.Upload(UploadRequest{
+		Profile:        profile,
+		Path:           "/docs/rapid.bin",
+		Name:           "rapid.bin",
+		Size:           1234,
+		MD5:            "abcdef0123456789abcdef0123456789",
+		ConflictPolicy: ConflictPolicyAutoRenameNew,
+		Strategy:       "fast_upload",
+	})
+	if !result.OK {
+		t.Fatalf("expected fast upload success, got %+v", result)
+	}
+	if !boolMapValue(result.Payload, "rapidUpload") {
+		t.Fatalf("expected rapidUpload true, got %+v", result.Payload)
+	}
+	if stringMapValue(result.Payload, "fileId") != "file-uploaded" {
+		t.Fatalf("expected file-uploaded, got %+v", result.Payload)
+	}
+	if string(state.uploadedBody) != "" {
+		t.Fatalf("did not expect binary PUT during fast upload, got %q", string(state.uploadedBody))
+	}
+	if stringMapValue(result.Payload, "verifyMode") != "metadata_by_file_id" {
+		t.Fatalf("expected metadata_by_file_id verification, got %+v", result.Payload)
+	}
+}
+
+func TestOpenFamilyAdapterFastUploads123OpenFileReportsHashMiss(t *testing.T) {
+	server, state := newPan123OpenTestServer(t)
+	t.Cleanup(server.Close)
+
+	originalClient := providerHTTPClient
+	providerHTTPClient = server.Client()
+	t.Cleanup(func() { providerHTTPClient = originalClient })
+
+	registry := NewRegistry(DefaultCatalog()...)
+	entry, ok := registry.Get("123_open")
+	if !ok {
+		t.Fatal("expected 123_open entry")
+	}
+	profile := AuthProfile{
+		ProviderKey: "123_open",
+		Token:       "token-live",
+		Extra: map[string]string{
+			"apiEndpoint": server.URL,
+		},
+	}
+
+	result := entry.Adapter.Upload(UploadRequest{
+		Profile:        profile,
+		Path:           "/docs/miss.bin",
+		Name:           "miss.bin",
+		Size:           5678,
+		MD5:            "0123456789abcdef0123456789abcdef",
+		ConflictPolicy: ConflictPolicyAutoRenameNew,
+		Strategy:       "fast_upload",
+	})
+	if result.OK || result.Status != "hash_miss" {
+		t.Fatalf("expected hash_miss, got %+v", result)
+	}
+	if boolMapValue(result.Payload, "rapidUpload") {
+		t.Fatalf("did not expect rapidUpload true, got %+v", result.Payload)
+	}
+	if state.lastCreatedFilename != "miss.bin" {
+		t.Fatalf("expected fast upload create target miss.bin, got %q", state.lastCreatedFilename)
+	}
+	if string(state.uploadedBody) != "" {
+		t.Fatalf("did not expect binary PUT during hash miss, got %q", string(state.uploadedBody))
+	}
+}
+
 type pan123OpenTestState struct {
 	lastCreatedFilename string
 	uploadedBody        []byte
+	reuseCreate         bool
+	lastCreatedSize     int64
+	lastCreatedMD5      string
 }
 
 func newPan123OpenTestServer(t *testing.T) (*httptest.Server, *pan123OpenTestState) {
@@ -266,13 +361,21 @@ func newPan123OpenTestServer(t *testing.T) (*httptest.Server, *pan123OpenTestSta
 			case "dir-docs":
 				items := docsItems
 				if state.lastCreatedFilename != "" {
+					fileSize := int64(len(state.uploadedBody))
+					if state.lastCreatedSize > 0 {
+						fileSize = state.lastCreatedSize
+					}
+					etag := "etag-uploaded"
+					if state.lastCreatedMD5 != "" {
+						etag = state.lastCreatedMD5
+					}
 					items = append(items, map[string]interface{}{
 						"fileId":       "file-uploaded",
 						"parentFileId": "dir-docs",
 						"filename":     state.lastCreatedFilename,
 						"type":         0,
-						"size":         len(state.uploadedBody),
-						"etag":         "etag-uploaded",
+						"size":         fileSize,
+						"etag":         etag,
 					})
 				}
 				_ = json.NewEncoder(w).Encode(map[string]interface{}{
@@ -300,11 +403,13 @@ func newPan123OpenTestServer(t *testing.T) (*httptest.Server, *pan123OpenTestSta
 		case r.Method == http.MethodPost && r.URL.Path == "/upload/v1/oss/file/create":
 			payload := mustDecode(r)
 			state.lastCreatedFilename = stringMapValue(payload, "filename")
+			state.lastCreatedSize = int64MapValue(payload, "size")
+			state.lastCreatedMD5 = stringMapValue(payload, "etag")
 			_ = json.NewEncoder(w).Encode(map[string]interface{}{
 				"data": map[string]interface{}{
 					"preuploadID": "preupload-1",
 					"fileID":      "file-uploaded",
-					"reuse":       false,
+					"reuse":       state.reuseCreate,
 				},
 			})
 		case r.Method == http.MethodPost && r.URL.Path == "/upload/v1/oss/file/get_upload_url":

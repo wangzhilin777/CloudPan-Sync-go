@@ -161,7 +161,7 @@
 | Provider | 协议族 | 当前状态 | 说明 |
 | --- | --- | --- | --- |
 | `aliyundrive_open` | `aliyun_123_open` | 部分真实 | 已接入真实 `ValidateAuth`，并已落地 `List / Metadata / CreateDir / FastUploadCheck / Upload / 多分片上传` 主链路 |
-| `123_open` | `aliyun_123_open` | 部分真实 | 已接入真实 `ValidateAuth / List / Metadata / CreateDir / FastUploadCheck / Upload`，当前为单分片上传主链路，`overwrite_existing` 会降级为 `auto_rename_new` |
+| `123_open` | `aliyun_123_open` | 部分真实 | 已接入真实 `ValidateAuth / List / Metadata / CreateDir / FastUploadCheck / Upload`，当前为单分片上传主链路，`fast_upload` 已可通过 `file/create` 的 `reuse` 命中完成 provider 侧秒传，`overwrite_existing` 会降级为 `auto_rename_new` |
 | `xunlei` | `xunlei_pikpak` | 部分真实 | 已接入真实 `ValidateAuth / List / Metadata / CreateDir / FastUploadCheck`，`Upload` 已接入真实 create + verify 主链路，并已内置 hash miss 后的 S3-compatible SigV4 PUT fallback；失败重试时可复用既有 `resumable` 会话，整对象 PUT 失败/成功会按统一 checkpoint 口径回填证据 |
 | `pikpak` | `xunlei_pikpak` | 部分真实 | 已接入真实 `ValidateAuth / List / Metadata / CreateDir / FastUploadCheck`，`Upload` 已接入真实 create + verify 主链路，并已内置 hash miss 后的 S3-compatible SigV4 PUT fallback；失败重试时可复用既有 `resumable` 会话，整对象 PUT 失败/成功会按统一 checkpoint 口径回填证据 |
 | `quark` | `quark_uc` | 部分真实 | 已接入真实 `ValidateAuth / List / Metadata / CreateDir / FastUploadCheck / Upload`，当前基于 share token + detail + download info + drive create folder；`Upload` 已支持 `upload/pre -> update/hash -> upload/finish`，hash miss 会继续走 `upload/auth + OSS multipart + upload/finish`，失败后可基于 `uploadId + uploadedParts + providerData` 继续分片上传 |

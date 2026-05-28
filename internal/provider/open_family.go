@@ -1742,14 +1742,7 @@ func (a OpenFamilyAdapter) uploadPan123Open(req UploadRequest) UploadResult {
 		}
 	}
 	if req.Strategy == "fast_upload" {
-		return UploadResult{
-			OperationResult: OperationResult{
-				Status:  "hash_miss",
-				Message: "123Pan Open fast-upload check is available, but provider-side fast upload execution is not implemented yet.",
-				Mode:    "open_family_real_upload",
-			},
-			ConflictAction: "none",
-		}
+		return a.uploadPan123OpenRapid(req, session)
 	}
 	if strings.TrimSpace(req.LocalPath) == "" {
 		return UploadResult{
@@ -2034,6 +2027,133 @@ func (a OpenFamilyAdapter) uploadPan123Open(req UploadRequest) UploadResult {
 			Message: joinPan123OpenNotes("123Pan Open binary upload completed through create + get_upload_url + single-part PUT + upload_complete.", conflictNote),
 			Mode:    "open_family_real_upload",
 			Payload: resultPayload,
+		},
+		ConflictAction: conflictAction,
+	}
+}
+
+func (a OpenFamilyAdapter) uploadPan123OpenRapid(req UploadRequest, session pan123OpenSession) UploadResult {
+	md5sum := strings.ToLower(strings.TrimSpace(req.MD5))
+	if md5sum == "" {
+		return UploadResult{
+			OperationResult: OperationResult{
+				Status:  "missing_md5",
+				Message: "123Pan Open fast upload requires md5.",
+				Mode:    "open_family_real_upload",
+			},
+			ConflictAction: "none",
+		}
+	}
+	if req.Size <= 0 {
+		return UploadResult{
+			OperationResult: OperationResult{
+				Status:  "missing_size",
+				Message: "123Pan Open fast upload requires size.",
+				Mode:    "open_family_real_upload",
+			},
+			ConflictAction: "none",
+		}
+	}
+	parentID, parentPath, parentErr := a.resolvePan123OpenUploadParent(session, req)
+	if parentErr != nil {
+		return UploadResult{
+			OperationResult: OperationResult{
+				Status:  normalizePan123OpenRequestErrorStatus(parentErr),
+				Message: fmt.Sprintf("123Pan Open fast upload parent resolution failed: %v", parentErr),
+				Mode:    "open_family_real_upload",
+			},
+			ConflictAction: "none",
+		}
+	}
+	targetPath := normalizeOpenFamilyPath(req.Path)
+	resolvedTargetName, conflictAction, conflictNote, conflictErr := a.resolvePan123OpenUploadName(session, parentID, inferAliyunOpenUploadName(req, targetPath), req.ConflictPolicy)
+	if conflictErr != nil {
+		return UploadResult{
+			OperationResult: OperationResult{
+				Status:  normalizePan123OpenRequestErrorStatus(conflictErr),
+				Message: fmt.Sprintf("123Pan Open fast upload conflict preflight failed: %v", conflictErr),
+				Mode:    "open_family_real_upload",
+			},
+			ConflictAction: conflictAction,
+		}
+	}
+	createStatus, createPayload, createErr := postPan123OpenJSON(context.Background(), session, "/upload/v1/oss/file/create", map[string]interface{}{
+		"parentFileID": parentID,
+		"filename":     resolvedTargetName,
+		"etag":         md5sum,
+		"size":         req.Size,
+		"type":         1,
+	})
+	basePayload := map[string]interface{}{
+		"createResponse":     createPayload,
+		"resolvedTargetName": resolvedTargetName,
+		"md5":                md5sum,
+		"size":               req.Size,
+		"rapidUpload":        false,
+	}
+	if createErr != nil {
+		return UploadResult{
+			OperationResult: OperationResult{
+				Status:  "provider_request_failed",
+				Message: fmt.Sprintf("123Pan Open fast upload create request failed: %v", createErr),
+				Mode:    "open_family_real_upload",
+				Payload: basePayload,
+			},
+			ConflictAction: conflictAction,
+		}
+	}
+	if createStatus == http.StatusUnauthorized || createStatus == http.StatusForbidden {
+		return UploadResult{
+			OperationResult: OperationResult{
+				Status:  "auth_invalid",
+				Message: "123Pan Open rejected the supplied access token while creating a fast upload.",
+				Mode:    "open_family_real_upload",
+				Payload: basePayload,
+			},
+			ConflictAction: conflictAction,
+		}
+	}
+	if createStatus < 200 || createStatus >= 300 {
+		return UploadResult{
+			OperationResult: OperationResult{
+				Status:  "provider_request_failed",
+				Message: fmt.Sprintf("123Pan Open fast upload create returned HTTP %d.", createStatus),
+				Mode:    "open_family_real_upload",
+				Payload: basePayload,
+			},
+			ConflictAction: conflictAction,
+		}
+	}
+	createData, _ := createPayload["data"].(map[string]interface{})
+	fileID := firstNonEmptyString(createData, "fileID", "fileId")
+	preuploadID := firstNonEmptyString(createData, "preuploadID", "preUploadID", "preuploadId")
+	basePayload["fileId"] = fileID
+	basePayload["preuploadID"] = preuploadID
+	if !boolMapValue(createData, "reuse") || fileID == "" {
+		return UploadResult{
+			OperationResult: OperationResult{
+				Status:  "hash_miss",
+				Message: joinPan123OpenNotes("123Pan Open fast upload did not match the supplied md5.", conflictNote),
+				Mode:    "open_family_real_upload",
+				Payload: basePayload,
+			},
+			ConflictAction: conflictAction,
+		}
+	}
+	verifyEntry, verifyMode, verifyOK := a.verifyPan123OpenUploadedFile(session, parentID, parentPath, resolvedTargetName, fileID)
+	basePayload["rapidUpload"] = true
+	basePayload["verifyMode"] = verifyMode
+	basePayload["verifyOk"] = verifyOK
+	if verifyEntry != nil {
+		basePayload["verifiedEntry"] = verifyEntry
+	}
+	return UploadResult{
+		OperationResult: OperationResult{
+			OK:      true,
+			Status:  "ok",
+			Message: joinPan123OpenNotes("123Pan Open fast upload reused an existing provider-side file.", conflictNote),
+			Mode:    "open_family_real_upload",
+			Payload: basePayload,
 		},
 		ConflictAction: conflictAction,
 	}

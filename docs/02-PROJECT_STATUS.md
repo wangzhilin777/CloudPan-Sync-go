@@ -103,6 +103,7 @@
     - 多分片 `Upload`
   - `123_open` 已接入真实 `ValidateAuth / List / Metadata / CreateDir / FastUploadCheck / Upload`
     - 当前为单分片上传主链路
+    - `fast_upload` 已可通过 `file/create` 的 `reuse` 命中完成 provider 侧秒传，未命中时返回 `hash_miss` 交给 fallback
     - `overwrite_existing` 会诚实降级为 `auto_rename_new`
     - 上传完成后会优先按 `fileId` 校验，再回退到父目录按名称确认
   - `xunlei` 已接入真实 `ValidateAuth / List / Metadata / CreateDir / FastUploadCheck`
