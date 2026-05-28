@@ -8,6 +8,7 @@ const state = {
   focusedProfileId: null,
   evidence: null,
   statuses: [],
+  treeGroupsCollapsed: {},
   treeFilters: {
     taskDirectory: { query: "", status: "" },
     taskPending: { query: "", reason: "", leafOnly: false },
@@ -117,6 +118,18 @@ function inferDisplayName(path) {
     return normalized.slice(index + 1);
   }
   return normalized;
+}
+
+function treeGroupCollapseKey(scope, panel, path) {
+  return `${scope}:${panel}:${path}`;
+}
+
+function isTreeGroupCollapsed(scope, panel, path) {
+  return Boolean(state.treeGroupsCollapsed[treeGroupCollapseKey(scope, panel, path)]);
+}
+
+function setTreeGroupCollapsed(scope, panel, path, collapsed) {
+  state.treeGroupsCollapsed[treeGroupCollapseKey(scope, panel, path)] = collapsed;
 }
 
 function buildDirectoryStateTree(states) {
@@ -460,6 +473,8 @@ function renderTreeNodes(nodes, options = {}) {
     mode = "directory",
     emptyMessage = "暂无数据。",
     normalized = false,
+    scope = "global",
+    panel = "tree",
   } = options;
   const tree = normalized ? nodes : mode === "pending" ? normalizePendingTree(nodes) : buildDirectoryStateTree(nodes);
   if (!tree.length) {
@@ -510,12 +525,50 @@ function renderTreeNodes(nodes, options = {}) {
 
   return tree
     .map(
-      (root) => `
-        <section class="directory-group">
-          <h4>Root <code>${escapeHTML(root.rootPath || root.path)}</code></h4>
-          ${renderNode(root)}
-        </section>
-      `,
+      (root) => {
+        const rootPath = root.rootPath || root.path;
+        const collapsed = isTreeGroupCollapsed(scope, panel, rootPath);
+        const summary =
+          mode === "pending"
+            ? `
+                <div class="directory-group-summary">
+                  <span class="pill">pending ${stringifyValue(root.itemCount, "0")}</span>
+                  <span class="pill">children ${stringifyValue(countTreeNodes(root.children || []), "0")}</span>
+                  ${root.providerStatus ? `<span class="pill">${escapeHTML(root.providerStatus)}</span>` : ""}
+                </div>
+              `
+            : `
+                <div class="directory-group-summary">
+                  <span class="pill">${escapeHTML(root.status)}</span>
+                  <span class="pill">processed ${stringifyValue(root.processedItems, "0")}/${stringifyValue(root.itemCount, "0")}</span>
+                  <span class="pill">done ${stringifyValue(root.doneItems, "0")}</span>
+                  <span class="pill">skipped ${stringifyValue(root.skippedItems, "0")}</span>
+                  <span class="pill">failed ${stringifyValue(root.failedItems, "0")}</span>
+                </div>
+              `;
+        return `
+          <section class="directory-group ${collapsed ? "is-collapsed" : ""}" data-tree-group-key="${escapeHTML(treeGroupCollapseKey(scope, panel, rootPath))}">
+            <div class="directory-group-header">
+              <div class="directory-group-title">
+                <h4>Root <code>${escapeHTML(rootPath)}</code></h4>
+                ${summary}
+              </div>
+              <button
+                type="button"
+                class="ghost tree-group-toggle"
+                data-tree-group-toggle
+                data-tree-group-scope="${escapeHTML(scope)}"
+                data-tree-group-panel="${escapeHTML(panel)}"
+                data-tree-group-path="${escapeHTML(rootPath)}"
+                aria-expanded="${collapsed ? "false" : "true"}"
+              >${collapsed ? "展开" : "收起"}</button>
+            </div>
+            <div class="directory-group-body">
+              ${renderNode(root)}
+            </div>
+          </section>
+        `;
+      },
     )
     .join("");
 }
@@ -544,11 +597,15 @@ function updateTaskTreePanels(detail) {
     mode: "directory",
     emptyMessage: "暂无目录状态。",
     normalized: true,
+    scope: "task",
+    panel: "directory",
   });
   $("#task-pending-tree").innerHTML = renderTreeNodes(pendingResult.nodes, {
     mode: "pending",
     emptyMessage: "暂无待补传项。",
     normalized: true,
+    scope: "task",
+    panel: "pending",
   });
   $("#task-directory-filter-summary").textContent = detail
     ? renderTreeFilterSummary(directoryResult, "目录节点")
@@ -556,6 +613,8 @@ function updateTaskTreePanels(detail) {
   $("#task-pending-filter-summary").textContent = detail
     ? renderTreeFilterSummary(pendingResult, "待补传节点")
     : "等待任务数据...";
+  wireTreeGroupToggles("task", "directory");
+  wireTreeGroupToggles("task", "pending");
 }
 
 function updateStatusTreePanels(runtimePayload) {
@@ -566,14 +625,20 @@ function updateStatusTreePanels(runtimePayload) {
     mode: "directory",
     emptyMessage: "暂无目录状态。",
     normalized: true,
+    scope: "status",
+    panel: "directory",
   });
   $("#status-pending-tree").innerHTML = renderTreeNodes(pendingResult.nodes, {
     mode: "pending",
     emptyMessage: "暂无待补传项。",
     normalized: true,
+    scope: "status",
+    panel: "pending",
   });
   $("#status-directory-filter-summary").textContent = renderTreeFilterSummary(directoryResult, "目录节点");
   $("#status-pending-filter-summary").textContent = renderTreeFilterSummary(pendingResult, "待补传节点");
+  wireTreeGroupToggles("status", "directory");
+  wireTreeGroupToggles("status", "pending");
 }
 
 function updateTaskRetryQueue(detail) {
@@ -741,6 +806,35 @@ function wireRetryQueueActions(scope) {
   wrap.querySelectorAll("[data-retry-focus-class]").forEach((button) => {
     button.addEventListener("click", () => {
       focusRetryClass(scope, button.dataset.retryFocusClass, button.dataset.retryFocusState);
+    });
+  });
+}
+
+function wireTreeGroupToggles(scope, panel) {
+  const wrap =
+    scope === "task"
+      ? panel === "directory"
+        ? $("#task-directory-states")
+        : $("#task-pending-tree")
+      : panel === "directory"
+        ? $("#status-directory-states")
+        : $("#status-pending-tree");
+  if (!wrap) {
+    return;
+  }
+  wrap.querySelectorAll("[data-tree-group-toggle]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const path = button.dataset.treeGroupPath;
+      const groupScope = button.dataset.treeGroupScope || scope;
+      const groupPanel = button.dataset.treeGroupPanel || panel;
+      const key = treeGroupCollapseKey(groupScope, groupPanel, path);
+      const next = !state.treeGroupsCollapsed[key];
+      setTreeGroupCollapsed(groupScope, groupPanel, path, next);
+      if (scope === "task") {
+        updateTaskTreePanels(currentSelectedTaskDetail());
+      } else {
+        updateStatusTreePanels(recentRuntimePayload());
+      }
     });
   });
 }

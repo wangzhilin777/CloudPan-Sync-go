@@ -123,6 +123,9 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 
 	runStep(t, runCtx, "status evidence and retry",
 		chromedp.Evaluate(`(() => document.querySelector('button[data-view="status"]')?.click())()`, nil),
+		waitForSelectorCount(`#status-directory-states [data-tree-group-toggle]`, 1),
+		chromedp.Click(`#status-directory-states [data-tree-group-toggle]`, chromedp.ByQuery),
+		waitForSelectorCount(`#status-directory-states .directory-group.is-collapsed`, 1),
 	)
 }
 

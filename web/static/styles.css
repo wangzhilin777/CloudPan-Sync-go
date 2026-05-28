@@ -496,6 +496,43 @@ tr.active td {
   font-size: 0.98rem;
 }
 
+.directory-group-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.directory-group-title {
+  display: grid;
+  gap: 8px;
+}
+
+.directory-group-summary {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.tree-group-toggle {
+  padding-inline: 1rem;
+}
+
+.directory-group-body {
+  display: grid;
+  gap: 10px;
+}
+
+.directory-group.is-collapsed .directory-group-body {
+  display: none;
+}
+
+.directory-group.is-collapsed {
+  border-color: rgba(15, 118, 110, 0.26);
+  background: rgba(255, 255, 255, 0.82);
+}
+
 .directory-row {
   display: grid;
   gap: 8px;
