@@ -113,6 +113,12 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 		waitForText(`#task-directory-states`, "/demo"),
 		chromedp.Click(`#task-summary [data-runtime-focus-kind="roots"]`, chromedp.ByQuery),
 		waitForText(`#task-directory-filter-summary`, "当前显示"),
+		chromedp.Click(`#task-directory-states [data-tree-prefill-path="/demo"]`, chromedp.ByQuery),
+		waitForValue(`#plan-selected-roots`, `[
+  "/demo"
+]`),
+		chromedp.Click(`button[data-view="tasks"]`, chromedp.ByQuery),
+		waitForText(`#task-summary`, "pre_scan_flat"),
 		chromedp.Click(`#task-directory-copy-visible`, chromedp.ByID),
 		waitForText(`#flash`, "已复制"),
 		chromedp.Click(`#task-directory-states [data-tree-focus-panel="directory"]`, chromedp.ByQuery),

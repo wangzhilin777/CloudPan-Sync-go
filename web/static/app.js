@@ -731,6 +731,32 @@ function renderTreeNodes(nodes, options = {}) {
         </div>
         ${metrics}
         <div class="actions compact">
+          ${
+            scope === "task"
+              ? `
+                <button
+                  type="button"
+                  class="ghost"
+                  data-tree-prefill-path="${escapeHTML(node.path)}"
+                  data-tree-prefill-scope="${escapeHTML(scope)}"
+                  data-tree-prefill-panel="${escapeHTML(panel)}"
+                >按当前路径重建向导</button>
+              `
+              : ""
+          }
+          ${
+            scope === "task" && panel === "pending"
+              ? `
+                <button
+                  type="button"
+                  class="ghost"
+                  data-tree-retry-path="${escapeHTML(node.path)}"
+                  data-tree-retry-scope="${escapeHTML(scope)}"
+                  data-tree-retry-panel="${escapeHTML(panel)}"
+                >重试当前路径</button>
+              `
+              : ""
+          }
           <button
             type="button"
             class="ghost"
@@ -782,6 +808,32 @@ function renderTreeNodes(nodes, options = {}) {
                 ${summary}
               </div>
               <div class="actions compact">
+                ${
+                  scope === "task"
+                    ? `
+                      <button
+                        type="button"
+                        class="ghost"
+                        data-tree-prefill-path="${escapeHTML(rootPath)}"
+                        data-tree-prefill-scope="${escapeHTML(scope)}"
+                        data-tree-prefill-panel="${escapeHTML(panel)}"
+                      >按当前 root 重建向导</button>
+                    `
+                    : ""
+                }
+                ${
+                  scope === "task" && panel === "pending"
+                    ? `
+                      <button
+                        type="button"
+                        class="ghost"
+                        data-tree-retry-path="${escapeHTML(rootPath)}"
+                        data-tree-retry-scope="${escapeHTML(scope)}"
+                        data-tree-retry-panel="${escapeHTML(panel)}"
+                      >重试当前 root</button>
+                    `
+                    : ""
+                }
                 <button
                   type="button"
                   class="ghost"
@@ -1205,6 +1257,20 @@ function wireTreeGroupToggles(scope, panel) {
       );
     });
   });
+  wrap.querySelectorAll("[data-tree-prefill-path]").forEach((button) => {
+    button.addEventListener("click", () => {
+      prefillWizardFromTaskPath(currentSelectedTaskDetail(), button.dataset.treePrefillPath || "");
+    });
+  });
+  wrap.querySelectorAll("[data-tree-retry-path]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      try {
+        await retryTaskPath(button.dataset.treeRetryPath || "");
+      } catch (error) {
+        showFlash(error.message, true);
+      }
+    });
+  });
 }
 
 function wireBlockedActionsSummary() {
@@ -1392,6 +1458,42 @@ function buildCreatePayloadFromTask(detail) {
     selectedRoots: detail.plan.metadata?.selectedRoots || ["/"],
     entries: detail.sourceEntries || [],
   };
+}
+
+function normalizeComparePath(path) {
+  const value = String(path || "").trim();
+  if (!value) {
+    return "";
+  }
+  if (value === "/") {
+    return "/";
+  }
+  return value.startsWith("/") ? value.replace(/\/+$/, "") || "/" : `/${value}`.replace(/\/+$/, "") || "/";
+}
+
+function pathMatchesSubtree(candidatePath, rootPath) {
+  const candidate = normalizeComparePath(candidatePath);
+  const root = normalizeComparePath(rootPath);
+  if (!candidate || !root) {
+    return false;
+  }
+  if (root === "/") {
+    return true;
+  }
+  return candidate === root || candidate.startsWith(`${root}/`);
+}
+
+function buildCreatePayloadFromTaskPath(detail, path) {
+  const payload = buildCreatePayloadFromTask(detail);
+  const normalizedPath = normalizeComparePath(path);
+  if (!payload || !normalizedPath) {
+    return payload;
+  }
+  const narrowedEntries = (payload.entries || []).filter((entry) => pathMatchesSubtree(entry?.path, normalizedPath));
+  const narrowedRoots = (payload.selectedRoots || []).filter((root) => pathMatchesSubtree(normalizedPath, root) || pathMatchesSubtree(root, normalizedPath));
+  payload.selectedRoots = narrowedRoots.length ? narrowedRoots.filter((root) => pathMatchesSubtree(normalizedPath, root)) : [normalizedPath];
+  payload.entries = narrowedEntries.length ? narrowedEntries : payload.entries;
+  return payload;
 }
 
 function prefillWizardFromTask(detail) {
@@ -1659,6 +1761,31 @@ function renderProviders() {
   syncTargetProfiles();
   syncAutoRecoverProviders();
   syncExecutionModeHint();
+}
+
+function prefillWizardFromTaskPath(detail, path) {
+  const payload = buildCreatePayloadFromTaskPath(detail, path);
+  if (!payload) {
+    showFlash("请先选择任务", true);
+    return;
+  }
+  activateTab("wizard");
+  setSelectValueIfPresent("#plan-source-provider", payload.sourceProvider);
+  syncSourceProfiles();
+  setSelectValueIfPresent("#plan-source-profile", payload.sourceProfileId || "");
+  setSelectValueIfPresent("#plan-target-provider", payload.targetProvider);
+  syncTargetProfiles();
+  setSelectValueIfPresent("#plan-target-profile", payload.targetProfileId || "");
+  setSelectValueIfPresent("#plan-execution-mode", payload.executionMode || "leaf_first_lazy");
+  setSelectValueIfPresent("#plan-risk-mode", payload.riskMode || "balanced");
+  setSelectValueIfPresent("#plan-conflict-policy", payload.conflictPolicy || "auto_rename_new");
+  setInputValueIfPresent("#plan-threshold", payload.thresholdMB || 0);
+  hydrateRiskOverrideForm(payload.riskOverride || null);
+  $("#plan-risk-override").value = payload.riskOverride ? JSON.stringify(payload.riskOverride, null, 2) : "";
+  $("#plan-selected-roots").value = JSON.stringify(payload.selectedRoots || ["/"], null, 2);
+  $("#plan-entries").value = JSON.stringify(payload.entries || [], null, 2);
+  syncExecutionModeHint();
+  showFlash(`已按 ${path} 重建向导范围`);
 }
 
 function syncAuthModes() {
@@ -3128,6 +3255,22 @@ async function retryVisibleSelection(source) {
   if (ok) {
     showFlash(`已按当前筛选重建 ${paths.length} 条路径的 retry 范围`);
   }
+}
+
+async function retryTaskPath(path) {
+  const normalizedPath = normalizeComparePath(path);
+  if (!normalizedPath) {
+    showFlash("当前路径无效，无法重试", true);
+    return false;
+  }
+  const ok = await runTaskAction("retry", {
+    paths: [normalizedPath],
+    scope: "selected_pending_subset",
+  });
+  if (ok) {
+    showFlash(`已按 ${normalizedPath} 重建 retry 范围`);
+  }
+  return ok;
 }
 
 function wireTasks() {
