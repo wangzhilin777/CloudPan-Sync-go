@@ -199,8 +199,10 @@
     - hash 命中时直接走 rapid 成功
     - hash miss 时会返回 `resumable` 会话并继续走内置 S3-compatible SigV4 PUT fallback
     - task retry 时已可复用失败结果里保留的 `resumable` 会话，不再重复 create upload
+    - PUT 失败时会按统一 upload checkpoint 口径回填 `partCount=1 / failedPartNumber=1 / nextPartNumber=1`
+    - PUT 成功后会回填 `statusCode / etag / objectSize / uploadedParts`
   - `xunlei` 当前约束：
-    - 当前先落地单对象 PUT fallback 与会话复用恢复，尚未扩展到 multipart-resume / 分片级断点续传
+    - 当前先落地整对象 PUT fallback 与会话复用恢复，尚未扩展到 multipart-resume / 分片级断点续传
   - `pikpak` 已接入真实最小目录主链路：
     - `GET /drive/v1/files`
     - `POST /drive/v1/files` folder create
@@ -209,8 +211,10 @@
     - hash 命中时直接走 rapid 成功
     - hash miss 时会返回 `resumable` 会话并继续走内置 S3-compatible SigV4 PUT fallback
     - task retry 时已可复用失败结果里保留的 `resumable` 会话，不再重复 create upload
+    - PUT 失败时会按统一 upload checkpoint 口径回填 `partCount=1 / failedPartNumber=1 / nextPartNumber=1`
+    - PUT 成功后会回填 `statusCode / etag / objectSize / uploadedParts`
   - `pikpak` 当前约束：
-    - 当前先落地单对象 PUT fallback 与会话复用恢复，尚未扩展到 multipart-resume / 分片级断点续传
+    - 当前先落地整对象 PUT fallback 与会话复用恢复，尚未扩展到 multipart-resume / 分片级断点续传
 
 ### 4. 独立链路
 

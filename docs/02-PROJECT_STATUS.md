@@ -109,12 +109,14 @@
     - hash 命中时可直接完成 rapid 路径
     - hash miss 后会继续走内置 `resumable` 二进制 fallback
     - 失败重试时已可复用既有 `resumable` 会话继续上传，避免重复 create upload
+    - 整对象 PUT fallback 失败时会按统一口径回填 `uploadId / partCount / failedPartNumber / nextPartNumber / providerData`
     - 当前默认构建已内置 S3-compatible SigV4 PUT 上传能力
   - `pikpak` 已接入真实 `ValidateAuth / List / Metadata / CreateDir / FastUploadCheck`
     - `Upload` 已接入真实建上传请求与校验主链路
     - hash 命中时可直接完成 rapid 路径
     - hash miss 后会继续走内置 `resumable` 二进制 fallback
     - 失败重试时已可复用既有 `resumable` 会话继续上传，避免重复 create upload
+    - 整对象 PUT fallback 失败时会按统一口径回填 `uploadId / partCount / failedPartNumber / nextPartNumber / providerData`
     - 当前默认构建已内置 S3-compatible SigV4 PUT 上传能力
   - `quark` 与 `uc` 已接入真实 `ValidateAuth / List / Metadata / CreateDir / FastUploadCheck / Upload`
     - 当前真实链路基于 share token + share detail + download info + drive create folder

@@ -709,6 +709,9 @@ func (a HashFamilyAdapter) uploadXunlei(req UploadRequest) UploadResult {
 			"resumable":          cloneMap(resumable),
 			"resolvedTargetName": resolvedName,
 			"conflictAction":     conflictAction,
+			"fileId":             fileID,
+			"gcid":               gcid,
+			"uploadId":           hashFamilyResumableUploadID(resumable),
 		}
 		if localPath == "" {
 			return UploadResult{
@@ -724,6 +727,7 @@ func (a HashFamilyAdapter) uploadXunlei(req UploadRequest) UploadResult {
 		uploadPayload, uploadErr := hashFamilyResumableUploader("xunlei", localPath, resumable)
 		if uploadErr != nil {
 			commonPayload["resumableUpload"] = uploadPayload
+			commonPayload = mergeMaps(commonPayload, hashFamilyWholeObjectCheckpoint(resumable, fileID, uploadPayload, false))
 			return UploadResult{
 				OperationResult: OperationResult{
 					Status:  "provider_request_failed",
@@ -736,6 +740,7 @@ func (a HashFamilyAdapter) uploadXunlei(req UploadRequest) UploadResult {
 		}
 		usedBinaryFallback = true
 		commonPayload["resumableUpload"] = uploadPayload
+		commonPayload = mergeMaps(commonPayload, hashFamilyWholeObjectCheckpoint(resumable, fileID, uploadPayload, true))
 	}
 
 	verifyEntry, verifyMode, verifyOK := a.verifyXunleiUploadedFile(session, parentID, resolvedName, fileID, gcid)
@@ -1181,6 +1186,9 @@ func (a HashFamilyAdapter) uploadPikPak(req UploadRequest) UploadResult {
 			"resumable":          cloneMap(resumable),
 			"resolvedTargetName": resolvedName,
 			"conflictAction":     conflictAction,
+			"fileId":             fileID,
+			"gcid":               gcid,
+			"uploadId":           hashFamilyResumableUploadID(resumable),
 		}
 		if localPath == "" {
 			return UploadResult{
@@ -1196,6 +1204,7 @@ func (a HashFamilyAdapter) uploadPikPak(req UploadRequest) UploadResult {
 		uploadPayload, uploadErr := hashFamilyResumableUploader("pikpak", localPath, resumable)
 		if uploadErr != nil {
 			commonPayload["resumableUpload"] = uploadPayload
+			commonPayload = mergeMaps(commonPayload, hashFamilyWholeObjectCheckpoint(resumable, fileID, uploadPayload, false))
 			return UploadResult{
 				OperationResult: OperationResult{
 					Status:  "provider_request_failed",
@@ -1208,6 +1217,7 @@ func (a HashFamilyAdapter) uploadPikPak(req UploadRequest) UploadResult {
 		}
 		usedBinaryFallback = true
 		commonPayload["resumableUpload"] = uploadPayload
+		commonPayload = mergeMaps(commonPayload, hashFamilyWholeObjectCheckpoint(resumable, fileID, uploadPayload, true))
 	}
 
 	verifyEntry, verifyMode, verifyOK := a.verifyPikPakUploadedFile(session, parentID, resolvedName, fileID, gcid)
@@ -1255,6 +1265,7 @@ func (a HashFamilyAdapter) resumeXunleiUpload(session hashFamilySession, req Upl
 	uploadPayload, uploadErr := hashFamilyResumableUploader("xunlei", localPath, resumable)
 	commonPayload := map[string]interface{}{
 		"fileId":             fileID,
+		"uploadId":           firstNonEmptyValue(resume.UploadID, hashFamilyResumableUploadID(resumable)),
 		"resolvedTargetName": resolvedName,
 		"gcid":               gcid,
 		"resumedUpload":      true,
@@ -1263,6 +1274,7 @@ func (a HashFamilyAdapter) resumeXunleiUpload(session hashFamilySession, req Upl
 		"resumableUpload":    uploadPayload,
 	}
 	if uploadErr != nil {
+		commonPayload = mergeMaps(commonPayload, hashFamilyWholeObjectCheckpoint(resumable, fileID, uploadPayload, false))
 		return &UploadResult{
 			OperationResult: OperationResult{
 				Status:  "provider_request_failed",
@@ -1273,6 +1285,7 @@ func (a HashFamilyAdapter) resumeXunleiUpload(session hashFamilySession, req Upl
 			ConflictAction: stringMapValue(resume.ProviderData, "conflictAction"),
 		}
 	}
+	commonPayload = mergeMaps(commonPayload, hashFamilyWholeObjectCheckpoint(resumable, fileID, uploadPayload, true))
 	verifyEntry, verifyMode, verifyOK := a.verifyXunleiUploadedFile(session, parentID, resolvedName, fileID, gcid)
 	commonPayload["verifyMode"] = verifyMode
 	commonPayload["verifyOk"] = verifyOK
@@ -1309,6 +1322,7 @@ func (a HashFamilyAdapter) resumePikPakUpload(session hashFamilySession, req Upl
 	uploadPayload, uploadErr := hashFamilyResumableUploader("pikpak", localPath, resumable)
 	commonPayload := map[string]interface{}{
 		"fileId":             fileID,
+		"uploadId":           firstNonEmptyValue(resume.UploadID, hashFamilyResumableUploadID(resumable)),
 		"resolvedTargetName": resolvedName,
 		"gcid":               gcid,
 		"resumedUpload":      true,
@@ -1317,6 +1331,7 @@ func (a HashFamilyAdapter) resumePikPakUpload(session hashFamilySession, req Upl
 		"resumableUpload":    uploadPayload,
 	}
 	if uploadErr != nil {
+		commonPayload = mergeMaps(commonPayload, hashFamilyWholeObjectCheckpoint(resumable, fileID, uploadPayload, false))
 		return &UploadResult{
 			OperationResult: OperationResult{
 				Status:  "provider_request_failed",
@@ -1327,6 +1342,7 @@ func (a HashFamilyAdapter) resumePikPakUpload(session hashFamilySession, req Upl
 			ConflictAction: stringMapValue(resume.ProviderData, "conflictAction"),
 		}
 	}
+	commonPayload = mergeMaps(commonPayload, hashFamilyWholeObjectCheckpoint(resumable, fileID, uploadPayload, true))
 	verifyEntry, verifyMode, verifyOK := a.verifyPikPakUploadedFile(session, parentID, resolvedName, fileID, gcid)
 	commonPayload["verifyMode"] = verifyMode
 	commonPayload["verifyOk"] = verifyOK
@@ -2009,10 +2025,69 @@ func uploadHashFamilyResumableBinary(providerKey string, localPath string, resum
 		return payload, err
 	}
 	defer func() { _ = file.Close() }()
-	if err := putHashFamilyResumableObject(context.Background(), providerKey, session, file); err != nil {
+	putPayload, err := putHashFamilyResumableObject(context.Background(), providerKey, session, file)
+	payload = mergeMaps(payload, putPayload)
+	if err != nil {
+		hashFamilyApplyWholeObjectProgress(payload, false)
 		return payload, err
 	}
+	hashFamilyApplyWholeObjectProgress(payload, true)
 	return payload, nil
+}
+
+func hashFamilyResumableUploadID(resumable map[string]interface{}) string {
+	if len(resumable) == 0 {
+		return ""
+	}
+	if value := firstNonEmptyString(resumable, "upload_id", "uploadId", "id"); value != "" {
+		return value
+	}
+	params, _ := resumable["params"].(map[string]interface{})
+	return firstNonEmptyString(params, "upload_id", "uploadId", "key")
+}
+
+func hashFamilyWholeObjectCheckpoint(resumable map[string]interface{}, fileID string, uploadPayload map[string]interface{}, completed bool) map[string]interface{} {
+	out := map[string]interface{}{
+		"fileId":            fileID,
+		"uploadId":          hashFamilyResumableUploadID(resumable),
+		"partCount":         1,
+		"uploadedPartCount": 0,
+		"failedPartNumber":  1,
+		"nextPartNumber":    1,
+	}
+	if completed {
+		out["uploadedPartCount"] = 1
+		out["uploadedParts"] = []map[string]interface{}{
+			{
+				"partNumber": 1,
+				"etag":       stringMapValue(uploadPayload, "etag"),
+				"size":       int64MapValue(uploadPayload, "objectSize"),
+			},
+		}
+		out["failedPartNumber"] = 0
+		out["nextPartNumber"] = 2
+	}
+	return out
+}
+
+func hashFamilyApplyWholeObjectProgress(payload map[string]interface{}, completed bool) {
+	payload["partCount"] = 1
+	if completed {
+		payload["uploadedPartCount"] = 1
+		payload["uploadedParts"] = []map[string]interface{}{
+			{
+				"partNumber": 1,
+				"etag":       stringMapValue(payload, "etag"),
+				"size":       int64MapValue(payload, "objectSize"),
+			},
+		}
+		payload["failedPartNumber"] = 0
+		payload["nextPartNumber"] = 2
+		return
+	}
+	payload["uploadedPartCount"] = 0
+	payload["failedPartNumber"] = 1
+	payload["nextPartNumber"] = 1
 }
 
 func hashFamilyResumeSessionPayload(resume ResumeUpload) map[string]interface{} {
@@ -2118,23 +2193,27 @@ func shouldUseHashFamilyPathStyle(hostname string, endpointHost string) bool {
 	return net.ParseIP(host) != nil || strings.Contains(endpointHost, ":")
 }
 
-func putHashFamilyResumableObject(ctx context.Context, region string, session hashFamilyResumableSession, file *os.File) error {
+func putHashFamilyResumableObject(ctx context.Context, region string, session hashFamilyResumableSession, file *os.File) (map[string]interface{}, error) {
+	payload := map[string]interface{}{}
 	info, err := file.Stat()
 	if err != nil {
-		return fmt.Errorf("stat resumable local file: %w", err)
+		return payload, fmt.Errorf("stat resumable local file: %w", err)
 	}
+	payload["objectSize"] = info.Size()
 	payloadHash, err := hashHashFamilyFileSHA256(file)
 	if err != nil {
-		return fmt.Errorf("hash resumable local file: %w", err)
+		return payload, fmt.Errorf("hash resumable local file: %w", err)
 	}
+	payload["sha256"] = payloadHash
 	if _, err := file.Seek(0, io.SeekStart); err != nil {
-		return fmt.Errorf("rewind resumable local file: %w", err)
+		return payload, fmt.Errorf("rewind resumable local file: %w", err)
 	}
 
 	requestURL, canonicalURI, host, err := buildHashFamilyResumableObjectURL(session)
 	if err != nil {
-		return err
+		return payload, err
 	}
+	payload["requestURL"] = requestURL
 	amzTime := time.Now().UTC()
 	amzDate := amzTime.Format("20060102T150405Z")
 	shortDate := amzTime.Format("20060102")
@@ -2173,7 +2252,7 @@ func putHashFamilyResumableObject(ctx context.Context, region string, session ha
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPut, requestURL, file)
 	if err != nil {
-		return fmt.Errorf("build resumable upload request: %w", err)
+		return payload, fmt.Errorf("build resumable upload request: %w", err)
 	}
 	req.Header.Set("Authorization", authorization)
 	req.Header.Set("X-Amz-Content-Sha256", payloadHash)
@@ -2182,14 +2261,17 @@ func putHashFamilyResumableObject(ctx context.Context, region string, session ha
 	req.Header.Set("Content-Length", strconv.FormatInt(info.Size(), 10))
 	resp, err := providerHTTPClient.Do(req)
 	if err != nil {
-		return fmt.Errorf("put resumable object: %w", err)
+		return payload, fmt.Errorf("put resumable object: %w", err)
 	}
 	defer func() { _ = resp.Body.Close() }()
+	payload["statusCode"] = resp.StatusCode
+	payload["etag"] = strings.Trim(strings.TrimSpace(resp.Header.Get("ETag")), "\"")
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		bodyBytes, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
-		return fmt.Errorf("put resumable object returned HTTP %d: %s", resp.StatusCode, strings.TrimSpace(string(bodyBytes)))
+		payload["responseBody"] = strings.TrimSpace(string(bodyBytes))
+		return payload, fmt.Errorf("put resumable object returned HTTP %d: %s", resp.StatusCode, strings.TrimSpace(string(bodyBytes)))
 	}
-	return nil
+	return payload, nil
 }
 
 func buildHashFamilyResumableObjectURL(session hashFamilyResumableSession) (string, string, string, error) {

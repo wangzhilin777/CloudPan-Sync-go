@@ -263,6 +263,18 @@ func TestHashFamilyAdapterResumesExistingResumableSessionForPikPak(t *testing.T)
 	if resumable == nil {
 		t.Fatalf("expected resumable providerData, got %+v", first.Payload)
 	}
+	if got := intMapValue(first.Payload, "partCount"); got != 1 {
+		t.Fatalf("expected whole-object checkpoint partCount 1, got %+v", first.Payload)
+	}
+	if got := intMapValue(first.Payload, "failedPartNumber"); got != 1 {
+		t.Fatalf("expected whole-object checkpoint failedPartNumber 1, got %+v", first.Payload)
+	}
+	if got := intMapValue(first.Payload, "nextPartNumber"); got != 1 {
+		t.Fatalf("expected whole-object checkpoint nextPartNumber 1, got %+v", first.Payload)
+	}
+	if got := stringMapValue(first.Payload, "uploadId"); got != "folder/demo.bin" {
+		t.Fatalf("expected resumable uploadId fallback from object key, got %+v", first.Payload)
+	}
 
 	second := entry.Adapter.Upload(UploadRequest{
 		Profile:        profile,
@@ -282,6 +294,12 @@ func TestHashFamilyAdapterResumesExistingResumableSessionForPikPak(t *testing.T)
 	}
 	if !boolMapValue(second.Payload, "resumedUpload") {
 		t.Fatalf("expected resumedUpload true, got %+v", second.Payload)
+	}
+	if got := intMapValue(second.Payload, "uploadedPartCount"); got != 1 {
+		t.Fatalf("expected resumed whole-object uploadedPartCount 1, got %+v", second.Payload)
+	}
+	if got := intMapValue(second.Payload, "nextPartNumber"); got != 2 {
+		t.Fatalf("expected resumed whole-object nextPartNumber 2, got %+v", second.Payload)
 	}
 	if state.createUploadCount != 1 {
 		t.Fatalf("expected create upload only once, state=%+v", state)
