@@ -266,6 +266,17 @@ func (s *Service) Run(ctx context.Context, id string) (Detail, bool, error) {
 	applyRetryQueueSummary(&detail.Runtime, detail.Plan.Metadata)
 
 	for i := startIndex; i < len(detail.Plan.Items); i++ {
+		if paused, err := s.taskPaused(ctx, detail.Task.ID); err != nil {
+			return Detail{}, true, err
+		} else if paused {
+			detail.Task.State = StatePaused
+			detail.Runtime.ExecutionState = "paused"
+			detail.Task.UpdatedAt = time.Now().UTC().Format(time.RFC3339)
+			if err := replaceTaskDetailAndResults(ctx, s.store, detail); err != nil {
+				return Detail{}, true, err
+			}
+			return detail, true, nil
+		}
 		item := detail.Plan.Items[i]
 		result := Result{
 			ID:     uuid.NewString(),
@@ -389,6 +400,17 @@ func (s *Service) Run(ctx context.Context, id string) (Detail, bool, error) {
 		applyRetryQueueSummary(&detail.Runtime, detail.Plan.Metadata)
 		detail.Results = results
 		updateRuntimeAfterItem(&detail, item.Path, result)
+		if paused, err := s.taskPaused(ctx, detail.Task.ID); err != nil {
+			return Detail{}, true, err
+		} else if paused {
+			detail.Task.State = StatePaused
+			detail.Runtime.ExecutionState = "paused"
+			detail.Task.UpdatedAt = time.Now().UTC().Format(time.RFC3339)
+			if err := replaceTaskDetailAndResults(ctx, s.store, detail); err != nil {
+				return Detail{}, true, err
+			}
+			return detail, true, nil
+		}
 		detail.Task.UpdatedAt = time.Now().UTC().Format(time.RFC3339)
 		if err := replaceTaskDetailAndResults(ctx, s.store, detail); err != nil {
 			return Detail{}, true, err
@@ -553,7 +575,7 @@ func (s *Service) materializeTaskEntriesIfNeeded(ctx context.Context, detail *De
 }
 
 func (s *Service) Pause(ctx context.Context, id string) (Detail, bool, error) {
-	return s.transitionState(ctx, id, []State{StateReady}, StatePaused)
+	return s.transitionState(ctx, id, []State{StateReady, StateRunning}, StatePaused)
 }
 
 func (s *Service) Resume(ctx context.Context, id string) (Detail, bool, error) {
@@ -879,6 +901,14 @@ func (s *Service) transitionState(ctx context.Context, id string, allowed []Stat
 		return Detail{}, true, err
 	}
 	return detail, true, nil
+}
+
+func (s *Service) taskPaused(ctx context.Context, id string) (bool, error) {
+	detail, ok, err := getTask(ctx, s.store, id)
+	if err != nil || !ok {
+		return false, err
+	}
+	return detail.Task.State == StatePaused, nil
 }
 
 func resolveConflictPolicy(meta provider.Provider, requested provider.ConflictPolicy) (provider.ConflictPolicy, string) {

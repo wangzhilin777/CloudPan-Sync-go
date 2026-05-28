@@ -1264,6 +1264,158 @@ func TestServicePendingTreeRespectsSelectedRootOrderWithPreScanFlat(t *testing.T
 	}
 }
 
+func TestServicePauseStopsRunningTaskBetweenItemsAndResumeContinues(t *testing.T) {
+	ctx := context.Background()
+	store, err := sqlitestore.New(ctx, filepath.Join(t.TempDir(), "pause-run.db"))
+	if err != nil {
+		t.Fatalf("new store: %v", err)
+	}
+	defer func() { _ = store.Close() }()
+
+	startedFirstUpload := make(chan struct{})
+	releaseFirstUpload := make(chan struct{})
+	uploadCalls := make([]string, 0, 2)
+	adapter := &scriptedAdapter{
+		meta: provider.Provider{
+			Key:              "pause_run_target",
+			DisplayName:      "Pause Run Target",
+			ProtocolGroup:    "fake",
+			AuthModes:        []string{"manual_token"},
+			FastUploadInputs: []string{"md5", "size"},
+			FallbackModes:    []string{"download_upload"},
+			Status:           "planned",
+		},
+		capability: provider.CapabilitySet{
+			SupportsAuthValidation: true,
+			SupportsUpload:         true,
+		},
+		uploadFunc: func(req provider.UploadRequest) provider.UploadResult {
+			uploadCalls = append(uploadCalls, req.Path)
+			if len(uploadCalls) == 1 {
+				close(startedFirstUpload)
+				<-releaseFirstUpload
+			}
+			return provider.UploadResult{
+				OperationResult: provider.OperationResult{
+					OK:      true,
+					Status:  "ok",
+					Message: "ok",
+					Mode:    "fake_ok",
+				},
+			}
+		},
+	}
+
+	registry := provider.NewRegistry(adapter)
+	authSvc := auth.NewService(store, registry)
+	svc := NewService(store, registry, authSvc)
+	profile, err := authSvc.CreateProfile(ctx, auth.CreateProfileInput{
+		ProviderKey: "pause_run_target",
+		AuthMode:    "manual_token",
+		DisplayName: "pause run target",
+		Token:       "token-1",
+	})
+	if err != nil {
+		t.Fatalf("CreateProfile() error = %v", err)
+	}
+
+	detail, err := svc.Create(ctx, CreateRequest{
+		SourceProvider:  "guangya",
+		TargetProvider:  "pause_run_target",
+		TargetProfileID: profile.ID,
+		ThresholdMB:     1,
+		Entries: []planner.SourceEntry{
+			{Path: "/a.bin", Size: 10 * 1024 * 1024, MD5: "md5-a"},
+			{Path: "/b.bin", Size: 10 * 1024 * 1024, MD5: "md5-b"},
+		},
+	})
+	if err != nil {
+		t.Fatalf("Create() error = %v", err)
+	}
+
+	runErrCh := make(chan error, 1)
+	runResultCh := make(chan Detail, 1)
+	go func() {
+		running, _, runErr := svc.Run(ctx, detail.Task.ID)
+		if runErr != nil {
+			runErrCh <- runErr
+			return
+		}
+		runResultCh <- running
+	}()
+
+	select {
+	case <-startedFirstUpload:
+	case <-time.After(5 * time.Second):
+		t.Fatal("expected first upload to start")
+	}
+
+	paused, ok, err := svc.Pause(ctx, detail.Task.ID)
+	if err != nil {
+		t.Fatalf("Pause() error = %v", err)
+	}
+	if !ok {
+		t.Fatal("expected task to exist for pause")
+	}
+	if paused.Task.State != StatePaused {
+		t.Fatalf("expected paused task state, got %s", paused.Task.State)
+	}
+
+	close(releaseFirstUpload)
+
+	var running Detail
+	select {
+	case err := <-runErrCh:
+		t.Fatalf("Run() error = %v", err)
+	case running = <-runResultCh:
+	case <-time.After(5 * time.Second):
+		t.Fatal("expected paused run to return")
+	}
+	if running.Task.State != StatePaused {
+		t.Fatalf("expected run to stop in paused state, got %s", running.Task.State)
+	}
+	if running.Runtime.ExecutionState != "paused" {
+		t.Fatalf("expected runtime paused, got %s", running.Runtime.ExecutionState)
+	}
+	if running.Runtime.ProcessedCount != 1 {
+		t.Fatalf("expected processed count 1 after pause, got %d", running.Runtime.ProcessedCount)
+	}
+	if running.Runtime.LastCompletedPath != "/a.bin" {
+		t.Fatalf("expected last completed /a.bin, got %s", running.Runtime.LastCompletedPath)
+	}
+	if len(running.Results) != 1 {
+		t.Fatalf("expected 1 result before pause, got %d", len(running.Results))
+	}
+
+	resumed, ok, err := svc.Resume(ctx, detail.Task.ID)
+	if err != nil {
+		t.Fatalf("Resume() error = %v", err)
+	}
+	if !ok {
+		t.Fatal("expected task to exist for resume")
+	}
+	if resumed.Task.State != StateReady {
+		t.Fatalf("expected ready after resume, got %s", resumed.Task.State)
+	}
+
+	finished, ok, err := svc.Run(ctx, detail.Task.ID)
+	if err != nil {
+		t.Fatalf("Run() after resume error = %v", err)
+	}
+	if !ok {
+		t.Fatal("expected resumed task to exist")
+	}
+	if finished.Task.State != StateCompleted {
+		t.Fatalf("expected completed after resume, got %s", finished.Task.State)
+	}
+	if len(uploadCalls) != 2 {
+		t.Fatalf("expected 2 upload calls across pause/resume, got %d: %#v", len(uploadCalls), uploadCalls)
+	}
+	if uploadCalls[0] != "/a.bin" || uploadCalls[1] != "/b.bin" {
+		t.Fatalf("expected upload order [/a.bin /b.bin], got %#v", uploadCalls)
+	}
+}
+
 func TestServiceRetryNarrowsToPendingRelayEntriesAndReplaysOnlyPendingItems(t *testing.T) {
 	ctx := context.Background()
 	store, err := sqlitestore.New(ctx, filepath.Join(t.TempDir(), "retry-pending.db"))
