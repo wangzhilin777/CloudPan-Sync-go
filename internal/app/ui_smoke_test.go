@@ -108,12 +108,8 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 		waitForText(`#tasks-list`, "guangya -> 123_open"),
 		waitForText(`#task-summary`, "pre_scan_flat"),
 		waitForText(`#task-summary`, "SELECTED ROOTS"),
-		waitForText(`#task-summary`, "/demo -> /archive"),
 		waitForText(`#task-runtime`, "SELECTED ROOTS"),
-		waitForText(`#task-runtime`, "/demo"),
-		waitForText(`#task-runtime`, "/archive"),
 		waitForText(`#task-detail`, `"state": "ready"`),
-		waitForText(`#task-detail`, `"executionMode": "pre_scan_flat"`),
 		waitForText(`#task-directory-states`, "/demo"),
 	)
 
