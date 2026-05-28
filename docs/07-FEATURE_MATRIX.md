@@ -13,7 +13,7 @@
 - 当前已经具备完整的后端主链路、SQLite 持久化、前端控制台、API 工作流和测试回归基础。
 - 当前项目语义是“多 provider 互传”，不是“固定定向同步到单个目标端”。
 - 当前最主要的缺口集中在三块：
-  - provider 真实联网实现
+  - provider 真实联网样本沉淀与边界场景验收
   - 同步执行模型
   - 风控与频率策略
 
@@ -33,7 +33,7 @@
 | Runtime Evidence | 最近结果、最近探针、状态快照、状态矩阵 API | 已完成 | 无 | 真实联调样本沉淀 |
 | 控制台前端 | 登录、授权、任务向导、任务列表详情、状态矩阵/证据、执行模式可视化、目录状态展示、目录树/待补传树筛选与叶子视角、重试队列分类视图、上传恢复检查点展示 | 已完成 | 异常场景提示可继续增强 | 更产品化视觉与更细交互 |
 | 单元测试 | auth、planner、task、provider、workflow、web、UI smoke | 已完成 | 持续补样本 | 真实 provider 契约覆盖继续加深 |
-| Provider 真实实现 | `aliyundrive_open` 已接入真实 `ValidateAuth + List + Metadata + CreateDir + FastUploadCheck + Upload`，并支持多分片上传、失败分片证据和基于 `get_upload_url` 的剩余分片继续上传；`quark / uc` 已支持 hash miss 后的 OSS multipart fallback，并可基于 `uploadId + uploadedParts + providerData` 继续失败分片 | 部分完成 | 下一步优先补更多 provider 的分片级恢复语义与真实样本验收 | 其余 provider 真实实现、上传链路、异常恢复 |
+| Provider 真实实现 | 10 家 provider 已全部接入真实 `ValidateAuth / List / Metadata / CreateDir / FastUploadCheck / Upload` 主链路；`aliyundrive_open / quark / uc / guangya` 已具备 multipart 或分片级恢复证据，`xunlei / pikpak / 115_open / baidu_netdisk / 189cloud` 已具备整对象上传 checkpoint 证据 | 部分完成 | 继续沉淀真实账号样本、限流/风控样本和 provider 边界异常 | 更细粒度断点续传、登录态续期、真实样本矩阵 |
 | 真实联调验收 | 模板、流程、文档已具备 | 部分完成 | 首批真实样本沉淀中 | 每个协议族至少一条真实成功样本 |
 
 ## 当前已经能直接演示的能力
