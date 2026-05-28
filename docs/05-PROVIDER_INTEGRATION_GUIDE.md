@@ -306,7 +306,7 @@
     - 当前仍缺真实在线样本验收，尤其是风控、限流和不同账号环境下的稳定性证据
     - 当前 provider 侧已支持基于 checkpoint 的已传分片恢复
     - task runtime 已可自动恢复冷却到期任务，以及仅包含 upload-session checkpoint 的安全续传队列
-    - 更完整的后台自动恢复编排仍待继续补齐
+    - 自动恢复已经会写入 runtime / result / provider probe / provider status 证据；后续主要继续补更细的队列编排、混合失败拆分和真实样本校准
 
 ## 当前接入状态要怎么理解
 
