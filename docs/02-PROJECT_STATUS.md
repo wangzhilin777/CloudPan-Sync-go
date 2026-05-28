@@ -370,6 +370,7 @@
   - `protocolCoverage` 协议族覆盖矩阵
   - `providerSmokeSummary` 真实样本聚合
   - `providerSmokeMatrix` 真实样本矩阵
+  - `accepted / pending` 真实联调验收判定
 - 当前可展示的数据包括：
   - `recentResults`
   - `recentProbes`
@@ -399,6 +400,7 @@
 - 当前状态：
   - 已具备联调、排错、演示所需的最小证据链
   - 现在还能直接看出每个协议族是否已经至少沉淀出一条真实成功样本
+  - `accepted` 表示“真实 smoke 成功样本 + 该协议组已有任务覆盖”，`pending` 表示还缺其中一项或两项
 
 ### 7. 前端控制台
 
@@ -431,6 +433,7 @@
   - 按 retry class / retry state 的重试队列筛选
   - 运行中的任务可在当前 item 完成后协作式暂停，并在恢复后继续后续 item
   - 真实 provider smoke 记录的协议组聚合与真实样本矩阵展示
+  - 真实联调验收判定层，能直接看出哪些协议组已经 accepted、哪些仍在 pending
   - 从重试队列一键定位待补传树或收敛到同类失败项
     - 从 blocked 聚合摘要一键跳到样本任务或当前阻塞动作
     - 从任务详情 blocked 引导卡片一键收敛当前任务问题子集
@@ -481,6 +484,7 @@
 
 - 当前统一内核已经搭好，10 家 provider 也已经进入真实链路阶段。
 - 真正的切换验收还需要真实 auth profile 和真实链路样本，尤其是跨协议族的成功样本矩阵。
+- 现在已经补上 accepted / pending 真实联调验收判定层，但 accepted 协议组数量仍在继续增长中。
 
 ### 4. 对外分享说明还可以继续增强
 

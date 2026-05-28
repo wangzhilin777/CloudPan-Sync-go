@@ -2122,7 +2122,7 @@ function renderProviderSmokeMatrix(items) {
           <div class="directory-metrics">
             <span class="pill">smoke ${stringifyValue(item.smokeCount, "0")}</span>
             <span class="pill">coverage ${stringifyValue(item.coverageRealSuccessTaskCount, "0")}/${stringifyValue(item.coverageTaskCount, "0")}</span>
-            <span class="pill">${item.hasRealSuccessSample || item.coverageHasRealSuccessSample ? "sampled" : "pending"}</span>
+            <span class="pill">${item.accepted ? "accepted" : item.acceptanceStatus || "pending"}</span>
           </div>
           <div class="muted">smoke sample: ${escapeHTML(stringifyValue(item.sampleTitle, "-"))} / ${escapeHTML(stringifyValue(item.sampleProviderKey, "-"))} / ${escapeHTML(stringifyValue(item.sampleCategory, "-"))}</div>
           <div class="muted">coverage sample: ${escapeHTML(stringifyValue(item.coverageSampleProviderKey, "-"))} / ${escapeHTML(stringifyValue(item.coverageSampleTaskState, "-"))} / ${escapeHTML(stringifyValue(item.coverageSampleCompletionKind, "-"))}</div>

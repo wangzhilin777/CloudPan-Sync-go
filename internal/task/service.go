@@ -138,6 +138,8 @@ type ProviderSmokeMatrixRow struct {
 	CoverageSampleTaskState      string   `json:"coverageSampleTaskState,omitempty"`
 	CoverageSampleCompletionKind string   `json:"coverageSampleCompletionKind,omitempty"`
 	CoverageLastObservedAt       string   `json:"coverageLastObservedAt,omitempty"`
+	Accepted                     bool     `json:"accepted"`
+	AcceptanceStatus             string   `json:"acceptanceStatus,omitempty"`
 }
 
 type EvidenceSample struct {
@@ -1943,11 +1945,20 @@ func buildEvidenceReport(summary EvidenceSummary, statuses []StatusSummary, smok
 	if len(smokeMatrix) == 0 {
 		b.WriteString("- 当前没有真实样本矩阵数据。\n")
 	} else {
-		b.WriteString("| ProtocolGroup | Smoke | Coverage | Sample | Latest Smoke |\n")
-		b.WriteString("| --- | --- | --- | --- | --- |\n")
+		acceptedCount := 0
 		for _, item := range smokeMatrix {
-			fmt.Fprintf(&b, "| %s | %d/%d | %d/%d/%d | %s / %s / %s | %s |\n",
+			if item.Accepted {
+				acceptedCount++
+			}
+		}
+		fmt.Fprintf(&b, "- 已验收协议组: %d / %d\n", acceptedCount, len(smokeMatrix))
+		b.WriteString("\n## 真实联调验收\n\n")
+		b.WriteString("| ProtocolGroup | Acceptance | Smoke | Coverage | Sample | Latest Smoke |\n")
+		b.WriteString("| --- | --- | --- | --- | --- | --- |\n")
+		for _, item := range smokeMatrix {
+			fmt.Fprintf(&b, "| %s | %s | %d/%d | %d/%d/%d | %s / %s / %s | %s |\n",
 				markdownCell(firstNonEmpty(item.ProtocolGroup, "-")),
+				markdownCell(firstNonEmpty(item.AcceptanceStatus, "-")),
 				item.SuccessCount,
 				item.FailureCount,
 				item.CoverageRealSuccessTaskCount,
@@ -2248,6 +2259,17 @@ func buildProviderSmokeMatrix(summary EvidenceSummary, smokeSummaries []Provider
 		state.row.CoverageSampleTaskState = coverage.SampleTaskState
 		state.row.CoverageSampleCompletionKind = coverage.SampleCompletionKind
 		state.row.CoverageLastObservedAt = coverage.LastObservedAt
+	}
+	for _, state := range states {
+		switch {
+		case state.row.HasRealSuccessSample && state.row.CoverageTaskCount > 0:
+			state.row.Accepted = true
+			state.row.AcceptanceStatus = "accepted"
+		case state.row.HasRealSuccessSample || state.row.CoverageHasRealSuccessSample:
+			state.row.AcceptanceStatus = "in_progress"
+		default:
+			state.row.AcceptanceStatus = "pending"
+		}
 	}
 	rows := make([]ProviderSmokeMatrixRow, 0, len(order))
 	for _, group := range order {
