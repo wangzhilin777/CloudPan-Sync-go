@@ -812,9 +812,9 @@ func saveProviderSmokeRecord(ctx context.Context, store *sqlitestore.Store, reco
 		return ProviderSmokeRecord{}, err
 	}
 	_, err = store.DB().ExecContext(ctx, `
-INSERT INTO provider_smoke_records(id, provider_key, protocol_group, auth_mode, result, title, note, operations_json, environment_json, created_at)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		record.ID, record.ProviderKey, record.ProtocolGroup, record.AuthMode, record.Result, record.Title, record.Note, string(operationsJSON), string(environmentJSON), record.CreatedAt,
+INSERT INTO provider_smoke_records(id, provider_key, protocol_group, auth_mode, category, result, title, note, markdown, operations_json, environment_json, created_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		record.ID, record.ProviderKey, record.ProtocolGroup, record.AuthMode, record.Category, record.Result, record.Title, record.Note, record.Markdown, string(operationsJSON), string(environmentJSON), record.CreatedAt,
 	)
 	if err != nil {
 		return ProviderSmokeRecord{}, err
@@ -824,7 +824,7 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 
 func listProviderSmokeRecords(ctx context.Context, store *sqlitestore.Store) ([]ProviderSmokeRecord, error) {
 	rows, err := store.DB().QueryContext(ctx, `
-SELECT id, provider_key, protocol_group, auth_mode, result, title, note, operations_json, environment_json, created_at
+SELECT id, provider_key, protocol_group, auth_mode, category, result, title, note, markdown, operations_json, environment_json, created_at
 FROM provider_smoke_records
 ORDER BY created_at DESC, rowid DESC`)
 	if err != nil {
@@ -839,7 +839,7 @@ ORDER BY created_at DESC, rowid DESC`)
 			operationsJSON  string
 			environmentJSON string
 		)
-		if err := rows.Scan(&item.ID, &item.ProviderKey, &item.ProtocolGroup, &item.AuthMode, &item.Result, &item.Title, &item.Note, &operationsJSON, &environmentJSON, &item.CreatedAt); err != nil {
+		if err := rows.Scan(&item.ID, &item.ProviderKey, &item.ProtocolGroup, &item.AuthMode, &item.Category, &item.Result, &item.Title, &item.Note, &item.Markdown, &operationsJSON, &environmentJSON, &item.CreatedAt); err != nil {
 			return nil, err
 		}
 		if err := json.Unmarshal([]byte(operationsJSON), &item.Operations); err != nil {
@@ -855,7 +855,7 @@ ORDER BY created_at DESC, rowid DESC`)
 
 func getProviderSmokeRecord(ctx context.Context, store *sqlitestore.Store, id string) (ProviderSmokeRecord, bool, error) {
 	row := store.DB().QueryRowContext(ctx, `
-SELECT id, provider_key, protocol_group, auth_mode, result, title, note, operations_json, environment_json, created_at
+SELECT id, provider_key, protocol_group, auth_mode, category, result, title, note, markdown, operations_json, environment_json, created_at
 FROM provider_smoke_records
 WHERE id = ?`, id)
 
@@ -864,7 +864,7 @@ WHERE id = ?`, id)
 		operationsJSON  string
 		environmentJSON string
 	)
-	if err := row.Scan(&item.ID, &item.ProviderKey, &item.ProtocolGroup, &item.AuthMode, &item.Result, &item.Title, &item.Note, &operationsJSON, &environmentJSON, &item.CreatedAt); err != nil {
+	if err := row.Scan(&item.ID, &item.ProviderKey, &item.ProtocolGroup, &item.AuthMode, &item.Category, &item.Result, &item.Title, &item.Note, &item.Markdown, &operationsJSON, &environmentJSON, &item.CreatedAt); err != nil {
 		if err == sql.ErrNoRows {
 			return ProviderSmokeRecord{}, false, nil
 		}

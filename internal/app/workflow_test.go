@@ -361,6 +361,7 @@ func TestAppWorkflowMainline(t *testing.T) {
 		"providerKey":   "123_open",
 		"protocolGroup": "aliyun_123_open",
 		"authMode":      "manual_token",
+		"category":      "browse_only",
 		"result":        "success",
 		"title":         "工作流真实 smoke",
 		"note":          "ValidateAuth/List/Metadata",
@@ -376,6 +377,9 @@ func TestAppWorkflowMainline(t *testing.T) {
 	}
 	if got := smokeData["providerKey"].(string); got != "123_open" {
 		t.Fatalf("expected smoke providerKey 123_open, got %s", got)
+	}
+	if got := smokeData["category"].(string); got != "browse_only" {
+		t.Fatalf("expected smoke category browse_only, got %s", got)
 	}
 
 	smokeListResp := invokeJSON(t, handler, http.MethodGet, "/api/provider-smokes", nil)
@@ -394,6 +398,17 @@ func TestAppWorkflowMainline(t *testing.T) {
 	}
 	if got := smokeSummary[0].(map[string]interface{})["protocolGroup"].(string); got != "aliyun_123_open" {
 		t.Fatalf("expected smoke summary protocolGroup aliyun_123_open, got %s", got)
+	}
+	if got := smokeSummary[0].(map[string]interface{})["sampleCategory"].(string); got != "browse_only" {
+		t.Fatalf("expected smoke summary sampleCategory browse_only, got %s", got)
+	}
+	if got := smokeSummary[0].(map[string]interface{})["hasRealSuccessSample"].(bool); !got {
+		t.Fatal("expected smoke summary hasRealSuccessSample true")
+	}
+
+	smokeMarkdown := invokeText(t, handler, http.MethodGet, "/api/provider-smokes/"+smokeID+"?format=markdown", nil)
+	if !strings.Contains(smokeMarkdown, "工作流真实 smoke") {
+		t.Fatalf("expected smoke markdown title, got %s", smokeMarkdown)
 	}
 
 	retryResp := invokeJSON(t, handler, http.MethodPost, "/api/tasks/"+taskID+"/retry", nil)
@@ -672,4 +687,28 @@ func invokeJSONError(t *testing.T, handler http.Handler, method string, path str
 		t.Fatalf("expected error for %s %s, got status=%d body=%s", method, path, rec.Code, rec.Body.String())
 	}
 	return envelope, rec.Code
+}
+
+func invokeText(t *testing.T, handler http.Handler, method string, path string, body interface{}) string {
+	t.Helper()
+
+	var reader io.Reader
+	if body != nil {
+		payload, err := json.Marshal(body)
+		if err != nil {
+			t.Fatalf("Marshal() error = %v", err)
+		}
+		reader = bytes.NewReader(payload)
+	}
+
+	req := httptest.NewRequest(method, path, reader)
+	if body != nil {
+		req.Header.Set("Content-Type", "application/json")
+	}
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	if rec.Code >= 400 {
+		t.Fatalf("expected success for %s %s, got status=%d body=%s", method, path, rec.Code, rec.Body.String())
+	}
+	return rec.Body.String()
 }

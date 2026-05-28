@@ -2973,6 +2973,7 @@ func TestServiceProviderSmokeRecords(t *testing.T) {
 		ProviderKey:   "123_open",
 		ProtocolGroup: "aliyun_123_open",
 		AuthMode:      "manual_token",
+		Category:      "browse_only",
 		Result:        "success",
 		Title:         "123_open 真实 smoke",
 		Note:          "ValidateAuth/List/Metadata",
@@ -3009,8 +3010,14 @@ func TestServiceProviderSmokeRecords(t *testing.T) {
 	if fetched.ProviderKey != "123_open" || fetched.Result != "success" {
 		t.Fatalf("unexpected fetched smoke record: %#v", fetched)
 	}
+	if fetched.Category != "browse_only" {
+		t.Fatalf("expected fetched smoke category browse_only, got %s", fetched.Category)
+	}
 	if len(fetched.Operations) != 3 {
 		t.Fatalf("expected 3 operations, got %#v", fetched.Operations)
+	}
+	if !strings.Contains(fetched.Markdown, "123_open 真实 smoke") {
+		t.Fatalf("expected markdown title, got %s", fetched.Markdown)
 	}
 
 	summary, err := svc.ProviderSmokeSummary(ctx)
@@ -3028,5 +3035,8 @@ func TestServiceProviderSmokeRecords(t *testing.T) {
 	}
 	if !summary[0].HasRealSuccessSample {
 		t.Fatal("expected smoke summary success sample")
+	}
+	if summary[0].SampleCategory != "browse_only" {
+		t.Fatalf("expected smoke summary sample category browse_only, got %s", summary[0].SampleCategory)
 	}
 }

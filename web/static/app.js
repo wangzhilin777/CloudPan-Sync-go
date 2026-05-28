@@ -13,6 +13,8 @@ const state = {
   selectedReportId: "",
   providerSmokes: [],
   providerSmokeSummary: [],
+  selectedProviderSmokeId: "",
+  selectedProviderSmokeMarkdown: "",
   treeGroupsCollapsed: {},
   treeFilters: {
     taskDirectory: { query: "", status: "" },
@@ -1709,6 +1711,7 @@ function renderStatus() {
   hydrateReportForm(currentReport);
   $("#provider-smoke-summary").innerHTML = renderProviderSmokeSummary(state.providerSmokeSummary || []);
   $("#provider-smoke-records").innerHTML = renderProviderSmokeRecords(state.providerSmokes || []);
+  $("#provider-smoke-markdown").innerHTML = renderProviderSmokeMarkdown(state.selectedProviderSmokeMarkdown);
 
   $("#status-table").innerHTML = `
     <table>
@@ -1967,6 +1970,10 @@ async function loadStatus() {
   state.reportHistory = history.items || [];
   state.providerSmokes = smokes.items || [];
   state.providerSmokeSummary = smokeSummary.items || [];
+  if (state.selectedProviderSmokeId && !state.providerSmokes.some((item) => item.id === state.selectedProviderSmokeId)) {
+    state.selectedProviderSmokeId = "";
+    state.selectedProviderSmokeMarkdown = "";
+  }
   if (state.selectedReportId && !state.reportHistory.some((item) => item.id === state.selectedReportId)) {
     state.selectedReportId = "";
   }
@@ -2043,7 +2050,7 @@ function renderProviderSmokeRecords(items) {
   return items
     .map(
       (item) => `
-        <div class="directory-row tree-node">
+        <div class="directory-row tree-node ${item.id === state.selectedProviderSmokeId ? "active" : ""}">
           <div class="directory-row-header">
             <strong>${escapeHTML(item.title || item.providerKey || "-")}</strong>
             <code>${escapeHTML(item.id || "-")}</code>
@@ -2052,11 +2059,16 @@ function renderProviderSmokeRecords(items) {
             <span class="pill">${escapeHTML(stringifyValue(item.providerKey, "-"))}</span>
             <span class="pill">${escapeHTML(stringifyValue(item.protocolGroup, "-"))}</span>
             <span class="pill">${escapeHTML(stringifyValue(item.authMode, "-"))}</span>
+            <span class="pill">${escapeHTML(stringifyValue(item.category, "-"))}</span>
             <span class="pill">${escapeHTML(stringifyValue(item.result, "-"))}</span>
           </div>
           ${item.note ? `<div class="muted">${escapeHTML(item.note)}</div>` : ""}
           <div class="muted">operations: ${escapeHTML((item.operations || []).join(", ") || "-")}</div>
           <div class="muted">createdAt: <code>${escapeHTML(stringifyValue(item.createdAt, "-"))}</code></div>
+          <div class="actions compact">
+            <button type="button" class="ghost" data-provider-smoke-view="${escapeHTML(item.id || "")}">查看 Markdown</button>
+            <button type="button" class="ghost" data-provider-smoke-download="${escapeHTML(item.id || "")}">下载 Markdown</button>
+          </div>
         </div>
       `,
     )
@@ -2080,14 +2092,22 @@ function renderProviderSmokeSummary(items) {
             <span class="pill">success ${stringifyValue(item.successCount, "0")}</span>
             <span class="pill">failure ${stringifyValue(item.failureCount, "0")}</span>
             <span class="pill">providers ${stringifyValue(item.providerCount, "0")}</span>
+            <span class="pill">${item.hasRealSuccessSample ? "sampled" : "pending"}</span>
           </div>
           <div class="muted">providers: ${escapeHTML((item.providerKeys || []).join(", ") || "-")}</div>
-          <div class="muted">sample: ${escapeHTML(stringifyValue(item.sampleTitle, "-"))} / ${escapeHTML(stringifyValue(item.sampleProviderKey, "-"))}</div>
+          <div class="muted">sample: ${escapeHTML(stringifyValue(item.sampleTitle, "-"))} / ${escapeHTML(stringifyValue(item.sampleProviderKey, "-"))} / ${escapeHTML(stringifyValue(item.sampleCategory, "-"))}</div>
           <div class="muted">latestSmokeAt: <code>${escapeHTML(stringifyValue(item.latestSmokeAt, "-"))}</code></div>
         </div>
       `,
     )
     .join("");
+}
+
+function renderProviderSmokeMarkdown(markdown) {
+  if (!markdown) {
+    return `<div class="directory-empty">请选择一条 smoke 记录查看 Markdown。</div>`;
+  }
+  return `<pre class="result-box">${escapeHTML(markdown)}</pre>`;
 }
 
 function hydrateReportForm(report) {
@@ -2122,6 +2142,23 @@ function hydrateProviderSmokeForm(record) {
   if (titleInput) titleInput.value = record.title || "";
   if (noteInput) noteInput.value = record.note || "";
   if (operationsInput) operationsInput.value = Array.isArray(record.operations) ? record.operations.join(",") : "";
+}
+
+async function loadProviderSmokeMarkdown(id) {
+  if (!id) {
+    return;
+  }
+  const response = await fetch(`/api/provider-smokes/${encodeURIComponent(id)}?format=markdown`, {
+    headers: {
+      "Accept": "text/plain",
+    },
+  });
+  if (!response.ok) {
+    throw new Error(`加载 smoke Markdown 失败：${response.status}`);
+  }
+  state.selectedProviderSmokeId = id;
+  state.selectedProviderSmokeMarkdown = await response.text();
+  renderStatus();
 }
 
 async function bootstrapData() {
@@ -2344,6 +2381,7 @@ function wireStatus() {
         providerKey: $("#provider-smoke-provider-key").value.trim(),
         protocolGroup: $("#provider-smoke-protocol-group").value.trim(),
         authMode: $("#provider-smoke-auth-mode").value.trim(),
+        category: $("#provider-smoke-category").value.trim(),
         result: $("#provider-smoke-result").value,
         title: $("#provider-smoke-title").value.trim(),
         note: $("#provider-smoke-note").value.trim(),
@@ -2361,6 +2399,8 @@ function wireStatus() {
         body: payload,
       });
       hydrateProviderSmokeForm(record);
+      state.selectedProviderSmokeId = record.id || "";
+      state.selectedProviderSmokeMarkdown = record.markdown || "";
       showFlash("Provider smoke 记录已保存");
       await loadStatus();
     } catch (error) {
@@ -2457,6 +2497,48 @@ function wireStatus() {
     if (downloadButton) {
       state.selectedReportId = downloadButton.dataset.reportDownload || "";
       $("#download-report").click();
+    }
+  });
+  $("#provider-smoke-records").addEventListener("click", async (event) => {
+    const viewButton = event.target.closest("[data-provider-smoke-view]");
+    if (viewButton) {
+      try {
+        await loadProviderSmokeMarkdown(viewButton.dataset.providerSmokeView || "");
+        showFlash("已切换 smoke Markdown");
+      } catch (error) {
+        showFlash(error.message, true);
+      }
+      return;
+    }
+    const downloadButton = event.target.closest("[data-provider-smoke-download]");
+    if (downloadButton) {
+      try {
+        const id = downloadButton.dataset.providerSmokeDownload || "";
+        if (!id) {
+          return;
+        }
+        const response = await fetch(`/api/provider-smokes/${encodeURIComponent(id)}?format=markdown`, {
+          headers: { Accept: "text/plain" },
+        });
+        if (!response.ok) {
+          throw new Error(`下载 smoke Markdown 失败：${response.status}`);
+        }
+        const markdown = await response.text();
+        const record = state.providerSmokes.find((item) => item.id === id);
+        const title = String(record?.title || record?.providerKey || "provider-smoke").trim().replace(/\s+/g, "-");
+        const blob = new Blob([markdown], { type: "text/plain;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement("a");
+        anchor.href = url;
+        anchor.download = `${title}.md`;
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+        URL.revokeObjectURL(url);
+        showFlash("smoke Markdown 已下载");
+      } catch (error) {
+        showFlash(error.message, true);
+      }
     }
   });
 }

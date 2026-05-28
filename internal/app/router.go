@@ -71,6 +71,7 @@ type providerSmokeRecordRequest struct {
 	ProviderKey   string            `json:"providerKey"`
 	ProtocolGroup string            `json:"protocolGroup"`
 	AuthMode      string            `json:"authMode"`
+	Category      string            `json:"category"`
 	Result        string            `json:"result"`
 	Title         string            `json:"title"`
 	Note          string            `json:"note"`
@@ -613,6 +614,7 @@ func (a *App) handleProviderSmokeRecords(w http.ResponseWriter, r *http.Request)
 		ProviderKey:   req.ProviderKey,
 		ProtocolGroup: req.ProtocolGroup,
 		AuthMode:      req.AuthMode,
+		Category:      req.Category,
 		Result:        req.Result,
 		Title:         req.Title,
 		Note:          req.Note,
@@ -653,6 +655,12 @@ func (a *App) handleProviderSmokeRecordByID(w http.ResponseWriter, r *http.Reque
 	}
 	if !ok {
 		writeError(w, http.StatusNotFound, "provider_smoke_not_found", "Provider smoke record was not found.")
+		return
+	}
+	if r.URL.Query().Get("format") == "markdown" {
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(record.Markdown))
 		return
 	}
 	writeOK(w, http.StatusOK, record)

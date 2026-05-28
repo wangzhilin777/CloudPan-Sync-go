@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"sort"
 	"strings"
 	"time"
 
@@ -82,11 +83,13 @@ type ProviderSmokeRecord struct {
 	ProviderKey   string            `json:"providerKey"`
 	ProtocolGroup string            `json:"protocolGroup,omitempty"`
 	AuthMode      string            `json:"authMode,omitempty"`
+	Category      string            `json:"category,omitempty"`
 	Result        string            `json:"result"`
 	Title         string            `json:"title"`
 	Note          string            `json:"note,omitempty"`
 	Operations    []string          `json:"operations,omitempty"`
 	Environment   map[string]string `json:"environment,omitempty"`
+	Markdown      string            `json:"markdown,omitempty"`
 	CreatedAt     string            `json:"createdAt"`
 }
 
@@ -101,6 +104,7 @@ type ProviderSmokeSummary struct {
 	SampleTitle          string   `json:"sampleTitle,omitempty"`
 	SampleProviderKey    string   `json:"sampleProviderKey,omitempty"`
 	SampleResult         string   `json:"sampleResult,omitempty"`
+	SampleCategory       string   `json:"sampleCategory,omitempty"`
 	LatestSmokeAt        string   `json:"latestSmokeAt,omitempty"`
 	HasRealSuccessSample bool     `json:"hasRealSuccessSample"`
 }
@@ -763,6 +767,9 @@ func (s *Service) SaveProviderSmokeRecord(ctx context.Context, record ProviderSm
 	if strings.TrimSpace(record.Title) == "" {
 		record.Title = strings.TrimSpace(record.ProviderKey) + " 真实 smoke 记录"
 	}
+	if strings.TrimSpace(record.Category) == "" {
+		record.Category = inferProviderSmokeCategory(record)
+	}
 	now := time.Now().UTC().Format(time.RFC3339)
 	record.ID = uuid.NewString()
 	record.Title = strings.TrimSpace(record.Title)
@@ -770,6 +777,7 @@ func (s *Service) SaveProviderSmokeRecord(ctx context.Context, record ProviderSm
 	record.ProviderKey = strings.TrimSpace(record.ProviderKey)
 	record.ProtocolGroup = strings.TrimSpace(record.ProtocolGroup)
 	record.AuthMode = strings.TrimSpace(record.AuthMode)
+	record.Category = strings.TrimSpace(record.Category)
 	record.Result = strings.TrimSpace(record.Result)
 	record.CreatedAt = now
 	if len(record.Operations) == 0 {
@@ -778,6 +786,7 @@ func (s *Service) SaveProviderSmokeRecord(ctx context.Context, record ProviderSm
 	if record.Environment == nil {
 		record.Environment = map[string]string{}
 	}
+	record.Markdown = buildProviderSmokeMarkdown(record)
 	return saveProviderSmokeRecord(ctx, s.store, record)
 }
 
@@ -1930,6 +1939,95 @@ func markdownCell(value string) string {
 	return value
 }
 
+func inferProviderSmokeCategory(record ProviderSmokeRecord) string {
+	if !strings.EqualFold(record.Result, "success") {
+		return "failed"
+	}
+	ops := make([]string, 0, len(record.Operations))
+	for _, op := range record.Operations {
+		ops = append(ops, strings.TrimSpace(strings.ToLower(op)))
+	}
+	contains := func(name string) bool {
+		for _, op := range ops {
+			if op == strings.ToLower(name) {
+				return true
+			}
+		}
+		return false
+	}
+	switch {
+	case contains("upload"):
+		return "binary_upload_success"
+	case contains("fastuploadcheck"):
+		return "fast_upload_success"
+	case contains("createdir") || contains("metadata") || contains("list"):
+		return "browse_only"
+	case contains("validateauth"):
+		return "auth_only"
+	default:
+		return "partial_blocked"
+	}
+}
+
+func buildProviderSmokeMarkdown(record ProviderSmokeRecord) string {
+	var b strings.Builder
+	title := strings.TrimSpace(record.Title)
+	if title == "" {
+		title = record.ProviderKey + " 真实 smoke 记录"
+	}
+	b.WriteString("# ")
+	b.WriteString(title)
+	b.WriteString("\n\n")
+	b.WriteString("## 基本信息\n\n")
+	fmt.Fprintf(&b, "- Provider: %s\n", markdownCell(record.ProviderKey))
+	fmt.Fprintf(&b, "- 协议组: %s\n", markdownCell(firstNonEmpty(record.ProtocolGroup, "-")))
+	fmt.Fprintf(&b, "- 认证方式: %s\n", markdownCell(firstNonEmpty(record.AuthMode, "-")))
+	fmt.Fprintf(&b, "- 结果分类: %s\n", markdownCell(firstNonEmpty(record.Category, "-")))
+	fmt.Fprintf(&b, "- 结果: %s\n", markdownCell(firstNonEmpty(record.Result, "-")))
+	fmt.Fprintf(&b, "- 记录时间: %s\n", markdownCell(firstNonEmpty(record.CreatedAt, "-")))
+	if record.Note != "" {
+		fmt.Fprintf(&b, "- 备注: %s\n", markdownCell(record.Note))
+	}
+	b.WriteString("\n## 本次覆盖范围\n\n")
+	if len(record.Operations) == 0 {
+		b.WriteString("- 未记录具体操作。\n")
+	} else {
+		for _, op := range record.Operations {
+			fmt.Fprintf(&b, "- %s\n", markdownCell(op))
+		}
+	}
+	b.WriteString("\n## 认证信息摘要\n\n")
+	fmt.Fprintf(&b, "- `authMode`: %s\n", markdownCell(firstNonEmpty(record.AuthMode, "-")))
+	if len(record.Environment) == 0 {
+		b.WriteString("- `extra` / 环境摘要：未填写\n")
+	} else {
+		keys := make([]string, 0, len(record.Environment))
+		for key := range record.Environment {
+			keys = append(keys, key)
+		}
+		sort.Strings(keys)
+		b.WriteString("- `extra` / 环境摘要：")
+		b.WriteString(strings.Join(keys, ", "))
+		b.WriteString("\n")
+	}
+	b.WriteString("\n## 异常与阻塞记录\n\n")
+	if strings.EqualFold(record.Result, "success") {
+		b.WriteString("- 本次未记录阻塞。\n")
+	} else {
+		b.WriteString("- 本次存在阻塞或失败，请结合控制台证据补充。\n")
+	}
+	b.WriteString("\n## 对代码的反推结论\n\n")
+	b.WriteString("- 这条记录可以作为协议族或 provider 的真实联调样本。\n")
+	b.WriteString("- 需要时可继续补充更细的请求 / 响应片段。\n")
+	b.WriteString("\n## 验收结论\n\n")
+	if strings.EqualFold(record.Result, "success") {
+		b.WriteString("- 本次形成有效真实联调样本。\n")
+	} else {
+		b.WriteString("- 本次未形成完整成功样本，但仍保留排障证据。\n")
+	}
+	return strings.TrimSpace(b.String())
+}
+
 func summarizeProviderSmokeRecords(records []ProviderSmokeRecord) []ProviderSmokeSummary {
 	if len(records) == 0 {
 		return nil
@@ -1971,6 +2069,7 @@ func summarizeProviderSmokeRecords(records []ProviderSmokeRecord) []ProviderSmok
 			state.row.SampleRecordID = record.ID
 			state.row.SampleTitle = record.Title
 			state.row.SampleProviderKey = record.ProviderKey
+			state.row.SampleCategory = record.Category
 			state.row.SampleResult = record.Result
 			state.row.LatestSmokeAt = record.CreatedAt
 		}
@@ -1981,6 +2080,7 @@ func summarizeProviderSmokeRecords(records []ProviderSmokeRecord) []ProviderSmok
 			state.row.SampleRecordID = record.ID
 			state.row.SampleTitle = record.Title
 			state.row.SampleProviderKey = record.ProviderKey
+			state.row.SampleCategory = record.Category
 			state.row.SampleResult = record.Result
 			state.row.LatestSmokeAt = record.CreatedAt
 		}
