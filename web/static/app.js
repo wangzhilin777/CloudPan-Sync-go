@@ -31,10 +31,10 @@ const state = {
   },
   treeGroupsCollapsed: {},
   treeFilters: {
-    taskDirectory: { query: "", status: "" },
+    taskDirectory: { query: "", status: "", leafOnly: false },
     taskPending: { query: "", reason: "", leafOnly: false },
     taskRetry: { query: "", retryClass: "", retryState: "" },
-    statusDirectory: { query: "", status: "" },
+    statusDirectory: { query: "", status: "", leafOnly: false },
     statusPending: { query: "", reason: "", leafOnly: false },
     statusRetry: { query: "", retryClass: "", retryState: "" },
   },
@@ -384,13 +384,16 @@ function filterDirectoryTree(states, filters = {}) {
   const tree = Array.isArray(states) && states[0]?.children ? states : buildDirectoryStateTree(states);
   const query = String(filters.query || "").trim().toLowerCase();
   const status = String(filters.status || "").trim().toLowerCase();
-  const filterActive = Boolean(query || status);
+  const leafOnly = Boolean(filters.leafOnly);
+  const filterActive = Boolean(query || status || leafOnly);
   const prune = (nodes) =>
     nodes.flatMap((node) => {
       const children = prune(node.children || []);
+      const isLeaf = !node.children?.length;
       const selfMatch =
         includesFilterText([node.path, node.name, node.rootPath, node.lastItemPath], query) &&
-        includesFilterText([node.status], status);
+        includesFilterText([node.status], status) &&
+        (!leafOnly || isLeaf);
       if (!selfMatch && !children.length) {
         return [];
       }
@@ -3929,6 +3932,7 @@ function wireTreeFilters() {
 
   bindTextFilter("#task-directory-filter-query", "taskDirectory", "query", rerenderTask);
   bindTextFilter("#task-directory-filter-status", "taskDirectory", "status", rerenderTask);
+  bindCheckboxFilter("#task-directory-filter-leaf-only", "taskDirectory", "leafOnly", rerenderTask);
   bindTextFilter("#task-pending-filter-query", "taskPending", "query", rerenderTask);
   bindTextFilter("#task-pending-filter-reason", "taskPending", "reason", rerenderTask);
   bindCheckboxFilter("#task-pending-filter-leaf-only", "taskPending", "leafOnly", rerenderTask);
@@ -3938,6 +3942,7 @@ function wireTreeFilters() {
 
   bindTextFilter("#status-directory-filter-query", "statusDirectory", "query", rerenderStatus);
   bindTextFilter("#status-directory-filter-status", "statusDirectory", "status", rerenderStatus);
+  bindCheckboxFilter("#status-directory-filter-leaf-only", "statusDirectory", "leafOnly", rerenderStatus);
   bindTextFilter("#status-pending-filter-query", "statusPending", "query", rerenderStatus);
   bindTextFilter("#status-pending-filter-reason", "statusPending", "reason", rerenderStatus);
   bindCheckboxFilter("#status-pending-filter-leaf-only", "statusPending", "leafOnly", rerenderStatus);
@@ -3949,6 +3954,7 @@ function wireTreeFilters() {
     resetTreeFilterSection("taskDirectory");
     setFilterControlValue("#task-directory-filter-query", "");
     setFilterControlValue("#task-directory-filter-status", "");
+    setFilterControlValue("#task-directory-filter-leaf-only", false);
     rerenderTask();
     showFlash("已清空任务目录树筛选");
   });
@@ -3964,6 +3970,7 @@ function wireTreeFilters() {
     resetTreeFilterSection("statusDirectory");
     setFilterControlValue("#status-directory-filter-query", "");
     setFilterControlValue("#status-directory-filter-status", "");
+    setFilterControlValue("#status-directory-filter-leaf-only", false);
     rerenderStatus();
     showFlash("已清空状态目录树筛选");
   });

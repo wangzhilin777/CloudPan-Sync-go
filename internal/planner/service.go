@@ -386,7 +386,19 @@ func applyRiskProfileOverrideWithFields(base RiskProfile, override *RiskProfileO
 		base.RiskKeywords = append([]string(nil), override.RiskKeywords...)
 		fields = append(fields, "riskKeywords")
 	}
+	base.AutoRetryStartHour = clamp(base.AutoRetryStartHour, 0, 23)
+	base.AutoRetryEndHour = clamp(base.AutoRetryEndHour, 0, 24)
 	return base, fields
+}
+
+func clamp(value, minValue, maxValue int) int {
+	if value < minValue {
+		return minValue
+	}
+	if value > maxValue {
+		return maxValue
+	}
+	return value
 }
 
 func normalizeExecutionMode(mode ExecutionMode) (ExecutionMode, error) {

@@ -309,6 +309,38 @@ func TestBuildPreviewSupportsPreScanFlatMode(t *testing.T) {
 	}
 }
 
+func TestBuildPreviewClampsAutoRetryWindowOverride(t *testing.T) {
+	registry := provider.NewRegistry(provider.DefaultCatalog()...)
+	plan, err := BuildPreview(registry, PreviewRequest{
+		SourceProvider: "guangya",
+		TargetProvider: "189cloud",
+		RiskMode:       RiskModeBalanced,
+		RiskOverride: &RiskProfileOverride{
+			AutoRetryStartHour: intPtr(99),
+			AutoRetryEndHour:   intPtr(88),
+		},
+		Entries: []SourceEntry{{Path: "/a.bin", Size: 10}},
+	})
+	if err != nil {
+		t.Fatalf("BuildPreview() error = %v", err)
+	}
+
+	riskProfile, ok := plan.Metadata["riskProfile"].(RiskProfile)
+	if !ok {
+		t.Fatalf("expected riskProfile metadata, got %#v", plan.Metadata["riskProfile"])
+	}
+	if riskProfile.AutoRetryStartHour != 23 || riskProfile.AutoRetryEndHour != 24 {
+		t.Fatalf("expected clamped auto retry window 23-24, got %+v", riskProfile)
+	}
+	resolution, ok := plan.Metadata["riskProfileResolution"].(RiskProfileResolution)
+	if !ok {
+		t.Fatalf("expected riskProfileResolution metadata, got %#v", plan.Metadata["riskProfileResolution"])
+	}
+	if resolution.Applied.AutoRetryStartHour != 23 || resolution.Applied.AutoRetryEndHour != 24 {
+		t.Fatalf("expected clamped applied auto retry window 23-24, got %+v", resolution.Applied)
+	}
+}
+
 func TestBuildPreviewRejectsInvalidExecutionMode(t *testing.T) {
 	registry := provider.NewRegistry(provider.DefaultCatalog()...)
 	_, err := BuildPreview(registry, PreviewRequest{
