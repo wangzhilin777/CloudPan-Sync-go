@@ -113,6 +113,10 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 		waitForText(`#task-directory-states`, "/demo"),
 		chromedp.Click(`#task-summary [data-runtime-focus-kind="roots"]`, chromedp.ByQuery),
 		waitForText(`#task-directory-filter-summary`, "当前显示"),
+		chromedp.Click(`#task-directory-states [data-tree-focus-panel="directory"]`, chromedp.ByQuery),
+		waitForValue(`#task-directory-filter-query`, "/demo"),
+		chromedp.Click(`#task-directory-filter-clear`, chromedp.ByID),
+		waitForText(`#task-directory-filter-summary`, "显示全部"),
 	)
 
 	runStep(t, runCtx, "pause resume run task",
@@ -130,6 +134,8 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 		chromedp.Evaluate(`(() => document.querySelector('button[data-view="status"]')?.click())()`, nil),
 		waitForText(`#status-runtime-checkpoints`, "SELECTED ROOTS"),
 		waitForText(`#status-runtime-checkpoints`, "SCAN TRACE"),
+		chromedp.Click(`#status-directory-states [data-tree-sync-panel="directory"][data-tree-sync-path="/demo"]`, chromedp.ByQuery),
+		waitForValue(`#status-pending-filter-query`, "/demo"),
 		waitForSelectorCount(`button[data-tree-bulk-scope="status"][data-tree-bulk-panel="directory"][data-tree-bulk-action="collapse"]`, 1),
 		chromedp.Click(`button[data-tree-bulk-scope="status"][data-tree-bulk-panel="directory"][data-tree-bulk-action="collapse"]`, chromedp.ByQuery),
 		waitForSelectorCount(`#status-directory-states .directory-group.is-collapsed`, 1),

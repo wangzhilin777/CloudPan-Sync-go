@@ -668,6 +668,8 @@ function renderTreeNodes(nodes, options = {}) {
     const children = node.children.length
       ? `<div class="directory-children">${node.children.map((child) => renderNode(child)).join("")}</div>`
       : "";
+    const syncTargetPanel = panel === "directory" ? "pending" : "directory";
+    const syncLabel = panel === "directory" ? "待补传树" : "目录树";
 
     return `
       <div class="directory-row tree-node">
@@ -676,6 +678,22 @@ function renderTreeNodes(nodes, options = {}) {
           <code>${escapeHTML(node.path)}</code>
         </div>
         ${metrics}
+        <div class="actions compact">
+          <button
+            type="button"
+            class="ghost"
+            data-tree-focus-path="${escapeHTML(node.path)}"
+            data-tree-focus-scope="${escapeHTML(scope)}"
+            data-tree-focus-panel="${escapeHTML(panel)}"
+          >只看当前路径</button>
+          <button
+            type="button"
+            class="ghost"
+            data-tree-sync-path="${escapeHTML(node.path)}"
+            data-tree-sync-scope="${escapeHTML(scope)}"
+            data-tree-sync-panel="${escapeHTML(panel)}"
+          >同步到${escapeHTML(syncLabel)}</button>
+        </div>
         ${children}
       </div>
     `;
@@ -711,15 +729,31 @@ function renderTreeNodes(nodes, options = {}) {
                 <h4>Root <code>${escapeHTML(rootPath)}</code></h4>
                 ${summary}
               </div>
-              <button
-                type="button"
-                class="ghost tree-group-toggle"
-                data-tree-group-toggle
-                data-tree-group-scope="${escapeHTML(scope)}"
-                data-tree-group-panel="${escapeHTML(panel)}"
-                data-tree-group-path="${escapeHTML(rootPath)}"
-                aria-expanded="${collapsed ? "false" : "true"}"
-              >${collapsed ? "展开" : "收起"}</button>
+              <div class="actions compact">
+                <button
+                  type="button"
+                  class="ghost"
+                  data-tree-focus-path="${escapeHTML(rootPath)}"
+                  data-tree-focus-scope="${escapeHTML(scope)}"
+                  data-tree-focus-panel="${escapeHTML(panel)}"
+                >只看 root</button>
+                <button
+                  type="button"
+                  class="ghost"
+                  data-tree-sync-path="${escapeHTML(rootPath)}"
+                  data-tree-sync-scope="${escapeHTML(scope)}"
+                  data-tree-sync-panel="${escapeHTML(panel)}"
+                >同步另一棵树</button>
+                <button
+                  type="button"
+                  class="ghost tree-group-toggle"
+                  data-tree-group-toggle
+                  data-tree-group-scope="${escapeHTML(scope)}"
+                  data-tree-group-panel="${escapeHTML(panel)}"
+                  data-tree-group-path="${escapeHTML(rootPath)}"
+                  aria-expanded="${collapsed ? "false" : "true"}"
+                >${collapsed ? "展开" : "收起"}</button>
+              </div>
             </div>
             <div class="directory-group-body">
               ${renderNode(root)}
@@ -829,6 +863,42 @@ function setFilterControlValue(selector, value) {
     return;
   }
   element.value = value;
+}
+
+function treePanelFilterSelector(scope, panel) {
+  if (scope === "task") {
+    return panel === "pending" ? "#task-pending-filter-query" : "#task-directory-filter-query";
+  }
+  return panel === "pending" ? "#status-pending-filter-query" : "#status-directory-filter-query";
+}
+
+function rerenderTreeScope(scope) {
+  if (scope === "task") {
+    updateTaskTreePanels(currentSelectedTaskDetail());
+    return;
+  }
+  updateStatusTreePanels(recentRuntimePayload());
+}
+
+function focusTreePanelByPath(scope, panel, path) {
+  const normalized = String(path || "").trim();
+  if (!normalized) {
+    return;
+  }
+  const selector = treePanelFilterSelector(scope, panel);
+  if (scope === "task") {
+    state.treeFilters[panel === "pending" ? "taskPending" : "taskDirectory"].query = normalized;
+  } else {
+    state.treeFilters[panel === "pending" ? "statusPending" : "statusDirectory"].query = normalized;
+  }
+  setFilterControlValue(selector, normalized);
+  rerenderTreeScope(scope);
+  showFlash(`已按 ${normalized} 收敛${panel === "pending" ? "待补传树" : "目录树"}`);
+}
+
+function syncTreePanelPath(scope, fromPanel, path) {
+  const targetPanel = fromPanel === "directory" ? "pending" : "directory";
+  focusTreePanelByPath(scope, targetPanel, path);
 }
 
 function focusPendingTreeFromRetry(scope, path) {
@@ -997,6 +1067,24 @@ function wireTreeGroupToggles(scope, panel) {
       } else {
         updateStatusTreePanels(recentRuntimePayload());
       }
+    });
+  });
+  wrap.querySelectorAll("[data-tree-focus-path]").forEach((button) => {
+    button.addEventListener("click", () => {
+      focusTreePanelByPath(
+        button.dataset.treeFocusScope || scope,
+        button.dataset.treeFocusPanel || panel,
+        button.dataset.treeFocusPath || "",
+      );
+    });
+  });
+  wrap.querySelectorAll("[data-tree-sync-path]").forEach((button) => {
+    button.addEventListener("click", () => {
+      syncTreePanelPath(
+        button.dataset.treeSyncScope || scope,
+        button.dataset.treeSyncPanel || panel,
+        button.dataset.treeSyncPath || "",
+      );
     });
   });
 }
