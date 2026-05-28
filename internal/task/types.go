@@ -58,30 +58,45 @@ type DirectoryState struct {
 	LastItemPath   string `json:"lastItemPath,omitempty"`
 }
 
+type UploadCheckpoint struct {
+	ItemPath          string                   `json:"itemPath"`
+	ProviderStatus    string                   `json:"providerStatus,omitempty"`
+	FileID            string                   `json:"fileId,omitempty"`
+	UploadID          string                   `json:"uploadId,omitempty"`
+	PartCount         int                      `json:"partCount,omitempty"`
+	UploadedPartCount int                      `json:"uploadedPartCount,omitempty"`
+	FailedPartNumber  int                      `json:"failedPartNumber,omitempty"`
+	NextPartNumber    int                      `json:"nextPartNumber,omitempty"`
+	UploadedParts     []map[string]interface{} `json:"uploadedParts,omitempty"`
+	ProviderData      map[string]interface{}   `json:"providerData,omitempty"`
+	UpdatedAt         string                   `json:"updatedAt,omitempty"`
+}
+
 type RuntimeState struct {
-	ExecutionState    string           `json:"executionState"`
-	CurrentRoot       string           `json:"currentRoot,omitempty"`
-	CurrentDirectory  string           `json:"currentDirectory,omitempty"`
-	CurrentItemPath   string           `json:"currentItemPath,omitempty"`
-	LastCompletedPath string           `json:"lastCompletedPath,omitempty"`
-	BlockedReason     string           `json:"blockedReason,omitempty"`
-	BlockedAction     string           `json:"blockedAction,omitempty"`
-	BlockedAdvice     string           `json:"blockedAdvice,omitempty"`
-	NextRetryAt       string           `json:"nextRetryAt,omitempty"`
-	ProcessedCount    int              `json:"processedCount"`
-	DoneCount         int              `json:"doneCount"`
-	SkippedCount      int              `json:"skippedCount"`
-	FailedCount       int              `json:"failedCount"`
-	PendingCount      int              `json:"pendingCount"`
-	RiskHitCount      int              `json:"riskHitCount"`
-	LastRiskStatus    string           `json:"lastRiskStatus,omitempty"`
-	RiskHits          []RiskHit        `json:"riskHits,omitempty"`
-	PendingTree       []PendingNode    `json:"pendingTree,omitempty"`
-	RetryQueue        []RetryQueueItem `json:"retryQueue,omitempty"`
-	RetryableCount    int              `json:"retryableCount"`
-	BlockedRetryCount int              `json:"blockedRetryCount"`
-	NextSequence      int              `json:"nextSequence"`
-	DirectoryStates   []DirectoryState `json:"directoryStates,omitempty"`
+	ExecutionState    string            `json:"executionState"`
+	CurrentRoot       string            `json:"currentRoot,omitempty"`
+	CurrentDirectory  string            `json:"currentDirectory,omitempty"`
+	CurrentItemPath   string            `json:"currentItemPath,omitempty"`
+	LastCompletedPath string            `json:"lastCompletedPath,omitempty"`
+	BlockedReason     string            `json:"blockedReason,omitempty"`
+	BlockedAction     string            `json:"blockedAction,omitempty"`
+	BlockedAdvice     string            `json:"blockedAdvice,omitempty"`
+	NextRetryAt       string            `json:"nextRetryAt,omitempty"`
+	ProcessedCount    int               `json:"processedCount"`
+	DoneCount         int               `json:"doneCount"`
+	SkippedCount      int               `json:"skippedCount"`
+	FailedCount       int               `json:"failedCount"`
+	PendingCount      int               `json:"pendingCount"`
+	RiskHitCount      int               `json:"riskHitCount"`
+	LastRiskStatus    string            `json:"lastRiskStatus,omitempty"`
+	RiskHits          []RiskHit         `json:"riskHits,omitempty"`
+	PendingTree       []PendingNode     `json:"pendingTree,omitempty"`
+	RetryQueue        []RetryQueueItem  `json:"retryQueue,omitempty"`
+	RetryableCount    int               `json:"retryableCount"`
+	BlockedRetryCount int               `json:"blockedRetryCount"`
+	NextSequence      int               `json:"nextSequence"`
+	DirectoryStates   []DirectoryState  `json:"directoryStates,omitempty"`
+	UploadCheckpoint  *UploadCheckpoint `json:"uploadCheckpoint,omitempty"`
 }
 
 type RiskHit struct {
@@ -106,20 +121,21 @@ type PendingNode struct {
 }
 
 type RetryQueueItem struct {
-	Path           string `json:"path"`
-	RootPath       string `json:"rootPath,omitempty"`
-	ProviderStatus string `json:"providerStatus,omitempty"`
-	Strategy       string `json:"strategy,omitempty"`
-	RetryClass     string `json:"retryClass"`
-	RetryAction    string `json:"retryAction"`
-	AttemptCount   int    `json:"attemptCount"`
-	RetryLimit     int    `json:"retryLimit,omitempty"`
-	RemainingCount int    `json:"remainingCount"`
-	EligibleAt     string `json:"eligibleAt,omitempty"`
-	Retryable      bool   `json:"retryable"`
-	Blocked        bool   `json:"blocked"`
-	Exhausted      bool   `json:"exhausted"`
-	Reason         string `json:"reason,omitempty"`
+	Path             string            `json:"path"`
+	RootPath         string            `json:"rootPath,omitempty"`
+	ProviderStatus   string            `json:"providerStatus,omitempty"`
+	Strategy         string            `json:"strategy,omitempty"`
+	RetryClass       string            `json:"retryClass"`
+	RetryAction      string            `json:"retryAction"`
+	AttemptCount     int               `json:"attemptCount"`
+	RetryLimit       int               `json:"retryLimit,omitempty"`
+	RemainingCount   int               `json:"remainingCount"`
+	EligibleAt       string            `json:"eligibleAt,omitempty"`
+	Retryable        bool              `json:"retryable"`
+	Blocked          bool              `json:"blocked"`
+	Exhausted        bool              `json:"exhausted"`
+	Reason           string            `json:"reason,omitempty"`
+	UploadCheckpoint *UploadCheckpoint `json:"uploadCheckpoint,omitempty"`
 }
 
 type Item struct {

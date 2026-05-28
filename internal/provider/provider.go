@@ -108,11 +108,23 @@ type UploadRequest struct {
 	MD5            string         `json:"md5,omitempty"`
 	SHA1           string         `json:"sha1,omitempty"`
 	GCID           string         `json:"gcid,omitempty"`
+	ResumeUpload   *ResumeUpload  `json:"resumeUpload,omitempty"`
 }
 
 type UploadResult struct {
 	OperationResult
 	ConflictAction string `json:"conflictAction,omitempty"`
+}
+
+type ResumeUpload struct {
+	FileID            string                   `json:"fileId,omitempty"`
+	UploadID          string                   `json:"uploadId,omitempty"`
+	PartCount         int                      `json:"partCount,omitempty"`
+	UploadedPartCount int                      `json:"uploadedPartCount,omitempty"`
+	FailedPartNumber  int                      `json:"failedPartNumber,omitempty"`
+	NextPartNumber    int                      `json:"nextPartNumber,omitempty"`
+	UploadedParts     []map[string]interface{} `json:"uploadedParts,omitempty"`
+	ProviderData      map[string]interface{}   `json:"providerData,omitempty"`
 }
 
 type Adapter interface {

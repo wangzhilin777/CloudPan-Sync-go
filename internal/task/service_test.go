@@ -395,6 +395,187 @@ func TestServiceRuntimeFallsBackAfterFastUploadPrecheckMiss(t *testing.T) {
 	}
 }
 
+func TestServiceRuntimePreservesUploadFailureEvidence(t *testing.T) {
+	ctx := context.Background()
+	store, err := sqlitestore.New(ctx, filepath.Join(t.TempDir(), "runtime-upload-evidence.db"))
+	if err != nil {
+		t.Fatalf("new store: %v", err)
+	}
+	defer func() { _ = store.Close() }()
+
+	adapter := &scriptedAdapter{
+		meta: provider.Provider{
+			Key:              "runtime_upload_evidence",
+			DisplayName:      "Runtime Upload Evidence",
+			ProtocolGroup:    "fake",
+			AuthModes:        []string{"manual_token"},
+			FastUploadInputs: []string{"md5", "size"},
+			FallbackModes:    []string{"download_upload"},
+			ConflictPolicies: []provider.ConflictPolicy{provider.ConflictPolicyAutoRenameNew},
+			Status:           "planned",
+		},
+		capability: provider.CapabilitySet{
+			SupportsAuthValidation: true,
+			SupportsUpload:         true,
+		},
+		uploadFunc: func(req provider.UploadRequest) provider.UploadResult {
+			if req.ResumeUpload != nil {
+				return provider.UploadResult{
+					OperationResult: provider.OperationResult{
+						OK:      true,
+						Status:  "ok",
+						Message: "resumed multipart upload",
+						Mode:    "fake_upload_resume",
+						Payload: map[string]interface{}{
+							"fileId":        req.ResumeUpload.FileID,
+							"uploadId":      req.ResumeUpload.UploadID,
+							"resumedUpload": true,
+							"providerData":  req.ResumeUpload.ProviderData,
+						},
+					},
+				}
+			}
+			return provider.UploadResult{
+				OperationResult: provider.OperationResult{
+					Status:  "provider_request_failed",
+					Message: "multipart part failed",
+					Mode:    "fake_upload_error",
+					Payload: map[string]interface{}{
+						"file_id":          "file-fail-1",
+						"uploadId":         "upload-fail-1",
+						"partCount":        3,
+						"failedPartNumber": 2,
+						"nextPartNumber":   2,
+						"providerData": map[string]interface{}{
+							"resumable": map[string]interface{}{
+								"provider": "S3",
+								"key":      "demo",
+							},
+						},
+					},
+				},
+			}
+		},
+	}
+
+	registry := provider.NewRegistry(adapter)
+	authSvc := auth.NewService(store, registry)
+	svc := NewService(store, registry, authSvc)
+	profile, err := authSvc.CreateProfile(ctx, auth.CreateProfileInput{
+		ProviderKey: "runtime_upload_evidence",
+		AuthMode:    "manual_token",
+		DisplayName: "runtime upload evidence",
+		Token:       "token-1",
+	})
+	if err != nil {
+		t.Fatalf("CreateProfile() error = %v", err)
+	}
+
+	localFile := filepath.Join(t.TempDir(), "source.bin")
+	if err := os.WriteFile(localFile, []byte("hello"), 0o644); err != nil {
+		t.Fatalf("WriteFile() error = %v", err)
+	}
+
+	detail, err := svc.Create(ctx, CreateRequest{
+		SourceProvider:  "guangya",
+		TargetProvider:  "runtime_upload_evidence",
+		TargetProfileID: profile.ID,
+		ThresholdMB:     1,
+		ConflictPolicy:  provider.ConflictPolicyAutoRenameNew,
+		Entries: []planner.SourceEntry{
+			{Path: "/a.bin", Size: 1024, LocalPath: localFile},
+		},
+	})
+	if err != nil {
+		t.Fatalf("Create() error = %v", err)
+	}
+
+	running, ok, err := svc.Run(ctx, detail.Task.ID)
+	if err != nil {
+		t.Fatalf("Run() error = %v", err)
+	}
+	if !ok {
+		t.Fatal("expected task to exist")
+	}
+	if len(running.Results) != 1 {
+		t.Fatalf("expected one result, got %d", len(running.Results))
+	}
+	uploadPayload, ok := running.Results[0].Payload["upload"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("expected upload payload, got %#v", running.Results[0].Payload["upload"])
+	}
+	if got := intTaskValue(uploadPayload["failedPartNumber"]); got != 2 {
+		t.Fatalf("expected failedPartNumber 2, got %#v", uploadPayload)
+	}
+	if got := intTaskValue(uploadPayload["nextPartNumber"]); got != 2 {
+		t.Fatalf("expected nextPartNumber 2, got %#v", uploadPayload)
+	}
+	if running.Runtime.UploadCheckpoint == nil {
+		t.Fatalf("expected runtime upload checkpoint, got %#v", running.Runtime)
+	}
+	if got := running.Runtime.UploadCheckpoint.UploadID; got != "upload-fail-1" {
+		t.Fatalf("expected upload checkpoint uploadId upload-fail-1, got %#v", running.Runtime.UploadCheckpoint)
+	}
+	if got := running.Runtime.UploadCheckpoint.NextPartNumber; got != 2 {
+		t.Fatalf("expected upload checkpoint nextPartNumber 2, got %#v", running.Runtime.UploadCheckpoint)
+	}
+	if got := running.Runtime.UploadCheckpoint.FileID; got != "file-fail-1" {
+		t.Fatalf("expected upload checkpoint fileId file-fail-1, got %#v", running.Runtime.UploadCheckpoint)
+	}
+	if resumable, ok := running.Runtime.UploadCheckpoint.ProviderData["resumable"].(map[string]interface{}); !ok || stringValue(resumable["provider"]) != "S3" {
+		t.Fatalf("expected upload checkpoint providerData.resumable, got %#v", running.Runtime.UploadCheckpoint.ProviderData)
+	}
+	if len(running.Runtime.RetryQueue) != 1 {
+		t.Fatalf("expected one retry queue item, got %#v", running.Runtime.RetryQueue)
+	}
+	if running.Runtime.RetryQueue[0].UploadCheckpoint == nil {
+		t.Fatalf("expected retry queue upload checkpoint, got %#v", running.Runtime.RetryQueue[0])
+	}
+	if got := running.Runtime.RetryQueue[0].UploadCheckpoint.FailedPartNumber; got != 2 {
+		t.Fatalf("expected retry queue failedPartNumber 2, got %#v", running.Runtime.RetryQueue[0].UploadCheckpoint)
+	}
+	retried, ok, err := svc.Retry(ctx, detail.Task.ID)
+	if err != nil {
+		t.Fatalf("Retry() error = %v", err)
+	}
+	if !ok {
+		t.Fatal("expected retried task to exist")
+	}
+	if retried.Runtime.UploadCheckpoint == nil {
+		t.Fatalf("expected retried runtime upload checkpoint, got %#v", retried.Runtime)
+	}
+	if got := retried.Runtime.UploadCheckpoint.UploadID; got != "upload-fail-1" {
+		t.Fatalf("expected retried upload checkpoint uploadId upload-fail-1, got %#v", retried.Runtime.UploadCheckpoint)
+	}
+	checkpoints, ok := retried.Plan.Metadata["retryUploadCheckpoints"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("expected retryUploadCheckpoints metadata, got %#v", retried.Plan.Metadata["retryUploadCheckpoints"])
+	}
+	if _, ok := checkpoints["/a.bin"]; !ok {
+		t.Fatalf("expected retryUploadCheckpoints to include /a.bin, got %#v", checkpoints)
+	}
+	resumed, ok, err := svc.Run(ctx, retried.Task.ID)
+	if err != nil {
+		t.Fatalf("Run(retried) error = %v", err)
+	}
+	if !ok {
+		t.Fatal("expected retried run task to exist")
+	}
+	if got := resumed.Results[0].Mode; got != "fake_upload_resume" {
+		t.Fatalf("expected resumed upload mode fake_upload_resume, got %#v", resumed.Results)
+	}
+	resumePayload, ok := resumed.Results[0].Payload["upload"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("expected resumed upload payload, got %#v", resumed.Results[0].Payload["upload"])
+	}
+	if got, _ := resumePayload["fileId"].(string); got != "file-fail-1" {
+		t.Fatalf("expected resumed upload fileId file-fail-1, got %#v", resumePayload)
+	}
+	if resumeProviderData, ok := resumePayload["providerData"].(map[string]interface{}); !ok || resumeProviderData == nil {
+		t.Fatalf("expected resumed upload providerData, got %#v", resumePayload)
+	}
+}
+
 func TestServiceRuntimeHandlesPendingManualAuthExpiredRateLimitAndMissingLocalFile(t *testing.T) {
 	ctx := context.Background()
 	store, err := sqlitestore.New(ctx, filepath.Join(t.TempDir(), "runtime-errors.db"))
@@ -1078,6 +1259,230 @@ func TestServiceRecoverBlockedTasksRetriesEligibleCooldownQueue(t *testing.T) {
 	}
 	if uploadCalls != 2 {
 		t.Fatalf("expected 2 upload attempts total, got %d", uploadCalls)
+	}
+}
+
+func TestServiceRecoverBlockedTasksAutoResumesUploadCheckpointQueue(t *testing.T) {
+	ctx := context.Background()
+	store, err := sqlitestore.New(ctx, filepath.Join(t.TempDir(), "recover-upload-session.db"))
+	if err != nil {
+		t.Fatalf("new store: %v", err)
+	}
+	defer func() { _ = store.Close() }()
+
+	uploadCalls := 0
+	resumeCalls := 0
+	adapter := &scriptedAdapter{
+		meta: provider.Provider{
+			Key:              "recover_upload_session_target",
+			DisplayName:      "Recover Upload Session Target",
+			ProtocolGroup:    "fake",
+			AuthModes:        []string{"manual_token"},
+			FastUploadInputs: []string{"md5", "size"},
+			FallbackModes:    []string{"download_upload"},
+			Status:           "planned",
+		},
+		capability: provider.CapabilitySet{
+			SupportsAuthValidation: true,
+			SupportsUpload:         true,
+		},
+		uploadFunc: func(req provider.UploadRequest) provider.UploadResult {
+			uploadCalls++
+			if req.ResumeUpload != nil {
+				resumeCalls++
+				return provider.UploadResult{
+					OperationResult: provider.OperationResult{
+						OK:      true,
+						Status:  "ok",
+						Message: "resumed upload session",
+						Mode:    "fake_resume_ok",
+						Payload: map[string]interface{}{
+							"fileId":       req.ResumeUpload.FileID,
+							"uploadId":     req.ResumeUpload.UploadID,
+							"providerData": req.ResumeUpload.ProviderData,
+						},
+					},
+				}
+			}
+			return provider.UploadResult{
+				OperationResult: provider.OperationResult{
+					Status:  "provider_request_failed",
+					Message: "upload session interrupted",
+					Mode:    "fake_upload_failed",
+					Payload: map[string]interface{}{
+						"fileId":           "resume-file-1",
+						"uploadId":         "resume-upload-1",
+						"nextPartNumber":   3,
+						"failedPartNumber": 3,
+						"providerData": map[string]interface{}{
+							"resumable": map[string]interface{}{
+								"provider": "oss",
+								"key":      "resume-key",
+							},
+						},
+					},
+				},
+			}
+		},
+	}
+
+	registry := provider.NewRegistry(adapter)
+	authSvc := auth.NewService(store, registry)
+	svc := NewService(store, registry, authSvc)
+	profile, err := authSvc.CreateProfile(ctx, auth.CreateProfileInput{
+		ProviderKey: "recover_upload_session_target",
+		AuthMode:    "manual_token",
+		DisplayName: "recover upload session target",
+		Token:       "token-1",
+	})
+	if err != nil {
+		t.Fatalf("CreateProfile() error = %v", err)
+	}
+
+	localFile := filepath.Join(t.TempDir(), "resume-source.bin")
+	if err := os.WriteFile(localFile, []byte("resume"), 0o644); err != nil {
+		t.Fatalf("WriteFile() error = %v", err)
+	}
+
+	created, err := svc.Create(ctx, CreateRequest{
+		SourceProvider:  "guangya",
+		TargetProvider:  "recover_upload_session_target",
+		TargetProfileID: profile.ID,
+		ThresholdMB:     1,
+		Entries: []planner.SourceEntry{
+			{Path: "/resume.bin", Size: 1024, MD5: "abc", LocalPath: localFile},
+		},
+	})
+	if err != nil {
+		t.Fatalf("Create() error = %v", err)
+	}
+
+	firstRun, ok, err := svc.Run(ctx, created.Task.ID)
+	if err != nil || !ok {
+		t.Fatalf("Run() first error=%v ok=%v", err, ok)
+	}
+	if firstRun.Task.State != StateCompletedWithErrors {
+		t.Fatalf("expected completed_with_errors after first run, got %s", firstRun.Task.State)
+	}
+	if len(firstRun.Runtime.RetryQueue) != 1 {
+		t.Fatalf("expected retry queue len 1, got %#v", firstRun.Runtime.RetryQueue)
+	}
+	if firstRun.Runtime.RetryQueue[0].UploadCheckpoint == nil {
+		t.Fatalf("expected upload checkpoint in retry queue, got %#v", firstRun.Runtime.RetryQueue[0])
+	}
+
+	recovered, err := svc.RecoverBlockedTasks(ctx)
+	if err != nil {
+		t.Fatalf("RecoverBlockedTasks() error = %v", err)
+	}
+	if recovered != 1 {
+		t.Fatalf("expected recovered count 1, got %d", recovered)
+	}
+
+	finalDetail, ok, err := svc.Get(ctx, created.Task.ID)
+	if err != nil || !ok {
+		t.Fatalf("Get() final task error=%v ok=%v", err, ok)
+	}
+	if finalDetail.Task.State != StateCompleted {
+		t.Fatalf("expected completed after auto resume recovery, got %s", finalDetail.Task.State)
+	}
+	if len(finalDetail.Results) != 1 || finalDetail.Results[0].Mode != "fake_resume_ok" {
+		t.Fatalf("expected resumed result, got %#v", finalDetail.Results)
+	}
+	if uploadCalls != 2 {
+		t.Fatalf("expected 2 upload attempts total, got %d", uploadCalls)
+	}
+	if resumeCalls != 1 {
+		t.Fatalf("expected 1 resume upload call, got %d", resumeCalls)
+	}
+}
+
+func TestServiceRecoverBlockedTasksDoesNotAutoRetryGenericCompletedErrors(t *testing.T) {
+	ctx := context.Background()
+	store, err := sqlitestore.New(ctx, filepath.Join(t.TempDir(), "recover-generic-error.db"))
+	if err != nil {
+		t.Fatalf("new store: %v", err)
+	}
+	defer func() { _ = store.Close() }()
+
+	uploadCalls := 0
+	adapter := &scriptedAdapter{
+		meta: provider.Provider{
+			Key:              "recover_generic_error_target",
+			DisplayName:      "Recover Generic Error Target",
+			ProtocolGroup:    "fake",
+			AuthModes:        []string{"manual_token"},
+			FastUploadInputs: []string{"md5", "size"},
+			FallbackModes:    []string{"download_upload"},
+			Status:           "planned",
+		},
+		capability: provider.CapabilitySet{
+			SupportsAuthValidation: true,
+			SupportsUpload:         true,
+		},
+		uploadFunc: func(req provider.UploadRequest) provider.UploadResult {
+			uploadCalls++
+			return provider.UploadResult{
+				OperationResult: provider.OperationResult{
+					Status:  "remote_error",
+					Message: "generic retryable remote error",
+					Mode:    "fake_remote_error",
+				},
+			}
+		},
+	}
+
+	registry := provider.NewRegistry(adapter)
+	authSvc := auth.NewService(store, registry)
+	svc := NewService(store, registry, authSvc)
+	profile, err := authSvc.CreateProfile(ctx, auth.CreateProfileInput{
+		ProviderKey: "recover_generic_error_target",
+		AuthMode:    "manual_token",
+		DisplayName: "recover generic error target",
+		Token:       "token-1",
+	})
+	if err != nil {
+		t.Fatalf("CreateProfile() error = %v", err)
+	}
+
+	created, err := svc.Create(ctx, CreateRequest{
+		SourceProvider:  "guangya",
+		TargetProvider:  "recover_generic_error_target",
+		TargetProfileID: profile.ID,
+		ThresholdMB:     1,
+		Entries: []planner.SourceEntry{
+			{Path: "/generic.bin", Size: 1024, MD5: "abc"},
+		},
+	})
+	if err != nil {
+		t.Fatalf("Create() error = %v", err)
+	}
+
+	firstRun, ok, err := svc.Run(ctx, created.Task.ID)
+	if err != nil || !ok {
+		t.Fatalf("Run() first error=%v ok=%v", err, ok)
+	}
+	if firstRun.Task.State != StateCompletedWithErrors {
+		t.Fatalf("expected completed_with_errors after first run, got %s", firstRun.Task.State)
+	}
+
+	recovered, err := svc.RecoverBlockedTasks(ctx)
+	if err != nil {
+		t.Fatalf("RecoverBlockedTasks() error = %v", err)
+	}
+	if recovered != 0 {
+		t.Fatalf("expected recovered count 0, got %d", recovered)
+	}
+
+	after, ok, err := svc.Get(ctx, created.Task.ID)
+	if err != nil || !ok {
+		t.Fatalf("Get() final task error=%v ok=%v", err, ok)
+	}
+	if after.Task.State != StateCompletedWithErrors {
+		t.Fatalf("expected task to remain completed_with_errors, got %s", after.Task.State)
+	}
+	if uploadCalls != 1 {
+		t.Fatalf("expected no extra upload attempts, got %d", uploadCalls)
 	}
 }
 
@@ -2095,6 +2500,23 @@ func assertExecutionModeValue(t *testing.T, raw interface{}, want planner.Execut
 		}
 	default:
 		t.Fatalf("expected execution mode %s, got %#v", want, raw)
+	}
+}
+
+func intTaskValue(raw interface{}) int {
+	switch value := raw.(type) {
+	case int:
+		return value
+	case int32:
+		return int(value)
+	case int64:
+		return int(value)
+	case float32:
+		return int(value)
+	case float64:
+		return int(value)
+	default:
+		return 0
 	}
 }
 

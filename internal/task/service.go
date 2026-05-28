@@ -185,6 +185,7 @@ func (s *Service) Run(ctx context.Context, id string) (Detail, bool, error) {
 	syncRuntimeRiskEvidence(&detail.Runtime, detail.Plan.Metadata, results)
 	syncRuntimePendingTree(&detail.Runtime, detail.Plan.Metadata, results)
 	syncRuntimeRetryQueue(&detail.Runtime, detail.Plan.Metadata, results)
+	syncRuntimeUploadCheckpoint(&detail.Runtime, results)
 	applyRetryQueueSummary(&detail.Runtime, detail.Plan.Metadata)
 
 	for i := startIndex; i < len(detail.Plan.Items); i++ {
@@ -219,6 +220,7 @@ func (s *Service) Run(ctx context.Context, id string) (Detail, bool, error) {
 			syncRuntimeRiskEvidence(&detail.Runtime, detail.Plan.Metadata, results)
 			syncRuntimePendingTree(&detail.Runtime, detail.Plan.Metadata, results)
 			syncRuntimeRetryQueue(&detail.Runtime, detail.Plan.Metadata, results)
+			syncRuntimeUploadCheckpoint(&detail.Runtime, results)
 			applyRetryQueueSummary(&detail.Runtime, detail.Plan.Metadata)
 			detail.Results = results
 			updateRuntimeAfterItem(&detail, item.Path, result)
@@ -249,6 +251,7 @@ func (s *Service) Run(ctx context.Context, id string) (Detail, bool, error) {
 			MD5:            lookupMD5(detail.SourceEntries, item.Path),
 			SHA1:           lookupSHA1(detail.SourceEntries, item.Path),
 			GCID:           lookupGCID(detail.SourceEntries, item.Path),
+			ResumeUpload:   resumeUploadForPath(detail.Plan.Metadata, item.Path),
 		}
 		upload, fallbackUsed, fastCheckPayload := s.executeUpload(entry, uploadReq)
 		result.Mode = upload.Mode
@@ -294,6 +297,7 @@ func (s *Service) Run(ctx context.Context, id string) (Detail, bool, error) {
 		syncRuntimeRiskEvidence(&detail.Runtime, detail.Plan.Metadata, results)
 		syncRuntimePendingTree(&detail.Runtime, detail.Plan.Metadata, results)
 		syncRuntimeRetryQueue(&detail.Runtime, detail.Plan.Metadata, results)
+		syncRuntimeUploadCheckpoint(&detail.Runtime, results)
 		applyRetryQueueSummary(&detail.Runtime, detail.Plan.Metadata)
 		detail.Results = results
 		updateRuntimeAfterItem(&detail, item.Path, result)
@@ -554,6 +558,7 @@ func inferUploadName(path string) string {
 func (s *Service) buildRetryDetail(detail Detail) (Detail, error) {
 	previousState := detail.Task.State
 	syncRuntimeRetryQueue(&detail.Runtime, detail.Plan.Metadata, detail.Results)
+	syncRuntimeUploadCheckpoint(&detail.Runtime, detail.Results)
 	detail.Task.State = StateReady
 	detail.Task.CompletionKind = ""
 	detail.Task.UpdatedAt = time.Now().UTC().Format(time.RFC3339)
@@ -572,6 +577,7 @@ func (s *Service) buildRetryDetail(detail Detail) (Detail, error) {
 		selectedRoots := retrySelectedRoots(metadataStringSlice(detail.Plan.Metadata, "selectedRoots"), retryPaths)
 		riskProfile := riskProfileFromMetadata(detail.Plan.Metadata)
 		retryAttempts := incrementRetryAttempts(detail.Plan.Metadata, retryPaths)
+		retryUploadCheckpoints := buildRetryUploadCheckpointMetadata(detail.Runtime.RetryQueue, retryPaths)
 		plan, err := planner.BuildPreview(s.registry, planner.PreviewRequest{
 			SourceProvider: detail.Task.SourceProvider,
 			TargetProvider: detail.Task.TargetProvider,
@@ -598,6 +604,9 @@ func (s *Service) buildRetryDetail(detail Detail) (Detail, error) {
 		plan.Metadata["retrySourceResultCount"] = len(detail.Results)
 		plan.Metadata["retrySourceTaskState"] = string(previousState)
 		plan.Metadata["retryAttempts"] = retryAttempts
+		if len(retryUploadCheckpoints) > 0 {
+			plan.Metadata["retryUploadCheckpoints"] = retryUploadCheckpoints
+		}
 		delete(plan.Metadata, "retrySummary")
 		detail.Plan = plan
 		detail.SourceEntries = retryEntries
@@ -608,9 +617,13 @@ func (s *Service) buildRetryDetail(detail Detail) (Detail, error) {
 		delete(detail.Plan.Metadata, "retrySourceResultCount")
 		delete(detail.Plan.Metadata, "retrySourceTaskState")
 		delete(detail.Plan.Metadata, "retryAttempts")
+		delete(detail.Plan.Metadata, "retryUploadCheckpoints")
 		delete(detail.Plan.Metadata, "retrySummary")
 	}
 	detail.Runtime = initializeRuntimeState(detail.Plan)
+	if checkpoint := firstRetryUploadCheckpoint(detail.Plan.Metadata, retryPaths); checkpoint != nil {
+		detail.Runtime.UploadCheckpoint = checkpoint
+	}
 	detail.Results = []Result{}
 	return detail, nil
 }
@@ -630,12 +643,12 @@ func (s *Service) RecoverBlockedTasks(ctx context.Context) (int, error) {
 	}
 	recovered := 0
 	for _, detail := range items {
-		if detail.Task.State != StateBlocked {
+		if detail.Task.State != StateBlocked && detail.Task.State != StateCompletedWithErrors {
 			continue
 		}
 		syncRuntimeRetryQueue(&detail.Runtime, detail.Plan.Metadata, detail.Results)
 		applyRetryQueueSummary(&detail.Runtime, detail.Plan.Metadata)
-		if !runtimeCanAutoRetry(detail.Runtime) {
+		if !taskCanAutoRecover(detail) {
 			continue
 		}
 		retried, err := s.buildRetryDetail(detail)
@@ -1304,6 +1317,7 @@ func syncRuntimeCountsFromResults(runtime *RuntimeState, results []Result) {
 	runtime.RiskHits = nil
 	runtime.PendingTree = nil
 	runtime.RetryQueue = nil
+	runtime.UploadCheckpoint = nil
 	runtime.RetryableCount = 0
 	runtime.BlockedRetryCount = 0
 	lastCompleted := ""
@@ -1943,6 +1957,21 @@ func applyRetryQueueSummary(runtime *RuntimeState, metadata map[string]interface
 	}
 }
 
+func syncRuntimeUploadCheckpoint(runtime *RuntimeState, results []Result) {
+	if runtime == nil {
+		return
+	}
+	runtime.UploadCheckpoint = nil
+	for idx := len(results) - 1; idx >= 0; idx-- {
+		checkpoint := uploadCheckpointFromResult(results[idx])
+		if checkpoint == nil {
+			continue
+		}
+		runtime.UploadCheckpoint = checkpoint
+		return
+	}
+}
+
 func blockedGuidance(reason string) (string, string) {
 	switch reason {
 	case "retry_queue_retry_limit_exhausted":
@@ -2063,6 +2092,41 @@ func runtimeCanAutoRetry(runtime RuntimeState) bool {
 	return summary.CanAutoRetry
 }
 
+func taskCanAutoRecover(detail Detail) bool {
+	switch detail.Task.State {
+	case StateBlocked:
+		return runtimeCanAutoRetry(detail.Runtime)
+	case StateCompletedWithErrors:
+		summary := summarizeRetryQueue(detail.Runtime.RetryQueue)
+		if summary.ShouldBlock {
+			return false
+		}
+		return retryQueueCanAutoResumeUploads(detail.Runtime.RetryQueue)
+	default:
+		return false
+	}
+}
+
+func retryQueueCanAutoResumeUploads(queue []RetryQueueItem) bool {
+	if len(queue) == 0 {
+		return false
+	}
+	hasRetryable := false
+	for _, item := range queue {
+		if !item.Retryable || item.Blocked || item.Exhausted {
+			return false
+		}
+		if item.RetryClass == "pending_manual" || item.RetryClass == "auth_expired" || item.RetryClass == "local_file_missing" {
+			return false
+		}
+		if !uploadCheckpointCanResume(item.UploadCheckpoint) {
+			return false
+		}
+		hasRetryable = true
+	}
+	return hasRetryable
+}
+
 func buildRetryQueue(metadata map[string]interface{}, results []Result) []RetryQueueItem {
 	if len(results) == 0 {
 		return nil
@@ -2083,13 +2147,14 @@ func buildRetryQueue(metadata map[string]interface{}, results []Result) []RetryQ
 		}
 		status := stringValue(result.Payload["providerStatus"])
 		item := RetryQueueItem{
-			Path:           path,
-			RootPath:       matchRootPath(path, selectedRoots),
-			ProviderStatus: status,
-			Strategy:       stringValue(result.Payload["strategy"]),
-			Reason:         firstNonEmpty(stringValue(result.Payload["syncDecisionReason"]), result.Message),
-			AttemptCount:   retryAttempts[path],
-			RetryLimit:     retryLimit,
+			Path:             path,
+			RootPath:         matchRootPath(path, selectedRoots),
+			ProviderStatus:   status,
+			Strategy:         stringValue(result.Payload["strategy"]),
+			Reason:           firstNonEmpty(stringValue(result.Payload["syncDecisionReason"]), result.Message),
+			AttemptCount:     retryAttempts[path],
+			RetryLimit:       retryLimit,
+			UploadCheckpoint: uploadCheckpointFromResult(result),
 		}
 		if retryLimit > 0 {
 			item.RemainingCount = maxInt(0, retryLimit-item.AttemptCount)
@@ -2366,8 +2431,215 @@ func buildProviderProbe(detail Detail, profile provider.AuthProfile, results []R
 			"currentRoot":                    detail.Runtime.CurrentRoot,
 			"currentDirectory":               detail.Runtime.CurrentDirectory,
 			"lastCompletedPath":              detail.Runtime.LastCompletedPath,
+			"uploadCheckpoint":               detail.Runtime.UploadCheckpoint,
 			"targetProfileId":                detail.TargetProfileID,
 		},
 		CreatedAt: createdAt,
+	}
+}
+
+func uploadCheckpointFromResult(result Result) *UploadCheckpoint {
+	if result.Status != "failed" {
+		return nil
+	}
+	uploadPayload, ok := result.Payload["upload"].(map[string]interface{})
+	if !ok || len(uploadPayload) == 0 {
+		return nil
+	}
+	uploadID := firstNonEmpty(stringValue(uploadPayload["uploadId"]), stringValue(uploadPayload["upload_id"]))
+	partCount := intNumber(uploadPayload["partCount"])
+	uploadedPartCount := intNumber(uploadPayload["uploadedPartCount"])
+	failedPartNumber := intNumber(uploadPayload["failedPartNumber"])
+	nextPartNumber := intNumber(uploadPayload["nextPartNumber"])
+	uploadedParts := uploadCheckpointParts(uploadPayload["uploadedParts"])
+	providerData := uploadCheckpointProviderData(uploadPayload["providerData"])
+	if len(providerData) == 0 {
+		if resumable, ok := uploadPayload["resumable"].(map[string]interface{}); ok && len(resumable) > 0 {
+			providerData = map[string]interface{}{
+				"resumable": copyPayloadMap(resumable),
+			}
+		}
+	}
+	if uploadID == "" && partCount == 0 && uploadedPartCount == 0 && failedPartNumber == 0 && nextPartNumber == 0 && len(uploadedParts) == 0 && len(providerData) == 0 {
+		return nil
+	}
+	return &UploadCheckpoint{
+		ItemPath:          stringValue(result.Payload["path"]),
+		ProviderStatus:    stringValue(result.Payload["providerStatus"]),
+		FileID:            firstNonEmpty(stringValue(uploadPayload["fileId"]), stringValue(uploadPayload["file_id"])),
+		UploadID:          uploadID,
+		PartCount:         partCount,
+		UploadedPartCount: uploadedPartCount,
+		FailedPartNumber:  failedPartNumber,
+		NextPartNumber:    nextPartNumber,
+		UploadedParts:     uploadedParts,
+		ProviderData:      providerData,
+		UpdatedAt:         result.CreatedAt,
+	}
+}
+
+func uploadCheckpointCanResume(checkpoint *UploadCheckpoint) bool {
+	if checkpoint == nil {
+		return false
+	}
+	return checkpoint.FileID != "" ||
+		checkpoint.UploadID != "" ||
+		checkpoint.PartCount > 0 ||
+		checkpoint.UploadedPartCount > 0 ||
+		checkpoint.FailedPartNumber > 0 ||
+		checkpoint.NextPartNumber > 0 ||
+		len(checkpoint.UploadedParts) > 0 ||
+		len(checkpoint.ProviderData) > 0
+}
+
+func uploadCheckpointParts(raw interface{}) []map[string]interface{} {
+	switch typed := raw.(type) {
+	case []map[string]interface{}:
+		out := make([]map[string]interface{}, 0, len(typed))
+		for _, item := range typed {
+			out = append(out, copyPayloadMap(item))
+		}
+		return out
+	case []interface{}:
+		out := make([]map[string]interface{}, 0, len(typed))
+		for _, item := range typed {
+			part, ok := item.(map[string]interface{})
+			if !ok {
+				continue
+			}
+			out = append(out, copyPayloadMap(part))
+		}
+		return out
+	default:
+		return nil
+	}
+}
+
+func uploadCheckpointProviderData(raw interface{}) map[string]interface{} {
+	typed, ok := raw.(map[string]interface{})
+	if !ok || len(typed) == 0 {
+		return nil
+	}
+	out := make(map[string]interface{}, len(typed))
+	for key, value := range typed {
+		if nested, ok := value.(map[string]interface{}); ok {
+			out[key] = copyPayloadMap(nested)
+			continue
+		}
+		out[key] = value
+	}
+	return out
+}
+
+func buildRetryUploadCheckpointMetadata(queue []RetryQueueItem, retryPaths []string) map[string]interface{} {
+	if len(queue) == 0 || len(retryPaths) == 0 {
+		return nil
+	}
+	allowed := make(map[string]bool, len(retryPaths))
+	for _, path := range retryPaths {
+		allowed[normalizeScanPath(path)] = true
+	}
+	items := make(map[string]interface{})
+	for _, item := range queue {
+		if item.UploadCheckpoint == nil {
+			continue
+		}
+		path := normalizeScanPath(item.Path)
+		if !allowed[path] {
+			continue
+		}
+		items[path] = uploadCheckpointToMap(item.UploadCheckpoint)
+	}
+	if len(items) == 0 {
+		return nil
+	}
+	return items
+}
+
+func firstRetryUploadCheckpoint(metadata map[string]interface{}, retryPaths []string) *UploadCheckpoint {
+	if len(retryPaths) == 0 || metadata == nil {
+		return nil
+	}
+	raw, ok := metadata["retryUploadCheckpoints"]
+	if !ok || raw == nil {
+		return nil
+	}
+	items, ok := raw.(map[string]interface{})
+	if !ok {
+		return nil
+	}
+	for _, path := range retryPaths {
+		checkpoint := uploadCheckpointFromMetadata(items[normalizeScanPath(path)])
+		if checkpoint != nil {
+			return checkpoint
+		}
+	}
+	return nil
+}
+
+func uploadCheckpointToMap(checkpoint *UploadCheckpoint) map[string]interface{} {
+	if checkpoint == nil {
+		return nil
+	}
+	out := map[string]interface{}{
+		"itemPath":          checkpoint.ItemPath,
+		"providerStatus":    checkpoint.ProviderStatus,
+		"fileId":            checkpoint.FileID,
+		"uploadId":          checkpoint.UploadID,
+		"partCount":         checkpoint.PartCount,
+		"uploadedPartCount": checkpoint.UploadedPartCount,
+		"failedPartNumber":  checkpoint.FailedPartNumber,
+		"nextPartNumber":    checkpoint.NextPartNumber,
+		"updatedAt":         checkpoint.UpdatedAt,
+	}
+	if len(checkpoint.UploadedParts) > 0 {
+		out["uploadedParts"] = uploadCheckpointParts(checkpoint.UploadedParts)
+	}
+	if len(checkpoint.ProviderData) > 0 {
+		out["providerData"] = uploadCheckpointProviderData(checkpoint.ProviderData)
+	}
+	return out
+}
+
+func uploadCheckpointFromMetadata(raw interface{}) *UploadCheckpoint {
+	switch typed := raw.(type) {
+	case *UploadCheckpoint:
+		return typed
+	case UploadCheckpoint:
+		checkpoint := typed
+		return &checkpoint
+	case map[string]interface{}:
+		return &UploadCheckpoint{
+			ItemPath:          stringValue(typed["itemPath"]),
+			ProviderStatus:    stringValue(typed["providerStatus"]),
+			FileID:            stringValue(typed["fileId"]),
+			UploadID:          stringValue(typed["uploadId"]),
+			PartCount:         intNumber(typed["partCount"]),
+			UploadedPartCount: intNumber(typed["uploadedPartCount"]),
+			FailedPartNumber:  intNumber(typed["failedPartNumber"]),
+			NextPartNumber:    intNumber(typed["nextPartNumber"]),
+			UploadedParts:     uploadCheckpointParts(typed["uploadedParts"]),
+			ProviderData:      uploadCheckpointProviderData(typed["providerData"]),
+			UpdatedAt:         stringValue(typed["updatedAt"]),
+		}
+	default:
+		return nil
+	}
+}
+
+func resumeUploadForPath(metadata map[string]interface{}, path string) *provider.ResumeUpload {
+	checkpoint := firstRetryUploadCheckpoint(metadata, []string{path})
+	if checkpoint == nil {
+		return nil
+	}
+	return &provider.ResumeUpload{
+		FileID:            checkpoint.FileID,
+		UploadID:          checkpoint.UploadID,
+		PartCount:         checkpoint.PartCount,
+		UploadedPartCount: checkpoint.UploadedPartCount,
+		FailedPartNumber:  checkpoint.FailedPartNumber,
+		NextPartNumber:    checkpoint.NextPartNumber,
+		UploadedParts:     uploadCheckpointParts(checkpoint.UploadedParts),
+		ProviderData:      uploadCheckpointProviderData(checkpoint.ProviderData),
 	}
 }

@@ -21,13 +21,17 @@
   - 提供 auth / planner / task / runtime evidence 主链路
   - 提供一个轻量控制台用于联调和演示
 - 当前产品语义是“多 provider 互传”，不是“固定源到固定目标”的定向工具。
-- 当前仓库已经不是“只有骨架”，而是已经具备完整主流程闭环；但 provider 真实联网实现仍以协议占位和行为模拟为主。
+- 当前仓库已经不是“只有骨架”，而是已经具备完整主流程闭环；provider 真实联网实现已从 `aliyundrive_open` 扩展到 `123_open / xunlei / pikpak / baidu_netdisk / 115_open / quark / uc / 189cloud / guangya`，剩余缺口主要集中在更多真实样本验收、断点恢复深化和后台执行策略补齐。
 
 ## 当前一句话状态
 
 - 当前已经完成“统一内核 + 控制台 + 测试回归”的主体建设。
 - 当前开发重心已经从“搭框架”切换到“逐家 provider 落真实链路”。
 - 同时也要补回原始项目中不可丢失的两类通用能力：执行模型与风控策略。
+- 当前 task runtime 已具备第一版后台自动恢复：
+  - 冷却到期的 `blocked` 任务可自动重建并继续执行
+  - `completed_with_errors` 中“全队列均带 upload checkpoint / providerData 的 upload-session 恢复型失败”可自动补跑
+  - 普通 `remote_error` 之类的泛化失败不会被后台盲目自动重试
 
 ## 先用业务语言理解当前规则
 
@@ -88,7 +92,7 @@
   - `123_open`
 - 当前状态：
   - 协议族和能力面已经统一
-  - 各 provider 具备可执行占位行为，能参与 API、planner、task、evidence 全链路
+  - 各 provider 已能参与 API、planner、task、evidence 全链路
   - `aliyundrive_open` 已接入真实 `ValidateAuth`，并已落地最小目录链路：
     - `List`
     - `Metadata`
@@ -96,7 +100,57 @@
     - `FastUploadCheck`
     - `Upload`
     - 多分片 `Upload`
-  - 真实外部平台 SDK / HTTP 联网细节仍未全面接入
+  - `123_open` 已接入真实 `ValidateAuth / List / Metadata / CreateDir / FastUploadCheck / Upload`
+    - 当前为单分片上传主链路
+    - `overwrite_existing` 会诚实降级为 `auto_rename_new`
+    - 上传完成后会优先按 `fileId` 校验，再回退到父目录按名称确认
+  - `xunlei` 已接入真实 `ValidateAuth / List / Metadata / CreateDir / FastUploadCheck`
+    - `Upload` 已接入真实建上传请求与校验主链路
+    - hash 命中时可直接完成 rapid 路径
+    - hash miss 后会继续走内置 `resumable` 二进制 fallback
+    - 失败重试时已可复用既有 `resumable` 会话继续上传，避免重复 create upload
+    - 当前默认构建已内置 S3-compatible SigV4 PUT 上传能力
+  - `pikpak` 已接入真实 `ValidateAuth / List / Metadata / CreateDir / FastUploadCheck`
+    - `Upload` 已接入真实建上传请求与校验主链路
+    - hash 命中时可直接完成 rapid 路径
+    - hash miss 后会继续走内置 `resumable` 二进制 fallback
+    - 失败重试时已可复用既有 `resumable` 会话继续上传，避免重复 create upload
+    - 当前默认构建已内置 S3-compatible SigV4 PUT 上传能力
+  - `quark` 与 `uc` 已接入真实 `ValidateAuth / List / Metadata / CreateDir / FastUploadCheck / Upload`
+    - 当前真实链路基于 share token + share detail + download info + drive create folder
+    - `Upload` 已接入真实 `upload/pre -> update/hash -> upload/finish` 主链
+    - hash 命中时可直接完成 provider 侧快传确认
+    - hash miss 时会继续走 `upload/auth + OSS multipart + upload/finish` 二进制 fallback
+    - multipart fallback 失败时会回填 `uploadId / uploadedParts / failedPartNumber / nextPartNumber / providerData`
+    - 失败重试时已可基于 `providerData` 恢复 upload session，并从失败分片继续 OSS multipart 上传
+    - 同名冲突当前会诚实降级为 `auto_rename_new`
+  - `baidu_netdisk` 已接入真实 `ValidateAuth / List / Metadata / CreateDir / FastUploadCheck / Upload`
+    - 当前真实上传链路为 `precreate -> superfile2 tmpfile -> create -> verify`
+    - `overwrite_existing` 会诚实降级为 `auto_rename_new`
+    - 上传完成后优先按 `fileId` 校验，再回退到父目录按路径确认
+  - `115_open` 已接入真实 `ValidateAuth / List / Metadata / CreateDir / FastUploadCheck`
+    - `Upload` 已接入真实 `upload/init` 主链路、`sign_check` follow-up、`get_token` 上传会话获取与 OSS binary fallback
+    - hash 命中时可直接完成 rapid 路径并校验
+    - hash miss 后当前默认构建已可继续走 OSS 单对象 PUT 上传并做上传后校验
+    - 失败重试时已可复用既有 OSS upload session，避免重复跑 `upload/init + get_token`
+    - 当前已不再停留在“只暴露会话但不上传”的失败态
+  - `189cloud` 已接入真实 `ValidateAuth / List / Metadata / CreateDir / FastUploadCheck / Upload`
+    - 当前读链路基于 `shareCode / accessCode` 的 share API
+    - `CreateDir` 已接入账号级 `AccessToken / Signature / Date` 写鉴权路径
+    - `Upload` 已接入真实 `getSessionForPC -> createUploadFile -> fileUploadUrl PUT -> getUploadFileStatus -> fileCommitUrl` 主链
+    - hash 命中时可直接走 provider 侧复用并由 commit XML 确认
+    - hash miss 时会继续走 binary PUT fallback，并由状态轮询与 commit XML 回包做校验
+    - 失败重试时已可复用既有 `uploadFileId + fileUploadUrl + fileCommitUrl`，避免重复 `createUploadFile`
+  - `guangya` 已接入真实 `ValidateAuth / List / Metadata / CreateDir / FastUploadCheck`
+    - 当前目录链路基于 Guangya live HTTP API
+    - `FastUploadCheck` 已接入真实库存预检与 GCID follow-up / 任务清理
+    - `Upload` 已接入真实上传主链：
+      - `fast_upload` 命中时可在 Go 内完成 provider-side 确认与上传后校验
+      - 小文件已接入 `upload_token + md5 + upload_info`
+      - 大文件已接入 `upload_token + GCID flash-check + OSS multipart + upload_info`
+      - 大文件 fallback 失败后已可携带 `uploadId + uploadedParts + failedPartNumber + nextPartNumber` 做分片续传
+      - 上传后优先按 `fileId` 校验，再回退到父目录按文件名确认
+      - 同名冲突当前会诚实降级为 `auto_rename_new`
 
 ### 2.1 Provider 辅助调试接口
 
@@ -177,8 +231,10 @@
     - `fastCheck`
     - `fallbackUsed`
     - `fallbackFrom`
+    - `uploadCheckpoint`
   - 但原始项目要求的这些通用能力还未完整落地：
     - 更完整的后台补传调度与队列策略
+    - upload-session 恢复之外的更完整后台自动重试编排
     - 真正异步 worker 下的运行中暂停 / 恢复
   - 这部分已经明确纳入 Go 版后续主线，不再视为可选增强
 
@@ -234,9 +290,21 @@
   - 任务运行结果透传执行模式、推荐模式、扫描方式、风险档位等元数据
   - task result 中透传 provider 上传证据：
     - `upload`
+    - `fileId`
     - `uploadId`
     - `partCount`
     - `rapidUpload`
+    - `uploadedParts`
+    - `failedPartNumber`
+    - `nextPartNumber`
+  - runtime / retry queue / provider probe / provider status 中已挂接上传恢复检查点：
+    - `uploadCheckpoint.itemPath`
+    - `uploadCheckpoint.uploadId`
+    - `uploadCheckpoint.uploadedPartCount`
+    - `uploadCheckpoint.failedPartNumber`
+    - `uploadCheckpoint.nextPartNumber`
+    - `uploadCheckpoint.uploadedParts`
+    - `uploadCheckpoint.providerData`
   - task payload 中持久化 runtime / directory states / resume checkpoint
 - 已覆盖的关键运行场景：
   - `fast_upload`
@@ -258,12 +326,16 @@
     - `probe_only`
   - 当前已支持把 `pending_manual` 类结果聚合成待补传树，并回写到 runtime / probe / provider status
   - 当前已支持在 `Retry` 时自动缩小到待补传子集，并按新 plan 继续执行
+  - 当前 `Retry` 新任务已保留 `retryUploadCheckpoints` 元数据，并把首个恢复检查点带回 runtime 视图
+  - 当前 `Retry` 运行时已会把恢复检查点继续传给 provider upload request，供真实 provider 复用 `uploadId / fileId / nextPartNumber`
   - 当前已支持把失败结果分类成重试队列，并区分：
     - `pending_manual`
     - `rate_limited`
     - `auth_expired`
     - `local_file_missing`
     - `retry_limit_exhausted`
+  - 当前重试队列项已可直接携带上传恢复线索，便于后续补传和排查时不用重新翻 task result 原始 payload
+  - `aliyundrive_open` 当前已接入 `POST /v2/file/get_upload_url`，可基于已有 `uploadId` 刷新剩余分片上传地址并继续上传
   - 当前 `rate_limited` 会按冷却时间阻断过早重试
   - 当前任务在“只有冷却 / 人工确认 / 授权失效 / 本地文件缺失”时会进入 `blocked`
   - 当前 runtime / probe / status 已回写 `blockedReason` 与 `nextRetryAt`
@@ -407,7 +479,7 @@
 - 如果按“10 家 provider 是否都已经真实联网可用”来判断：
   - 还没有完成
 - 如果按“是否已经进入真实联调阶段”来判断：
-  - 已经进入，而且 `aliyundrive_open` 是当前优先推进样本
+  - 已经进入，而且 `aliyundrive_open / 123_open / xunlei / pikpak / baidu_netdisk / 115_open / quark / uc / guangya` 都已经进入真实链路样本阶段
 - 如果按“原始项目里的执行模型和风控策略有没有完整继承”来判断：
   - 还没有完全继承，但执行模式、任务级风险覆盖和风控命中证据已经接入主链路
 - 如果按“叶子目录优先是不是已经从单纯排序升级为按需扫描骨架”来判断：

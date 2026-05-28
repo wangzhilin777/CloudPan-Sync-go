@@ -255,7 +255,7 @@ function filterRetryQueue(items, filters = {}) {
   const filterActive = Boolean(query || retryClass || retryState);
   const visible = queue.filter((item) => {
     const matchesQuery = includesFilterText(
-      [item.path, item.rootPath, item.reason, item.providerStatus, item.retryAction, item.strategy],
+      [item.path, item.rootPath, item.reason, item.providerStatus, item.retryAction, item.strategy, item.uploadCheckpoint?.uploadId],
       query,
     );
     const matchesClass = includesFilterText([item.retryClass], retryClass);
@@ -327,6 +327,7 @@ function renderRetryQueue(items, filters = {}) {
           ${item.eligibleAt ? `<div class="muted">eligibleAt: <code>${escapeHTML(item.eligibleAt)}</code></div>` : ""}
           ${item.rootPath ? `<div class="muted">root: <code>${escapeHTML(item.rootPath)}</code></div>` : ""}
           ${item.reason ? `<div class="muted">reason: <code>${escapeHTML(item.reason)}</code></div>` : ""}
+          ${item.uploadCheckpoint ? `<div class="muted">checkpoint: upload ${escapeHTML(stringifyValue(item.uploadCheckpoint.uploadId, "-"))} / next part ${escapeHTML(stringifyValue(item.uploadCheckpoint.nextPartNumber, "-"))} / uploaded ${escapeHTML(stringifyValue(item.uploadCheckpoint.uploadedPartCount, "0"))}</div>` : ""}
           <div class="actions compact">
             <button
               type="button"
@@ -410,6 +411,46 @@ function renderRuntimeCheckpoint(runtime) {
     <div class="insight-card checkpoint-card">
       <strong>下次自动补传</strong>
       <span>${stringifyValue(runtime.nextRetryAt, "-")}</span>
+    </div>
+    ${renderUploadCheckpoint(runtime.uploadCheckpoint)}
+  `;
+}
+
+function renderUploadCheckpoint(checkpoint) {
+  if (!checkpoint || typeof checkpoint !== "object") {
+    return "";
+  }
+  const uploadedPartCount = stringifyValue(checkpoint.uploadedPartCount, "0");
+  const partCount = stringifyValue(checkpoint.partCount, "0");
+  const uploadedPartsLen = Array.isArray(checkpoint.uploadedParts) ? checkpoint.uploadedParts.length : 0;
+  return `
+    <div class="insight-card checkpoint-card">
+      <strong>上传恢复文件</strong>
+      <span><code>${escapeHTML(stringifyValue(checkpoint.itemPath, "-"))}</code></span>
+    </div>
+    <div class="insight-card checkpoint-card">
+      <strong>上传会话</strong>
+      <span>${stringifyValue(checkpoint.uploadId, "-")}</span>
+    </div>
+    <div class="insight-card checkpoint-card">
+      <strong>上传分片进度</strong>
+      <span>${uploadedPartCount} / ${partCount}，证据 ${uploadedPartsLen} 段</span>
+    </div>
+    <div class="insight-card checkpoint-card">
+      <strong>失败分片</strong>
+      <span>${stringifyValue(checkpoint.failedPartNumber, "-")}</span>
+    </div>
+    <div class="insight-card checkpoint-card">
+      <strong>下一个分片</strong>
+      <span>${stringifyValue(checkpoint.nextPartNumber, "-")}</span>
+    </div>
+    <div class="insight-card checkpoint-card">
+      <strong>上传状态</strong>
+      <span>${stringifyValue(checkpoint.providerStatus, "-")}</span>
+    </div>
+    <div class="insight-card checkpoint-card">
+      <strong>检查点时间</strong>
+      <span>${stringifyValue(checkpoint.updatedAt, "-")}</span>
     </div>
   `;
 }

@@ -21,6 +21,13 @@ func TestPan115FamilyAdapterRequiresTokenOrCookie(t *testing.T) {
 }
 
 func TestPan115FamilyAdapterSupportsFastUploadCandidate(t *testing.T) {
+	server, _ := newPan115FamilyTestServer(t)
+	t.Cleanup(server.Close)
+
+	originalClient := providerHTTPClient
+	providerHTTPClient = server.Client()
+	t.Cleanup(func() { providerHTTPClient = originalClient })
+
 	registry := NewRegistry(DefaultCatalog()...)
 	entry, ok := registry.Get("115_open")
 	if !ok {
@@ -29,7 +36,14 @@ func TestPan115FamilyAdapterSupportsFastUploadCandidate(t *testing.T) {
 	check := entry.Adapter.FastUploadCheck(FastUploadCheckRequest{
 		Profile: AuthProfile{
 			ProviderKey: "115_open",
-			Cookie:      "UID=1; CID=2",
+			Cookie:      "cookie-live",
+			Extra: map[string]string{
+				"listEndpoint":           server.URL + "/files",
+				"infoEndpoint":           server.URL + "/files/get_info",
+				"mkdirEndpoint":          server.URL + "/files/add",
+				"uploadInitEndpoint":     server.URL + "/open/upload/init",
+				"uploadGetTokenEndpoint": server.URL + "/open/upload/get_token",
+			},
 		},
 		Path: "/a.bin",
 		Name: "a.bin",

@@ -86,13 +86,14 @@
   - `123_open`
 - 当前认证特点：
   - 依赖 `token`
+  - `123_open` 额外允许从 `extra.authorization` 读取 `Bearer` 头
   - `aliyundrive_open` 还要求：
     - `extra.domainId`
     - `extra.driveId`
     - 支持通过 `extra.apiEndpoint` 覆盖真实校验目标地址，便于本地 mock 或联调
 - 当前快传指纹：
-  - `sha1`
-  - `size`
+  - `aliyundrive_open`: `sha1 + size`
+  - `123_open`: `md5 + size`
 - 当前落地进度：
   - `aliyundrive_open` 的 `ValidateAuth` 已走真实远程校验
   - 当前最小目录与上传链路已接通：
@@ -109,7 +110,18 @@
     - `POST /adrive/v1.0/openFile/get`
     - `POST /adrive/v1.0/openFile/create`
     - `POST /v2/file/complete`
-  - `123_open` 当前仍保留占位校验语义
+  - `123_open` 已接入真实最小主链路：
+    - `GET /api/v2/file/list`
+    - `POST /upload/v1/file/mkdir`
+    - `POST /upload/v1/oss/file/create`
+    - `POST /upload/v1/oss/file/get_upload_url`
+    - `PUT presignedURL`
+    - `POST /upload/v1/oss/file/upload_complete`
+    - `POST /upload/v1/oss/file/upload_async_result`
+  - `123_open` 当前约束：
+    - 先落单分片上传主链路
+    - `overwrite_existing` 诚实降级为 `auto_rename_new`
+    - 上传后优先按 `fileId` 校验，校验失败再回退为父目录按文件名确认
 
 ### 2. Share Family
 
@@ -126,6 +138,39 @@
 - 当前快传指纹：
   - `md5`
   - `size`
+- 当前落地进度：
+  - `quark` 已接入真实最小目录主链路：
+    - `POST /1/clouddrive/share/sharepage/token`
+    - `GET /1/clouddrive/share/sharepage/detail`
+    - `POST /1/clouddrive/file/download`
+    - `POST /1/clouddrive/file` folder create
+  - `uc` 已接入同构真实最小目录主链路：
+    - `POST /1/clouddrive/share/sharepage/token`
+    - `GET /1/clouddrive/share/sharepage/detail`
+    - `POST /1/clouddrive/file/download`
+    - `POST /1/clouddrive/file` folder create
+  - 两家当前都已接入真实：
+    - `ValidateAuth`
+    - `List`
+    - `Metadata`
+    - `CreateDir`
+    - `FastUploadCheck`
+    - `Upload`
+  - 当前上传链路：
+    - `POST /1/clouddrive/file/upload/pre`
+    - `POST /1/clouddrive/file/update/hash`
+    - `POST /1/clouddrive/file/upload/auth`
+    - `POST /1/clouddrive/file/upload/finish`
+    - `PUT OSS part`
+    - `POST OSS multipart complete`
+  - 当前约束：
+    - hash 命中时会直接走 provider 侧快传确认
+    - hash miss 时会继续走 `upload/auth + OSS multipart + upload/finish`
+    - 当前同名冲突会诚实降级为 `auto_rename_new`
+    - 当前 provider 侧真实上传已支持基于既有 `uploadId + uploadedParts + providerData` 的 multipart checkpoint 恢复
+    - `providerData` 会保留 `authInfo / bucket / objKey / uploadUrl / callback / taskId / fileId / parentId / resolvedTargetName / md5 / sha1`
+    - 恢复上传会跳过已完成分片，从 `failedPartNumber` 或 `nextPartNumber` 继续上传剩余 OSS part
+    - task runtime 已可透传 `uploadCheckpoint + providerData` 做自动续跑编排
 
 ### 3. Hash Family
 
@@ -136,9 +181,36 @@
   - `pikpak`
 - 当前认证特点：
   - 依赖 `token`
+  - `xunlei` 额外允许：
+    - `extra.authorization`
+    - `extra.deviceId`
+    - `extra.captchaToken`
+    - `extra.clientId`
+    - `extra.apiEndpoint`
 - 当前快传指纹：
   - `gcid`
   - `size`
+- 当前落地进度：
+  - `xunlei` 已接入真实最小目录主链路：
+    - `GET /drive/v1/files`
+    - `POST /drive/v1/files` folder create
+  - `xunlei` 已接入真实上传 create 主链路：
+    - `POST /drive/v1/files` file create
+    - hash 命中时直接走 rapid 成功
+    - hash miss 时会返回 `resumable` 会话并继续走内置 S3-compatible SigV4 PUT fallback
+    - task retry 时已可复用失败结果里保留的 `resumable` 会话，不再重复 create upload
+  - `xunlei` 当前约束：
+    - 当前先落地单对象 PUT fallback 与会话复用恢复，尚未扩展到 multipart-resume / 分片级断点续传
+  - `pikpak` 已接入真实最小目录主链路：
+    - `GET /drive/v1/files`
+    - `POST /drive/v1/files` folder create
+  - `pikpak` 已接入真实上传 create 主链路：
+    - `POST /drive/v1/files` file create
+    - hash 命中时直接走 rapid 成功
+    - hash miss 时会返回 `resumable` 会话并继续走内置 S3-compatible SigV4 PUT fallback
+    - task retry 时已可复用失败结果里保留的 `resumable` 会话，不再重复 create upload
+  - `pikpak` 当前约束：
+    - 当前先落地单对象 PUT fallback 与会话复用恢复，尚未扩展到 multipart-resume / 分片级断点续传
 
 ### 4. 独立链路
 
@@ -146,18 +218,84 @@
   - 文件：`internal/provider/baidu_family.go`
   - 认证：`token` 或 `cookie`
   - 快传指纹：`md5` + `size`
+  - 当前落地进度：
+    - 已接入真实 `ValidateAuth`
+    - 已接入真实 `List / Metadata / CreateDir`
+    - `Upload` 已接入真实 `precreate -> superfile2 tmpfile -> create -> verify`
+    - `overwrite_existing` 会诚实降级为 `auto_rename_new`
+  - 当前约束：
+    - 目前先落单分片 tmpfile 主链路
+    - 仍未扩展到多分片并行或更复杂断点续传
 - `115_open`
   - 文件：`internal/provider/pan115_family.go`
   - 认证：`token` 或 `cookie`
   - 快传指纹：`sha1` + `size`
+  - 当前落地进度：
+    - 已接入真实 `ValidateAuth / List / Metadata / CreateDir / FastUploadCheck`
+    - `Upload` 已接入真实 `upload/init`
+    - 当返回 `sign_check` 时，已继续做本地区间 SHA1 follow-up
+    - hash miss 后，已接入 `upload/get_token` 并可解析完整 OSS 上传会话
+    - 当前默认构建已内置基于 OSS 鉴权头的单对象 PUT fallback
+    - task retry 时已可复用失败结果里保留的 OSS upload session，不再重复请求 `upload/init + get_token`
+    - hash 命中时可直接返回 rapid success 并做校验
+  - 当前约束：
+    - 当前先落单对象 PUT 主链路与 upload-session 复用恢复，尚未扩展到 multipart / 分片级断点续传
+    - 如果 OSS 会话字段不完整或 provider 侧返回异常，仍会诚实返回 `binary_upload_failed` 并保留真实上传会话
 - `189cloud`
   - 文件：`internal/provider/cloud189_family.go`
   - 认证：`cookie`
   - 快传指纹：`md5` + `size`
+  - 当前落地进度：
+    - 已接入真实 `ValidateAuth / List / Metadata / CreateDir / FastUploadCheck / Upload`
+    - 当前读链路基于 `shareCode / accessCode`：
+      - `POST /api/open/share/getShareInfoByCodeV2.action`
+      - `GET /api/open/share/checkAccessCode.action`
+      - `GET /api/open/share/listShareDir.action`
+    - `CreateDir` 已接入账号级写鉴权：
+      - `POST /api/open/file/createFolder.action`
+      - 需要 `AccessToken / Signature / Date`
+    - `Upload` 已接入真实主链：
+      - `GET /getSessionForPC.action`
+      - `POST /createUploadFile.action`
+      - `PUT fileUploadUrl`
+      - `GET /getUploadFileStatus.action`
+      - `POST fileCommitUrl`
+    - hash 命中时会直接走 provider 侧复用，并由 commit XML 回包确认
+    - hash miss 时会继续走 `fileUploadUrl PUT + getUploadFileStatus + fileCommitUrl`
+    - task retry 时已可复用失败结果里保留的 `uploadFileId + fileUploadUrl + fileCommitUrl`，不再重复 `createUploadFile`
+  - 当前约束：
+    - shareCode/accessCode 当前只提供只读目录链路，不能直接写目录
+    - `CreateDir` 仍依赖账号级 `AccessToken / Signature / Date`
+    - `Upload` 当前仍主要依赖 `accessToken -> getSessionForPC` 刷新的临时 sessionKey/sessionSecret；已支持 upload-session 级恢复，但尚未扩展到更细粒度断点续传
 - `guangya`
   - 文件：`internal/provider/guangya_family.go`
   - 认证：`token`
   - 快传指纹：`md5` + `size` + `name`
+  - 当前落地进度：
+    - 已接入真实 `ValidateAuth / List / Metadata / CreateDir / FastUploadCheck`
+    - 当前目录链路基于：
+      - `POST /nd.bizuserres.s/v1/file/get_file_list`
+      - `POST /nd.bizuserres.s/v1/get_res_download_url`
+      - `POST /nd.bizuserres.s/v1/file/create_dir`
+    - `FastUploadCheck` 已接入真实库存预检：
+      - `POST /nd.bizuserres.s/v1/get_res_center_token`
+      - `POST /nd.bizuserres.s/v1/check_can_flash_upload`
+      - `POST /nd.bizuserres.s/v1/file/delete_upload_task`
+    - `Upload` 当前已支持真实快传命中闭环：
+      - `get_res_center_token` 直接命中时，会在 Go 内确认成功并回做上传后校验
+      - GCID flash hit 会继续调用 `upload_info` 做最终确认
+      - 上传后优先按 `fileId` 校验，再回退到父目录按文件名确认
+      - 同名冲突当前会诚实降级为 `auto_rename_new`
+    - `Upload` 当前也已接入真实二进制上传 runtime：
+      - 小文件：`upload_token + md5 + upload_info`
+      - 大文件：`upload_token + check_can_flash_upload + OSS multipart + upload_info`
+      - OSS multipart 当前使用与 `guangyaclient` 一致的签名和 complete flow
+      - multipart 失败时已会把 `uploadId / uploadedParts / failedPartNumber / nextPartNumber` 回填到 evidence，重试时可直接从失败分片继续
+  - 当前约束：
+    - 当前仍缺真实在线样本验收，尤其是风控、限流和不同账号环境下的稳定性证据
+    - 当前 provider 侧已支持基于 checkpoint 的已传分片恢复
+    - task runtime 已可自动恢复冷却到期任务，以及仅包含 upload-session checkpoint 的安全续传队列
+    - 更完整的后台自动恢复编排仍待继续补齐
 
 ## 当前接入状态要怎么理解
 
@@ -293,6 +431,7 @@
   - 快传命中
   - 秒传失败回退
   - 多分片上传
+  - 基于 `uploadId + fileId` 的剩余分片 URL 刷新与继续上传
 
 ## 当前错误语义约束
 
@@ -370,10 +509,10 @@
 ## 当前最推荐的下一步
 
 - 优先从下面任一方向切一条真实 provider：
-  - `123_open`
+  - `115_open`
   - `guangya`
-  - `baidu_netdisk`
+  - `xunlei/pikpak`
 - 原因：
-  - 认证模型相对清晰
-  - 能较快形成真实样本
-  - 对现有 planner / task / UI 主链路验证价值高
+  - `quark / uc / 189cloud` 已完成当前阶段最核心的上传主链补齐
+  - `115_open / guangya` 继续补断点恢复与真实样本，对现有 planner / task / UI 主链路验证价值高
+  - `xunlei/pikpak` 的 resumable fallback 也适合继续深化恢复语义

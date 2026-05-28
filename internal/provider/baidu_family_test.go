@@ -21,6 +21,13 @@ func TestBaiduFamilyAdapterRequiresTokenOrCookie(t *testing.T) {
 }
 
 func TestBaiduFamilyAdapterSupportsFastUploadCandidate(t *testing.T) {
+	server, _ := newBaiduFamilyTestServer(t)
+	t.Cleanup(server.Close)
+
+	originalClient := providerHTTPClient
+	providerHTTPClient = server.Client()
+	t.Cleanup(func() { providerHTTPClient = originalClient })
+
 	registry := NewRegistry(DefaultCatalog()...)
 	entry, ok := registry.Get("baidu_netdisk")
 	if !ok {
@@ -29,7 +36,11 @@ func TestBaiduFamilyAdapterSupportsFastUploadCandidate(t *testing.T) {
 	check := entry.Adapter.FastUploadCheck(FastUploadCheckRequest{
 		Profile: AuthProfile{
 			ProviderKey: "baidu_netdisk",
-			Token:       "token-1",
+			Token:       "token-live",
+			Extra: map[string]string{
+				"apiEndpoint": server.URL,
+				"pcsEndpoint": server.URL,
+			},
 		},
 		Path: "/a.bin",
 		Name: "a.bin",

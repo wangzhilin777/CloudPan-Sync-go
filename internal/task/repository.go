@@ -638,6 +638,7 @@ func buildProviderStatusSnapshot(ctx context.Context, store *sqlitestore.Store, 
 			"currentRoot":                    detail.Runtime.CurrentRoot,
 			"currentDirectory":               detail.Runtime.CurrentDirectory,
 			"lastCompletedPath":              detail.Runtime.LastCompletedPath,
+			"uploadCheckpoint":               detail.Runtime.UploadCheckpoint,
 		},
 		CreatedAt: createdAt,
 	}, nil

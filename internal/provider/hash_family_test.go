@@ -20,6 +20,13 @@ func TestHashFamilyAdapterRequiresToken(t *testing.T) {
 }
 
 func TestHashFamilyAdapterSupportsFastUploadCandidate(t *testing.T) {
+	server, _ := newPikPakHashFamilyTestServer(t)
+	t.Cleanup(server.Close)
+
+	originalClient := providerHTTPClient
+	providerHTTPClient = server.Client()
+	t.Cleanup(func() { providerHTTPClient = originalClient })
+
 	registry := NewRegistry(DefaultCatalog()...)
 	entry, ok := registry.Get("pikpak")
 	if !ok {
@@ -28,7 +35,11 @@ func TestHashFamilyAdapterSupportsFastUploadCandidate(t *testing.T) {
 	check := entry.Adapter.FastUploadCheck(FastUploadCheckRequest{
 		Profile: AuthProfile{
 			ProviderKey: "pikpak",
-			Token:       "token-1",
+			Token:       "token-live",
+			Extra: map[string]string{
+				"apiEndpoint": server.URL,
+				"deviceId":    "device-pk",
+			},
 		},
 		Path: "/a.bin",
 		Name: "a.bin",
