@@ -141,6 +141,7 @@ type ProviderSmokeMatrixRow struct {
 	Accepted                     bool     `json:"accepted"`
 	AcceptanceStatus             string   `json:"acceptanceStatus,omitempty"`
 	AcceptanceMissing            []string `json:"acceptanceMissing,omitempty"`
+	AcceptanceAdvice             string   `json:"acceptanceAdvice,omitempty"`
 }
 
 type EvidenceSample struct {
@@ -1954,13 +1955,14 @@ func buildEvidenceReport(summary EvidenceSummary, statuses []StatusSummary, smok
 		}
 		fmt.Fprintf(&b, "- 已验收协议组: %d / %d\n", acceptedCount, len(smokeMatrix))
 		b.WriteString("\n## 真实联调验收\n\n")
-		b.WriteString("| ProtocolGroup | Acceptance | Missing | Smoke | Coverage | Sample | Latest Smoke |\n")
-		b.WriteString("| --- | --- | --- | --- | --- | --- | --- |\n")
+		b.WriteString("| ProtocolGroup | Acceptance | Missing | Advice | Smoke | Coverage | Sample | Latest Smoke |\n")
+		b.WriteString("| --- | --- | --- | --- | --- | --- | --- | --- |\n")
 		for _, item := range smokeMatrix {
-			fmt.Fprintf(&b, "| %s | %s | %s | %d/%d | %d/%d/%d | %s / %s / %s | %s |\n",
+			fmt.Fprintf(&b, "| %s | %s | %s | %s | %d/%d | %d/%d/%d | %s / %s / %s | %s |\n",
 				markdownCell(firstNonEmpty(item.ProtocolGroup, "-")),
 				markdownCell(firstNonEmpty(item.AcceptanceStatus, "-")),
 				markdownCell(strings.Join(item.AcceptanceMissing, ", ")),
+				markdownCell(firstNonEmpty(item.AcceptanceAdvice, "-")),
 				item.SuccessCount,
 				item.FailureCount,
 				item.CoverageRealSuccessTaskCount,
@@ -2274,10 +2276,13 @@ func buildProviderSmokeMatrix(summary EvidenceSummary, smokeSummaries []Provider
 		case state.row.HasRealSuccessSample && state.row.CoverageTaskCount > 0:
 			state.row.Accepted = true
 			state.row.AcceptanceStatus = "accepted"
+			state.row.AcceptanceAdvice = "已具备真实 smoke 成功样本与任务覆盖，可继续补充更多边界样本。"
 		case state.row.HasRealSuccessSample || state.row.CoverageHasRealSuccessSample:
 			state.row.AcceptanceStatus = "in_progress"
+			state.row.AcceptanceAdvice = buildAcceptanceAdvice(missing, true)
 		default:
 			state.row.AcceptanceStatus = "pending"
+			state.row.AcceptanceAdvice = buildAcceptanceAdvice(missing, false)
 		}
 		if len(missing) > 0 {
 			state.row.AcceptanceMissing = missing
@@ -2288,6 +2293,27 @@ func buildProviderSmokeMatrix(summary EvidenceSummary, smokeSummaries []Provider
 		rows = append(rows, states[group].row)
 	}
 	return rows
+}
+
+func buildAcceptanceAdvice(missing []string, partial bool) string {
+	if len(missing) == 0 {
+		if partial {
+			return "当前协议组已具备部分验收条件，建议继续补充另一侧样本。"
+		}
+		return "当前协议组已具备验收条件。"
+	}
+	hints := make([]string, 0, len(missing))
+	for _, item := range missing {
+		switch item {
+		case "real_smoke_success_missing":
+			hints = append(hints, "补 1 条真实 smoke 成功样本")
+		case "task_coverage_missing":
+			hints = append(hints, "补 1 条真实任务覆盖样本")
+		default:
+			hints = append(hints, item)
+		}
+	}
+	return "建议：" + strings.Join(hints, "；")
 }
 
 func maxInt(left, right int) int {

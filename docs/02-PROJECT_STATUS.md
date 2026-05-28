@@ -372,6 +372,7 @@
   - `providerSmokeMatrix` 真实样本矩阵
   - `accepted / pending` 真实联调验收判定
   - `acceptanceMissing` 缺失原因提示，能直接看出还差真实 smoke、任务覆盖或两者都缺
+  - `acceptanceAdvice` 补齐建议，能直接指导下一步补样本
 - 当前可展示的数据包括：
   - `recentResults`
   - `recentProbes`
@@ -436,6 +437,7 @@
   - 真实 provider smoke 记录的协议组聚合与真实样本矩阵展示
   - 真实联调验收判定层，能直接看出哪些协议组已经 accepted、哪些仍在 pending
   - pending 行会带上 `acceptanceMissing` 缺失原因，便于直接补样本
+  - pending / in_progress 行还会带上 `acceptanceAdvice`，提示下一步应补真实 smoke 还是任务覆盖
   - 从重试队列一键定位待补传树或收敛到同类失败项
     - 从 blocked 聚合摘要一键跳到样本任务或当前阻塞动作
     - 从任务详情 blocked 引导卡片一键收敛当前任务问题子集

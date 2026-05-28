@@ -3298,4 +3298,7 @@ func TestServiceProviderSmokeRecords(t *testing.T) {
 	if matrix[0].AcceptanceMissing[0] != "task_coverage_missing" {
 		t.Fatalf("expected task_coverage_missing reason, got %#v", matrix[0].AcceptanceMissing)
 	}
+	if !strings.Contains(matrix[0].AcceptanceAdvice, "真实任务覆盖样本") {
+		t.Fatalf("expected advice to mention task coverage, got %s", matrix[0].AcceptanceAdvice)
+	}
 }
