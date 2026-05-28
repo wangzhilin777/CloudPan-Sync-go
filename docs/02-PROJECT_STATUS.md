@@ -136,6 +136,7 @@
     - hash 命中时可直接完成 rapid 路径并校验
     - hash miss 后当前默认构建已可继续走 OSS 单对象 PUT 上传并做上传后校验
     - 失败重试时已可复用既有 OSS upload session，避免重复跑 `upload/init + get_token`
+    - OSS 单对象 PUT 失败/成功会按统一 upload checkpoint 口径回填 `uploadId / partCount / uploadedParts / failedPartNumber / nextPartNumber`
     - 当前已不再停留在“只暴露会话但不上传”的失败态
   - `189cloud` 已接入真实 `ValidateAuth / List / Metadata / CreateDir / FastUploadCheck / Upload`
     - 当前读链路基于 `shareCode / accessCode` 的 share API

@@ -580,10 +580,13 @@ func (a Pan115FamilyAdapter) Upload(req UploadRequest) UploadResult {
 		"resolvedTargetName": resolvedTargetName,
 		"sha1":               sha1Value,
 		"parentId":           parentID,
+		"fileId":             fileID,
+		"uploadId":           pan115OSSUploadID(uploadSession),
 	}
 	uploadPayload, uploadErr := pan115OSSUploader(localPath, uploadSession)
 	commonPayload["binaryUpload"] = uploadPayload
 	if uploadErr != nil {
+		commonPayload = mergeMaps(commonPayload, pan115WholeObjectCheckpoint(uploadSession, fileID, uploadPayload, false))
 		return UploadResult{
 			OperationResult: OperationResult{
 				Status:  "binary_upload_failed",
@@ -593,6 +596,7 @@ func (a Pan115FamilyAdapter) Upload(req UploadRequest) UploadResult {
 			},
 		}
 	}
+	commonPayload = mergeMaps(commonPayload, pan115WholeObjectCheckpoint(uploadSession, fileID, uploadPayload, true))
 	verifyEntry, verifyMode, verifyOK := a.verifyPan115UploadedFile(req.Profile, parentID, resolvedTargetName, fileID, sha1Value)
 	if verifyEntry != nil {
 		commonPayload["verifyEntry"] = verifyEntry
@@ -640,6 +644,7 @@ func (a Pan115FamilyAdapter) resumePan115BinaryUpload(req UploadRequest, session
 	uploadPayload, uploadErr := pan115OSSUploader(localPath, uploadSession)
 	commonPayload := map[string]interface{}{
 		"fileId":             fileID,
+		"uploadId":           firstNonEmptyValue(resume.UploadID, pan115OSSUploadID(uploadSession)),
 		"resolvedTargetName": resolvedTargetName,
 		"usedBinaryFallback": true,
 		"resumedUpload":      true,
@@ -648,6 +653,7 @@ func (a Pan115FamilyAdapter) resumePan115BinaryUpload(req UploadRequest, session
 		"binaryUpload":       uploadPayload,
 	}
 	if uploadErr != nil {
+		commonPayload = mergeMaps(commonPayload, pan115WholeObjectCheckpoint(uploadSession, fileID, uploadPayload, false))
 		return &UploadResult{
 			OperationResult: OperationResult{
 				Status:  "binary_upload_failed",
@@ -657,6 +663,7 @@ func (a Pan115FamilyAdapter) resumePan115BinaryUpload(req UploadRequest, session
 			},
 		}
 	}
+	commonPayload = mergeMaps(commonPayload, pan115WholeObjectCheckpoint(uploadSession, fileID, uploadPayload, true))
 	verifyEntry, verifyMode, verifyOK := a.verifyPan115UploadedFile(req.Profile, parentID, resolvedTargetName, fileID, sha1Value)
 	if verifyEntry != nil {
 		commonPayload["verifyEntry"] = verifyEntry
@@ -1033,6 +1040,60 @@ func extractPan115CallbackPayload(data map[string]interface{}) (string, string) 
 	return firstNonEmptyString(value, "callback"), firstNonEmptyString(value, "callback_var", "callbackVar")
 }
 
+func pan115OSSUploadID(session map[string]interface{}) string {
+	if len(session) == 0 {
+		return ""
+	}
+	if value := firstNonEmptyString(session, "uploadId", "upload_id", "id"); value != "" {
+		return value
+	}
+	return firstNonEmptyString(session, "object", "objectKey", "key")
+}
+
+func pan115WholeObjectCheckpoint(session map[string]interface{}, fileID string, uploadPayload map[string]interface{}, completed bool) map[string]interface{} {
+	out := map[string]interface{}{
+		"fileId":            fileID,
+		"uploadId":          pan115OSSUploadID(session),
+		"partCount":         1,
+		"uploadedPartCount": 0,
+		"failedPartNumber":  1,
+		"nextPartNumber":    1,
+	}
+	if completed {
+		out["uploadedPartCount"] = 1
+		out["uploadedParts"] = []map[string]interface{}{
+			{
+				"partNumber": 1,
+				"etag":       strings.Trim(stringMapValue(uploadPayload, "etag"), "\""),
+				"size":       int64MapValue(uploadPayload, "objectSize"),
+			},
+		}
+		out["failedPartNumber"] = 0
+		out["nextPartNumber"] = 2
+	}
+	return out
+}
+
+func pan115ApplyWholeObjectProgress(payload map[string]interface{}, completed bool) {
+	payload["partCount"] = 1
+	if completed {
+		payload["uploadedPartCount"] = 1
+		payload["uploadedParts"] = []map[string]interface{}{
+			{
+				"partNumber": 1,
+				"etag":       strings.Trim(stringMapValue(payload, "etag"), "\""),
+				"size":       int64MapValue(payload, "objectSize"),
+			},
+		}
+		payload["failedPartNumber"] = 0
+		payload["nextPartNumber"] = 2
+		return
+	}
+	payload["uploadedPartCount"] = 0
+	payload["failedPartNumber"] = 1
+	payload["nextPartNumber"] = 1
+}
+
 func uploadPan115OSSBinary(localPath string, session map[string]interface{}) (map[string]interface{}, error) {
 	bucketName := firstNonEmptyString(session, "bucket")
 	objectKey := firstNonEmptyString(session, "object")
@@ -1048,6 +1109,7 @@ func uploadPan115OSSBinary(localPath string, session map[string]interface{}) (ma
 		"endpoint":  endpoint,
 	}
 	if bucketName == "" || objectKey == "" || endpoint == "" || accessKeyID == "" || accessKeySecret == "" || securityToken == "" {
+		pan115ApplyWholeObjectProgress(payload, false)
 		return payload, fmt.Errorf("115 Open hash-miss response did not include a complete OSS upload session")
 	}
 	if callbackText := firstNonEmptyString(session, "callback"); callbackText != "" {
@@ -1064,10 +1126,13 @@ func uploadPan115OSSBinary(localPath string, session map[string]interface{}) (ma
 
 	info, err := file.Stat()
 	if err != nil {
+		pan115ApplyWholeObjectProgress(payload, false)
 		return payload, err
 	}
+	payload["objectSize"] = info.Size()
 	requestURL, canonicalResource, host, canonicalURI, usePathStyle, err := buildPan115OSSObjectURL(endpoint, bucketName, objectKey)
 	if err != nil {
+		pan115ApplyWholeObjectProgress(payload, false)
 		return payload, err
 	}
 	dateValue := time.Now().UTC().Format(http.TimeFormat)
@@ -1103,6 +1168,7 @@ func uploadPan115OSSBinary(localPath string, session map[string]interface{}) (ma
 	}
 	resp, err := providerHTTPClient.Do(req)
 	if err != nil {
+		pan115ApplyWholeObjectProgress(payload, false)
 		return payload, fmt.Errorf("put 115 Open oss object: %w", err)
 	}
 	defer func() { _ = resp.Body.Close() }()
@@ -1114,12 +1180,14 @@ func uploadPan115OSSBinary(localPath string, session map[string]interface{}) (ma
 		bodyBytes, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
 		payload["responseBody"] = strings.TrimSpace(string(bodyBytes))
 		payload["responseStatus"] = resp.StatusCode
+		pan115ApplyWholeObjectProgress(payload, false)
 		return payload, fmt.Errorf("put 115 Open oss object returned HTTP %d: %s", resp.StatusCode, strings.TrimSpace(string(bodyBytes)))
 	}
 	payload["responseStatus"] = resp.StatusCode
 	if etag := strings.TrimSpace(resp.Header.Get("ETag")); etag != "" {
 		payload["etag"] = etag
 	}
+	pan115ApplyWholeObjectProgress(payload, true)
 	return payload, nil
 }
 

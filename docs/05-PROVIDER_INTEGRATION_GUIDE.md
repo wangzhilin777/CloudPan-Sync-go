@@ -242,8 +242,10 @@
     - 当前默认构建已内置基于 OSS 鉴权头的单对象 PUT fallback
     - task retry 时已可复用失败结果里保留的 OSS upload session，不再重复请求 `upload/init + get_token`
     - hash 命中时可直接返回 rapid success 并做校验
+    - OSS PUT 失败时会按统一 upload checkpoint 口径回填 `partCount=1 / failedPartNumber=1 / nextPartNumber=1`
+    - OSS PUT 成功后会回填 `uploadedPartCount / uploadedParts / objectSize / responseStatus`
   - 当前约束：
-    - 当前先落单对象 PUT 主链路与 upload-session 复用恢复，尚未扩展到 multipart / 分片级断点续传
+    - 当前先落整对象 PUT 主链路与 upload-session 复用恢复，尚未扩展到 multipart / 分片级断点续传
     - 如果 OSS 会话字段不完整或 provider 侧返回异常，仍会诚实返回 `binary_upload_failed` 并保留真实上传会话
 - `189cloud`
   - 文件：`internal/provider/cloud189_family.go`

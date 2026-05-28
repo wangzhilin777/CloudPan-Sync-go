@@ -222,6 +222,18 @@ func TestPan115FamilyAdapterResumesCachedOSSUploadSession(t *testing.T) {
 	if uploadSession == nil {
 		t.Fatalf("expected uploadSession in providerData, got %+v", first.Payload)
 	}
+	if got := intMapValue(first.Payload, "partCount"); got != 1 {
+		t.Fatalf("expected whole-object checkpoint partCount 1, got %+v", first.Payload)
+	}
+	if got := intMapValue(first.Payload, "failedPartNumber"); got != 1 {
+		t.Fatalf("expected failedPartNumber 1, got %+v", first.Payload)
+	}
+	if got := intMapValue(first.Payload, "nextPartNumber"); got != 1 {
+		t.Fatalf("expected nextPartNumber 1, got %+v", first.Payload)
+	}
+	if got := stringMapValue(first.Payload, "uploadId"); got == "" {
+		t.Fatalf("expected uploadId from OSS object key, got %+v", first.Payload)
+	}
 
 	second := entry.Adapter.Upload(UploadRequest{
 		Profile:   profile,
@@ -239,6 +251,12 @@ func TestPan115FamilyAdapterResumesCachedOSSUploadSession(t *testing.T) {
 	}
 	if !boolMapValue(second.Payload, "resumedUpload") {
 		t.Fatalf("expected resumedUpload true, got %+v", second.Payload)
+	}
+	if got := intMapValue(second.Payload, "uploadedPartCount"); got != 1 {
+		t.Fatalf("expected resumed uploadedPartCount 1, got %+v", second.Payload)
+	}
+	if got := intMapValue(second.Payload, "nextPartNumber"); got != 2 {
+		t.Fatalf("expected resumed nextPartNumber 2, got %+v", second.Payload)
 	}
 	state.mu.Lock()
 	defer state.mu.Unlock()
