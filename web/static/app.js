@@ -74,6 +74,19 @@ function stringifyValue(value, fallback = "-") {
   return String(value);
 }
 
+function summarizePathList(paths, limit = 6) {
+  if (!Array.isArray(paths) || !paths.length) {
+    return "-";
+  }
+  const items = paths.map((item) => String(item || "").trim()).filter(Boolean);
+  if (!items.length) {
+    return "-";
+  }
+  const shown = items.slice(0, Math.max(limit, 1));
+  const suffix = items.length > shown.length ? ` …(+${items.length - shown.length})` : "";
+  return `${shown.join(" -> ")}${suffix}`;
+}
+
 function escapeHTML(value) {
   return String(value)
     .replaceAll("&", "&amp;")
@@ -1592,6 +1605,14 @@ function renderSelectedTask() {
       <span>${stringifyValue(metadata.executionMode)}</span>
     </div>
     <div class="insight-card">
+      <strong>Selected Roots</strong>
+      <span><code>${escapeHTML(summarizePathList(metadata.selectedRoots || []))}</code></span>
+    </div>
+    <div class="insight-card">
+      <strong>Scan Trace</strong>
+      <span><code>${escapeHTML(summarizePathList(metadata.scanTrace || []))}</code></span>
+    </div>
+    <div class="insight-card">
       <strong>推荐模式</strong>
       <span>${stringifyValue(metadata.recommendedExecutionMode)}</span>
     </div>
@@ -1650,6 +1671,10 @@ function renderPreview() {
     <div class="insight-card">
       <strong>当前模式</strong>
       <span>${stringifyValue(metadata.executionMode)}</span>
+    </div>
+    <div class="insight-card">
+      <strong>Selected Roots</strong>
+      <span><code>${escapeHTML(summarizePathList(metadata.selectedRoots || []))}</code></span>
     </div>
     <div class="insight-card">
       <strong>推荐模式</strong>
