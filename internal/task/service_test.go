@@ -1764,6 +1764,19 @@ func TestServiceRetryQueueHonorsCooldownForRateLimitedItems(t *testing.T) {
 	if running.Runtime.NextRetryAt == "" {
 		t.Fatal("expected nextRetryAt on blocked runtime")
 	}
+	retrySummary, ok := running.Plan.Metadata["retrySummary"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("expected retrySummary metadata, got %#v", running.Plan.Metadata["retrySummary"])
+	}
+	if stringValue(retrySummary["autoRecoverMode"]) != "cooldown_elapsed_auto_retry" {
+		t.Fatalf("expected cooldown auto recover mode, got %#v", retrySummary)
+	}
+	if intNumber(retrySummary["cooldownCount"]) != 1 {
+		t.Fatalf("expected cooldownCount 1, got %#v", retrySummary)
+	}
+	if !boolValue(retrySummary["autoRecoverEligible"]) {
+		t.Fatalf("expected autoRecoverEligible for cooldown queue, got %#v", retrySummary)
+	}
 }
 
 func TestServiceRecoverBlockedTasksRetriesEligibleCooldownQueue(t *testing.T) {
@@ -1995,6 +2008,19 @@ func TestServiceRecoverBlockedTasksAutoResumesUploadCheckpointQueue(t *testing.T
 	}
 	if firstRun.Runtime.RetryQueue[0].UploadCheckpoint == nil {
 		t.Fatalf("expected upload checkpoint in retry queue, got %#v", firstRun.Runtime.RetryQueue[0])
+	}
+	retrySummary, ok := firstRun.Plan.Metadata["retrySummary"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("expected retrySummary metadata, got %#v", firstRun.Plan.Metadata["retrySummary"])
+	}
+	if stringValue(retrySummary["autoRecoverMode"]) != "upload_checkpoint_auto_resume" {
+		t.Fatalf("expected upload checkpoint auto recover mode, got %#v", retrySummary)
+	}
+	if intNumber(retrySummary["uploadCheckpointEligible"]) != 1 {
+		t.Fatalf("expected uploadCheckpointEligible 1, got %#v", retrySummary)
+	}
+	if !boolValue(retrySummary["autoRecoverEligible"]) {
+		t.Fatalf("expected autoRecoverEligible for upload checkpoint queue, got %#v", retrySummary)
 	}
 
 	recovered, err := svc.RecoverBlockedTasks(ctx)
@@ -3301,4 +3327,9 @@ func TestServiceProviderSmokeRecords(t *testing.T) {
 	if !strings.Contains(matrix[0].AcceptanceAdvice, "真实任务覆盖样本") {
 		t.Fatalf("expected advice to mention task coverage, got %s", matrix[0].AcceptanceAdvice)
 	}
+}
+
+func boolValue(value interface{}) bool {
+	typed, ok := value.(bool)
+	return ok && typed
 }

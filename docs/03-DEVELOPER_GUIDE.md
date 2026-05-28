@@ -177,6 +177,18 @@
 - 当前控制台任务详情页也会直接显示：
   - 当前是否处于 `pending_only` 重试范围
   - 当前重试队列里的 `retryable / blocked` 计数
+- 当前 `metadata.retrySummary` 还会补充：
+  - `retryableNowCount / cooldownCount / pendingManualCount / authExpiredCount / localMissingCount / exhaustedCount`
+  - `uploadCheckpointEligible`
+  - `autoRecoverEligible / autoRecoverMode / autoRecoverAdvice`
+- 当前任务详情、运行检查点和状态页快照会直接把它们展示成：
+  - `后台补传候选`
+  - `队列拆分`
+  - `自动补传提示`
+- 这几个字段主要用来判断：
+  - 当前队列是不是“冷却到期后自动重试”
+  - 是不是“upload checkpoint 自动续跑”
+  - 还是“仍需人工确认 / 刷新授权 / 补回本地文件”
 - 当前还没有做到：
   - 在 UI 里对待补传树做更复杂的筛选和批量操作
   - 更细粒度的后台补传策略编排

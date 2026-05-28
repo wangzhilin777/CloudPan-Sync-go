@@ -523,6 +523,35 @@ function renderRetryQueue(items, filters = {}) {
   };
 }
 
+function renderRetrySummaryBreakdown(summary) {
+  if (!summary || typeof summary !== "object") {
+    return "-";
+  }
+  const parts = [
+    `ready ${stringifyValue(summary.retryableNowCount, "0")}`,
+    `cooldown ${stringifyValue(summary.cooldownCount, "0")}`,
+    `checkpoint ${stringifyValue(summary.uploadCheckpointEligible, "0")}`,
+    `manual ${stringifyValue(summary.pendingManualCount, "0")}`,
+    `auth ${stringifyValue(summary.authExpiredCount, "0")}`,
+    `local ${stringifyValue(summary.localMissingCount, "0")}`,
+    `exhausted ${stringifyValue(summary.exhaustedCount, "0")}`,
+  ];
+  return parts.join(" / ");
+}
+
+function renderAutoRecoverMode(summary) {
+  if (!summary || typeof summary !== "object") {
+    return "-";
+  }
+  if (summary.autoRecoverMode) {
+    return String(summary.autoRecoverMode);
+  }
+  if (summary.autoRecoverEligible) {
+    return "eligible";
+  }
+  return "manual_only";
+}
+
 function renderRuntimeCheckpoint(runtime, metadata = null, scope = "task") {
   if (!runtime || typeof runtime !== "object") {
     return `
@@ -583,6 +612,24 @@ function renderRuntimeCheckpoint(runtime, metadata = null, scope = "task") {
       <strong>下次自动补传</strong>
       <span>${stringifyValue(runtime.nextRetryAt, "-")}</span>
     </div>
+    ${
+      metadata?.retrySummary
+        ? `
+          <div class="insight-card checkpoint-card">
+            <strong>后台补传候选</strong>
+            <span>${escapeHTML(renderAutoRecoverMode(metadata.retrySummary))}</span>
+          </div>
+          <div class="insight-card checkpoint-card">
+            <strong>队列拆分</strong>
+            <span>${escapeHTML(renderRetrySummaryBreakdown(metadata.retrySummary))}</span>
+          </div>
+          <div class="insight-card checkpoint-card">
+            <strong>自动补传提示</strong>
+            <span>${escapeHTML(stringifyValue(metadata.retrySummary.autoRecoverAdvice, "-"))}</span>
+          </div>
+        `
+        : ""
+    }
     ${renderUploadCheckpoint(runtime.uploadCheckpoint)}
   `;
 }
@@ -1847,6 +1894,14 @@ function renderSelectedTask() {
       <strong>建议动作</strong>
       <span>${stringifyValue(metadata.retrySummary?.blockedAction, "-")}</span>
     </div>
+    <div class="insight-card">
+      <strong>后台补传候选</strong>
+      <span>${renderAutoRecoverMode(metadata.retrySummary)}</span>
+    </div>
+    <div class="insight-card">
+      <strong>队列拆分</strong>
+      <span>${renderRetrySummaryBreakdown(metadata.retrySummary)}</span>
+    </div>
   `;
   $("#task-runtime").innerHTML = renderRuntimeCheckpoint(runtime, metadata, "task");
   wireRuntimePathFocus("task", "#task-summary");
@@ -2095,6 +2150,8 @@ function renderSnapshotSummary(summary) {
       <div><strong>blockedTop</strong> <code>${escapeHTML(stringifyValue(blockedActions[0]?.action, "-"))}</code></div>
       <div><strong>nextRetryAt</strong> <code>${escapeHTML(stringifyValue(retrySummary.nextRetryAt, "-"))}</code></div>
       <div><strong>queueSize</strong> <code>${escapeHTML(stringifyValue(retrySummary.queueSize, "0"))}</code></div>
+      <div><strong>autoRecover</strong> <code>${escapeHTML(renderAutoRecoverMode(retrySummary))}</code></div>
+      <div><strong>queueBreakdown</strong> <code>${escapeHTML(renderRetrySummaryBreakdown(retrySummary))}</code></div>
       <div><strong>protocolCoverage</strong> <code>${escapeHTML(stringifyValue(summary.protocolCoverage?.protocolGroup, "-"))} / ${escapeHTML(stringifyValue(summary.protocolCoverage?.realSuccessTaskCount, "0"))}</code></div>
     `;
   }

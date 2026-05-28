@@ -130,6 +130,8 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 		waitForText(`#task-detail`, `"state": "completed_with_errors"`),
 		waitForText(`#task-detail`, `"status": "failed"`),
 		waitForText(`#task-runtime`, "completed"),
+		waitForText(`#task-summary`, "retry_queue_auto_retry"),
+		waitForText(`#task-runtime`, "后台补传候选"),
 	)
 
 	runStep(t, runCtx, "status evidence and retry",

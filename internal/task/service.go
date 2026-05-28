@@ -497,12 +497,22 @@ type targetInspection struct {
 }
 
 type retryQueueSummary struct {
-	ShouldBlock   bool
-	BlockedReason string
-	BlockedAction string
-	BlockedAdvice string
-	NextRetryAt   string
-	CanAutoRetry  bool
+	ShouldBlock              bool
+	BlockedReason            string
+	BlockedAction            string
+	BlockedAdvice            string
+	NextRetryAt              string
+	CanAutoRetry             bool
+	RetryableNowCount        int
+	CooldownCount            int
+	PendingManualCount       int
+	AuthExpiredCount         int
+	LocalMissingCount        int
+	ExhaustedCount           int
+	UploadCheckpointEligible int
+	AutoRecoverEligible      bool
+	AutoRecoverMode          string
+	AutoRecoverAdvice        string
 }
 
 type pendingTreeBuilderNode struct {
@@ -2723,13 +2733,23 @@ func applyRetryQueueSummary(runtime *RuntimeState, metadata map[string]interface
 		return
 	}
 	metadata["retrySummary"] = map[string]interface{}{
-		"shouldBlock":   summary.ShouldBlock,
-		"blockedReason": summary.BlockedReason,
-		"blockedAction": summary.BlockedAction,
-		"blockedAdvice": summary.BlockedAdvice,
-		"nextRetryAt":   summary.NextRetryAt,
-		"canAutoRetry":  summary.CanAutoRetry,
-		"queueSize":     len(runtime.RetryQueue),
+		"shouldBlock":              summary.ShouldBlock,
+		"blockedReason":            summary.BlockedReason,
+		"blockedAction":            summary.BlockedAction,
+		"blockedAdvice":            summary.BlockedAdvice,
+		"nextRetryAt":              summary.NextRetryAt,
+		"canAutoRetry":             summary.CanAutoRetry,
+		"queueSize":                len(runtime.RetryQueue),
+		"retryableNowCount":        summary.RetryableNowCount,
+		"cooldownCount":            summary.CooldownCount,
+		"pendingManualCount":       summary.PendingManualCount,
+		"authExpiredCount":         summary.AuthExpiredCount,
+		"localMissingCount":        summary.LocalMissingCount,
+		"exhaustedCount":           summary.ExhaustedCount,
+		"uploadCheckpointEligible": summary.UploadCheckpointEligible,
+		"autoRecoverEligible":      summary.AutoRecoverEligible,
+		"autoRecoverMode":          summary.AutoRecoverMode,
+		"autoRecoverAdvice":        summary.AutoRecoverAdvice,
 	}
 }
 
@@ -2824,6 +2844,19 @@ func blockedGuidance(reason string) (string, string) {
 	}
 }
 
+func autoRecoverGuidance(mode string) string {
+	switch mode {
+	case "upload_checkpoint_auto_resume":
+		return "当前失败队列都带可恢复的 upload checkpoint，单机 worker 会优先尝试续跑上传会话。"
+	case "cooldown_elapsed_auto_retry":
+		return "当前队列主要受冷却窗口阻塞，窗口结束后单机 worker 会自动重试。"
+	case "retry_queue_auto_retry":
+		return "当前队列不存在人工确认/授权/本地文件硬阻塞，满足条件时可由后台自动接管重试。"
+	default:
+		return ""
+	}
+}
+
 func summarizeRetryQueue(queue []RetryQueueItem) retryQueueSummary {
 	summary := retryQueueSummary{}
 	if len(queue) == 0 {
@@ -2835,6 +2868,7 @@ func summarizeRetryQueue(queue []RetryQueueItem) retryQueueSummary {
 	authExpiredCount := 0
 	localMissingCount := 0
 	exhaustedCount := 0
+	uploadCheckpointEligible := 0
 	now := time.Now().UTC()
 	for _, item := range queue {
 		if item.Exhausted {
@@ -2867,9 +2901,28 @@ func summarizeRetryQueue(queue []RetryQueueItem) retryQueueSummary {
 				immediateRetry++
 			}
 		}
+		if item.Retryable && !item.Blocked && uploadCheckpointCanResume(item.UploadCheckpoint) {
+			uploadCheckpointEligible++
+		}
 	}
+	summary.RetryableNowCount = immediateRetry
+	summary.CooldownCount = cooldownCount
+	summary.PendingManualCount = pendingManualCount
+	summary.AuthExpiredCount = authExpiredCount
+	summary.LocalMissingCount = localMissingCount
+	summary.ExhaustedCount = exhaustedCount
+	summary.UploadCheckpointEligible = uploadCheckpointEligible
 	if immediateRetry > 0 {
 		summary.CanAutoRetry = pendingManualCount == 0 && authExpiredCount == 0 && localMissingCount == 0
+		if retryQueueCanAutoResumeUploads(queue) {
+			summary.AutoRecoverEligible = true
+			summary.AutoRecoverMode = "upload_checkpoint_auto_resume"
+			summary.AutoRecoverAdvice = autoRecoverGuidance(summary.AutoRecoverMode)
+		} else if summary.CanAutoRetry {
+			summary.AutoRecoverEligible = true
+			summary.AutoRecoverMode = "retry_queue_auto_retry"
+			summary.AutoRecoverAdvice = autoRecoverGuidance(summary.AutoRecoverMode)
+		}
 		return summary
 	}
 	if exhaustedCount > 0 {
@@ -2895,6 +2948,11 @@ func summarizeRetryQueue(queue []RetryQueueItem) retryQueueSummary {
 		summary.BlockedReason = "retry_queue_waiting_for_cooldown"
 		summary.CanAutoRetry = pendingManualCount == 0
 		summary.BlockedAction, summary.BlockedAdvice = blockedGuidance(summary.BlockedReason)
+		if summary.CanAutoRetry {
+			summary.AutoRecoverEligible = true
+			summary.AutoRecoverMode = "cooldown_elapsed_auto_retry"
+			summary.AutoRecoverAdvice = autoRecoverGuidance(summary.AutoRecoverMode)
+		}
 		return summary
 	}
 	if pendingManualCount > 0 {
