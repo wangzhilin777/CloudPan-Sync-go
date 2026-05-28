@@ -127,6 +127,13 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 		chromedp.Click(`button[data-tree-bulk-scope="status"][data-tree-bulk-panel="directory"][data-tree-bulk-action="collapse"]`, chromedp.ByQuery),
 		waitForSelectorCount(`#status-directory-states .directory-group.is-collapsed`, 1),
 		waitForLocalStorageContains("cloudpan_console_tree_groups_collapsed", `status:directory:/demo`),
+		chromedp.SetValue(`#report-title`, "UI Smoke 里程碑报告", chromedp.ByID),
+		chromedp.SetValue(`#report-note`, "用于验证报告历史与保存流程", chromedp.ByID),
+		chromedp.Click(`#save-report`, chromedp.ByID),
+		waitForText(`#evidence-report`, "UI Smoke 里程碑报告"),
+		waitForText(`#report-history`, "UI Smoke 里程碑报告"),
+		chromedp.Click(`#report-history [data-report-view]`, chromedp.ByQuery),
+		waitForText(`#evidence-report`, "UI Smoke 里程碑报告"),
 	)
 }
 

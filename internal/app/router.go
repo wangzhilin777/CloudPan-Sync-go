@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"errors"
+	"io"
 	"net/http"
 	"strings"
 
@@ -61,6 +62,11 @@ type providerUploadRequest struct {
 	GCID           string `json:"gcid"`
 }
 
+type evidenceReportRequest struct {
+	Title string `json:"title"`
+	Note  string `json:"note"`
+}
+
 func (a *App) routes() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", a.handleIndex)
@@ -75,6 +81,9 @@ func (a *App) routes() http.Handler {
 	mux.HandleFunc("/api/tasks", a.handleTasks)
 	mux.HandleFunc("/api/tasks/", a.handleTaskByID)
 	mux.HandleFunc("/api/evidence/runtime", a.handleRuntimeEvidence)
+	mux.HandleFunc("/api/evidence/report", a.handleEvidenceReport)
+	mux.HandleFunc("/api/evidence/reports", a.handleEvidenceReports)
+	mux.HandleFunc("/api/evidence/reports/", a.handleEvidenceReportByID)
 	mux.HandleFunc("/api/status/providers", a.handleProviderStatuses)
 	return a.loggingMiddleware(mux)
 }
@@ -485,6 +494,86 @@ func (a *App) handleRuntimeEvidence(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeOK(w, http.StatusOK, item)
+}
+
+func (a *App) handleEvidenceReport(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet && r.Method != http.MethodPost {
+		writeError(w, http.StatusMethodNotAllowed, "method_not_allowed", "Method not allowed.")
+		return
+	}
+	report, err := a.tasks.EvidenceReport(r.Context())
+	if err != nil {
+		handleError(w, err)
+		return
+	}
+	if r.URL.Query().Get("format") == "markdown" {
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(report.Markdown))
+		return
+	}
+	if r.Method == http.MethodPost {
+		var req evidenceReportRequest
+		if r.Body != nil {
+			body, err := io.ReadAll(r.Body)
+			if err != nil {
+				handleError(w, err)
+				return
+			}
+			if len(strings.TrimSpace(string(body))) > 0 {
+				if err := decodeJSONFromBytes(body, &req); err != nil {
+					writeError(w, http.StatusBadRequest, "invalid_json", "Invalid JSON payload.")
+					return
+				}
+			}
+		}
+		record, err := a.tasks.SaveEvidenceReport(r.Context(), req.Title, req.Note)
+		if err != nil {
+			handleError(w, err)
+			return
+		}
+		writeOK(w, http.StatusOK, record)
+		return
+	}
+	writeOK(w, http.StatusOK, report)
+}
+
+func (a *App) handleEvidenceReports(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		writeError(w, http.StatusMethodNotAllowed, "method_not_allowed", "Method not allowed.")
+		return
+	}
+	items, err := a.tasks.ListEvidenceReports(r.Context())
+	if err != nil {
+		handleError(w, err)
+		return
+	}
+	writeOK(w, http.StatusOK, map[string]interface{}{"items": items})
+}
+
+func (a *App) handleEvidenceReportByID(w http.ResponseWriter, r *http.Request) {
+	id := strings.TrimPrefix(r.URL.Path, "/api/evidence/reports/")
+	id = strings.Trim(id, "/")
+	if id == "" {
+		writeError(w, http.StatusNotFound, "not_found", "Resource not found.")
+		return
+	}
+	record, ok, err := a.tasks.GetEvidenceReport(r.Context(), id)
+	if err != nil {
+		handleError(w, err)
+		return
+	}
+	if !ok {
+		writeError(w, http.StatusNotFound, "report_not_found", "Report was not found.")
+		return
+	}
+	if r.URL.Query().Get("format") == "markdown" {
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(record.Markdown))
+		return
+	}
+	writeOK(w, http.StatusOK, record)
 }
 
 func (a *App) handleProviderStatuses(w http.ResponseWriter, r *http.Request) {

@@ -311,6 +311,52 @@ func TestAppWorkflowMainline(t *testing.T) {
 		t.Fatal("expected 123_open in provider statuses")
 	}
 
+	reportResp := invokeJSON(t, handler, http.MethodGet, "/api/evidence/report", nil)
+	reportData := reportResp.Data.(map[string]interface{})
+	if got := reportData["title"].(string); got != "CloudPan Sync Go 验收与样本报告" {
+		t.Fatalf("expected default report title, got %s", got)
+	}
+	if got := reportData["markdown"].(string); !strings.Contains(got, "CloudPan Sync Go 验收与样本报告") {
+		t.Fatalf("expected default title in report markdown, got %s", got)
+	}
+	if got := reportData["markdown"].(string); !strings.Contains(got, "## 代表任务样本") {
+		t.Fatalf("expected sample section in report markdown, got %s", got)
+	}
+
+	savedReportResp := invokeJSON(t, handler, http.MethodPost, "/api/evidence/report", map[string]interface{}{
+		"title": "工作流验收报告",
+		"note":  "用于验证报告保存与历史记录",
+	})
+	savedReport := savedReportResp.Data.(map[string]interface{})
+	savedReportID := savedReport["id"].(string)
+	if savedReportID == "" {
+		t.Fatal("expected saved report id")
+	}
+	if got := savedReport["title"].(string); got != "工作流验收报告" {
+		t.Fatalf("expected saved report title, got %s", got)
+	}
+	if got := savedReport["note"].(string); got != "用于验证报告保存与历史记录" {
+		t.Fatalf("expected saved report note, got %s", got)
+	}
+
+	reportListResp := invokeJSON(t, handler, http.MethodGet, "/api/evidence/reports", nil)
+	reportList := reportListResp.Data.(map[string]interface{})["items"].([]interface{})
+	if len(reportList) == 0 {
+		t.Fatal("expected evidence report history items")
+	}
+	if got := reportList[0].(map[string]interface{})["id"].(string); got != savedReportID {
+		t.Fatalf("expected latest saved report id %s, got %s", savedReportID, got)
+	}
+
+	reportByIDResp := invokeJSON(t, handler, http.MethodGet, "/api/evidence/reports/"+savedReportID, nil)
+	reportByID := reportByIDResp.Data.(map[string]interface{})
+	if got := reportByID["title"].(string); got != "工作流验收报告" {
+		t.Fatalf("expected saved report title from get-by-id, got %s", got)
+	}
+	if got := reportByID["markdown"].(string); !strings.Contains(got, "工作流验收报告") {
+		t.Fatalf("expected custom title in saved report markdown, got %s", got)
+	}
+
 	retryResp := invokeJSON(t, handler, http.MethodPost, "/api/tasks/"+taskID+"/retry", nil)
 	retryData := retryResp.Data.(map[string]interface{})
 	if got := retryData["task"].(map[string]interface{})["state"].(string); got != "ready" {

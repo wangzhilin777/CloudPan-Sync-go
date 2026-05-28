@@ -699,6 +699,109 @@ VALUES (?, ?, ?, ?)`,
 	return err
 }
 
+func saveEvidenceReport(ctx context.Context, store *sqlitestore.Store, report EvidenceReport) (EvidenceReportRecord, error) {
+	record := EvidenceReportRecord{
+		ID:          uuid.NewString(),
+		GeneratedAt: report.GeneratedAt,
+		Title:       report.Title,
+		Note:        report.Note,
+		Markdown:    report.Markdown,
+		Summary:     report.Summary,
+		Statuses:    report.Statuses,
+		Samples:     report.Samples,
+	}
+	summaryJSON, err := json.Marshal(record.Summary)
+	if err != nil {
+		return EvidenceReportRecord{}, err
+	}
+	statusesJSON, err := json.Marshal(record.Statuses)
+	if err != nil {
+		return EvidenceReportRecord{}, err
+	}
+	samplesJSON, err := json.Marshal(record.Samples)
+	if err != nil {
+		return EvidenceReportRecord{}, err
+	}
+	_, err = store.DB().ExecContext(ctx, `
+INSERT INTO evidence_reports(id, generated_at, title, note, markdown, summary_json, statuses_json, samples_json)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+		record.ID, record.GeneratedAt, record.Title, record.Note, record.Markdown, string(summaryJSON), string(statusesJSON), string(samplesJSON),
+	)
+	if err != nil {
+		return EvidenceReportRecord{}, err
+	}
+	return record, nil
+}
+
+func listEvidenceReports(ctx context.Context, store *sqlitestore.Store) ([]EvidenceReportRecord, error) {
+	rows, err := store.DB().QueryContext(ctx, `
+SELECT id, generated_at, title, note, markdown, summary_json, statuses_json, samples_json
+FROM evidence_reports
+ORDER BY generated_at DESC, rowid DESC`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	items := make([]EvidenceReportRecord, 0)
+	for rows.Next() {
+		var (
+			item         EvidenceReportRecord
+			title        string
+			note         string
+			summaryJSON  string
+			statusesJSON string
+			samplesJSON  string
+		)
+		if err := rows.Scan(&item.ID, &item.GeneratedAt, &title, &note, &item.Markdown, &summaryJSON, &statusesJSON, &samplesJSON); err != nil {
+			return nil, err
+		}
+		item.Title = title
+		item.Note = note
+		if err := json.Unmarshal([]byte(summaryJSON), &item.Summary); err != nil {
+			return nil, err
+		}
+		if err := json.Unmarshal([]byte(statusesJSON), &item.Statuses); err != nil {
+			return nil, err
+		}
+		if err := json.Unmarshal([]byte(samplesJSON), &item.Samples); err != nil {
+			return nil, err
+		}
+		items = append(items, item)
+	}
+	return items, rows.Err()
+}
+
+func getEvidenceReport(ctx context.Context, store *sqlitestore.Store, id string) (EvidenceReportRecord, bool, error) {
+	row := store.DB().QueryRowContext(ctx, `
+SELECT id, generated_at, title, note, markdown, summary_json, statuses_json, samples_json
+FROM evidence_reports
+WHERE id = ?`, id)
+
+	var (
+		item         EvidenceReportRecord
+		summaryJSON  string
+		statusesJSON string
+		samplesJSON  string
+	)
+	if err := row.Scan(&item.ID, &item.GeneratedAt, &item.Title, &item.Note, &item.Markdown, &summaryJSON, &statusesJSON, &samplesJSON); err != nil {
+		if err == sql.ErrNoRows {
+			return EvidenceReportRecord{}, false, nil
+		}
+		return EvidenceReportRecord{}, false, err
+	}
+	if err := json.Unmarshal([]byte(summaryJSON), &item.Summary); err != nil {
+		return EvidenceReportRecord{}, false, err
+	}
+	if err := json.Unmarshal([]byte(statusesJSON), &item.Statuses); err != nil {
+		return EvidenceReportRecord{}, false, err
+	}
+	if err := json.Unmarshal([]byte(samplesJSON), &item.Samples); err != nil {
+		return EvidenceReportRecord{}, false, err
+	}
+	return item, true, nil
+}
+
 func buildProviderStatusSnapshot(ctx context.Context, store *sqlitestore.Store, detail Detail, probe ProviderProbe, createdAt string) (ProviderStatus, error) {
 	var (
 		profileCount   int

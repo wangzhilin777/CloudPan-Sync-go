@@ -56,6 +56,42 @@ type EvidenceSummary struct {
 	RecentProbes       []ProviderProbe    `json:"recentProbes"`
 }
 
+type EvidenceReport struct {
+	GeneratedAt string           `json:"generatedAt"`
+	Title       string           `json:"title"`
+	Note        string           `json:"note,omitempty"`
+	Markdown    string           `json:"markdown"`
+	Summary     EvidenceSummary  `json:"summary"`
+	Statuses    []StatusSummary  `json:"statuses"`
+	Samples     []EvidenceSample `json:"samples"`
+}
+
+type EvidenceReportRecord struct {
+	ID          string           `json:"id"`
+	GeneratedAt string           `json:"generatedAt"`
+	Title       string           `json:"title"`
+	Note        string           `json:"note,omitempty"`
+	Markdown    string           `json:"markdown"`
+	Summary     EvidenceSummary  `json:"summary"`
+	Statuses    []StatusSummary  `json:"statuses"`
+	Samples     []EvidenceSample `json:"samples"`
+}
+
+type EvidenceSample struct {
+	ProviderKey       string `json:"providerKey"`
+	TaskID            string `json:"taskId"`
+	SourceProvider    string `json:"sourceProvider"`
+	TargetProvider    string `json:"targetProvider"`
+	TaskState         string `json:"taskState"`
+	CompletionKind    string `json:"completionKind,omitempty"`
+	ExecutionMode     string `json:"executionMode,omitempty"`
+	ScanMode          string `json:"scanMode,omitempty"`
+	BlockedReason     string `json:"blockedReason,omitempty"`
+	LastCompletedPath string `json:"lastCompletedPath,omitempty"`
+	ResultCount       int    `json:"resultCount"`
+	CreatedAt         string `json:"createdAt"`
+}
+
 type BlockedAction struct {
 	Action         string `json:"action"`
 	Advice         string `json:"advice,omitempty"`
@@ -657,6 +693,38 @@ func (s *Service) ProviderStatuses(ctx context.Context) ([]StatusSummary, error)
 	return providerStatusSummary(ctx, s.store, s.registry.List())
 }
 
+func (s *Service) EvidenceReport(ctx context.Context) (EvidenceReport, error) {
+	summary, err := s.RuntimeEvidence(ctx)
+	if err != nil {
+		return EvidenceReport{}, err
+	}
+	statuses, err := s.ProviderStatuses(ctx)
+	if err != nil {
+		return EvidenceReport{}, err
+	}
+	details, err := s.List(ctx)
+	if err != nil {
+		return EvidenceReport{}, err
+	}
+	return buildEvidenceReport(summary, statuses, buildEvidenceSamples(details, 12), time.Now().UTC().Format(time.RFC3339), "", ""), nil
+}
+
+func (s *Service) SaveEvidenceReport(ctx context.Context, title, note string) (EvidenceReportRecord, error) {
+	report, err := s.EvidenceReport(ctx)
+	if err != nil {
+		return EvidenceReportRecord{}, err
+	}
+	return saveEvidenceReport(ctx, s.store, buildEvidenceReport(report.Summary, report.Statuses, report.Samples, report.GeneratedAt, title, note))
+}
+
+func (s *Service) ListEvidenceReports(ctx context.Context) ([]EvidenceReportRecord, error) {
+	return listEvidenceReports(ctx, s.store)
+}
+
+func (s *Service) GetEvidenceReport(ctx context.Context, id string) (EvidenceReportRecord, bool, error) {
+	return getEvidenceReport(ctx, s.store, id)
+}
+
 func (s *Service) RecoverBlockedTasks(ctx context.Context) (int, error) {
 	items, err := s.List(ctx)
 	if err != nil {
@@ -1216,6 +1284,14 @@ func executionModeFromMetadata(values map[string]interface{}) (planner.Execution
 	}
 }
 
+func executionModeString(values map[string]interface{}) string {
+	mode, err := executionModeFromMetadata(values)
+	if err != nil {
+		return ""
+	}
+	return string(mode)
+}
+
 func scanModeForExecutionMode(mode planner.ExecutionMode) string {
 	switch mode {
 	case planner.ExecutionModePreScanFlat:
@@ -1637,8 +1713,160 @@ func firstNonEmpty(values ...string) string {
 	return ""
 }
 
+func normalizeEvidenceReportTitle(title string) string {
+	title = strings.TrimSpace(title)
+	if title == "" {
+		return "CloudPan Sync Go 验收与样本报告"
+	}
+	return title
+}
+
+func buildEvidenceReport(summary EvidenceSummary, statuses []StatusSummary, samples []EvidenceSample, generatedAt string, title string, note string) EvidenceReport {
+	title = normalizeEvidenceReportTitle(title)
+	note = strings.TrimSpace(note)
+	var b strings.Builder
+	b.WriteString("# ")
+	b.WriteString(title)
+	b.WriteString("\n\n")
+	b.WriteString("生成时间: ")
+	b.WriteString(generatedAt)
+	b.WriteString("\n\n")
+	if note != "" {
+		b.WriteString("备注: ")
+		b.WriteString(note)
+		b.WriteString("\n\n")
+	}
+	b.WriteString("## 运行证据摘要\n\n")
+	fmt.Fprintf(&b, "- 总任务数: %d\n", summary.TotalTasks)
+	fmt.Fprintf(&b, "- 已完成任务: %d\n", summary.CompletedTasks)
+	fmt.Fprintf(&b, "- 阻塞任务: %d\n", summary.BlockedTasks)
+	fmt.Fprintf(&b, "- 成功结果: %d\n", summary.DoneResultCount)
+	fmt.Fprintf(&b, "- 跳过结果: %d\n", summary.SkippedResultCount)
+	fmt.Fprintf(&b, "- 待补传结果: %d\n", summary.PendingResultCount)
+	fmt.Fprintf(&b, "- 失败结果: %d\n", summary.FailedResultCount)
+	fmt.Fprintf(&b, "- 风控命中: %d\n", summary.RiskHitCount)
+	b.WriteString("\n## 阻塞动作\n\n")
+	if len(summary.BlockedActions) == 0 {
+		b.WriteString("- 当前没有需要人工处理的阻塞动作。\n")
+	} else {
+		b.WriteString("| 动作 | 任务数 | Provider 数 | 下一次可重试 | 建议 |\n")
+		b.WriteString("| --- | ---: | ---: | --- | --- |\n")
+		for _, item := range summary.BlockedActions {
+			fmt.Fprintf(&b, "| %s | %d | %d | %s | %s |\n",
+				markdownCell(item.Action),
+				item.TaskCount,
+				item.ProviderCount,
+				markdownCell(firstNonEmpty(item.NextRetryAt, "-")),
+				markdownCell(firstNonEmpty(item.Advice, "-")),
+			)
+		}
+	}
+	b.WriteString("\n## Provider 样本矩阵\n\n")
+	if len(statuses) == 0 {
+		b.WriteString("- 当前没有 provider 状态样本。\n")
+	} else {
+		b.WriteString("| Provider | Profiles | Tasks | Completed | Blocked | Latest Probe | Last Task State | Observed At |\n")
+		b.WriteString("| --- | ---: | ---: | ---: | ---: | --- | --- | --- |\n")
+		for _, item := range statuses {
+			fmt.Fprintf(&b, "| %s | %d | %d | %d | %d | %s | %s | %s |\n",
+				markdownCell(item.ProviderKey),
+				item.ProfileCount,
+				item.TaskCount,
+				item.CompletedCount,
+				item.BlockedCount,
+				markdownCell(firstNonEmpty(item.LatestProbe, "-")),
+				markdownCell(firstNonEmpty(item.LastTaskState, "-")),
+				markdownCell(firstNonEmpty(item.LastObservedAt, "-")),
+			)
+		}
+	}
+	b.WriteString("\n## 代表任务样本\n\n")
+	if len(samples) == 0 {
+		b.WriteString("- 当前没有可展示的任务样本。\n")
+	} else {
+		b.WriteString("| Provider | Task | State | Completion | ExecMode | ScanMode | BlockedReason | Last Path |\n")
+		b.WriteString("| --- | --- | --- | --- | --- | --- | --- | --- |\n")
+		for _, item := range samples {
+			fmt.Fprintf(&b, "| %s | %s | %s | %s | %s | %s | %s | %s |\n",
+				markdownCell(firstNonEmpty(item.ProviderKey, "-")),
+				markdownCell(firstNonEmpty(item.TaskID, "-")),
+				markdownCell(firstNonEmpty(item.TaskState, "-")),
+				markdownCell(firstNonEmpty(item.CompletionKind, "-")),
+				markdownCell(firstNonEmpty(item.ExecutionMode, "-")),
+				markdownCell(firstNonEmpty(item.ScanMode, "-")),
+				markdownCell(firstNonEmpty(item.BlockedReason, "-")),
+				markdownCell(firstNonEmpty(item.LastCompletedPath, "-")),
+			)
+		}
+	}
+	b.WriteString("\n## 最近证据\n\n")
+	if len(summary.RecentProbes) == 0 {
+		b.WriteString("- 暂无 recent probe。\n")
+	} else {
+		for _, probe := range summary.RecentProbes {
+			fmt.Fprintf(&b, "- %s %s %s %s\n",
+				markdownCell(firstNonEmpty(probe.ProviderKey, "-")),
+				markdownCell(firstNonEmpty(probe.Status, "-")),
+				markdownCell(firstNonEmpty(probe.CreatedAt, "-")),
+				markdownCell(firstNonEmpty(stringValue(probe.Payload["taskState"]), "-")),
+			)
+		}
+	}
+	return EvidenceReport{
+		GeneratedAt: generatedAt,
+		Title:       title,
+		Note:        note,
+		Markdown:    strings.TrimSpace(b.String()),
+		Summary:     summary,
+		Statuses:    statuses,
+		Samples:     samples,
+	}
+}
+
+func buildEvidenceSamples(details []Detail, limit int) []EvidenceSample {
+	if limit <= 0 {
+		limit = 10
+	}
+	samples := make([]EvidenceSample, 0, minInt(limit, len(details)))
+	for _, detail := range details {
+		samples = append(samples, EvidenceSample{
+			ProviderKey:       detail.Task.TargetProvider,
+			TaskID:            detail.Task.ID,
+			SourceProvider:    detail.Task.SourceProvider,
+			TargetProvider:    detail.Task.TargetProvider,
+			TaskState:         string(detail.Task.State),
+			CompletionKind:    string(detail.Task.CompletionKind),
+			ExecutionMode:     executionModeString(detail.Plan.Metadata),
+			ScanMode:          stringValue(detail.Plan.Metadata["scanMode"]),
+			BlockedReason:     stringValue(detail.Runtime.BlockedReason),
+			LastCompletedPath: detail.Runtime.LastCompletedPath,
+			ResultCount:       len(detail.Results),
+			CreatedAt:         detail.Task.CreatedAt,
+		})
+		if len(samples) >= limit {
+			break
+		}
+	}
+	return samples
+}
+
+func markdownCell(value string) string {
+	value = strings.ReplaceAll(strings.TrimSpace(value), "|", "\\|")
+	if value == "" {
+		return "-"
+	}
+	return value
+}
+
 func maxInt(left, right int) int {
 	if left > right {
+		return left
+	}
+	return right
+}
+
+func minInt(left, right int) int {
+	if left < right {
 		return left
 	}
 	return right

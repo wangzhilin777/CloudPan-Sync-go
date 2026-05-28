@@ -8,6 +8,9 @@ const state = {
   focusedProfileId: null,
   evidence: null,
   statuses: [],
+  report: null,
+  reportHistory: [],
+  selectedReportId: "",
   treeGroupsCollapsed: {},
   treeFilters: {
     taskDirectory: { query: "", status: "" },
@@ -1698,6 +1701,10 @@ function renderStatus() {
   $("#blocked-actions-summary").innerHTML = renderBlockedActionsSummary(evidence.blockedActions || []);
   wireBlockedActionsSummary();
   $("#protocol-coverage-summary").innerHTML = renderProtocolCoverageSummary(protocolCoverage);
+  const currentReport = selectedEvidenceReport();
+  $("#evidence-report").innerHTML = renderEvidenceReport(currentReport);
+  $("#report-history").innerHTML = renderReportHistory(state.reportHistory || []);
+  hydrateReportForm(currentReport);
 
   $("#status-table").innerHTML = `
     <table>
@@ -1942,10 +1949,19 @@ async function loadTasks() {
 }
 
 async function loadStatus() {
-  const evidence = await api("/api/evidence/runtime");
-  const statuses = await api("/api/status/providers");
+  const [evidence, statuses, report, history] = await Promise.all([
+    api("/api/evidence/runtime"),
+    api("/api/status/providers"),
+    api("/api/evidence/report"),
+    api("/api/evidence/reports"),
+  ]);
   state.evidence = evidence;
   state.statuses = statuses.items || [];
+  state.report = report;
+  state.reportHistory = history.items || [];
+  if (state.selectedReportId && !state.reportHistory.some((item) => item.id === state.selectedReportId)) {
+    state.selectedReportId = "";
+  }
   renderStatus();
 }
 
@@ -1968,15 +1984,17 @@ function renderReportHistory(items) {
       (item) => `
         <div class="directory-row tree-node ${item.id === state.selectedReportId ? "active" : ""}">
           <div class="directory-row-header">
-            <strong>${escapeHTML(item.generatedAt || "-")}</strong>
+            <strong>${escapeHTML(item.title || item.generatedAt || "-")}</strong>
             <code>${escapeHTML(item.id || "-")}</code>
           </div>
           <div class="directory-metrics">
+            <span class="pill">time ${escapeHTML(stringifyValue(item.generatedAt || "-", "-"))}</span>
             <span class="pill">tasks ${stringifyValue(item.summary?.totalTasks, "0")}</span>
             <span class="pill">blocked ${stringifyValue(item.summary?.blockedTasks, "0")}</span>
             <span class="pill">providers ${stringifyValue(item.statuses?.length, "0")}</span>
             <span class="pill">samples ${stringifyValue(item.samples?.length, "0")}</span>
           </div>
+          ${item.note ? `<div class="muted">${escapeHTML(item.note)}</div>` : ""}
           <div class="actions compact">
             <button type="button" class="ghost" data-report-view="${escapeHTML(item.id || "")}">查看</button>
             <button type="button" class="ghost" data-report-download="${escapeHTML(item.id || "")}">下载</button>
@@ -1985,6 +2003,43 @@ function renderReportHistory(items) {
       `, 
     )
     .join("");
+}
+
+function renderEvidenceReport(report) {
+  if (!report || typeof report !== "object") {
+    return `<div class="directory-empty">暂无验收报告，请先刷新或保存一份报告。</div>`;
+  }
+  return `
+    <div class="insight-card">
+      <strong>报告标题</strong>
+      <span>${escapeHTML(stringifyValue(report.title, "-"))}</span>
+    </div>
+    <div class="insight-card">
+      <strong>生成时间</strong>
+      <span>${escapeHTML(stringifyValue(report.generatedAt, "-"))}</span>
+    </div>
+    ${report.note ? `
+      <div class="insight-card">
+        <strong>报告备注</strong>
+        <span>${escapeHTML(report.note)}</span>
+      </div>
+    ` : ""}
+    <pre class="result-box">${escapeHTML(report.markdown || "")}</pre>
+  `;
+}
+
+function hydrateReportForm(report) {
+  if (!report || typeof report !== "object") {
+    return;
+  }
+  const titleInput = $("#report-title");
+  const noteInput = $("#report-note");
+  if (titleInput) {
+    titleInput.value = report.title || "";
+  }
+  if (noteInput) {
+    noteInput.value = report.note || "";
+  }
 }
 
 async function bootstrapData() {
@@ -2199,6 +2254,69 @@ function wireStatus() {
       showFlash("状态矩阵已刷新");
     } catch (error) {
       showFlash(error.message, true);
+    }
+  });
+  $("#refresh-report").addEventListener("click", async () => {
+    try {
+      await loadStatus();
+      showFlash("验收报告已刷新");
+    } catch (error) {
+      showFlash(error.message, true);
+    }
+  });
+  $("#save-report").addEventListener("click", async () => {
+    try {
+      const payload = {
+        title: $("#report-title").value.trim(),
+        note: $("#report-note").value.trim(),
+      };
+      const record = await api("/api/evidence/report", {
+        method: "POST",
+        body: payload,
+      });
+      state.selectedReportId = record.id || "";
+      showFlash("验收报告已保存");
+      await loadStatus();
+      if (state.selectedReportId) {
+        $("#report-history").querySelector(`[data-report-view="${state.selectedReportId}"]`)?.focus?.();
+      }
+    } catch (error) {
+      showFlash(error.message, true);
+    }
+  });
+  $("#download-report").addEventListener("click", async () => {
+    try {
+      const report = selectedEvidenceReport();
+      if (!report || !report.markdown) {
+        showFlash("暂无可下载的验收报告", true);
+        return;
+      }
+      const blob = new Blob([report.markdown], { type: "text/plain;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = `${String(report.title || "cloudpan-sync-report").trim().replace(/\s+/g, "-")}.md`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(url);
+      showFlash("验收报告已下载");
+    } catch (error) {
+      showFlash(error.message, true);
+    }
+  });
+  $("#report-history").addEventListener("click", async (event) => {
+    const viewButton = event.target.closest("[data-report-view]");
+    if (viewButton) {
+      state.selectedReportId = viewButton.dataset.reportView || "";
+      renderStatus();
+      showFlash("已切换验收报告");
+      return;
+    }
+    const downloadButton = event.target.closest("[data-report-download]");
+    if (downloadButton) {
+      state.selectedReportId = downloadButton.dataset.reportDownload || "";
+      $("#download-report").click();
     }
   });
 }

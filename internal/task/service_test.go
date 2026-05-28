@@ -365,6 +365,65 @@ func TestServiceProtocolCoverageSummary(t *testing.T) {
 	if !found123 || !foundQuark {
 		t.Fatalf("expected both target providers in status list, got %#v", statuses)
 	}
+
+	report, err := svc.EvidenceReport(ctx)
+	if err != nil {
+		t.Fatalf("EvidenceReport() error = %v", err)
+	}
+	if report.GeneratedAt == "" {
+		t.Fatal("expected report generatedAt")
+	}
+	if report.Title != "CloudPan Sync Go 验收与样本报告" {
+		t.Fatalf("expected default report title, got %s", report.Title)
+	}
+	if !strings.Contains(report.Markdown, "CloudPan Sync Go 验收与样本报告") {
+		t.Fatalf("expected default title in report markdown, got %s", report.Markdown)
+	}
+	if !strings.Contains(report.Markdown, "## 代表任务样本") {
+		t.Fatalf("expected sample section in report markdown, got %s", report.Markdown)
+	}
+	if len(report.Samples) == 0 {
+		t.Fatal("expected report samples")
+	}
+	if report.Samples[0].ProviderKey == "" {
+		t.Fatal("expected report sample provider key")
+	}
+
+	savedReport, err := svc.SaveEvidenceReport(ctx, "里程碑报告", "验收备注")
+	if err != nil {
+		t.Fatalf("SaveEvidenceReport() error = %v", err)
+	}
+	if savedReport.ID == "" {
+		t.Fatal("expected saved report id")
+	}
+	if savedReport.Title != "里程碑报告" {
+		t.Fatalf("expected saved report title 里程碑报告, got %s", savedReport.Title)
+	}
+	if savedReport.Note != "验收备注" {
+		t.Fatalf("expected saved report note 验收备注, got %s", savedReport.Note)
+	}
+
+	listedReports, err := svc.ListEvidenceReports(ctx)
+	if err != nil {
+		t.Fatalf("ListEvidenceReports() error = %v", err)
+	}
+	if len(listedReports) == 0 {
+		t.Fatal("expected evidence report history items")
+	}
+	if got := listedReports[0].ID; got != savedReport.ID {
+		t.Fatalf("expected latest saved report id %s, got %s", savedReport.ID, got)
+	}
+
+	fetchedReport, ok, err := svc.GetEvidenceReport(ctx, savedReport.ID)
+	if err != nil {
+		t.Fatalf("GetEvidenceReport() error = %v", err)
+	}
+	if !ok {
+		t.Fatal("expected saved report to be found")
+	}
+	if fetchedReport.Markdown == "" || !strings.Contains(fetchedReport.Markdown, "里程碑报告") {
+		t.Fatalf("expected custom title in saved report markdown, got %s", fetchedReport.Markdown)
+	}
 }
 
 func TestServiceRuntimeHandlesFallbackAndConflictDowngrade(t *testing.T) {

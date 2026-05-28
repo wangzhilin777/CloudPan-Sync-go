@@ -366,6 +366,20 @@
                 <span class="muted">按 protocol group 聚合真实成功样本</span>
               </div>
               <div id="protocol-coverage-summary" class="directory-state-list"></div>
+              <div class="section-head compact-head">
+                <h3>验收报告</h3>
+                <div class="actions compact">
+                  <button type="button" class="ghost" id="refresh-report">刷新</button>
+                  <button type="button" class="ghost" id="save-report">保存</button>
+                  <button type="button" class="ghost" id="download-report">下载 Markdown</button>
+                </div>
+              </div>
+              <div class="filter-bar">
+                <input id="report-title" type="text" placeholder="报告标题，默认使用标准标题" />
+                <input id="report-note" type="text" placeholder="报告备注，写交接要点或里程碑说明" />
+              </div>
+              <div id="evidence-report" class="result-box">等待报告数据...</div>
+              <div id="report-history" class="directory-state-list"></div>
             </article>
             <article class="card">
               <h2>Provider 状态矩阵</h2>
