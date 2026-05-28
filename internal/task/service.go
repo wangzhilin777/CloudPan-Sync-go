@@ -555,6 +555,7 @@ type retryQueueSummary struct {
 	BlockedAction            string
 	BlockedAdvice            string
 	NextRetryAt              string
+	WindowBlocked            bool
 	CanAutoRetry             bool
 	RetryableNowCount        int
 	CooldownCount            int
@@ -1204,7 +1205,7 @@ func detailMatchesBlockedAction(detail Detail, blockedAction string) bool {
 
 func buildRecoverCandidate(detail Detail) recoverCandidate {
 	mode := autoRecoverReason(detail)
-	summary := summarizeRetryQueue(detail.Runtime.RetryQueue)
+	summary := summarizeRetryQueueWithRisk(detail.Runtime.RetryQueue, riskProfileFromMetadata(detail.Plan.Metadata), time.Now().UTC())
 	if mode == "" {
 		mode = summary.AutoRecoverMode
 	}
@@ -1268,14 +1269,16 @@ func blockedActionPriority(action string) int {
 	switch strings.TrimSpace(action) {
 	case "wait_for_cooldown":
 		return 0
-	case "review_and_reset_retry_strategy":
+	case "wait_for_retry_window":
 		return 1
-	case "refresh_auth_profile":
+	case "review_and_reset_retry_strategy":
 		return 2
-	case "restore_local_source_file":
+	case "refresh_auth_profile":
 		return 3
-	case "manual_confirmation_required":
+	case "restore_local_source_file":
 		return 4
+	case "manual_confirmation_required":
+		return 5
 	default:
 		return 9
 	}
@@ -3303,7 +3306,8 @@ func applyRetryQueueSummary(runtime *RuntimeState, metadata map[string]interface
 	if runtime == nil {
 		return
 	}
-	summary := summarizeRetryQueue(runtime.RetryQueue)
+	riskProfile := riskProfileFromMetadata(metadata)
+	summary := summarizeRetryQueueWithRisk(runtime.RetryQueue, riskProfile, time.Now().UTC())
 	runtime.BlockedReason = ""
 	runtime.BlockedAction = ""
 	runtime.BlockedAdvice = ""
@@ -3327,6 +3331,7 @@ func applyRetryQueueSummary(runtime *RuntimeState, metadata map[string]interface
 		"blockedAction":            summary.BlockedAction,
 		"blockedAdvice":            summary.BlockedAdvice,
 		"nextRetryAt":              summary.NextRetryAt,
+		"windowBlocked":            summary.WindowBlocked,
 		"canAutoRetry":             summary.CanAutoRetry,
 		"queueSize":                len(runtime.RetryQueue),
 		"retryableNowCount":        summary.RetryableNowCount,
@@ -3346,7 +3351,10 @@ func autoRecoverReason(detail Detail) string {
 	if detail.Task.State == StateCompletedWithErrors && retryQueueCanAutoResumeUploads(detail.Runtime.RetryQueue) {
 		return "upload_checkpoint_auto_resume"
 	}
-	summary := summarizeRetryQueue(detail.Runtime.RetryQueue)
+	summary := summarizeRetryQueueWithRisk(detail.Runtime.RetryQueue, riskProfileFromMetadata(detail.Plan.Metadata), time.Now().UTC())
+	if summary.BlockedReason == "retry_queue_waiting_for_retry_window" {
+		return "retry_window_waiting_auto_retry"
+	}
 	if summary.BlockedReason == "retry_queue_waiting_for_cooldown" {
 		return "cooldown_elapsed_auto_retry"
 	}
@@ -3426,6 +3434,8 @@ func blockedGuidance(reason string) (string, string) {
 		return "restore_local_source_file", "本地回退文件缺失，请先补回源文件或调整执行策略，再继续重试。"
 	case "retry_queue_waiting_for_cooldown":
 		return "wait_for_cooldown", "当前处于风控冷却窗口，等待 nextRetryAt 后系统会尝试自动补传。"
+	case "retry_queue_waiting_for_retry_window":
+		return "wait_for_retry_window", "当前已满足自动补传条件，但不在允许的自动补传时间窗内，等待 nextRetryAt 后系统会自动接管。"
 	case "retry_queue_pending_manual_confirmation":
 		return "manual_confirmation_required", "存在 pending_manual 项，需要人工确认或等待后续真实 fallback 运行时能力。"
 	default:
@@ -3439,6 +3449,8 @@ func autoRecoverGuidance(mode string) string {
 		return "当前失败队列都带可恢复的 upload checkpoint，单机 worker 会优先尝试续跑上传会话。"
 	case "cooldown_elapsed_auto_retry":
 		return "当前队列主要受冷却窗口阻塞，窗口结束后单机 worker 会自动重试。"
+	case "retry_window_waiting_auto_retry":
+		return "当前队列已经满足自动补传条件，但还不在允许的自动补传时间窗内，系统会在下一个时间窗开始后自动接管。"
 	case "retry_queue_auto_retry":
 		return "当前队列不存在人工确认/授权/本地文件硬阻塞，满足条件时可由后台自动接管重试。"
 	default:
@@ -3452,8 +3464,10 @@ func autoRecoverModePriority(mode string) int {
 		return 0
 	case "retry_queue_auto_retry":
 		return 1
-	case "cooldown_elapsed_auto_retry":
+	case "retry_window_waiting_auto_retry":
 		return 2
+	case "cooldown_elapsed_auto_retry":
+		return 3
 	default:
 		return 9
 	}
@@ -3566,16 +3580,75 @@ func summarizeRetryQueue(queue []RetryQueueItem) retryQueueSummary {
 	return summary
 }
 
+func summarizeRetryQueueWithRisk(queue []RetryQueueItem, riskProfile planner.RiskProfile, now time.Time) retryQueueSummary {
+	summary := summarizeRetryQueue(queue)
+	if len(queue) == 0 || !summary.CanAutoRetry || summary.ShouldBlock {
+		return summary
+	}
+	nextWindowAt, blockedByWindow := nextAutoRetryWindowStart(riskProfile, now)
+	if !blockedByWindow {
+		return summary
+	}
+	summary.ShouldBlock = true
+	summary.WindowBlocked = true
+	summary.BlockedReason = "retry_queue_waiting_for_retry_window"
+	summary.BlockedAction, summary.BlockedAdvice = blockedGuidance(summary.BlockedReason)
+	summary.NextRetryAt = nextWindowAt
+	summary.AutoRecoverEligible = true
+	summary.AutoRecoverMode = "retry_window_waiting_auto_retry"
+	summary.AutoRecoverAdvice = autoRecoverGuidance(summary.AutoRecoverMode)
+	return summary
+}
+
+func nextAutoRetryWindowStart(riskProfile planner.RiskProfile, now time.Time) (string, bool) {
+	start := riskProfile.AutoRetryStartHour
+	end := riskProfile.AutoRetryEndHour
+	if start <= 0 && end <= 0 {
+		return "", false
+	}
+	if autoRetryAllowedNow(riskProfile, now) {
+		return "", false
+	}
+	if start < 0 {
+		start = 0
+	}
+	if end < 0 {
+		end = 0
+	}
+	if start > 23 {
+		start = 23
+	}
+	if end > 24 {
+		end = 24
+	}
+	if start == end {
+		return "", false
+	}
+	base := now.UTC()
+	next := time.Date(base.Year(), base.Month(), base.Day(), start, 0, 0, 0, time.UTC)
+	if start < end {
+		if base.Hour() >= end {
+			next = next.Add(24 * time.Hour)
+		}
+		return next.Format(time.RFC3339), true
+	}
+	if base.Hour() < start {
+		return next.Format(time.RFC3339), true
+	}
+	return next.Add(24 * time.Hour).Format(time.RFC3339), true
+}
+
 func runtimeCanAutoRetry(runtime RuntimeState) bool {
 	return runtimeCanAutoRetryWithRisk(runtime, planner.RiskProfile{})
 }
 
 func runtimeCanAutoRetryWithRisk(runtime RuntimeState, riskProfile planner.RiskProfile) bool {
-	summary := summarizeRetryQueue(runtime.RetryQueue)
+	now := time.Now().UTC()
+	summary := summarizeRetryQueueWithRisk(runtime.RetryQueue, riskProfile, now)
 	if !summary.ShouldBlock {
-		return summary.CanAutoRetry && len(runtime.RetryQueue) > 0 && autoRetryAllowedNow(riskProfile, time.Now().UTC())
+		return summary.CanAutoRetry && len(runtime.RetryQueue) > 0 && autoRetryAllowedNow(riskProfile, now)
 	}
-	if summary.BlockedReason != "retry_queue_waiting_for_cooldown" {
+	if summary.BlockedReason != "retry_queue_waiting_for_cooldown" && summary.BlockedReason != "retry_queue_waiting_for_retry_window" {
 		return false
 	}
 	if strings.TrimSpace(summary.NextRetryAt) == "" {
@@ -3585,10 +3658,10 @@ func runtimeCanAutoRetryWithRisk(runtime RuntimeState, riskProfile planner.RiskP
 	if err != nil {
 		return false
 	}
-	if time.Now().UTC().Before(nextRetryAt) {
+	if now.Before(nextRetryAt) {
 		return false
 	}
-	return summary.CanAutoRetry && autoRetryAllowedNow(riskProfile, time.Now().UTC())
+	return summary.CanAutoRetry && autoRetryAllowedNow(riskProfile, now)
 }
 
 func taskCanAutoRecover(detail Detail) bool {
@@ -3597,7 +3670,7 @@ func taskCanAutoRecover(detail Detail) bool {
 	case StateBlocked:
 		return runtimeCanAutoRetryWithRisk(detail.Runtime, riskProfile)
 	case StateCompletedWithErrors:
-		summary := summarizeRetryQueue(detail.Runtime.RetryQueue)
+		summary := summarizeRetryQueueWithRisk(detail.Runtime.RetryQueue, riskProfile, time.Now().UTC())
 		if summary.ShouldBlock {
 			return false
 		}

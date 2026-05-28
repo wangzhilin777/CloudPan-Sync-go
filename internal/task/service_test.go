@@ -3041,6 +3041,157 @@ func TestServiceRecoverBlockedTasksWithOptionsFiltersModeProviderAndLimit(t *tes
 	}
 }
 
+func TestServiceAutoRecoverPoolShowsRetryWindowWaitingAndSkipsExecutionUntilWindow(t *testing.T) {
+	ctx := context.Background()
+	store, err := sqlitestore.New(ctx, filepath.Join(t.TempDir(), "auto-recover-window.db"))
+	if err != nil {
+		t.Fatalf("new store: %v", err)
+	}
+	defer func() { _ = store.Close() }()
+
+	uploadCalls := 0
+	windowAdapter := &scriptedAdapter{
+		meta: provider.Provider{
+			Key:              "auto_recover_window_target",
+			DisplayName:      "Auto Recover Window Target",
+			ProtocolGroup:    "fake",
+			AuthModes:        []string{"manual_token"},
+			FastUploadInputs: []string{"md5", "size"},
+			FallbackModes:    []string{"download_upload"},
+			Status:           "planned",
+		},
+		capability: provider.CapabilitySet{
+			SupportsAuthValidation: true,
+			SupportsUpload:         true,
+		},
+		uploadFunc: func(req provider.UploadRequest) provider.UploadResult {
+			uploadCalls++
+			if uploadCalls == 1 {
+				return provider.UploadResult{
+					OperationResult: provider.OperationResult{
+						Status:  "rate_limited",
+						Message: "window wait",
+						Mode:    "fake_window_wait",
+					},
+				}
+			}
+			return provider.UploadResult{
+				OperationResult: provider.OperationResult{
+					OK:      true,
+					Status:  "ok",
+					Message: "window recovered",
+					Mode:    "fake_window_ok",
+				},
+			}
+		},
+	}
+
+	registry := provider.NewRegistry(windowAdapter)
+	authSvc := auth.NewService(store, registry)
+	svc := NewService(store, registry, authSvc)
+	profile, err := authSvc.CreateProfile(ctx, auth.CreateProfileInput{
+		ProviderKey: "auto_recover_window_target",
+		AuthMode:    "manual_token",
+		DisplayName: "auto recover window target",
+		Token:       "token-window",
+	})
+	if err != nil {
+		t.Fatalf("CreateProfile(window) error = %v", err)
+	}
+
+	nowHour := time.Now().UTC().Hour()
+	startHour := (nowHour + 1) % 24
+	endHour := (nowHour + 2) % 24
+	if startHour == endHour {
+		endHour = (endHour + 1) % 24
+	}
+
+	taskDetail, err := svc.Create(ctx, CreateRequest{
+		SourceProvider:  "guangya",
+		TargetProvider:  "auto_recover_window_target",
+		TargetProfileID: profile.ID,
+		ThresholdMB:     1,
+		RiskOverride: &planner.RiskProfileOverride{
+			CooldownSeconds:    intPtrTask(0),
+			AutoRetryStartHour: intPtrTask(startHour),
+			AutoRetryEndHour:   intPtrTask(endHour),
+		},
+		Entries: []planner.SourceEntry{
+			{Path: "/window.bin", Size: 1024, MD5: "window-md5"},
+		},
+	})
+	if err != nil {
+		t.Fatalf("Create(window) error = %v", err)
+	}
+	running, ok, err := svc.Run(ctx, taskDetail.Task.ID)
+	if err != nil || !ok {
+		t.Fatalf("Run(window) error=%v ok=%v", err, ok)
+	}
+	running.Results[0].CreatedAt = time.Now().Add(-2 * time.Hour).UTC().Format(time.RFC3339)
+	syncRuntimeRetryQueue(&running.Runtime, running.Plan.Metadata, running.Results)
+	applyRetryQueueSummary(&running.Runtime, running.Plan.Metadata)
+	running.Task.UpdatedAt = time.Now().UTC().Format(time.RFC3339)
+	if err := replaceTaskDetailAndResults(ctx, store, running); err != nil {
+		t.Fatalf("replaceTaskDetailAndResults(window) error = %v", err)
+	}
+	running, ok, err = svc.Get(ctx, taskDetail.Task.ID)
+	if err != nil || !ok {
+		t.Fatalf("Get(window) error=%v ok=%v", err, ok)
+	}
+	if running.Runtime.BlockedAction != "wait_for_retry_window" {
+		t.Fatalf("expected blockedAction wait_for_retry_window, got %#v", running.Runtime.BlockedAction)
+	}
+	if running.Runtime.BlockedReason != "retry_queue_waiting_for_retry_window" {
+		t.Fatalf("expected blockedReason retry_queue_waiting_for_retry_window, got %#v", running.Runtime.BlockedReason)
+	}
+	if strings.TrimSpace(running.Runtime.NextRetryAt) == "" {
+		t.Fatalf("expected runtime nextRetryAt for waiting window, got %#v", running.Runtime)
+	}
+
+	retrySummary, ok := running.Plan.Metadata["retrySummary"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("expected retrySummary metadata, got %#v", running.Plan.Metadata["retrySummary"])
+	}
+	if stringValue(retrySummary["autoRecoverMode"]) != "retry_window_waiting_auto_retry" {
+		t.Fatalf("expected retry_window_waiting_auto_retry mode, got %#v", retrySummary)
+	}
+	if stringValue(retrySummary["blockedAction"]) != "wait_for_retry_window" {
+		t.Fatalf("expected blockedAction wait_for_retry_window, got %#v", retrySummary)
+	}
+	if !boolValue(retrySummary["windowBlocked"]) {
+		t.Fatalf("expected windowBlocked true, got %#v", retrySummary)
+	}
+
+	evidence, err := svc.RuntimeEvidence(ctx)
+	if err != nil {
+		t.Fatalf("RuntimeEvidence() error = %v", err)
+	}
+	windowLane := autoRecoverLaneByMode(evidence.AutoRecoverPool, "retry_window_waiting_auto_retry")
+	if windowLane.Mode == "" {
+		t.Fatalf("expected retry_window_waiting_auto_retry lane in %#v", evidence.AutoRecoverPool)
+	}
+	if windowLane.TaskCount != 1 || windowLane.PrimaryBlockedAction != "wait_for_retry_window" {
+		t.Fatalf("unexpected window lane %#v", windowLane)
+	}
+	if windowLane.PrimaryRetryClass != "rate_limited" {
+		t.Fatalf("expected window lane primary retryClass rate_limited, got %#v", windowLane)
+	}
+	if strings.TrimSpace(windowLane.NextRetryAt) == "" {
+		t.Fatalf("expected window lane nextRetryAt, got %#v", windowLane)
+	}
+
+	recovered, err := svc.RecoverBlockedTasks(ctx)
+	if err != nil {
+		t.Fatalf("RecoverBlockedTasks() error = %v", err)
+	}
+	if recovered != 0 {
+		t.Fatalf("expected no recovery before retry window, got %d", recovered)
+	}
+	if uploadCalls != 1 {
+		t.Fatalf("expected no extra upload calls before retry window, got %d", uploadCalls)
+	}
+}
+
 func TestServiceRecoverBlockedTasksWithOptionsFiltersPathSubset(t *testing.T) {
 	ctx := context.Background()
 	store, err := sqlitestore.New(ctx, filepath.Join(t.TempDir(), "auto-recover-path.db"))

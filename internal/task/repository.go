@@ -563,7 +563,7 @@ func shouldIncludeAutoRecoverPool(detail Detail, summary retryQueueSummary) bool
 	case StateBlocked:
 		return summary.AutoRecoverEligible
 	case StateCompletedWithErrors:
-		return retryQueueCanAutoResumeUploads(detail.Runtime.RetryQueue)
+		return summary.AutoRecoverEligible
 	default:
 		return false
 	}

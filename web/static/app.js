@@ -1232,6 +1232,8 @@ function blockedActionFilterPreset(action) {
       return { retryClass: "auth_expired", retryState: "blocked" };
     case "restore_local_source_file":
       return { retryClass: "local_file_missing", retryState: "blocked" };
+    case "wait_for_retry_window":
+      return { retryClass: "", retryState: "blocked" };
     case "wait_for_cooldown":
       return { retryClass: "rate_limited", retryState: "blocked" };
     case "manual_confirmation_required":
@@ -1753,6 +1755,18 @@ function renderTaskResolutionGuide(detail) {
       buttons: [
         { label: "只看冷却队列", view: "tasks", intent: "focus_task_retry" },
         { label: "查看状态矩阵", view: "status" },
+      ],
+    },
+    wait_for_retry_window: {
+      title: "等待自动补传时间窗",
+      steps: [
+        nextRetryAt ? `当前下一次允许自动补传的时间是 ${nextRetryAt}。` : "当前不在允许的自动补传时间窗内。",
+        "这类任务仍会留在自动补传候选池里，但在时间窗开始前不会被 worker 实际执行。",
+        "如果需要排查影响范围，可切到状态矩阵按 blocked action 或 lane 直接聚焦。",
+      ],
+      buttons: [
+        { label: "只看时间窗等待态", view: "status" },
+        { label: "只看当前任务重试队列", view: "tasks", intent: "focus_task_retry" },
       ],
     },
     manual_confirmation_required: {
