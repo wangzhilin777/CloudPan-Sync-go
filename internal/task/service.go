@@ -56,6 +56,7 @@ type RecoverResult struct {
 	MatchedCount   int    `json:"matchedCount"`
 	RecoveredCount int    `json:"recoveredCount"`
 	SkippedByLimit int    `json:"skippedByLimit"`
+	SkippedByProviderBudget int `json:"skippedByProviderBudget"`
 }
 
 type Detail struct {
@@ -1033,8 +1034,15 @@ func (s *Service) RecoverBlockedTasksWithOptions(ctx context.Context, opts Recov
 		candidates = candidates[:opts.Limit]
 	}
 	recovered := 0
+	recoveredByProvider := make(map[string]int)
 	for _, candidate := range candidates {
 		detail := candidate.Detail
+		providerKey := strings.TrimSpace(detail.Task.TargetProvider)
+		providerBudget := recoverProviderBudget(detail)
+		if providerBudget > 0 && recoveredByProvider[providerKey] >= providerBudget {
+			result.SkippedByProviderBudget++
+			continue
+		}
 		retryOpts := RetryOptions{}
 		if opts.Path != "" {
 			retryOpts.Paths = []string{opts.Path}
@@ -1062,6 +1070,7 @@ func (s *Service) RecoverBlockedTasksWithOptions(ctx context.Context, opts Recov
 			return result, err
 		}
 		recovered++
+		recoveredByProvider[providerKey] = recoveredByProvider[providerKey] + 1
 	}
 	result.RecoveredCount = recovered
 	return result, nil
@@ -1073,6 +1082,14 @@ func recoverSelectionScope(scope string) string {
 		return "selected_retry_subset"
 	}
 	return scope
+}
+
+func recoverProviderBudget(detail Detail) int {
+	riskProfile := riskProfileFromMetadata(detail.Plan.Metadata)
+	if riskProfile.MaxConcurrent <= 0 {
+		return 0
+	}
+	return riskProfile.MaxConcurrent
 }
 
 func retryQueueContainsClass(queue []RetryQueueItem, retryClass string) bool {

@@ -59,6 +59,7 @@
   - 可以按任务覆盖风险关键词
   - 运行证据里会回写命中的风险状态
   - 自动补传时间窗会在 planner 阶段先归一化到合法小时范围，避免预览口径和 runtime 执行口径漂移
+  - 后台补传单轮放行也会开始尊重 `riskProfile.maxConcurrent` 的 provider 级批量预算，避免某一类任务一次性吃掉整轮额度
 - 当前 `rate_limited` 重试队列也已经不再只有单一冷却秒数：
   - 会按失败次数进入 `fast / normal / extended` 三档退避
   - 队列项会直接展示 `cooldownTier / cooldownSeconds / eligibleAt`

@@ -3072,6 +3072,136 @@ func TestServiceRecoverBlockedTasksWithOptionsFiltersPathSubset(t *testing.T) {
 	}
 }
 
+func TestServiceRecoverBlockedTasksWithOptionsRespectsProviderBudget(t *testing.T) {
+	ctx := context.Background()
+	store, err := sqlitestore.New(ctx, filepath.Join(t.TempDir(), "auto-recover-provider-budget.db"))
+	if err != nil {
+		t.Fatalf("new store: %v", err)
+	}
+	defer func() { _ = store.Close() }()
+
+	uploadCallsByPath := map[string]int{}
+	adapter := &scriptedAdapter{
+		meta: provider.Provider{
+			Key:              "recover_budget_target",
+			DisplayName:      "Recover Budget Target",
+			ProtocolGroup:    "fake",
+			AuthModes:        []string{"manual_token"},
+			FastUploadInputs: []string{"md5", "size"},
+			FallbackModes:    []string{"download_upload"},
+			Status:           "planned",
+		},
+		capability: provider.CapabilitySet{
+			SupportsAuthValidation: true,
+			SupportsUpload:         true,
+		},
+		uploadFunc: func(req provider.UploadRequest) provider.UploadResult {
+			uploadCallsByPath[req.Path]++
+			if uploadCallsByPath[req.Path] == 1 {
+				return provider.UploadResult{
+					OperationResult: provider.OperationResult{
+						Status:  "rate_limited",
+						Message: "rate limited",
+						Mode:    "fake_rate_limit",
+					},
+				}
+			}
+			return provider.UploadResult{
+				OperationResult: provider.OperationResult{
+					OK:      true,
+					Status:  "ok",
+					Message: "budget recovered",
+					Mode:    "fake_budget_ok",
+				},
+			}
+		},
+	}
+
+	registry := provider.NewRegistry(adapter)
+	authSvc := auth.NewService(store, registry)
+	svc := NewService(store, registry, authSvc)
+	profile, err := authSvc.CreateProfile(ctx, auth.CreateProfileInput{
+		ProviderKey: "recover_budget_target",
+		AuthMode:    "manual_token",
+		DisplayName: "recover budget target",
+		Token:       "token-budget",
+	})
+	if err != nil {
+		t.Fatalf("CreateProfile(budget) error = %v", err)
+	}
+
+	createBlockedTask := func(name string) string {
+		taskDetail, err := svc.Create(ctx, CreateRequest{
+			SourceProvider:  "guangya",
+			TargetProvider:  "recover_budget_target",
+			TargetProfileID: profile.ID,
+			ThresholdMB:     1,
+			RiskOverride: &planner.RiskProfileOverride{
+				CooldownSeconds: intPtrTask(3600),
+				MaxConcurrent:   intPtrTask(1),
+			},
+			Entries: []planner.SourceEntry{
+				{Path: "/" + name + ".bin", Size: 128, MD5: name + "-md5"},
+			},
+		})
+		if err != nil {
+			t.Fatalf("Create(%s) error = %v", name, err)
+		}
+		if _, ok, err := svc.Run(ctx, taskDetail.Task.ID); err != nil || !ok {
+			t.Fatalf("Run(%s) error=%v ok=%v", name, err, ok)
+		}
+		blocked, ok, err := svc.Get(ctx, taskDetail.Task.ID)
+		if err != nil || !ok {
+			t.Fatalf("Get(%s) error=%v ok=%v", name, err, ok)
+		}
+		for idx := range blocked.Results {
+			blocked.Results[idx].CreatedAt = time.Now().Add(-2 * time.Hour).UTC().Format(time.RFC3339)
+		}
+		syncRuntimeRetryQueue(&blocked.Runtime, blocked.Plan.Metadata, blocked.Results)
+		applyRetryQueueSummary(&blocked.Runtime, blocked.Plan.Metadata)
+		if err := replaceTaskDetailAndResults(ctx, store, blocked); err != nil {
+			t.Fatalf("replaceTaskDetailAndResults(%s) error = %v", name, err)
+		}
+		return taskDetail.Task.ID
+	}
+
+	firstID := createBlockedTask("budget-a")
+	secondID := createBlockedTask("budget-b")
+
+	result, err := svc.RecoverBlockedTasksWithOptions(ctx, RecoverOptions{
+		ProviderKey: "recover_budget_target",
+		Limit:       5,
+	})
+	if err != nil {
+		t.Fatalf("RecoverBlockedTasksWithOptions(provider budget) error = %v", err)
+	}
+	if result.MatchedCount != 2 || result.RecoveredCount != 1 || result.SkippedByProviderBudget != 1 {
+		t.Fatalf("unexpected provider budget recover result: %#v", result)
+	}
+
+	firstTask, ok, err := svc.Get(ctx, firstID)
+	if err != nil || !ok {
+		t.Fatalf("Get(first budget task) error=%v ok=%v", err, ok)
+	}
+	secondTask, ok, err := svc.Get(ctx, secondID)
+	if err != nil || !ok {
+		t.Fatalf("Get(second budget task) error=%v ok=%v", err, ok)
+	}
+	completedCount := 0
+	blockedCount := 0
+	for _, item := range []Detail{firstTask, secondTask} {
+		switch item.Task.State {
+		case StateCompleted:
+			completedCount++
+		case StateBlocked:
+			blockedCount++
+		}
+	}
+	if completedCount != 1 || blockedCount != 1 {
+		t.Fatalf("expected one completed and one blocked task, got completed=%d blocked=%d", completedCount, blockedCount)
+	}
+}
+
 func TestServiceRecoverBlockedTasksRespectsAutoRetryWindow(t *testing.T) {
 	ctx := context.Background()
 	store, err := sqlitestore.New(ctx, filepath.Join(t.TempDir(), "auto-retry-window.db"))

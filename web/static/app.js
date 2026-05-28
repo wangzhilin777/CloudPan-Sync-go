@@ -3044,7 +3044,7 @@ async function triggerAutoRecover() {
   });
   await Promise.all([loadTasks(), loadStatus()]);
   showFlash(
-    `后台补传已执行：matched ${stringifyValue(result.matchedCount, "0")} / recovered ${stringifyValue(result.recoveredCount, "0")} / skipped ${stringifyValue(result.skippedByLimit, "0")}`,
+    `后台补传已执行：matched ${stringifyValue(result.matchedCount, "0")} / recovered ${stringifyValue(result.recoveredCount, "0")} / limit ${stringifyValue(result.skippedByLimit, "0")} / providerBudget ${stringifyValue(result.skippedByProviderBudget, "0")}`,
   );
 }
 
