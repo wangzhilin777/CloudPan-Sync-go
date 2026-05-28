@@ -783,6 +783,55 @@ function parseJSONInput(raw, fallback) {
   return JSON.parse(text);
 }
 
+function optionalNumberValue(selector) {
+  const value = $(selector).value.trim();
+  if (value === "") {
+    return null;
+  }
+  return Number(value);
+}
+
+function collectRiskOverrideFromForm() {
+  const override = {};
+  const numberFields = [
+    ["#risk-request-interval", "requestIntervalMs"],
+    ["#risk-directory-interval", "directoryIntervalMs"],
+    ["#risk-page-size", "pageSize"],
+    ["#risk-cooldown-seconds", "cooldownSeconds"],
+    ["#risk-retry-limit", "retryLimit"],
+  ];
+  numberFields.forEach(([selector, key]) => {
+    const value = optionalNumberValue(selector);
+    if (value !== null && Number.isFinite(value)) {
+      override[key] = value;
+    }
+  });
+  const keywords = $("#risk-keywords").value
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+  if (keywords.length > 0) {
+    override.riskKeywords = keywords;
+  }
+  return Object.keys(override).length > 0 ? override : null;
+}
+
+function hydrateRiskOverrideForm(value) {
+  const override = value && typeof value === "object" ? value : {};
+  $("#risk-request-interval").value = override.requestIntervalMs ?? "";
+  $("#risk-directory-interval").value = override.directoryIntervalMs ?? "";
+  $("#risk-page-size").value = override.pageSize ?? "";
+  $("#risk-cooldown-seconds").value = override.cooldownSeconds ?? "";
+  $("#risk-retry-limit").value = override.retryLimit ?? "";
+  $("#risk-keywords").value = Array.isArray(override.riskKeywords) ? override.riskKeywords.join(",") : "";
+}
+
+function syncRiskOverrideJSON() {
+  const override = collectRiskOverrideFromForm();
+  $("#plan-risk-override").value = override ? JSON.stringify(override, null, 2) : "";
+  return override;
+}
+
 function showFlash(message, isError = false) {
   const flash = $("#flash");
   flash.textContent = message;
@@ -897,7 +946,10 @@ function prefillWizardFromTask(detail) {
   setSelectValueIfPresent("#plan-risk-mode", detail.plan.metadata?.riskProfile?.mode || "balanced");
   setSelectValueIfPresent("#plan-conflict-policy", detail.conflictPolicy || "auto_rename_new");
   setInputValueIfPresent("#plan-threshold", detail.plan.thresholdMB || 0);
-  $("#plan-risk-override").value = JSON.stringify(detail.plan.metadata?.riskOverride || null, null, 2);
+  hydrateRiskOverrideForm(detail.plan.metadata?.riskOverride || null);
+  $("#plan-risk-override").value = detail.plan.metadata?.riskOverride
+    ? JSON.stringify(detail.plan.metadata.riskOverride, null, 2)
+    : "";
   $("#plan-selected-roots").value = JSON.stringify(detail.plan.metadata?.selectedRoots || ["/"], null, 2);
   $("#plan-entries").value = JSON.stringify(detail.sourceEntries || [], null, 2);
   syncExecutionModeHint();
@@ -1753,6 +1805,7 @@ function wireProfiles() {
 }
 
 function buildPlanPayload() {
+  const riskOverride = parseJSONInput($("#plan-risk-override").value, collectRiskOverrideFromForm());
   return {
     sourceProvider: $("#plan-source-provider").value,
     sourceProfileId: $("#plan-source-profile").value,
@@ -1760,7 +1813,7 @@ function buildPlanPayload() {
     targetProfileId: $("#plan-target-profile").value,
     thresholdMB: Number($("#plan-threshold").value || "0"),
     riskMode: $("#plan-risk-mode").value,
-    riskOverride: parseJSONInput($("#plan-risk-override").value, null),
+    riskOverride,
     executionMode: $("#plan-execution-mode").value,
     conflictPolicy: $("#plan-conflict-policy").value,
     selectedRoots: parseJSONInput($("#plan-selected-roots").value, []),
@@ -1769,6 +1822,28 @@ function buildPlanPayload() {
 }
 
 function wirePlanner() {
+  ["#risk-request-interval", "#risk-directory-interval", "#risk-page-size", "#risk-cooldown-seconds", "#risk-retry-limit", "#risk-keywords"].forEach(
+    (selector) => {
+      $(selector).addEventListener("input", syncRiskOverrideJSON);
+    },
+  );
+  $("#sync-risk-override").addEventListener("click", () => {
+    syncRiskOverrideJSON();
+    showFlash("风控覆盖已同步到 JSON");
+  });
+  $("#clear-risk-override").addEventListener("click", () => {
+    hydrateRiskOverrideForm(null);
+    $("#plan-risk-override").value = "";
+    showFlash("风控覆盖已清空，将使用默认档位和 provider 校准");
+  });
+  $("#plan-risk-override").addEventListener("blur", () => {
+    try {
+      hydrateRiskOverrideForm(parseJSONInput($("#plan-risk-override").value, null));
+    } catch (error) {
+      showFlash(`Risk Override JSON 无法解析：${error.message}`, true);
+    }
+  });
+
   $("#preview-plan").addEventListener("click", async () => {
     try {
       const payload = buildPlanPayload();
