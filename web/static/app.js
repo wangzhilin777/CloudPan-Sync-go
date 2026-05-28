@@ -947,6 +947,15 @@ function visibleTreePaths(scope, panel) {
   return flattenVisibleTreePaths(result.nodes, "directory");
 }
 
+function visibleRetryPaths(scope) {
+  const detail = currentSelectedTaskDetail();
+  const runtimePayload = recentRuntimePayload();
+  const runtime = scope === "task" ? detail?.runtime || detail?.plan?.metadata?.runtime || {} : runtimePayload?.runtime || runtimePayload || {};
+  const filters = scope === "task" ? state.treeFilters.taskRetry : state.treeFilters.statusRetry;
+  const result = filterRetryQueue(runtime.retryQueue || [], filters);
+  return Array.from(new Set((result.items || []).map((item) => item.path).filter(Boolean)));
+}
+
 async function copyVisibleTreePaths(scope, panel) {
   const paths = visibleTreePaths(scope, panel);
   if (!paths.length) {
@@ -1885,6 +1894,14 @@ function renderSelectedTask() {
     <div class="insight-card">
       <strong>重试模式</strong>
       <span>${stringifyValue(metadata.retryMode, "default")}</span>
+    </div>
+    <div class="insight-card">
+      <strong>重试来源</strong>
+      <span>${stringifyValue(metadata.retryScope, metadata.retrySelectedPaths ? "selected_subset" : "-")}</span>
+    </div>
+    <div class="insight-card">
+      <strong>重试选中路径</strong>
+      <span>${Array.isArray(metadata.retrySelectedPaths) && metadata.retrySelectedPaths.length ? summarizePathList(metadata.retrySelectedPaths, 4) : "-"}</span>
     </div>
     <div class="insight-card">
       <strong>重试摘要</strong>
@@ -2951,17 +2968,35 @@ function wirePlanner() {
   });
 }
 
-async function runTaskAction(action) {
+async function runTaskAction(action, body = undefined) {
+  if (!state.selectedTaskId) {
+    showFlash("请先选择任务", true);
+    return false;
+  }
+  try {
+    await api(`/api/tasks/${state.selectedTaskId}/${action}`, { method: "POST", body });
+    showFlash(`任务 ${action} 已执行`);
+    await Promise.all([loadTasks(), loadStatus()]);
+    return true;
+  } catch (error) {
+    showFlash(error.message, true);
+    return false;
+  }
+}
+
+async function retryVisibleSelection(source) {
   if (!state.selectedTaskId) {
     showFlash("请先选择任务", true);
     return;
   }
-  try {
-    await api(`/api/tasks/${state.selectedTaskId}/${action}`, { method: "POST" });
-    showFlash(`任务 ${action} 已执行`);
-    await Promise.all([loadTasks(), loadStatus()]);
-  } catch (error) {
-    showFlash(error.message, true);
+  const paths = source === "pending_tree" ? visibleTreePaths("task", "pending") : visibleRetryPaths("task");
+  if (!paths.length) {
+    showFlash("当前筛选结果里没有可重试的路径", true);
+    return;
+  }
+  const ok = await runTaskAction("retry", { paths, scope: source });
+  if (ok) {
+    showFlash(`已按当前筛选重建 ${paths.length} 条路径的 retry 范围`);
   }
 }
 
@@ -2978,6 +3013,8 @@ function wireTasks() {
   $("#task-pause").addEventListener("click", () => runTaskAction("pause"));
   $("#task-resume").addEventListener("click", () => runTaskAction("resume"));
   $("#task-retry").addEventListener("click", () => runTaskAction("retry"));
+  $("#task-retry-visible-queue").addEventListener("click", () => retryVisibleSelection("selected_retry_subset"));
+  $("#task-retry-visible-pending").addEventListener("click", () => retryVisibleSelection("selected_pending_subset"));
 }
 
 function wireStatus() {

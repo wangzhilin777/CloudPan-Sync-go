@@ -1572,6 +1572,236 @@ func TestServiceRetryNarrowsToPendingRelayEntriesAndReplaysOnlyPendingItems(t *t
 	}
 }
 
+func TestServiceRetryWithOptionsSelectedPendingSubsetKeepsOnlyChosenPaths(t *testing.T) {
+	ctx := context.Background()
+	store, err := sqlitestore.New(ctx, filepath.Join(t.TempDir(), "retry-selected-pending.db"))
+	if err != nil {
+		t.Fatalf("new store: %v", err)
+	}
+	defer func() { _ = store.Close() }()
+
+	uploadCalls := []string{}
+	adapter := &scriptedAdapter{
+		meta: provider.Provider{
+			Key:              "retry_selected_pending_target",
+			DisplayName:      "Retry Selected Pending Target",
+			ProtocolGroup:    "fake",
+			AuthModes:        []string{"manual_token"},
+			FastUploadInputs: []string{"md5", "size"},
+			FallbackModes:    []string{"download_upload"},
+			Status:           "planned",
+		},
+		capability: provider.CapabilitySet{
+			SupportsAuthValidation: true,
+			SupportsUpload:         true,
+		},
+		uploadFunc: func(req provider.UploadRequest) provider.UploadResult {
+			uploadCalls = append(uploadCalls, req.Path)
+			if len(uploadCalls) <= 2 {
+				return provider.UploadResult{
+					OperationResult: provider.OperationResult{
+						Status:  "pending_manual_requires_confirmation",
+						Message: "pending manual",
+						Mode:    "fake_pending",
+					},
+				}
+			}
+			return provider.UploadResult{
+				OperationResult: provider.OperationResult{
+					OK:      true,
+					Status:  "ok",
+					Message: "selected pending resolved",
+					Mode:    "fake_selected_pending_ok",
+				},
+			}
+		},
+	}
+
+	registry := provider.NewRegistry(adapter)
+	authSvc := auth.NewService(store, registry)
+	svc := NewService(store, registry, authSvc)
+	profile, err := authSvc.CreateProfile(ctx, auth.CreateProfileInput{
+		ProviderKey: "retry_selected_pending_target",
+		AuthMode:    "manual_token",
+		DisplayName: "retry selected pending target",
+		Token:       "token-1",
+	})
+	if err != nil {
+		t.Fatalf("CreateProfile() error = %v", err)
+	}
+
+	detail, err := svc.Create(ctx, CreateRequest{
+		SourceProvider:  "guangya",
+		TargetProvider:  "retry_selected_pending_target",
+		TargetProfileID: profile.ID,
+		ThresholdMB:     1,
+		Entries: []planner.SourceEntry{
+			{Path: "/pending-a.bin", Size: 10 * 1024 * 1024},
+			{Path: "/pending-b.bin", Size: 12 * 1024 * 1024},
+		},
+	})
+	if err != nil {
+		t.Fatalf("Create() error = %v", err)
+	}
+
+	firstRun, ok, err := svc.Run(ctx, detail.Task.ID)
+	if err != nil || !ok {
+		t.Fatalf("Run() error=%v ok=%v", err, ok)
+	}
+	if firstRun.Runtime.PendingCount != 2 {
+		t.Fatalf("expected pending count 2, got %d", firstRun.Runtime.PendingCount)
+	}
+
+	retried, ok, err := svc.RetryWithOptions(ctx, detail.Task.ID, RetryOptions{
+		Paths: []string{"/pending-b.bin"},
+		Scope: "selected_pending_subset",
+	})
+	if err != nil || !ok {
+		t.Fatalf("RetryWithOptions() error=%v ok=%v", err, ok)
+	}
+	if len(retried.Plan.Items) != 1 || retried.Plan.Items[0].Path != "/pending-b.bin" {
+		t.Fatalf("expected selected pending retry to keep only /pending-b.bin, got %#v", retried.Plan.Items)
+	}
+	if retryMode, _ := retried.Plan.Metadata["retryMode"].(string); retryMode != "selected_pending_subset" {
+		t.Fatalf("expected retryMode selected_pending_subset, got %#v", retried.Plan.Metadata["retryMode"])
+	}
+	if selectedPaths, ok := retried.Plan.Metadata["retrySelectedPaths"].([]string); !ok || len(selectedPaths) != 1 || selectedPaths[0] != "/pending-b.bin" {
+		t.Fatalf("expected retrySelectedPaths [/pending-b.bin], got %#v", retried.Plan.Metadata["retrySelectedPaths"])
+	}
+
+	secondRun, ok, err := svc.Run(ctx, detail.Task.ID)
+	if err != nil || !ok {
+		t.Fatalf("Run() retried error=%v ok=%v", err, ok)
+	}
+	if len(secondRun.Results) != 1 || stringValue(secondRun.Results[0].Payload["path"]) != "/pending-b.bin" {
+		t.Fatalf("expected second run to execute only /pending-b.bin, got %#v", secondRun.Results)
+	}
+	if secondRun.Task.State != StateCompleted {
+		t.Fatalf("expected completed after selected pending retry, got %s", secondRun.Task.State)
+	}
+}
+
+func TestServiceRetryWithOptionsSelectedRetrySubsetKeepsOnlyChosenPaths(t *testing.T) {
+	ctx := context.Background()
+	store, err := sqlitestore.New(ctx, filepath.Join(t.TempDir(), "retry-selected-queue.db"))
+	if err != nil {
+		t.Fatalf("new store: %v", err)
+	}
+	defer func() { _ = store.Close() }()
+
+	uploadCalls := []string{}
+	adapter := &scriptedAdapter{
+		meta: provider.Provider{
+			Key:              "retry_selected_queue_target",
+			DisplayName:      "Retry Selected Queue Target",
+			ProtocolGroup:    "fake",
+			AuthModes:        []string{"manual_token"},
+			FastUploadInputs: []string{"md5", "size"},
+			FallbackModes:    []string{"download_upload"},
+			Status:           "planned",
+		},
+		capability: provider.CapabilitySet{
+			SupportsAuthValidation: true,
+			SupportsUpload:         true,
+		},
+		uploadFunc: func(req provider.UploadRequest) provider.UploadResult {
+			uploadCalls = append(uploadCalls, req.Path)
+			if len(uploadCalls) <= 2 {
+				return provider.UploadResult{
+					OperationResult: provider.OperationResult{
+						Status:  "remote_error",
+						Message: "retry later",
+						Mode:    "fake_remote_error",
+					},
+				}
+			}
+			return provider.UploadResult{
+				OperationResult: provider.OperationResult{
+					OK:      true,
+					Status:  "ok",
+					Message: "selected queue resolved",
+					Mode:    "fake_selected_queue_ok",
+				},
+			}
+		},
+	}
+
+	registry := provider.NewRegistry(adapter)
+	authSvc := auth.NewService(store, registry)
+	svc := NewService(store, registry, authSvc)
+	profile, err := authSvc.CreateProfile(ctx, auth.CreateProfileInput{
+		ProviderKey: "retry_selected_queue_target",
+		AuthMode:    "manual_token",
+		DisplayName: "retry selected queue target",
+		Token:       "token-1",
+	})
+	if err != nil {
+		t.Fatalf("CreateProfile() error = %v", err)
+	}
+
+	fileA := filepath.Join(t.TempDir(), "retry-a.bin")
+	fileB := filepath.Join(t.TempDir(), "retry-b.bin")
+	if err := os.WriteFile(fileA, []byte("a"), 0o644); err != nil {
+		t.Fatalf("WriteFile(fileA) error = %v", err)
+	}
+	if err := os.WriteFile(fileB, []byte("b"), 0o644); err != nil {
+		t.Fatalf("WriteFile(fileB) error = %v", err)
+	}
+
+	detail, err := svc.Create(ctx, CreateRequest{
+		SourceProvider:  "guangya",
+		TargetProvider:  "retry_selected_queue_target",
+		TargetProfileID: profile.ID,
+		ThresholdMB:     1,
+		Entries: []planner.SourceEntry{
+			{Path: "/retry-a.bin", Size: 1024, MD5: "md5-a", LocalPath: fileA},
+			{Path: "/retry-b.bin", Size: 2048, MD5: "md5-b", LocalPath: fileB},
+		},
+	})
+	if err != nil {
+		t.Fatalf("Create() error = %v", err)
+	}
+
+	firstRun, ok, err := svc.Run(ctx, detail.Task.ID)
+	if err != nil || !ok {
+		t.Fatalf("Run() error=%v ok=%v", err, ok)
+	}
+	if firstRun.Task.State != StateCompletedWithErrors {
+		t.Fatalf("expected completed_with_errors, got %s", firstRun.Task.State)
+	}
+	if len(firstRun.Runtime.RetryQueue) != 2 {
+		t.Fatalf("expected retry queue len 2, got %#v", firstRun.Runtime.RetryQueue)
+	}
+
+	retried, ok, err := svc.RetryWithOptions(ctx, detail.Task.ID, RetryOptions{
+		Paths: []string{"/retry-b.bin"},
+		Scope: "selected_retry_subset",
+	})
+	if err != nil || !ok {
+		t.Fatalf("RetryWithOptions() error=%v ok=%v", err, ok)
+	}
+	if len(retried.Plan.Items) != 1 || retried.Plan.Items[0].Path != "/retry-b.bin" {
+		t.Fatalf("expected selected queue retry to keep only /retry-b.bin, got %#v", retried.Plan.Items)
+	}
+	if retryMode, _ := retried.Plan.Metadata["retryMode"].(string); retryMode != "selected_retry_subset" {
+		t.Fatalf("expected retryMode selected_retry_subset, got %#v", retried.Plan.Metadata["retryMode"])
+	}
+	if retryPendingOnly, _ := retried.Plan.Metadata["retryPendingOnly"].(bool); retryPendingOnly {
+		t.Fatalf("expected retryPendingOnly false for selected retry queue, got %#v", retried.Plan.Metadata["retryPendingOnly"])
+	}
+
+	secondRun, ok, err := svc.Run(ctx, detail.Task.ID)
+	if err != nil || !ok {
+		t.Fatalf("Run() retried error=%v ok=%v", err, ok)
+	}
+	if len(secondRun.Results) != 1 || stringValue(secondRun.Results[0].Payload["path"]) != "/retry-b.bin" {
+		t.Fatalf("expected second run to execute only /retry-b.bin, got %#v", secondRun.Results)
+	}
+	if secondRun.Task.State != StateCompleted {
+		t.Fatalf("expected completed after selected retry queue retry, got %s", secondRun.Task.State)
+	}
+}
+
 func TestServiceAppliesRiskProfileRuntimeThrottle(t *testing.T) {
 	ctx := context.Background()
 	store, err := sqlitestore.New(ctx, filepath.Join(t.TempDir(), "runtime-throttle.db"))

@@ -298,6 +298,31 @@ Invoke-RestMethod `
   - `runtime.uploadCheckpoint` 用于说明当前最近一次可恢复上传的位置
 - 如果当前没有待补传项，`retry` 仍按普通整任务重置语义处理。
 
+按路径子集重试示例：
+
+```powershell
+Invoke-RestMethod `
+  -Method Post `
+  -Uri "$base/api/tasks/$taskId/retry" `
+  -Body (@{
+    paths = @("/demo/pending.bin", "/demo/subtree")
+    scope = "selected_pending_subset"
+  } | ConvertTo-Json) `
+  -ContentType "application/json" | ConvertTo-Json -Depth 12
+```
+
+子集重试补充语义：
+
+- `scope=selected_pending_subset`
+  - 表示这次 retry 来自待补传树当前筛选结果
+- `scope=selected_retry_subset`
+  - 表示这次 retry 来自重试队列当前筛选结果
+- 任务元数据会额外保留：
+  - `metadata.retryScope`
+  - `metadata.retrySelectedPaths`
+- 如果传入的 `paths` 没有命中任何可运行 pending / retryable 项：
+  - API 会返回 `retry_selection_empty`
+
 恢复检查点示例：
 
 ```json

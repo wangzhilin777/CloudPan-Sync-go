@@ -79,6 +79,11 @@ type providerSmokeRecordRequest struct {
 	Environment   map[string]string `json:"environment"`
 }
 
+type retryTaskRequest struct {
+	Paths []string `json:"paths"`
+	Scope string   `json:"scope"`
+}
+
 func (a *App) routes() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", a.handleIndex)
@@ -483,7 +488,20 @@ func (a *App) handleTaskByID(w http.ResponseWriter, r *http.Request) {
 	case "resume":
 		item, ok, err = a.tasks.Resume(r.Context(), id)
 	case "retry":
-		item, ok, err = a.tasks.Retry(r.Context(), id)
+		req := retryTaskRequest{}
+		if body, readErr := io.ReadAll(r.Body); readErr != nil {
+			handleError(w, readErr)
+			return
+		} else if len(strings.TrimSpace(string(body))) > 0 {
+			if err := decodeJSONFromBytes(body, &req); err != nil {
+				writeError(w, http.StatusBadRequest, "invalid_json", "Invalid JSON payload.")
+				return
+			}
+		}
+		item, ok, err = a.tasks.RetryWithOptions(r.Context(), id, task.RetryOptions{
+			Paths: req.Paths,
+			Scope: req.Scope,
+		})
 	default:
 		writeError(w, http.StatusNotFound, "not_found", "Resource not found.")
 		return
@@ -739,6 +757,8 @@ func handleServiceError(w http.ResponseWriter, err error) {
 		writeError(w, http.StatusBadRequest, "retry_cooldown_active", "Retry queue is still cooling down for a rate-limited item.")
 	case err != nil && strings.HasPrefix(err.Error(), "retry_blocked:"):
 		writeError(w, http.StatusBadRequest, "retry_blocked", "Retry queue is blocked and still requires manual intervention.")
+	case err != nil && err.Error() == "retry_selection_empty":
+		writeError(w, http.StatusBadRequest, "retry_selection_empty", "The selected retry paths do not contain runnable pending or retryable items.")
 	default:
 		handleError(w, err)
 	}

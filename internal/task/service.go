@@ -30,6 +30,11 @@ type CreateRequest struct {
 	Entries         []planner.SourceEntry        `json:"entries"`
 }
 
+type RetryOptions struct {
+	Paths []string `json:"paths,omitempty"`
+	Scope string   `json:"scope,omitempty"`
+}
+
 type Detail struct {
 	Task            Task                  `json:"task"`
 	Plan            planner.Plan          `json:"plan"`
@@ -647,11 +652,15 @@ func (s *Service) Resume(ctx context.Context, id string) (Detail, bool, error) {
 }
 
 func (s *Service) Retry(ctx context.Context, id string) (Detail, bool, error) {
+	return s.RetryWithOptions(ctx, id, RetryOptions{})
+}
+
+func (s *Service) RetryWithOptions(ctx context.Context, id string, opts RetryOptions) (Detail, bool, error) {
 	detail, ok, err := getTask(ctx, s.store, id)
 	if err != nil || !ok {
 		return Detail{}, ok, err
 	}
-	retried, err := s.buildRetryDetail(detail)
+	retried, err := s.buildRetryDetail(detail, opts)
 	if err != nil {
 		return Detail{}, true, err
 	}
@@ -730,16 +739,19 @@ func inferUploadName(path string) string {
 	return path
 }
 
-func (s *Service) buildRetryDetail(detail Detail) (Detail, error) {
+func (s *Service) buildRetryDetail(detail Detail, opts RetryOptions) (Detail, error) {
 	previousState := detail.Task.State
 	syncRuntimeRetryQueue(&detail.Runtime, detail.Plan.Metadata, detail.Results)
 	syncRuntimeUploadCheckpoint(&detail.Runtime, detail.Results)
 	detail.Task.State = StateReady
 	detail.Task.CompletionKind = ""
 	detail.Task.UpdatedAt = time.Now().UTC().Format(time.RFC3339)
-	retryEntries, retryPaths, retryMode, retryBlockedUntil, retryBlockedReason := selectRetryEntries(detail)
+	retryEntries, retryPaths, retryMode, retryBlockedUntil, retryBlockedReason := selectRetryEntries(detail, opts)
 	if retryBlockedUntil != "" {
 		return Detail{}, fmt.Errorf("retry_cooldown_active:%s", retryBlockedUntil)
+	}
+	if retryBlockedReason == "retry_selection_empty" {
+		return Detail{}, fmt.Errorf("retry_selection_empty")
 	}
 	if retryBlockedReason != "" {
 		return Detail{}, fmt.Errorf("retry_blocked:%s", retryBlockedReason)
@@ -771,11 +783,15 @@ func (s *Service) buildRetryDetail(detail Detail) (Detail, error) {
 			plan.Metadata = map[string]interface{}{}
 		}
 		plan.Metadata["retryPendingOnly"] = true
-		if retryMode != "" && retryMode != "pending_only" {
+		if retryMode == "retry_queue" || retryMode == "selected_retry_subset" {
 			plan.Metadata["retryPendingOnly"] = false
 		}
 		plan.Metadata["retryMode"] = retryMode
 		plan.Metadata["retryPendingPaths"] = retryPaths
+		if len(opts.Paths) > 0 {
+			plan.Metadata["retrySelectedPaths"] = normalizeSelectionPaths(opts.Paths)
+			plan.Metadata["retryScope"] = strings.TrimSpace(opts.Scope)
+		}
 		plan.Metadata["retrySourceResultCount"] = len(detail.Results)
 		plan.Metadata["retrySourceTaskState"] = string(previousState)
 		plan.Metadata["retryAttempts"] = retryAttempts
@@ -793,6 +809,8 @@ func (s *Service) buildRetryDetail(detail Detail) (Detail, error) {
 		delete(detail.Plan.Metadata, "retrySourceTaskState")
 		delete(detail.Plan.Metadata, "retryAttempts")
 		delete(detail.Plan.Metadata, "retryUploadCheckpoints")
+		delete(detail.Plan.Metadata, "retrySelectedPaths")
+		delete(detail.Plan.Metadata, "retryScope")
 		delete(detail.Plan.Metadata, "retrySummary")
 	}
 	detail.Runtime = initializeRuntimeState(detail.Plan)
@@ -952,7 +970,7 @@ func (s *Service) RecoverBlockedTasks(ctx context.Context) (int, error) {
 	})
 	recovered := 0
 	for _, detail := range candidates {
-		retried, err := s.buildRetryDetail(detail)
+		retried, err := s.buildRetryDetail(detail, RetryOptions{})
 		if err != nil {
 			if strings.HasPrefix(err.Error(), "retry_cooldown_active:") {
 				continue
@@ -2450,6 +2468,36 @@ func pendingRetryEntries(detail Detail) ([]planner.SourceEntry, []string) {
 	return filtered, pendingPaths
 }
 
+func normalizeSelectionPaths(paths []string) []string {
+	normalized := make([]string, 0, len(paths))
+	seen := make(map[string]struct{}, len(paths))
+	for _, path := range paths {
+		value := normalizeScanPath(path)
+		if value == "" || value == "/" {
+			continue
+		}
+		if _, ok := seen[value]; ok {
+			continue
+		}
+		seen[value] = struct{}{}
+		normalized = append(normalized, value)
+	}
+	return normalized
+}
+
+func pathMatchesSelection(path string, selected []string) bool {
+	normalized := normalizeScanPath(path)
+	if normalized == "" {
+		return false
+	}
+	for _, item := range selected {
+		if item == normalized || strings.HasPrefix(normalized, item+"/") {
+			return true
+		}
+	}
+	return false
+}
+
 func retryAttemptsFromMetadata(values map[string]interface{}) map[string]int {
 	attempts := make(map[string]int)
 	if values == nil {
@@ -2484,7 +2532,11 @@ func incrementRetryAttempts(values map[string]interface{}, retryPaths []string) 
 	return attempts
 }
 
-func selectRetryEntries(detail Detail) ([]planner.SourceEntry, []string, string, string, string) {
+func selectRetryEntries(detail Detail, opts RetryOptions) ([]planner.SourceEntry, []string, string, string, string) {
+	selectedPaths := normalizeSelectionPaths(opts.Paths)
+	if len(selectedPaths) > 0 {
+		return selectRetryEntriesForSelection(detail, selectedPaths, strings.TrimSpace(opts.Scope))
+	}
 	pendingEntries, pendingPaths := pendingRetryEntries(detail)
 	if len(pendingEntries) > 0 {
 		return pendingEntries, pendingPaths, "pending_only", "", ""
@@ -2543,6 +2595,97 @@ func selectRetryEntries(detail Detail) ([]planner.SourceEntry, []string, string,
 		})
 	}
 	return filtered, eligiblePaths, "retry_queue", "", ""
+}
+
+func selectRetryEntriesForSelection(detail Detail, selectedPaths []string, scope string) ([]planner.SourceEntry, []string, string, string, string) {
+	pendingEntries, pendingPaths := pendingRetryEntries(detail)
+	selectedPendingEntries := make([]planner.SourceEntry, 0, len(pendingEntries))
+	selectedPendingPaths := make([]string, 0, len(pendingPaths))
+	for idx, path := range pendingPaths {
+		if !pathMatchesSelection(path, selectedPaths) {
+			continue
+		}
+		selectedPendingPaths = append(selectedPendingPaths, path)
+		if idx < len(pendingEntries) {
+			selectedPendingEntries = append(selectedPendingEntries, pendingEntries[idx])
+		}
+	}
+	if len(selectedPendingEntries) > 0 {
+		mode := "selected_pending_subset"
+		if scope != "" {
+			mode = scope
+		}
+		return selectedPendingEntries, selectedPendingPaths, mode, "", ""
+	}
+
+	filteredQueue := make([]RetryQueueItem, 0)
+	for _, item := range detail.Runtime.RetryQueue {
+		if pathMatchesSelection(item.Path, selectedPaths) {
+			filteredQueue = append(filteredQueue, item)
+		}
+	}
+	if len(filteredQueue) == 0 {
+		return nil, nil, "", "", "retry_selection_empty"
+	}
+
+	eligiblePaths := make([]string, 0, len(filteredQueue))
+	blockedUntil := ""
+	entryByPath := make(map[string]planner.SourceEntry, len(detail.SourceEntries))
+	for _, entry := range detail.SourceEntries {
+		entryByPath[normalizeScanPath(entry.Path)] = entry
+	}
+	sizeByPath := make(map[string]int64, len(detail.Plan.Items))
+	for _, item := range detail.Plan.Items {
+		sizeByPath[normalizeScanPath(item.Path)] = item.Size
+	}
+	for _, item := range filteredQueue {
+		if !item.Retryable {
+			continue
+		}
+		switch item.RetryClass {
+		case "pending_manual":
+			continue
+		case "rate_limited":
+			if item.EligibleAt != "" {
+				eligibleAt, err := time.Parse(time.RFC3339, item.EligibleAt)
+				if err == nil && time.Now().UTC().Before(eligibleAt) {
+					if blockedUntil == "" || item.EligibleAt < blockedUntil {
+						blockedUntil = item.EligibleAt
+					}
+					continue
+				}
+			}
+		}
+		eligiblePaths = append(eligiblePaths, item.Path)
+	}
+	if len(eligiblePaths) == 0 {
+		if blockedUntil != "" {
+			return nil, nil, "", blockedUntil, ""
+		}
+		summary := summarizeRetryQueue(filteredQueue)
+		if summary.ShouldBlock {
+			return nil, nil, "", "", summary.BlockedReason
+		}
+		return nil, nil, "", "", "retry_selection_empty"
+	}
+
+	filtered := make([]planner.SourceEntry, 0, len(eligiblePaths))
+	for _, path := range eligiblePaths {
+		normalized := normalizeScanPath(path)
+		if entry, ok := entryByPath[normalized]; ok {
+			filtered = append(filtered, entry)
+			continue
+		}
+		filtered = append(filtered, planner.SourceEntry{
+			Path: normalized,
+			Size: sizeByPath[normalized],
+		})
+	}
+	mode := "selected_retry_subset"
+	if scope != "" {
+		mode = scope
+	}
+	return filtered, eligiblePaths, mode, "", ""
 }
 
 func pendingRetryPaths(results []Result) []string {

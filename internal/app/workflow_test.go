@@ -12,6 +12,10 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"cloudpan-sync-go/internal/auth"
+	"cloudpan-sync-go/internal/provider"
+	"cloudpan-sync-go/internal/task"
 )
 
 func TestAppWorkflowMainline(t *testing.T) {
@@ -467,7 +471,10 @@ func TestAppWorkflowMainline(t *testing.T) {
 		t.Fatalf("expected report markdown to include acceptance counters, got %s", reportData["markdown"].(string))
 	}
 
-	retryResp := invokeJSON(t, handler, http.MethodPost, "/api/tasks/"+taskID+"/retry", nil)
+	retryResp := invokeJSON(t, handler, http.MethodPost, "/api/tasks/"+taskID+"/retry", map[string]interface{}{
+		"paths": []string{"/demo/pending.bin"},
+		"scope": "selected_pending_subset",
+	})
 	retryData := retryResp.Data.(map[string]interface{})
 	if got := retryData["task"].(map[string]interface{})["state"].(string); got != "ready" {
 		t.Fatalf("expected ready after retry, got %s", got)
@@ -480,8 +487,12 @@ func TestAppWorkflowMainline(t *testing.T) {
 	if retryPendingOnly, _ := retryMetadata["retryPendingOnly"].(bool); !retryPendingOnly {
 		t.Fatalf("expected retryPendingOnly metadata true, got %#v", retryMetadata["retryPendingOnly"])
 	}
-	if retryMode, _ := retryMetadata["retryMode"].(string); retryMode != "pending_only" {
-		t.Fatalf("expected retryMode pending_only, got %s", retryMode)
+	if retryMode, _ := retryMetadata["retryMode"].(string); retryMode != "selected_pending_subset" {
+		t.Fatalf("expected retryMode selected_pending_subset, got %s", retryMode)
+	}
+	selectedPaths, ok := retryMetadata["retrySelectedPaths"].([]interface{})
+	if !ok || len(selectedPaths) != 1 || selectedPaths[0].(string) != "/demo/pending.bin" {
+		t.Fatalf("expected retrySelectedPaths [/demo/pending.bin], got %#v", retryMetadata["retrySelectedPaths"])
 	}
 }
 
@@ -571,6 +582,95 @@ func TestAppRetryBlockedReturnsStructuredError(t *testing.T) {
 	}
 }
 
+func TestAppRetrySelectionEmptyReturnsStructuredError(t *testing.T) {
+	ctx := context.Background()
+	application := mustNewTestApp(t, ctx)
+	sourceAdapter := &appScriptedAdapter{
+		meta: provider.Provider{
+			Key:           "retry_selection_source",
+			DisplayName:   "Retry Selection Source",
+			ProtocolGroup: "fake_source",
+			AuthModes:     []string{"manual_token"},
+			Status:        "planned",
+		},
+		capability: provider.CapabilitySet{
+			SupportsAuthValidation: true,
+		},
+	}
+	targetAdapter := &appScriptedAdapter{
+		meta: provider.Provider{
+			Key:              "retry_selection_target",
+			DisplayName:      "Retry Selection Target",
+			ProtocolGroup:    "fake_target",
+			AuthModes:        []string{"manual_token"},
+			FastUploadInputs: []string{"md5", "size"},
+			FallbackModes:    []string{"download_upload"},
+			Status:           "planned",
+		},
+		capability: provider.CapabilitySet{
+			SupportsAuthValidation: true,
+			SupportsUpload:         true,
+		},
+		uploadFunc: func(req provider.UploadRequest) provider.UploadResult {
+			return provider.UploadResult{
+				OperationResult: provider.OperationResult{
+					Status:  "remote_error",
+					Message: "retry later",
+					Mode:    "fake_remote_error",
+				},
+			}
+		},
+	}
+	registry := provider.NewRegistry(sourceAdapter, targetAdapter)
+	authSvc := auth.NewService(application.store, registry)
+	taskSvc := task.NewService(application.store, registry, authSvc)
+	application.providers = registry
+	application.auth = authSvc
+	application.tasks = taskSvc
+
+	handler := application.routes()
+
+	profileResp := invokeJSON(t, handler, http.MethodPost, "/api/auth/profiles", map[string]interface{}{
+		"providerKey": "retry_selection_target",
+		"authMode":    "manual_token",
+		"displayName": "Retry Selection Target",
+		"token":       "token-retry-selection",
+	})
+	profileID := profileResp.Data.(map[string]interface{})["id"].(string)
+
+	localFile := filepath.Join(t.TempDir(), "retry-selection.bin")
+	if err := os.WriteFile(localFile, []byte("retry-selection"), 0o644); err != nil {
+		t.Fatalf("WriteFile() error = %v", err)
+	}
+
+	taskResp := invokeJSON(t, handler, http.MethodPost, "/api/tasks", map[string]interface{}{
+		"sourceProvider":  "retry_selection_source",
+		"targetProvider":  "retry_selection_target",
+		"targetProfileId": profileID,
+		"thresholdMB":     1,
+		"entries": []map[string]interface{}{
+			{"path": "/retry.bin", "size": 1024, "md5": "retry-md5", "localPath": localFile},
+		},
+	})
+	taskID := taskResp.Data.(map[string]interface{})["task"].(map[string]interface{})["id"].(string)
+
+	runResp := invokeJSON(t, handler, http.MethodPost, "/api/tasks/"+taskID+"/run", nil)
+	if got := runResp.Data.(map[string]interface{})["task"].(map[string]interface{})["state"].(string); got != "completed_with_errors" {
+		t.Fatalf("expected completed_with_errors, got %s", got)
+	}
+
+	errorResp, status := invokeJSONError(t, handler, http.MethodPost, "/api/tasks/"+taskID+"/retry", map[string]interface{}{
+		"paths": []string{"/not-found.bin"},
+		"scope": "selected_pending_subset",
+	})
+	if status != http.StatusBadRequest {
+		t.Fatalf("expected bad request, got %d", status)
+	}
+	if errorResp.Error == nil || errorResp.Error.Code != "retry_selection_empty" {
+		t.Fatalf("expected retry_selection_empty error, got %#v", errorResp.Error)
+	}
+}
+
 func mustNewTestApp(t *testing.T, ctx context.Context) *App {
 	t.Helper()
 
@@ -592,6 +692,50 @@ func mustNewTestApp(t *testing.T, ctx context.Context) *App {
 		_ = app.store.Close()
 	})
 	return app
+}
+
+type appScriptedAdapter struct {
+	meta         provider.Provider
+	capability   provider.CapabilitySet
+	validateFunc func(provider.AuthProfile) provider.OperationResult
+	uploadFunc   func(provider.UploadRequest) provider.UploadResult
+}
+
+func (a *appScriptedAdapter) Meta() provider.Provider { return a.meta }
+
+func (a *appScriptedAdapter) Capabilities() provider.CapabilitySet { return a.capability }
+
+func (a *appScriptedAdapter) ValidateAuth(profile provider.AuthProfile) provider.OperationResult {
+	if a.validateFunc != nil {
+		return a.validateFunc(profile)
+	}
+	return provider.OperationResult{OK: true, Status: "verified", Message: "verified", Mode: "scripted_validate"}
+}
+
+func (a *appScriptedAdapter) List(req provider.ListRequest) provider.ListResult {
+	return provider.ListResult{OperationResult: provider.OperationResult{OK: true, Status: "ok", Message: "ok", Mode: "scripted_list"}}
+}
+
+func (a *appScriptedAdapter) Metadata(req provider.MetadataRequest) provider.MetadataResult {
+	return provider.MetadataResult{OperationResult: provider.OperationResult{OK: true, Status: "missing", Message: "missing", Mode: "scripted_metadata"}}
+}
+
+func (a *appScriptedAdapter) CreateDir(req provider.CreateDirRequest) provider.OperationResult {
+	return provider.OperationResult{OK: true, Status: "ok", Message: "ok", Mode: "scripted_create_dir"}
+}
+
+func (a *appScriptedAdapter) FastUploadCheck(req provider.FastUploadCheckRequest) provider.FastUploadCheckResult {
+	return provider.FastUploadCheckResult{
+		OperationResult: provider.OperationResult{OK: true, Status: "hash_miss", Message: "hash miss", Mode: "scripted_fast_check"},
+		Candidate:       false,
+	}
+}
+
+func (a *appScriptedAdapter) Upload(req provider.UploadRequest) provider.UploadResult {
+	if a.uploadFunc != nil {
+		return a.uploadFunc(req)
+	}
+	return provider.UploadResult{OperationResult: provider.OperationResult{OK: true, Status: "ok", Message: "ok", Mode: "scripted_upload"}}
 }
 
 type appPan123OpenTestState struct {

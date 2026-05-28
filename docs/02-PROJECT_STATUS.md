@@ -341,6 +341,9 @@
   - 当前已支持把 `pending_manual` 类结果聚合成待补传树，并回写到 runtime / probe / provider status
   - 待补传树的根节点顺序会优先遵循 `selectedRoots`，避免结果返回顺序打乱用户勾选顺序
   - 当前已支持在 `Retry` 时自动缩小到待补传子集，并按新 plan 继续执行
+  - 当前也支持通过 `paths + scope` 把任务显式缩成用户选定的 retry 子集
+    - `selected_pending_subset`
+    - `selected_retry_subset`
   - 当前 `Retry` 新任务已保留 `retryUploadCheckpoints` 元数据，并把首个恢复检查点带回 runtime 视图
   - 当前 `Retry` 运行时已会把恢复检查点继续传给 provider upload request，供真实 provider 复用 `uploadId / fileId / nextPartNumber`
   - 当前已支持把失败结果分类成重试队列，并区分：
@@ -374,6 +377,12 @@
   - 当前 `retryLimit` 已真正接入重试队列，支持累计次数、剩余次数与 exhausted 阻断
   - 当前 `blockedReason` 已补充统一的 `blockedAction / blockedAdvice`，便于状态矩阵直接给出处理建议
   - 当前 `/api/evidence/runtime` 与 `/api/status/providers` 已补充 `blockedTasks / blockedActions` 聚合摘要，便于快速定位最需要人工处理的动作
+  - 当前任务详情页已经支持把“当前筛选结果”直接变成 retry 范围：
+    - 重试当前待补传树筛选结果
+    - 重试当前重试队列筛选结果
+  - 当前任务元数据也会直接保留：
+    - `retryScope`
+    - `retrySelectedPaths`
 
 ### 6. Runtime Evidence / 状态矩阵
 

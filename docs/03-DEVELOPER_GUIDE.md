@@ -121,6 +121,10 @@
 - 当前 `POST /api/tasks/{id}/retry` 已支持：
   - 发现待补传项后优先缩小到待补传子集
   - 清空旧结果后只重跑这些待补传文件
+  - 也支持显式传 `paths + scope`，把当前任务重建成“用户选定路径子集”的 retry 范围
+  - 当前任务页里的“重试当前筛选”已经接到这条能力：
+    - 可以按当前待补传树筛选结果重建 `selected_pending_subset`
+    - 也可以按当前重试队列筛选结果重建 `selected_retry_subset`
 - 当前 runtime 还会维护 `retryQueue`：
   - `pending_manual_requires_confirmation`
   - `rate_limited`
@@ -182,6 +186,8 @@
 - 当前控制台任务详情页也会直接显示：
   - 当前是否处于 `pending_only` 重试范围
   - 当前重试队列里的 `retryable / blocked` 计数
+  - 当前这次 retry 是不是来自用户手动选定的路径子集
+  - 当前 `retryScope / retrySelectedPaths`
 - 当前 `metadata.retrySummary` 还会补充：
   - `retryableNowCount / cooldownCount / pendingManualCount / authExpiredCount / localMissingCount / exhaustedCount`
   - `uploadCheckpointEligible`
