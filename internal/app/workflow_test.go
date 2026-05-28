@@ -822,6 +822,142 @@ func TestAppRecoverTasksEndpointReturnsSummary(t *testing.T) {
 	}
 }
 
+func TestAppRecoverTasksEndpointReportsProviderBudgetSkips(t *testing.T) {
+	ctx := context.Background()
+	application := mustNewTestApp(t, ctx)
+
+	uploadCallsByPath := map[string]int{}
+	targetAdapter := &appScriptedAdapter{
+		meta: provider.Provider{
+			Key:              "recover_budget_api_target",
+			DisplayName:      "Recover Budget API Target",
+			ProtocolGroup:    "fake_target",
+			AuthModes:        []string{"manual_token"},
+			FastUploadInputs: []string{"md5", "size"},
+			FallbackModes:    []string{"download_upload"},
+			Status:           "planned",
+		},
+		capability: provider.CapabilitySet{
+			SupportsAuthValidation: true,
+			SupportsUpload:         true,
+		},
+		uploadFunc: func(req provider.UploadRequest) provider.UploadResult {
+			uploadCallsByPath[req.Path]++
+			if req.ResumeUpload != nil {
+				return provider.UploadResult{
+					OperationResult: provider.OperationResult{
+						OK:      true,
+						Status:  "ok",
+						Message: "budget recovered",
+						Mode:    "scripted_budget_ok",
+						Payload: map[string]interface{}{
+							"fileId":   req.ResumeUpload.FileID,
+							"uploadId": req.ResumeUpload.UploadID,
+						},
+					},
+				}
+			}
+			if uploadCallsByPath[req.Path] == 1 {
+				return provider.UploadResult{
+					OperationResult: provider.OperationResult{
+						Status:  "provider_request_failed",
+						Message: "resume later",
+						Mode:    "scripted_resume_later",
+						Payload: map[string]interface{}{
+							"fileId":           "budget-file-" + strings.TrimPrefix(strings.ReplaceAll(req.Path, "/", "-"), "-"),
+							"uploadId":         "budget-upload-" + strings.TrimPrefix(strings.ReplaceAll(req.Path, "/", "-"), "-"),
+							"nextPartNumber":   2,
+							"failedPartNumber": 2,
+						},
+					},
+				}
+			}
+			t.Fatalf("unexpected non-resume upload for %s", req.Path)
+			return provider.UploadResult{}
+		},
+	}
+
+	registry := provider.NewRegistry(targetAdapter)
+	authSvc := auth.NewService(application.store, registry)
+	taskSvc := task.NewService(application.store, registry, authSvc)
+	application.providers = registry
+	application.auth = authSvc
+	application.tasks = taskSvc
+	handler := application.routes()
+
+	profileResp := invokeJSON(t, handler, http.MethodPost, "/api/auth/profiles", map[string]interface{}{
+		"providerKey": "recover_budget_api_target",
+		"authMode":    "manual_token",
+		"displayName": "Recover Budget API Target",
+		"token":       "token-recover-budget-api",
+	})
+	profileID := profileResp.Data.(map[string]interface{})["id"].(string)
+
+	createBlockedTask := func(path string) string {
+		fileName := strings.TrimPrefix(strings.ReplaceAll(path, "/", "_"), "_")
+		localFile := filepath.Join(t.TempDir(), fileName)
+		if err := os.WriteFile(localFile, []byte(path), 0o644); err != nil {
+			t.Fatalf("WriteFile(%s) error = %v", path, err)
+		}
+		taskResp := invokeJSON(t, handler, http.MethodPost, "/api/tasks", map[string]interface{}{
+			"sourceProvider":  "recover_budget_api_source",
+			"targetProvider":  "recover_budget_api_target",
+			"targetProfileId": profileID,
+			"thresholdMB":     1,
+			"riskOverride": map[string]interface{}{
+				"maxConcurrent":   1,
+			},
+			"entries": []map[string]interface{}{
+				{"path": path, "size": 1024, "md5": "md5-" + fileName, "localPath": localFile},
+			},
+		})
+		taskID := taskResp.Data.(map[string]interface{})["task"].(map[string]interface{})["id"].(string)
+		runResp := invokeJSON(t, handler, http.MethodPost, "/api/tasks/"+taskID+"/run", nil)
+		if got := runResp.Data.(map[string]interface{})["task"].(map[string]interface{})["state"].(string); got != "completed_with_errors" {
+			t.Fatalf("expected completed_with_errors, got %s", got)
+		}
+		return taskID
+	}
+
+	firstID := createBlockedTask("/budget-a.bin")
+	secondID := createBlockedTask("/budget-b.bin")
+
+	recoverResp := invokeJSON(t, handler, http.MethodPost, "/api/tasks/recover", map[string]interface{}{
+		"providerKey": "recover_budget_api_target",
+		"limit":       5,
+	})
+	recoverData := recoverResp.Data.(map[string]interface{})
+	if got := int(recoverData["matchedCount"].(float64)); got != 2 {
+		t.Fatalf("expected matchedCount 2, got %d", got)
+	}
+	if got := int(recoverData["recoveredCount"].(float64)); got != 1 {
+		t.Fatalf("expected recoveredCount 1, got %d", got)
+	}
+	if got := int(recoverData["skippedByProviderBudget"].(float64)); got != 1 {
+		t.Fatalf("expected skippedByProviderBudget 1, got %d", got)
+	}
+
+	firstDetail := invokeJSON(t, handler, http.MethodGet, "/api/tasks/"+firstID, nil)
+	secondDetail := invokeJSON(t, handler, http.MethodGet, "/api/tasks/"+secondID, nil)
+	states := []string{
+		firstDetail.Data.(map[string]interface{})["task"].(map[string]interface{})["state"].(string),
+		secondDetail.Data.(map[string]interface{})["task"].(map[string]interface{})["state"].(string),
+	}
+	completed := 0
+	pendingRecover := 0
+	for _, state := range states {
+		if state == "completed" {
+			completed++
+		}
+		if state == "completed_with_errors" {
+			pendingRecover++
+		}
+	}
+	if completed != 1 || pendingRecover != 1 {
+		t.Fatalf("expected one completed and one blocked task, got %#v", states)
+	}
+}
+
 func mustNewTestApp(t *testing.T, ctx context.Context) *App {
 	t.Helper()
 

@@ -2526,6 +2526,7 @@ function renderAutoRecoverSummary(items) {
               ? `<div class="muted">主失败口径：retryClass <code>${escapeHTML(stringifyValue(item.primaryRetryClass, "-"))}</code> / blockedAction <code>${escapeHTML(stringifyValue(item.primaryBlockedAction, "-"))}</code></div>`
               : ""
           }
+          <div class="muted">同档位会按 provider 轮转放行，并受 provider 级批量预算约束。</div>
           <div class="muted">${escapeHTML(stringifyValue(item.advice, "-"))}</div>
           <div class="actions compact">
             <span class="pill">next ${escapeHTML(stringifyValue(item.nextRetryAt, "-"))}</span>
