@@ -25,6 +25,8 @@ type App struct {
 	server    *http.Server
 	webIndex  []byte
 	webStatic http.Handler
+
+	recoverBlockedTasksFunc func(context.Context) (int, error)
 }
 
 func New(ctx context.Context, cfg Config) (*App, error) {
@@ -105,6 +107,8 @@ func (a *App) Run(ctx context.Context) error {
 }
 
 func (a *App) runAutoRetryScheduler(ctx context.Context) {
+	a.runAutoRetryOnce(ctx, "startup")
+
 	ticker := time.NewTicker(a.cfg.AutoRetryTick)
 	defer ticker.Stop()
 	for {
@@ -112,19 +116,26 @@ func (a *App) runAutoRetryScheduler(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			recovered, err := a.recoverBlockedTasks(ctx)
-			if err != nil {
-				a.logger.Warn("auto retry tick failed", "error", err)
-				continue
-			}
-			if recovered > 0 {
-				a.logger.Info("auto retry recovered blocked tasks", "count", recovered)
-			}
+			a.runAutoRetryOnce(ctx, "tick")
 		}
 	}
 }
 
+func (a *App) runAutoRetryOnce(ctx context.Context, reason string) {
+	recovered, err := a.recoverBlockedTasks(ctx)
+	if err != nil {
+		a.logger.Warn("auto retry recovery failed", "reason", reason, "error", err)
+		return
+	}
+	if recovered > 0 {
+		a.logger.Info("auto retry recovered blocked tasks", "reason", reason, "count", recovered)
+	}
+}
+
 func (a *App) recoverBlockedTasks(ctx context.Context) (int, error) {
+	if a.recoverBlockedTasksFunc != nil {
+		return a.recoverBlockedTasksFunc(ctx)
+	}
 	return a.tasks.RecoverBlockedTasks(ctx)
 }
 

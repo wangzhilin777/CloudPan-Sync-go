@@ -10,6 +10,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -17,6 +18,8 @@ func TestAppWorkflowMainline(t *testing.T) {
 	ctx := context.Background()
 	application := mustNewTestApp(t, ctx)
 	handler := application.routes()
+	providerServer, _ := newAppPan123OpenTestServer(t)
+	t.Cleanup(providerServer.Close)
 
 	loginResp := invokeJSON(t, handler, http.MethodPost, "/api/session/login", map[string]interface{}{
 		"password": "admin",
@@ -32,11 +35,13 @@ func TestAppWorkflowMainline(t *testing.T) {
 	}
 
 	profileResp := invokeJSON(t, handler, http.MethodPost, "/api/auth/profiles", map[string]interface{}{
-		"providerKey": "guangya",
+		"providerKey": "123_open",
 		"authMode":    "manual_token",
-		"displayName": "Workflow Guangya",
+		"displayName": "Workflow 123",
 		"token":       "token-workflow",
-		"extra":       map[string]interface{}{},
+		"extra": map[string]interface{}{
+			"apiEndpoint": providerServer.URL,
+		},
 	})
 	profileData := profileResp.Data.(map[string]interface{})
 	profileID := profileData["id"].(string)
@@ -51,7 +56,7 @@ func TestAppWorkflowMainline(t *testing.T) {
 
 	previewResp := invokeJSON(t, handler, http.MethodPost, "/api/plans/preview", map[string]interface{}{
 		"sourceProvider": "baidu_netdisk",
-		"targetProvider": "guangya",
+		"targetProvider": "123_open",
 		"thresholdMB":    1,
 		"riskMode":       "fast",
 		"riskOverride": map[string]interface{}{
@@ -96,7 +101,7 @@ func TestAppWorkflowMainline(t *testing.T) {
 
 	taskResp := invokeJSON(t, handler, http.MethodPost, "/api/tasks", map[string]interface{}{
 		"sourceProvider":  "baidu_netdisk",
-		"targetProvider":  "guangya",
+		"targetProvider":  "123_open",
 		"targetProfileId": profileID,
 		"thresholdMB":     1,
 		"riskMode":        "fast",
@@ -218,18 +223,18 @@ func TestAppWorkflowMainline(t *testing.T) {
 
 	statusResp := invokeJSON(t, handler, http.MethodGet, "/api/status/providers", nil)
 	statusItems := statusResp.Data.(map[string]interface{})["items"].([]interface{})
-	foundGuangya := false
+	foundProvider := false
 	for _, raw := range statusItems {
 		item := raw.(map[string]interface{})
-		if item["providerKey"].(string) != "guangya" {
+		if item["providerKey"].(string) != "123_open" {
 			continue
 		}
-		foundGuangya = true
+		foundProvider = true
 		if item["latestProbe"].(string) == "" {
-			t.Fatal("expected latestProbe for guangya")
+			t.Fatal("expected latestProbe for 123_open")
 		}
 		if item["lastTaskState"].(string) == "" {
-			t.Fatal("expected lastTaskState for guangya")
+			t.Fatal("expected lastTaskState for 123_open")
 		}
 		summary := item["snapshotSummary"].(map[string]interface{})
 		if got := summary["executionMode"].(string); got != "pre_scan_flat" {
@@ -267,8 +272,8 @@ func TestAppWorkflowMainline(t *testing.T) {
 			t.Fatalf("expected runtime summary in status snapshot, got %#v", summary["runtime"])
 		}
 	}
-	if !foundGuangya {
-		t.Fatal("expected guangya in provider statuses")
+	if !foundProvider {
+		t.Fatal("expected 123_open in provider statuses")
 	}
 
 	retryResp := invokeJSON(t, handler, http.MethodPost, "/api/tasks/"+taskID+"/retry", nil)
@@ -293,13 +298,17 @@ func TestAppProviderUploadEndpoint(t *testing.T) {
 	ctx := context.Background()
 	application := mustNewTestApp(t, ctx)
 	handler := application.routes()
+	providerServer, _ := newAppPan123OpenTestServer(t)
+	t.Cleanup(providerServer.Close)
 
 	profileResp := invokeJSON(t, handler, http.MethodPost, "/api/auth/profiles", map[string]interface{}{
 		"providerKey": "123_open",
 		"authMode":    "manual_token",
 		"displayName": "Upload 123",
 		"token":       "token-upload",
-		"extra":       map[string]interface{}{},
+		"extra": map[string]interface{}{
+			"apiEndpoint": providerServer.URL,
+		},
 	})
 	profileID := profileResp.Data.(map[string]interface{})["id"].(string)
 	if profileID == "" {
@@ -328,8 +337,8 @@ func TestAppProviderUploadEndpoint(t *testing.T) {
 	if got := data["status"].(string); got != "ok" {
 		t.Fatalf("expected provider upload status ok, got %s", got)
 	}
-	if got := data["mode"].(string); got != "open_family_placeholder" {
-		t.Fatalf("expected provider upload mode open_family_placeholder, got %s", got)
+	if got := data["mode"].(string); got != "open_family_real_upload" {
+		t.Fatalf("expected provider upload mode open_family_real_upload, got %s", got)
 	}
 }
 
@@ -392,6 +401,99 @@ func mustNewTestApp(t *testing.T, ctx context.Context) *App {
 		_ = app.store.Close()
 	})
 	return app
+}
+
+type appPan123OpenTestState struct {
+	lastCreatedFilename string
+	uploadedBody        []byte
+}
+
+func newAppPan123OpenTestServer(t *testing.T) (*httptest.Server, *appPan123OpenTestState) {
+	t.Helper()
+
+	state := &appPan123OpenTestState{}
+	rootItems := []map[string]interface{}{
+		{"fileId": "dir-demo", "parentFileId": "0", "filename": "demo", "type": 1, "size": 0},
+	}
+	demoItems := func() []map[string]interface{} {
+		items := []map[string]interface{}{}
+		if state.lastCreatedFilename != "" {
+			items = append(items, map[string]interface{}{
+				"fileId":       "file-uploaded",
+				"parentFileId": "dir-demo",
+				"filename":     state.lastCreatedFilename,
+				"type":         0,
+				"size":         len(state.uploadedBody),
+				"etag":         "etag-uploaded",
+			})
+		}
+		return items
+	}
+
+	var server *httptest.Server
+	server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasPrefix(r.URL.Path, "/upload-put/") {
+			body, err := io.ReadAll(r.Body)
+			if err != nil {
+				t.Fatalf("read upload body: %v", err)
+			}
+			state.uploadedBody = body
+			w.Header().Set("ETag", `"etag-uploaded"`)
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+		if got := r.Header.Get("Authorization"); !strings.HasPrefix(got, "Bearer ") {
+			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		switch {
+		case r.Method == http.MethodGet && r.URL.Path == "/api/v2/file/list":
+			parentID := r.URL.Query().Get("parentFileId")
+			if parentID == "" || parentID == "0" {
+				_ = json.NewEncoder(w).Encode(map[string]interface{}{"code": 0, "data": map[string]interface{}{"fileList": rootItems}})
+				return
+			}
+			if parentID == "dir-demo" {
+				_ = json.NewEncoder(w).Encode(map[string]interface{}{"code": 0, "data": map[string]interface{}{"fileList": demoItems()}})
+				return
+			}
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{"code": 0, "data": map[string]interface{}{"fileList": []map[string]interface{}{}}})
+		case r.Method == http.MethodPost && r.URL.Path == "/upload/v1/oss/file/create":
+			payload := decodeAppTestJSON(t, r)
+			state.lastCreatedFilename = appTestString(payload["filename"])
+			if state.lastCreatedFilename == "" {
+				state.lastCreatedFilename = appTestString(payload["fileName"])
+			}
+			if state.lastCreatedFilename == "" {
+				state.lastCreatedFilename = appTestString(payload["name"])
+			}
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{"code": 0, "data": map[string]interface{}{"preuploadID": "preupload-app-1", "fileID": "file-uploaded"}})
+		case r.Method == http.MethodPost && r.URL.Path == "/upload/v1/oss/file/get_upload_url":
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{"code": 0, "data": map[string]interface{}{"presignedURL": server.URL + "/upload-put/preupload-app-1"}})
+		case r.Method == http.MethodPost && r.URL.Path == "/upload/v1/oss/file/upload_complete":
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{"code": 0, "data": map[string]interface{}{"completed": true, "fileID": "file-uploaded"}})
+		case r.Method == http.MethodPost && r.URL.Path == "/upload/v1/oss/file/upload_async_result":
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{"code": 0, "data": map[string]interface{}{"completed": true, "fileID": "file-uploaded"}})
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	return server, state
+}
+
+func decodeAppTestJSON(t *testing.T, r *http.Request) map[string]interface{} {
+	t.Helper()
+	var payload map[string]interface{}
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		t.Fatalf("decode request payload: %v", err)
+	}
+	return payload
+}
+
+func appTestString(value interface{}) string {
+	text, _ := value.(string)
+	return strings.TrimSpace(text)
 }
 
 func invokeJSON(t *testing.T, handler http.Handler, method string, path string, body interface{}) Envelope {

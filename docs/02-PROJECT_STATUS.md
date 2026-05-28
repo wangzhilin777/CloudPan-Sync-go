@@ -29,6 +29,7 @@
 - 当前开发重心已经从“搭框架”切换到“逐家 provider 落真实链路”。
 - 同时也要补回原始项目中不可丢失的两类通用能力：执行模型与风控策略。
 - 当前 task runtime 已具备第一版后台自动恢复：
+  - 应用启动后会立即做一次恢复扫描，避免冷却任务必须等到第一个 tick
   - 冷却到期的 `blocked` 任务可自动重建并继续执行
   - `completed_with_errors` 中“全队列均带 upload checkpoint / providerData 的 upload-session 恢复型失败”可自动补跑
   - 普通 `remote_error` 之类的泛化失败不会被后台盲目自动重试
@@ -341,7 +342,7 @@
   - 当前 `rate_limited` 会按冷却时间阻断过早重试
   - 当前任务在“只有冷却 / 人工确认 / 授权失效 / 本地文件缺失”时会进入 `blocked`
   - 当前 runtime / probe / status 已回写 `blockedReason` 与 `nextRetryAt`
-  - 当前已接入单机 tick 版后台自动补传调度，可自动恢复冷却到期的 `blocked` 任务
+  - 当前已接入单机 worker 版后台自动补传调度，启动时会先恢复一次，随后按 `CLOUDPAN_AUTO_RETRY_TICK` 自动恢复冷却到期的 `blocked` 任务
   - 当前 `retryLimit` 已真正接入重试队列，支持累计次数、剩余次数与 exhausted 阻断
   - 当前 `blockedReason` 已补充统一的 `blockedAction / blockedAdvice`，便于状态矩阵直接给出处理建议
   - 当前 `/api/evidence/runtime` 与 `/api/status/providers` 已补充 `blockedTasks / blockedActions` 聚合摘要，便于快速定位最需要人工处理的动作

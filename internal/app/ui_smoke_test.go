@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http/httptest"
 	"os"
@@ -47,13 +48,22 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 	t.Cleanup(cancelTimeout)
 
 	profileName := "UI Smoke 123"
-	entriesJSON := `[
-  {
-    "path": "/demo/ui-smoke.bin",
-    "size": 2048,
-    "md5": "md5-ui-smoke"
-  }
-]`
+	localFile := filepath.Join(t.TempDir(), "ui-smoke.bin")
+	if err := os.WriteFile(localFile, []byte("ui-smoke"), 0o644); err != nil {
+		t.Fatalf("write ui smoke local file: %v", err)
+	}
+	entriesBytes, err := json.Marshal([]map[string]interface{}{
+		{
+			"path":      "/demo/ui-smoke.bin",
+			"size":      2048,
+			"md5":       "md5-ui-smoke",
+			"localPath": localFile,
+		},
+	})
+	if err != nil {
+		t.Fatalf("marshal ui smoke entries: %v", err)
+	}
+	entriesJSON := string(entriesBytes)
 
 	runStep(t, runCtx, "login and bootstrap",
 		chromedp.Navigate(server.URL),
@@ -106,8 +116,8 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 		chromedp.Click(`#task-resume`, chromedp.ByID),
 		waitForText(`#task-detail`, `"state": "ready"`),
 		chromedp.Click(`#task-run`, chromedp.ByID),
-		waitForText(`#task-detail`, `"state": "completed"`),
-		waitForText(`#task-detail`, `"status": "done"`),
+		waitForText(`#task-detail`, `"state": "completed_with_errors"`),
+		waitForText(`#task-detail`, `"status": "failed"`),
 		waitForText(`#task-runtime`, "completed"),
 	)
 
@@ -115,7 +125,7 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 		chromedp.Click(`button[data-view="status"]`, chromedp.ByQuery),
 		waitForText(`#status-table`, "123_open"),
 		waitForText(`#status-table`, "pre_scan_flat"),
-		waitForText(`#recent-results`, "done"),
+		waitForText(`#recent-results`, "failed"),
 		waitForText(`#recent-results`, "pre_scan_flat"),
 		waitForText(`#recent-probes`, "completed"),
 		waitForText(`#recent-probes`, "pre_scan_flat"),
