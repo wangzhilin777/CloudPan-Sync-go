@@ -1225,8 +1225,23 @@ function focusBlockedActionSummary(action) {
   state.treeFilters.statusRetry.retryState = preset.retryState;
   setFilterControlValue("#status-retry-filter-class", preset.retryClass);
   setFilterControlValue("#status-retry-filter-state", preset.retryState);
+  state.autoRecoverFilters.blockedAction = action || "";
+  setFilterControlValue("#auto-recover-blocked-action", action || "");
   updateStatusRetryQueue(recentRuntimePayload());
+  $("#auto-recover-filter-summary").textContent = renderAutoRecoverFilterSummary(
+    filterAutoRecoverItems(state.evidence?.autoRecoverPool || []),
+    state.evidence?.autoRecoverPool || [],
+  );
+  $("#auto-recover-summary").innerHTML = renderAutoRecoverSummary(state.evidence?.autoRecoverPool || []);
+  wireAutoRecoverSummary();
   showFlash("已按 blocked action 收敛最近重试队列");
+}
+
+async function runBlockedActionRecovery(action) {
+  activateTab("status");
+  state.autoRecoverFilters.blockedAction = action || "";
+  setFilterControlValue("#auto-recover-blocked-action", action || "");
+  await triggerAutoRecover();
 }
 
 function wireRetryQueueActions(scope) {
@@ -1324,6 +1339,15 @@ function wireBlockedActionsSummary() {
   wrap.querySelectorAll("[data-blocked-focus-action]").forEach((button) => {
     button.addEventListener("click", () => {
       focusBlockedActionSummary(button.dataset.blockedFocusAction);
+    });
+  });
+  wrap.querySelectorAll("[data-blocked-run-action]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      try {
+        await runBlockedActionRecovery(button.dataset.blockedRunAction);
+      } catch (error) {
+        showFlash(error.message, true);
+      }
     });
   });
 }
@@ -2357,6 +2381,11 @@ function renderBlockedActionsSummary(items) {
               class="ghost"
               data-blocked-focus-action="${escapeHTML(stringifyValue(item.action))}"
             >只看这一类阻塞</button>
+            <button
+              type="button"
+              class="ghost"
+              data-blocked-run-action="${escapeHTML(stringifyValue(item.action))}"
+            >执行此阻塞动作</button>
             <button
               type="button"
               class="ghost"
