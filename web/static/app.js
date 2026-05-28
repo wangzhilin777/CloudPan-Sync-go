@@ -1949,6 +1949,44 @@ async function loadStatus() {
   renderStatus();
 }
 
+function selectedEvidenceReport() {
+  if (state.selectedReportId) {
+    const record = state.reportHistory.find((item) => item.id === state.selectedReportId);
+    if (record && record.markdown) {
+      return record;
+    }
+  }
+  return state.report;
+}
+
+function renderReportHistory(items) {
+  if (!Array.isArray(items) || !items.length) {
+    return `<div class="directory-empty">暂无持久化报告记录。</div>`;
+  }
+  return items
+    .map(
+      (item) => `
+        <div class="directory-row tree-node ${item.id === state.selectedReportId ? "active" : ""}">
+          <div class="directory-row-header">
+            <strong>${escapeHTML(item.generatedAt || "-")}</strong>
+            <code>${escapeHTML(item.id || "-")}</code>
+          </div>
+          <div class="directory-metrics">
+            <span class="pill">tasks ${stringifyValue(item.summary?.totalTasks, "0")}</span>
+            <span class="pill">blocked ${stringifyValue(item.summary?.blockedTasks, "0")}</span>
+            <span class="pill">providers ${stringifyValue(item.statuses?.length, "0")}</span>
+            <span class="pill">samples ${stringifyValue(item.samples?.length, "0")}</span>
+          </div>
+          <div class="actions compact">
+            <button type="button" class="ghost" data-report-view="${escapeHTML(item.id || "")}">查看</button>
+            <button type="button" class="ghost" data-report-download="${escapeHTML(item.id || "")}">下载</button>
+          </div>
+        </div>
+      `, 
+    )
+    .join("");
+}
+
 async function bootstrapData() {
   await Promise.all([loadProviders(), loadProfiles(), loadTasks(), loadStatus()]);
 }

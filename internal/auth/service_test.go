@@ -35,6 +35,9 @@ func TestServiceCreateAndValidateProfile(t *testing.T) {
 		AuthMode:    "manual_token",
 		DisplayName: "demo",
 		Token:       "token-1",
+		Extra: map[string]string{
+			"parentId": "parent-demo",
+		},
 	})
 	if err != nil {
 		t.Fatalf("CreateProfile() error = %v", err)
