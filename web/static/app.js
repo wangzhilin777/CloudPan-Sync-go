@@ -853,6 +853,63 @@ function updateStatusRetryQueue(runtimePayload) {
   wireRetryQueueActions("status");
 }
 
+function flattenVisibleTreePaths(nodes, mode) {
+  if (!Array.isArray(nodes) || !nodes.length) {
+    return [];
+  }
+  const paths = [];
+  const visit = (items) => {
+    items.forEach((node) => {
+      if (!node || !node.path) {
+        return;
+      }
+      if (mode === "pending") {
+        if (node.nodeType === "file" || !Array.isArray(node.children) || node.children.length === 0) {
+          paths.push(node.path);
+        }
+      } else {
+        paths.push(node.path);
+      }
+      if (Array.isArray(node.children) && node.children.length) {
+        visit(node.children);
+      }
+    });
+  };
+  visit(nodes);
+  return Array.from(new Set(paths));
+}
+
+function visibleTreePaths(scope, panel) {
+  const detail = currentSelectedTaskDetail();
+  const runtimePayload = recentRuntimePayload();
+  if (scope === "task") {
+    const runtime = detail?.runtime || detail?.plan?.metadata?.runtime || {};
+    if (panel === "pending") {
+      const result = filterPendingTree(runtime.pendingTree || [], state.treeFilters.taskPending);
+      return flattenVisibleTreePaths(result.nodes, "pending");
+    }
+    const result = filterDirectoryTree(runtime.directoryStates || [], state.treeFilters.taskDirectory);
+    return flattenVisibleTreePaths(result.nodes, "directory");
+  }
+  const runtime = runtimePayload?.runtime || runtimePayload || {};
+  if (panel === "pending") {
+    const result = filterPendingTree(runtime.pendingTree || [], state.treeFilters.statusPending);
+    return flattenVisibleTreePaths(result.nodes, "pending");
+  }
+  const result = filterDirectoryTree(runtime.directoryStates || [], state.treeFilters.statusDirectory);
+  return flattenVisibleTreePaths(result.nodes, "directory");
+}
+
+async function copyVisibleTreePaths(scope, panel) {
+  const paths = visibleTreePaths(scope, panel);
+  if (!paths.length) {
+    showFlash(`当前${panel === "pending" ? "待补传树" : "目录树"}没有可复制的路径`, true);
+    return;
+  }
+  await copyTextToClipboard(paths.join("\n"));
+  showFlash(`已复制 ${paths.length} 条${panel === "pending" ? "待补传" : "目录"}路径`);
+}
+
 function setFilterControlValue(selector, value) {
   const element = $(selector);
   if (!element) {
@@ -3090,6 +3147,34 @@ function wireTreeFilters() {
     setFilterControlValue("#provider-smoke-records-filter-result", "");
     renderStatus();
     showFlash("已清空 smoke 记录筛选");
+  });
+  $("#task-directory-copy-visible").addEventListener("click", async () => {
+    try {
+      await copyVisibleTreePaths("task", "directory");
+    } catch (error) {
+      showFlash(`复制目录路径失败：${error.message}`, true);
+    }
+  });
+  $("#task-pending-copy-visible").addEventListener("click", async () => {
+    try {
+      await copyVisibleTreePaths("task", "pending");
+    } catch (error) {
+      showFlash(`复制待补传路径失败：${error.message}`, true);
+    }
+  });
+  $("#status-directory-copy-visible").addEventListener("click", async () => {
+    try {
+      await copyVisibleTreePaths("status", "directory");
+    } catch (error) {
+      showFlash(`复制目录路径失败：${error.message}`, true);
+    }
+  });
+  $("#status-pending-copy-visible").addEventListener("click", async () => {
+    try {
+      await copyVisibleTreePaths("status", "pending");
+    } catch (error) {
+      showFlash(`复制待补传路径失败：${error.message}`, true);
+    }
   });
 }
 
