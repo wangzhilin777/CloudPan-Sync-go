@@ -14,6 +14,7 @@ const state = {
   providerSmokes: [],
   providerSmokeSummary: [],
   providerSmokeMatrix: [],
+  providerSmokeMatrixFilter: "all",
   selectedProviderSmokeId: "",
   selectedProviderSmokeMarkdown: "",
   treeGroupsCollapsed: {},
@@ -1713,11 +1714,14 @@ function renderStatus() {
   $("#blocked-actions-summary").innerHTML = renderBlockedActionsSummary(evidence.blockedActions || []);
   wireBlockedActionsSummary();
   $("#protocol-coverage-summary").innerHTML = renderProtocolCoverageSummary(protocolCoverage);
+  $("#provider-smoke-summary").innerHTML = `
+    ${renderProviderSmokeMatrixControls(state.providerSmokeMatrix || [])}
+    ${renderProviderSmokeSummary(state.providerSmokeSummary || [])}
+  `;
   const currentReport = selectedEvidenceReport();
   $("#evidence-report").innerHTML = renderEvidenceReport(currentReport);
   $("#report-history").innerHTML = renderReportHistory(state.reportHistory || []);
   hydrateReportForm(currentReport);
-  $("#provider-smoke-summary").innerHTML = renderProviderSmokeSummary(state.providerSmokeSummary || []);
   $("#provider-smoke-matrix").innerHTML = renderProviderSmokeMatrix(state.providerSmokeMatrix || []);
   $("#provider-smoke-records").innerHTML = renderProviderSmokeRecords(state.providerSmokes || []);
   $("#provider-smoke-markdown").innerHTML = renderProviderSmokeMarkdown(state.selectedProviderSmokeMarkdown);
@@ -2114,11 +2118,104 @@ function renderProviderSmokeSummary(items) {
     .join("");
 }
 
-function renderProviderSmokeMatrix(items) {
-  if (!Array.isArray(items) || !items.length) {
-    return `<div class="directory-empty">暂无真实样本矩阵。</div>`;
+function providerSmokeMatrixCounts(items) {
+  const counts = {
+    total: 0,
+    accepted: 0,
+    inProgress: 0,
+    pending: 0,
+  };
+  for (const item of Array.isArray(items) ? items : []) {
+    counts.total += 1;
+    if (item?.accepted) {
+      counts.accepted += 1;
+      continue;
+    }
+    if (item?.acceptanceStatus === "in_progress") {
+      counts.inProgress += 1;
+      continue;
+    }
+    counts.pending += 1;
   }
-  return items
+  return counts;
+}
+
+function providerSmokeMatrixFilterLabel(filter) {
+  switch (filter) {
+    case "accepted":
+      return "已验收";
+    case "in_progress":
+      return "进行中";
+    case "pending":
+      return "待补齐";
+    default:
+      return "全部";
+  }
+}
+
+function filteredProviderSmokeMatrix(items) {
+  const filter = state.providerSmokeMatrixFilter || "all";
+  const matrix = Array.isArray(items) ? items : [];
+  if (filter === "all") {
+    return matrix;
+  }
+  return matrix.filter((item) => {
+    if (filter === "accepted") {
+      return Boolean(item?.accepted);
+    }
+    if (filter === "in_progress") {
+      return item?.acceptanceStatus === "in_progress";
+    }
+    if (filter === "pending") {
+      return item?.acceptanceStatus === "pending";
+    }
+    return true;
+  });
+}
+
+function setProviderSmokeMatrixFilter(filter) {
+  state.providerSmokeMatrixFilter = ["all", "accepted", "in_progress", "pending"].includes(filter) ? filter : "all";
+  renderStatus();
+}
+
+function renderProviderSmokeMatrixControls(items) {
+  const counts = providerSmokeMatrixCounts(items);
+  const filters = [
+    { key: "all", label: `全部 ${counts.total}` },
+    { key: "accepted", label: `已验收 ${counts.accepted}` },
+    { key: "in_progress", label: `进行中 ${counts.inProgress}` },
+    { key: "pending", label: `待补齐 ${counts.pending}` },
+  ];
+  return `
+    <div class="provider-smoke-matrix-toolbar">
+      <div class="directory-row-header">
+        <strong>验收矩阵视图</strong>
+        <code>${escapeHTML(providerSmokeMatrixFilterLabel(state.providerSmokeMatrixFilter))}</code>
+      </div>
+      <div class="muted">可按验收状态快速筛选，也能直接跳到对应 smoke 样本或样本任务，方便继续补齐真实联调样本。</div>
+      <div class="actions compact">
+        ${filters
+          .map(
+            (item) => `
+              <button
+                type="button"
+                class="ghost ${state.providerSmokeMatrixFilter === item.key ? "active" : ""}"
+                data-provider-smoke-filter="${escapeHTML(item.key)}"
+              >${escapeHTML(item.label)}</button>
+            `,
+          )
+          .join("")}
+      </div>
+    </div>
+  `;
+}
+
+function renderProviderSmokeMatrix(items) {
+  const visibleItems = filteredProviderSmokeMatrix(items);
+  if (!Array.isArray(visibleItems) || !visibleItems.length) {
+    return `<div class="directory-empty">当前筛选 ${escapeHTML(providerSmokeMatrixFilterLabel(state.providerSmokeMatrixFilter))} 没有真实样本矩阵。</div>`;
+  }
+  return visibleItems
     .map(
       (item) => `
         <div class="directory-row tree-node">
@@ -2135,6 +2232,11 @@ function renderProviderSmokeMatrix(items) {
           <div class="muted">coverage sample: ${escapeHTML(stringifyValue(item.coverageSampleProviderKey, "-"))} / ${escapeHTML(stringifyValue(item.coverageSampleTaskState, "-"))} / ${escapeHTML(stringifyValue(item.coverageSampleCompletionKind, "-"))}</div>
           ${Array.isArray(item.acceptanceMissing) && item.acceptanceMissing.length ? `<div class="muted">missing: ${escapeHTML(item.acceptanceMissing.join(", "))}</div>` : ""}
           ${item.acceptanceAdvice ? `<div class="muted">advice: ${escapeHTML(item.acceptanceAdvice)}</div>` : ""}
+          <div class="actions compact">
+            ${item.sampleRecordId ? `<button type="button" class="ghost" data-provider-smoke-open-record="${escapeHTML(stringifyValue(item.sampleRecordId))}">打开 smoke 样本</button>` : ""}
+            ${item.coverageSampleTaskId ? `<button type="button" class="ghost" data-provider-smoke-open-task="${escapeHTML(stringifyValue(item.coverageSampleTaskId))}">打开任务样本</button>` : ""}
+            <button type="button" class="ghost" data-provider-smoke-filter-status="${escapeHTML(item.accepted ? "accepted" : item.acceptanceStatus || "pending")}">只看此类</button>
+          </div>
           <div class="muted">latest smoke: <code>${escapeHTML(stringifyValue(item.latestSmokeAt, "-"))}</code> / coverage observed: <code>${escapeHTML(stringifyValue(item.coverageLastObservedAt, "-"))}</code></div>
         </div>
       `,
@@ -2578,6 +2680,38 @@ function wireStatus() {
       } catch (error) {
         showFlash(error.message, true);
       }
+    }
+  });
+  $("#provider-smoke-summary").addEventListener("click", (event) => {
+    const filterButton = event.target.closest("[data-provider-smoke-filter]");
+    if (!filterButton) {
+      return;
+    }
+    setProviderSmokeMatrixFilter(filterButton.dataset.providerSmokeFilter || "all");
+  });
+  $("#provider-smoke-matrix").addEventListener("click", async (event) => {
+    const openRecordButton = event.target.closest("[data-provider-smoke-open-record]");
+    if (openRecordButton) {
+      try {
+        await loadProviderSmokeMarkdown(openRecordButton.dataset.providerSmokeOpenRecord || "");
+        showFlash("已打开 smoke 样本");
+      } catch (error) {
+        showFlash(error.message, true);
+      }
+      return;
+    }
+    const openTaskButton = event.target.closest("[data-provider-smoke-open-task]");
+    if (openTaskButton) {
+      try {
+        await openTaskByID(openTaskButton.dataset.providerSmokeOpenTask || "");
+      } catch (error) {
+        showFlash(error.message, true);
+      }
+      return;
+    }
+    const filterStatusButton = event.target.closest("[data-provider-smoke-filter-status]");
+    if (filterStatusButton) {
+      setProviderSmokeMatrixFilter(filterStatusButton.dataset.providerSmokeFilterStatus || "all");
     }
   });
 }

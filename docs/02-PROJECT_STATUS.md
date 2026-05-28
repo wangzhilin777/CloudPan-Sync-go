@@ -374,6 +374,7 @@
   - `acceptanceMissing` 缺失原因提示，能直接看出还差真实 smoke、任务覆盖或两者都缺
   - `acceptanceAdvice` 补齐建议，能直接指导下一步补样本
   - 状态页证据摘要里会直接显示 accepted / in_progress / pending 协议组计数
+  - 验收矩阵支持按 accepted / in_progress / pending 快速筛选，并可直接打开对应 smoke 样本或样本任务
 - 当前可展示的数据包括：
   - `recentResults`
   - `recentProbes`
@@ -440,6 +441,7 @@
   - pending 行会带上 `acceptanceMissing` 缺失原因，便于直接补样本
   - pending / in_progress 行还会带上 `acceptanceAdvice`，提示下一步应补真实 smoke 还是任务覆盖
   - 首页证据摘要会同步显示 accepted / in_progress / pending 的数量，便于一眼判断收口进度
+  - 验收矩阵可以按状态筛选，并直接打开对应 smoke 样本或样本任务，方便继续补齐真实联调材料
   - 从重试队列一键定位待补传树或收敛到同类失败项
     - 从 blocked 聚合摘要一键跳到样本任务或当前阻塞动作
     - 从任务详情 blocked 引导卡片一键收敛当前任务问题子集
