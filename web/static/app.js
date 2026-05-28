@@ -25,6 +25,7 @@ const state = {
   autoRecoverFilters: {
     mode: "",
     providerKey: "",
+    profileId: "",
     retryClass: "",
     blockedAction: "",
     limit: "",
@@ -1908,6 +1909,7 @@ function renderProviders() {
   syncSourceProfiles();
   syncTargetProfiles();
   syncAutoRecoverProviders();
+  syncAutoRecoverProfiles();
   syncAutoRecoverBlockedActions();
   syncExecutionModeHint();
 }
@@ -2077,6 +2079,34 @@ function syncAutoRecoverProviders() {
   setSelectValueIfPresent("#auto-recover-provider", current);
 }
 
+function syncAutoRecoverProfiles() {
+  const select = $("#auto-recover-profile");
+  if (!select) {
+    return;
+  }
+  const current = state.autoRecoverFilters.profileId || select.value || "";
+  const options = new Map();
+  (state.evidence?.autoRecoverPool || []).forEach((item) => {
+    (item?.profileIds || []).forEach((profileId) => {
+      const normalized = String(profileId || "").trim();
+      if (!normalized || options.has(normalized)) {
+        return;
+      }
+      const profile = (state.profiles || []).find((entry) => entry?.id === normalized);
+      const label = profile ? `${profile.displayName || normalized} (${profile.providerKey || "unknown"})` : normalized;
+      options.set(normalized, label);
+    });
+  });
+  const sorted = [...options.entries()].sort((left, right) => left[1].localeCompare(right[1], "zh-CN"));
+  select.innerHTML = `<option value="">全部授权档案</option>${sorted
+    .map(([value, label]) => `<option value="${escapeHTML(value)}">${escapeHTML(label)}</option>`)
+    .join("")}`;
+  setFilterControlValue(
+    "#auto-recover-profile",
+    sorted.some(([value]) => value === current) ? current : "",
+  );
+}
+
 function syncAutoRecoverBlockedActions() {
   const select = $("#auto-recover-blocked-action");
   if (!select) {
@@ -2102,7 +2132,7 @@ function syncAutoRecoverBlockedActions() {
   select.innerHTML = `<option value="">全部阻塞动作</option>${values
     .map((value) => `<option value="${value}">${value}</option>`)
     .join("")}`;
-  setSelectValueIfPresent("#auto-recover-blocked-action", current);
+  setFilterControlValue("#auto-recover-blocked-action", values.includes(current) ? current : "");
 }
 
 function syncExecutionModeHint() {
@@ -2364,6 +2394,7 @@ function renderStatus() {
   const acceptedSmokeGroups = providerSmokeMatrix.filter((item) => item?.accepted).length;
   const inProgressSmokeGroups = providerSmokeMatrix.filter((item) => item?.acceptanceStatus === "in_progress").length;
   const pendingSmokeGroups = providerSmokeMatrix.filter((item) => item?.acceptanceStatus === "pending").length;
+  syncAutoRecoverProfiles();
   syncAutoRecoverBlockedActions();
   $("#evidence-summary").innerHTML = `
     <div class="metric"><span>Total Tasks</span><strong>${evidence.totalTasks}</strong></div>
@@ -2510,6 +2541,7 @@ function renderBlockedActionsSummary(items) {
 function filterAutoRecoverItems(items, filters = state.autoRecoverFilters) {
   const mode = String(filters?.mode || "").trim();
   const providerKey = String(filters?.providerKey || "").trim();
+  const profileId = String(filters?.profileId || "").trim();
   const retryClass = String(filters?.retryClass || "").trim();
   const blockedAction = String(filters?.blockedAction || "").trim();
   const source = Array.isArray(items) ? items : [];
@@ -2519,6 +2551,12 @@ function filterAutoRecoverItems(items, filters = state.autoRecoverFilters) {
     }
     if (providerKey && String(item?.sampleProvider || "").trim() !== providerKey) {
       return false;
+    }
+    if (profileId) {
+      const sampleProfiles = Array.isArray(item?.profileIds) ? item.profileIds.map((value) => String(value || "").trim()) : [];
+      if (!sampleProfiles.includes(profileId)) {
+        return false;
+      }
     }
     if (retryClass) {
       const sampleClasses = Array.isArray(item?.retryClasses) ? item.retryClasses.map((value) => String(value || "").trim()) : [];
@@ -2541,6 +2579,7 @@ function renderAutoRecoverFilterSummary(visibleItems, allItems) {
   const current = Array.isArray(visibleItems) ? visibleItems.length : 0;
   const mode = String(state.autoRecoverFilters.mode || "").trim();
   const providerKey = String(state.autoRecoverFilters.providerKey || "").trim();
+  const profileId = String(state.autoRecoverFilters.profileId || "").trim();
   const retryClass = String(state.autoRecoverFilters.retryClass || "").trim();
   const blockedAction = String(state.autoRecoverFilters.blockedAction || "").trim();
   const limit = String(state.autoRecoverFilters.limit || "").trim();
@@ -2550,6 +2589,9 @@ function renderAutoRecoverFilterSummary(visibleItems, allItems) {
   }
   if (providerKey) {
     parts.push(`provider=${providerKey}`);
+  }
+  if (profileId) {
+    parts.push(`profileId=${profileId}`);
   }
   if (retryClass) {
     parts.push(`retryClass=${retryClass}`);
@@ -2585,12 +2627,14 @@ function renderAutoRecoverSummary(items) {
           <div class="directory-metrics">
             <span class="pill">tasks ${stringifyValue(item.taskCount, "0")}</span>
             <span class="pill">providers ${stringifyValue(item.providerCount, "0")}</span>
+            <span class="pill">profiles ${stringifyValue(item.profileCount, "0")}</span>
             <span class="pill">queue ${stringifyValue(item.queueItemCount, "0")}</span>
             <span class="pill">ready ${stringifyValue(item.retryableNowCount, "0")}</span>
             <span class="pill">cooldown ${stringifyValue(item.cooldownCount, "0")}</span>
             <span class="pill">checkpoint ${stringifyValue(item.uploadCheckpointEligible, "0")}</span>
             <span class="pill">primary class ${stringifyValue(item.primaryRetryClass, "-")}</span>
             <span class="pill">primary action ${stringifyValue(item.primaryBlockedAction, "-")}</span>
+            <span class="pill">sample profile ${stringifyValue(item.sampleProfileId, "-")}</span>
             <span class="pill">classes ${(item.retryClasses || []).join(", ") || "-"}</span>
             <span class="pill">actions ${(item.blockedActions || []).join(", ") || "-"}</span>
           </div>
@@ -2599,7 +2643,7 @@ function renderAutoRecoverSummary(items) {
               ? `<div class="muted">主失败口径：retryClass <code>${escapeHTML(stringifyValue(item.primaryRetryClass, "-"))}</code> / blockedAction <code>${escapeHTML(stringifyValue(item.primaryBlockedAction, "-"))}</code></div>`
               : ""
           }
-          <div class="muted">同档位会按 provider 轮转放行，并受 provider 级批量预算约束。</div>
+          <div class="muted">同档位会先按 provider 轮转，再在同 provider 内按授权档案轮转，并继续受 provider 级批量预算约束。</div>
           <div class="muted">${escapeHTML(stringifyValue(item.advice, "-"))}</div>
           <div class="actions compact">
             <span class="pill">next ${escapeHTML(stringifyValue(item.nextRetryAt, "-"))}</span>
@@ -2710,6 +2754,10 @@ function applyAutoRecoverFilters(nextFilters, options = {}) {
   if (Object.prototype.hasOwnProperty.call(filters, "providerKey")) {
     state.autoRecoverFilters.providerKey = String(filters.providerKey || "");
     setFilterControlValue("#auto-recover-provider", state.autoRecoverFilters.providerKey);
+  }
+  if (Object.prototype.hasOwnProperty.call(filters, "profileId")) {
+    state.autoRecoverFilters.profileId = String(filters.profileId || "");
+    setFilterControlValue("#auto-recover-profile", state.autoRecoverFilters.profileId);
   }
   if (Object.prototype.hasOwnProperty.call(filters, "retryClass")) {
     state.autoRecoverFilters.retryClass = String(filters.retryClass || "");
@@ -3099,6 +3147,7 @@ function currentAutoRecoverRequest() {
   return {
     mode: String($("#auto-recover-mode")?.value || "").trim(),
     providerKey: String($("#auto-recover-provider")?.value || "").trim(),
+    profileId: String($("#auto-recover-profile")?.value || "").trim(),
     retryClass: String($("#auto-recover-retry-class")?.value || "").trim(),
     blockedAction: String($("#auto-recover-blocked-action")?.value || "").trim(),
     limit: Number.isFinite(limit) && limit > 0 ? limit : 0,
@@ -3109,6 +3158,7 @@ async function triggerAutoRecover() {
   const payload = currentAutoRecoverRequest();
   state.autoRecoverFilters.mode = payload.mode;
   state.autoRecoverFilters.providerKey = payload.providerKey;
+  state.autoRecoverFilters.profileId = payload.profileId;
   state.autoRecoverFilters.retryClass = payload.retryClass;
   state.autoRecoverFilters.blockedAction = payload.blockedAction;
   state.autoRecoverFilters.limit = payload.limit ? String(payload.limit) : "";
@@ -3157,11 +3207,13 @@ async function autoRecoverTaskPath(scope, path) {
 function resetAutoRecoverFilters() {
   state.autoRecoverFilters.mode = "";
   state.autoRecoverFilters.providerKey = "";
+  state.autoRecoverFilters.profileId = "";
   state.autoRecoverFilters.retryClass = "";
   state.autoRecoverFilters.blockedAction = "";
   state.autoRecoverFilters.limit = "";
   setFilterControlValue("#auto-recover-mode", "");
   setFilterControlValue("#auto-recover-provider", "");
+  setFilterControlValue("#auto-recover-profile", "");
   setFilterControlValue("#auto-recover-retry-class", "");
   setFilterControlValue("#auto-recover-blocked-action", "");
   setInputValueIfPresent("#auto-recover-limit", "");
@@ -3867,6 +3919,10 @@ function wireStatus() {
   });
   $("#auto-recover-provider").addEventListener("change", () => {
     state.autoRecoverFilters.providerKey = $("#auto-recover-provider").value;
+    renderStatus();
+  });
+  $("#auto-recover-profile").addEventListener("change", () => {
+    state.autoRecoverFilters.profileId = $("#auto-recover-profile").value;
     renderStatus();
   });
   $("#auto-recover-retry-class").addEventListener("change", () => {

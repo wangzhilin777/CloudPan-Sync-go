@@ -88,6 +88,7 @@ type recoverTasksRequest struct {
 	Mode          string   `json:"mode"`
 	TaskID        string   `json:"taskId"`
 	ProviderKey   string   `json:"providerKey"`
+	ProfileID     string   `json:"profileId"`
 	RetryClass    string   `json:"retryClass"`
 	BlockedAction string   `json:"blockedAction"`
 	Paths         []string `json:"paths"`
@@ -549,6 +550,7 @@ func (a *App) handleTaskRecovery(w http.ResponseWriter, r *http.Request) {
 		Mode:          req.Mode,
 		TaskID:        req.TaskID,
 		ProviderKey:   req.ProviderKey,
+		ProfileID:     req.ProfileID,
 		RetryClass:    req.RetryClass,
 		BlockedAction: req.BlockedAction,
 		Paths:         req.Paths,

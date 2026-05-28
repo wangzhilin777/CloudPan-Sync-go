@@ -395,6 +395,8 @@ Invoke-RestMethod `
   - 便于 UI 和脚本确认本轮到底按什么条件执行
 - `taskId / retryClass / blockedAction / path / scope`
   - 便于确认本轮是否只放行了某种失败类型、某个阻塞动作，或某一棵指定子树
+- `profileId`
+  - 适合把后台补传进一步收敛到某个授权档案，避免同 provider 下的其它账号被一起命中
 - `mode=retry_window_waiting_auto_retry`
   - 适合只查看“已经满足自动补传条件，但还不在允许时间窗内”的候选
 - `taskId`

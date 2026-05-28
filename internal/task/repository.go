@@ -341,6 +341,7 @@ type autoRecoverLaneAccumulator struct {
 	advice                   string
 	taskIDs                  map[string]struct{}
 	providers                map[string]struct{}
+	profiles                 map[string]struct{}
 	retryClasses             map[string]struct{}
 	blockedActions           map[string]struct{}
 	queueItemCount           int
@@ -350,6 +351,7 @@ type autoRecoverLaneAccumulator struct {
 	nextRetryAt              string
 	sampleTaskID             string
 	sampleProvider           string
+	sampleProfileID          string
 }
 
 func sortedMapKeys(values map[string]struct{}) []string {
@@ -472,6 +474,7 @@ func summarizeAutoRecoverPool(details []Detail) ([]AutoRecoverLane, int) {
 				advice:         autoRecoverGuidance(candidate.Mode),
 				taskIDs:        make(map[string]struct{}),
 				providers:      make(map[string]struct{}),
+				profiles:       make(map[string]struct{}),
 				retryClasses:   make(map[string]struct{}),
 				blockedActions: make(map[string]struct{}),
 			}
@@ -480,6 +483,9 @@ func summarizeAutoRecoverPool(details []Detail) ([]AutoRecoverLane, int) {
 		}
 		acc.taskIDs[detail.Task.ID] = struct{}{}
 		acc.providers[detail.Task.TargetProvider] = struct{}{}
+		if profileID := strings.TrimSpace(detail.TargetProfileID); profileID != "" {
+			acc.profiles[profileID] = struct{}{}
+		}
 		if blockedAction := strings.TrimSpace(candidate.EffectiveAction); blockedAction != "" {
 			acc.blockedActions[blockedAction] = struct{}{}
 		}
@@ -501,6 +507,7 @@ func summarizeAutoRecoverPool(details []Detail) ([]AutoRecoverLane, int) {
 		if acc.sampleTaskID == "" {
 			acc.sampleTaskID = detail.Task.ID
 			acc.sampleProvider = detail.Task.TargetProvider
+			acc.sampleProfileID = detail.TargetProfileID
 		}
 		nextRetryAt := strings.TrimSpace(candidate.Summary.NextRetryAt)
 		if nextRetryAt != "" && (acc.nextRetryAt == "" || nextRetryAt < acc.nextRetryAt) {
@@ -512,22 +519,26 @@ func summarizeAutoRecoverPool(details []Detail) ([]AutoRecoverLane, int) {
 		acc := accumulators[mode]
 		retryClasses := sortedMapKeys(acc.retryClasses)
 		blockedActions := sortedMapKeys(acc.blockedActions)
+		profileIDs := sortedMapKeys(acc.profiles)
 		items = append(items, AutoRecoverLane{
 			Mode:                     acc.mode,
 			Advice:                   acc.advice,
 			TaskCount:                len(acc.taskIDs),
 			ProviderCount:            len(acc.providers),
+			ProfileCount:             len(acc.profiles),
 			QueueItemCount:           acc.queueItemCount,
 			RetryableNowCount:        acc.retryableNowCount,
 			CooldownCount:            acc.cooldownCount,
 			UploadCheckpointEligible: acc.uploadCheckpointEligible,
 			RetryClasses:             retryClasses,
 			BlockedActions:           blockedActions,
+			ProfileIDs:               profileIDs,
 			PrimaryRetryClass:        firstStringValue(retryClasses),
 			PrimaryBlockedAction:     firstStringValue(blockedActions),
 			NextRetryAt:              acc.nextRetryAt,
 			SampleTaskID:             acc.sampleTaskID,
 			SampleProvider:           acc.sampleProvider,
+			SampleProfileID:          acc.sampleProfileID,
 		})
 	}
 	sort.SliceStable(items, func(i, j int) bool {

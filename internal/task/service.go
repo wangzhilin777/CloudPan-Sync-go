@@ -39,6 +39,7 @@ type RecoverOptions struct {
 	Mode          string   `json:"mode,omitempty"`
 	TaskID        string   `json:"taskId,omitempty"`
 	ProviderKey   string   `json:"providerKey,omitempty"`
+	ProfileID     string   `json:"profileId,omitempty"`
 	RetryClass    string   `json:"retryClass,omitempty"`
 	BlockedAction string   `json:"blockedAction,omitempty"`
 	Paths         []string `json:"paths,omitempty"`
@@ -51,6 +52,7 @@ type RecoverResult struct {
 	Mode                    string `json:"mode,omitempty"`
 	TaskID                  string `json:"taskId,omitempty"`
 	ProviderKey             string `json:"providerKey,omitempty"`
+	ProfileID               string `json:"profileId,omitempty"`
 	RetryClass              string `json:"retryClass,omitempty"`
 	BlockedAction           string `json:"blockedAction,omitempty"`
 	Path                    string `json:"path,omitempty"`
@@ -96,17 +98,20 @@ type AutoRecoverLane struct {
 	Advice                   string   `json:"advice,omitempty"`
 	TaskCount                int      `json:"taskCount"`
 	ProviderCount            int      `json:"providerCount"`
+	ProfileCount             int      `json:"profileCount"`
 	QueueItemCount           int      `json:"queueItemCount"`
 	RetryableNowCount        int      `json:"retryableNowCount"`
 	CooldownCount            int      `json:"cooldownCount"`
 	UploadCheckpointEligible int      `json:"uploadCheckpointEligible"`
 	RetryClasses             []string `json:"retryClasses,omitempty"`
 	BlockedActions           []string `json:"blockedActions,omitempty"`
+	ProfileIDs               []string `json:"profileIds,omitempty"`
 	PrimaryRetryClass        string   `json:"primaryRetryClass,omitempty"`
 	PrimaryBlockedAction     string   `json:"primaryBlockedAction,omitempty"`
 	NextRetryAt              string   `json:"nextRetryAt,omitempty"`
 	SampleTaskID             string   `json:"sampleTaskId,omitempty"`
 	SampleProvider           string   `json:"sampleProvider,omitempty"`
+	SampleProfileID          string   `json:"sampleProfileId,omitempty"`
 }
 
 type EvidenceReport struct {
@@ -979,6 +984,7 @@ func (s *Service) RecoverBlockedTasksWithOptions(ctx context.Context, opts Recov
 	opts.Mode = strings.TrimSpace(opts.Mode)
 	opts.TaskID = strings.TrimSpace(opts.TaskID)
 	opts.ProviderKey = strings.TrimSpace(opts.ProviderKey)
+	opts.ProfileID = strings.TrimSpace(opts.ProfileID)
 	opts.RetryClass = strings.TrimSpace(opts.RetryClass)
 	opts.BlockedAction = strings.TrimSpace(opts.BlockedAction)
 	opts.Paths = normalizeRecoverSelectionPaths(opts.Paths, opts.Path)
@@ -988,6 +994,7 @@ func (s *Service) RecoverBlockedTasksWithOptions(ctx context.Context, opts Recov
 		Mode:          opts.Mode,
 		TaskID:        opts.TaskID,
 		ProviderKey:   opts.ProviderKey,
+		ProfileID:     opts.ProfileID,
 		RetryClass:    opts.RetryClass,
 		BlockedAction: opts.BlockedAction,
 		Path:          opts.Path,
@@ -1018,6 +1025,9 @@ func (s *Service) RecoverBlockedTasksWithOptions(ctx context.Context, opts Recov
 		if opts.ProviderKey != "" && detail.Task.TargetProvider != opts.ProviderKey {
 			continue
 		}
+		if opts.ProfileID != "" && detail.TargetProfileID != opts.ProfileID {
+			continue
+		}
 		if opts.RetryClass != "" && !retryQueueContainsClass(detail.Runtime.RetryQueue, opts.RetryClass) {
 			continue
 		}
@@ -1038,7 +1048,7 @@ func (s *Service) RecoverBlockedTasksWithOptions(ctx context.Context, opts Recov
 	sort.SliceStable(candidates, func(i, j int) bool {
 		return recoverCandidateLess(candidates[i], candidates[j])
 	})
-	candidates = interleaveRecoverCandidatesByProvider(candidates)
+	candidates = interleaveRecoverCandidatesByProviderAndProfile(candidates)
 	result.MatchedCount = len(candidates)
 	if opts.Limit > 0 && len(candidates) > opts.Limit {
 		result.SkippedByLimit = len(candidates) - opts.Limit
@@ -1122,7 +1132,7 @@ func recoverProviderBudget(detail Detail) int {
 	return riskProfile.MaxConcurrent
 }
 
-func interleaveRecoverCandidatesByProvider(candidates []recoverCandidate) []recoverCandidate {
+func interleaveRecoverCandidatesByProviderAndProfile(candidates []recoverCandidate) []recoverCandidate {
 	if len(candidates) <= 2 {
 		return candidates
 	}
@@ -1148,32 +1158,58 @@ func interleaveRecoverCandidateBand(candidates []recoverCandidate) []recoverCand
 	if len(candidates) <= 2 {
 		return candidates
 	}
-	order := make([]string, 0)
-	queues := make(map[string][]recoverCandidate)
+	providerOrder := make([]string, 0)
+	providerQueues := make(map[string]map[string][]recoverCandidate)
+	profileOrders := make(map[string][]string)
+	profileCursor := make(map[string]int)
 	for _, candidate := range candidates {
 		providerKey := strings.TrimSpace(candidate.Detail.Task.TargetProvider)
 		if providerKey == "" {
 			providerKey = "_unknown"
 		}
-		if _, ok := queues[providerKey]; !ok {
-			order = append(order, providerKey)
+		profileID := strings.TrimSpace(candidate.Detail.TargetProfileID)
+		if profileID == "" {
+			profileID = "_unknown_profile"
 		}
-		queues[providerKey] = append(queues[providerKey], candidate)
+		if _, ok := providerQueues[providerKey]; !ok {
+			providerOrder = append(providerOrder, providerKey)
+			providerQueues[providerKey] = make(map[string][]recoverCandidate)
+		}
+		if _, ok := providerQueues[providerKey][profileID]; !ok {
+			profileOrders[providerKey] = append(profileOrders[providerKey], profileID)
+		}
+		providerQueues[providerKey][profileID] = append(providerQueues[providerKey][profileID], candidate)
 	}
-	if len(order) <= 1 {
+	if len(providerOrder) == 0 {
 		return candidates
+	}
+	if len(providerOrder) == 1 {
+		singleProvider := providerOrder[0]
+		if len(profileOrders[singleProvider]) <= 1 {
+			return candidates
+		}
 	}
 	result := make([]recoverCandidate, 0, len(candidates))
 	for {
 		progressed := false
-		for _, providerKey := range order {
-			queue := queues[providerKey]
-			if len(queue) == 0 {
+		for _, providerKey := range providerOrder {
+			profiles := profileOrders[providerKey]
+			if len(profiles) == 0 {
 				continue
 			}
-			result = append(result, queue[0])
-			queues[providerKey] = queue[1:]
-			progressed = true
+			start := profileCursor[providerKey] % len(profiles)
+			for offset := 0; offset < len(profiles); offset++ {
+				profileID := profiles[(start+offset)%len(profiles)]
+				queue := providerQueues[providerKey][profileID]
+				if len(queue) == 0 {
+					continue
+				}
+				result = append(result, queue[0])
+				providerQueues[providerKey][profileID] = queue[1:]
+				profileCursor[providerKey] = (start + offset + 1) % len(profiles)
+				progressed = true
+				break
+			}
 		}
 		if !progressed {
 			break

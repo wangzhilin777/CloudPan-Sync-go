@@ -1250,6 +1250,7 @@ func TestAppRecoverTasksEndpointFiltersTaskID(t *testing.T) {
 	recoverResp := invokeJSON(t, handler, http.MethodPost, "/api/tasks/recover", map[string]interface{}{
 		"taskId":      secondTaskID,
 		"providerKey": "recover_task_id_api_target",
+		"profileId":   profileID,
 		"paths":       []string{"/group-b"},
 		"scope":       "selected_retry_subset",
 		"limit":       1,
@@ -1263,6 +1264,9 @@ func TestAppRecoverTasksEndpointFiltersTaskID(t *testing.T) {
 	}
 	if got := recoverData["taskId"].(string); got != secondTaskID {
 		t.Fatalf("expected taskId %s, got %s", secondTaskID, got)
+	}
+	if got := recoverData["profileId"].(string); got != profileID {
+		t.Fatalf("expected profileId %s, got %s", profileID, got)
 	}
 
 	firstDetail := invokeJSON(t, handler, http.MethodGet, "/api/tasks/"+firstTaskID, nil)

@@ -39,7 +39,8 @@
   - 当前状态页候选池已可直接按 `primaryRetryClass / primaryBlockedAction / lane(mode + class + action)` 一键聚焦或放行
   - 当前 `/api/tasks/recover` 也已支持按 `path/paths + scope` 只放行一棵或多棵子树，便于和叶子目录优先排障结合使用
   - 当前 `/api/tasks/recover` 还支持额外带 `taskId`，可把后台补传精准约束到单个任务样本，避免状态页排障时误打到同 provider 的其它任务
-  - 当前同优先级档位下的后台补传候选会按 provider 轮转放行，避免同一个 provider 长时间独占当前批次
+  - 当前 `/api/tasks/recover` 也支持额外带 `profileId`，可把后台补传进一步精准约束到某个授权档案
+  - 当前同优先级档位下的后台补传候选会先按 provider 轮转，再在同 provider 内按授权档案轮转，避免同一个账号长时间独占当前批次
   - 当前如果任务本身已经满足自动补传条件，但不在 `autoRetryStartHour / autoRetryEndHour` 时间窗内，也会被显式标记为 `wait_for_retry_window`，并继续留在候选池里等待下一个允许时间点
 
 ## 先用业务语言理解当前规则

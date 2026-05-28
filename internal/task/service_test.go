@@ -3841,6 +3841,261 @@ func TestServiceRecoverBlockedTasksWithOptionsRoundRobinsProvidersWithinSameBand
 	}
 }
 
+func TestServiceRecoverBlockedTasksWithOptionsRoundRobinsProfilesWithinSameProviderBand(t *testing.T) {
+	ctx := context.Background()
+	store, err := sqlitestore.New(ctx, filepath.Join(t.TempDir(), "auto-recover-profile-round-robin.db"))
+	if err != nil {
+		t.Fatalf("new store: %v", err)
+	}
+	defer func() { _ = store.Close() }()
+
+	recoveryOrder := make([]string, 0, 3)
+	adapter := &scriptedAdapter{
+		meta: provider.Provider{
+			Key:              "recover_rr_profile_target",
+			DisplayName:      "recover_rr_profile_target",
+			ProtocolGroup:    "fake",
+			AuthModes:        []string{"manual_token"},
+			FastUploadInputs: []string{"md5", "size"},
+			FallbackModes:    []string{"download_upload"},
+			Status:           "planned",
+		},
+		capability: provider.CapabilitySet{
+			SupportsAuthValidation: true,
+			SupportsUpload:         true,
+		},
+		uploadFunc: func(req provider.UploadRequest) provider.UploadResult {
+			recoveryOrder = append(recoveryOrder, req.Profile.ID+":"+req.Path)
+			return provider.UploadResult{
+				OperationResult: provider.OperationResult{
+					OK:      true,
+					Status:  "ok",
+					Message: "profile round robin recovered",
+					Mode:    "fake_profile_round_robin_ok",
+				},
+			}
+		},
+	}
+
+	registry := provider.NewRegistry(adapter)
+	authSvc := auth.NewService(store, registry)
+	svc := NewService(store, registry, authSvc)
+
+	createProfile := func(name string) string {
+		profile, err := authSvc.CreateProfile(ctx, auth.CreateProfileInput{
+			ProviderKey: "recover_rr_profile_target",
+			AuthMode:    "manual_token",
+			DisplayName: name,
+			Token:       "token-" + name,
+		})
+		if err != nil {
+			t.Fatalf("CreateProfile(%s) error = %v", name, err)
+		}
+		return profile.ID
+	}
+	profileA := createProfile("profile-a")
+	profileB := createProfile("profile-b")
+
+	createBlockedTask := func(profileID, path string, offsetMinutes int) {
+		now := time.Now().Add(time.Duration(offsetMinutes) * time.Minute).UTC().Format(time.RFC3339)
+		detail, err := svc.Create(ctx, CreateRequest{
+			SourceProvider:  "guangya",
+			TargetProvider:  "recover_rr_profile_target",
+			TargetProfileID: profileID,
+			ThresholdMB:     1,
+			RiskOverride: &planner.RiskProfileOverride{
+				MaxConcurrent: intPtrTask(3),
+			},
+			Entries: []planner.SourceEntry{
+				{Path: path, Size: 256, MD5: strings.Trim(path, "/")},
+			},
+		})
+		if err != nil {
+			t.Fatalf("Create(%s %s) error = %v", profileID, path, err)
+		}
+		blocked, ok, err := svc.Get(ctx, detail.Task.ID)
+		if err != nil || !ok {
+			t.Fatalf("Get(%s %s) error=%v ok=%v", profileID, path, err, ok)
+		}
+		blocked.Task.State = StateBlocked
+		blocked.Task.UpdatedAt = now
+		blocked.Runtime = initializeRuntimeState(blocked.Plan)
+		blocked.Runtime.ExecutionState = "blocked"
+		blocked.Runtime.RetryQueue = []RetryQueueItem{
+			{
+				Path:           path,
+				Retryable:      true,
+				RetryClass:     "retry_failed",
+				ProviderStatus: "provider_request_failed",
+			},
+		}
+		blocked.Results = []Result{
+			{
+				ID:        uuid.NewString(),
+				TaskID:    blocked.Task.ID,
+				ItemID:    blocked.Items[0].ID,
+				Status:    "failed",
+				Mode:      "fake_failed",
+				Message:   "failed",
+				CreatedAt: now,
+				Payload: map[string]interface{}{
+					"path":           path,
+					"providerStatus": "provider_request_failed",
+				},
+			},
+		}
+		applyRetryQueueSummary(&blocked.Runtime, blocked.Plan.Metadata)
+		if err := replaceTaskDetailAndResults(ctx, store, blocked); err != nil {
+			t.Fatalf("replaceTaskDetailAndResults(%s %s) error = %v", profileID, path, err)
+		}
+	}
+
+	createBlockedTask(profileA, "/a-1.bin", -182)
+	createBlockedTask(profileA, "/a-2.bin", -181)
+	createBlockedTask(profileB, "/b-1.bin", -180)
+
+	result, err := svc.RecoverBlockedTasksWithOptions(ctx, RecoverOptions{Limit: 3})
+	if err != nil {
+		t.Fatalf("RecoverBlockedTasksWithOptions(profile round robin) error = %v", err)
+	}
+	if result.MatchedCount != 3 || result.RecoveredCount != 3 {
+		t.Fatalf("unexpected profile round robin result: %#v", result)
+	}
+	if len(recoveryOrder) != 3 {
+		t.Fatalf("expected 3 recovery operations, got %#v", recoveryOrder)
+	}
+	if recoveryOrder[0] != profileA+":/a-1.bin" ||
+		recoveryOrder[1] != profileB+":/b-1.bin" ||
+		recoveryOrder[2] != profileA+":/a-2.bin" {
+		t.Fatalf("expected profile round robin order [a1 b1 a2], got %#v", recoveryOrder)
+	}
+}
+
+func TestServiceRecoverBlockedTasksWithOptionsFiltersProfileID(t *testing.T) {
+	ctx := context.Background()
+	store, err := sqlitestore.New(ctx, filepath.Join(t.TempDir(), "auto-recover-profile-filter.db"))
+	if err != nil {
+		t.Fatalf("new store: %v", err)
+	}
+	defer func() { _ = store.Close() }()
+
+	uploadCallsByPath := make(map[string]int)
+	adapter := &scriptedAdapter{
+		meta: provider.Provider{
+			Key:              "recover_profile_filter_target",
+			DisplayName:      "Recover Profile Filter Target",
+			ProtocolGroup:    "fake",
+			AuthModes:        []string{"manual_token"},
+			FastUploadInputs: []string{"md5", "size"},
+			FallbackModes:    []string{"download_upload"},
+			Status:           "planned",
+		},
+		capability: provider.CapabilitySet{
+			SupportsAuthValidation: true,
+			SupportsUpload:         true,
+		},
+		uploadFunc: func(req provider.UploadRequest) provider.UploadResult {
+			uploadCallsByPath[req.Path]++
+			if uploadCallsByPath[req.Path] == 1 {
+				return provider.UploadResult{
+					OperationResult: provider.OperationResult{
+						Status:  "rate_limited",
+						Message: "rate limited",
+						Mode:    "scripted_rate_limit",
+					},
+				}
+			}
+			return provider.UploadResult{
+				OperationResult: provider.OperationResult{
+					OK:      true,
+					Status:  "ok",
+					Message: "profile filtered recovered",
+					Mode:    "scripted_profile_filter_ok",
+				},
+			}
+		},
+	}
+
+	registry := provider.NewRegistry(adapter)
+	authSvc := auth.NewService(store, registry)
+	svc := NewService(store, registry, authSvc)
+
+	createProfile := func(name string) string {
+		profile, err := authSvc.CreateProfile(ctx, auth.CreateProfileInput{
+			ProviderKey: "recover_profile_filter_target",
+			AuthMode:    "manual_token",
+			DisplayName: name,
+			Token:       "token-" + name,
+		})
+		if err != nil {
+			t.Fatalf("CreateProfile(%s) error = %v", name, err)
+		}
+		return profile.ID
+	}
+	profileA := createProfile("profile-a")
+	profileB := createProfile("profile-b")
+
+	createBlockedTask := func(profileID, path string) string {
+		detail, err := svc.Create(ctx, CreateRequest{
+			SourceProvider:  "guangya",
+			TargetProvider:  "recover_profile_filter_target",
+			TargetProfileID: profileID,
+			ThresholdMB:     1,
+			Entries: []planner.SourceEntry{
+				{Path: path, Size: 101, MD5: path},
+			},
+		})
+		if err != nil {
+			t.Fatalf("Create(%s %s) error = %v", profileID, path, err)
+		}
+		if _, ok, err := svc.Run(ctx, detail.Task.ID); err != nil || !ok {
+			t.Fatalf("Run(%s %s) error=%v ok=%v", profileID, path, err, ok)
+		}
+		if _, err := store.DB().ExecContext(ctx, `UPDATE task_results SET created_at = ? WHERE task_id = ?`,
+			time.Now().Add(-2*time.Hour).UTC().Format(time.RFC3339), detail.Task.ID,
+		); err != nil {
+			t.Fatalf("update task_results created_at for %s error = %v", path, err)
+		}
+		return detail.Task.ID
+	}
+
+	firstTaskID := createBlockedTask(profileA, "/group-a/one.bin")
+	secondTaskID := createBlockedTask(profileB, "/group-b/two.bin")
+
+	result, err := svc.RecoverBlockedTasksWithOptions(ctx, RecoverOptions{
+		ProfileID: profileB,
+		Limit:     2,
+	})
+	if err != nil {
+		t.Fatalf("RecoverBlockedTasksWithOptions(profile filter) error = %v", err)
+	}
+	if result.MatchedCount != 1 || result.RecoveredCount != 1 || result.ProfileID != profileB {
+		t.Fatalf("unexpected profile filter result: %#v", result)
+	}
+
+	firstDetail, ok, err := svc.Get(ctx, firstTaskID)
+	if err != nil || !ok {
+		t.Fatalf("Get(first task) error=%v ok=%v", err, ok)
+	}
+	if len(firstDetail.Results) != 1 || stringValue(firstDetail.Results[0].Payload["path"]) != "/group-a/one.bin" {
+		t.Fatalf("expected first task unchanged, got %#v", firstDetail.Results)
+	}
+
+	secondDetail, ok, err := svc.Get(ctx, secondTaskID)
+	if err != nil || !ok {
+		t.Fatalf("Get(second task) error=%v ok=%v", err, ok)
+	}
+	if len(secondDetail.Results) != 1 || stringValue(secondDetail.Results[0].Payload["path"]) != "/group-b/two.bin" {
+		t.Fatalf("expected second task recovered path /group-b/two.bin, got %#v", secondDetail.Results)
+	}
+	if got := uploadCallsByPath["/group-a/one.bin"]; got != 1 {
+		t.Fatalf("expected first task upload calls to remain 1, got %d", got)
+	}
+	if got := uploadCallsByPath["/group-b/two.bin"]; got != 2 {
+		t.Fatalf("expected second task upload calls to become 2, got %d", got)
+	}
+}
+
 func TestServiceRecoverBlockedTasksRespectsAutoRetryWindow(t *testing.T) {
 	ctx := context.Background()
 	store, err := sqlitestore.New(ctx, filepath.Join(t.TempDir(), "auto-retry-window.db"))
