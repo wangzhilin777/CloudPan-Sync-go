@@ -12,6 +12,7 @@ const state = {
   reportHistory: [],
   selectedReportId: "",
   providerSmokes: [],
+  providerSmokeSummary: [],
   treeGroupsCollapsed: {},
   treeFilters: {
     taskDirectory: { query: "", status: "" },
@@ -1706,6 +1707,7 @@ function renderStatus() {
   $("#evidence-report").innerHTML = renderEvidenceReport(currentReport);
   $("#report-history").innerHTML = renderReportHistory(state.reportHistory || []);
   hydrateReportForm(currentReport);
+  $("#provider-smoke-summary").innerHTML = renderProviderSmokeSummary(state.providerSmokeSummary || []);
   $("#provider-smoke-records").innerHTML = renderProviderSmokeRecords(state.providerSmokes || []);
 
   $("#status-table").innerHTML = `
@@ -1951,18 +1953,20 @@ async function loadTasks() {
 }
 
 async function loadStatus() {
-  const [evidence, statuses, report, history, smokes] = await Promise.all([
+  const [evidence, statuses, report, history, smokes, smokeSummary] = await Promise.all([
     api("/api/evidence/runtime"),
     api("/api/status/providers"),
     api("/api/evidence/report"),
     api("/api/evidence/reports"),
     api("/api/provider-smokes"),
+    api("/api/provider-smokes/summary"),
   ]);
   state.evidence = evidence;
   state.statuses = statuses.items || [];
   state.report = report;
   state.reportHistory = history.items || [];
   state.providerSmokes = smokes.items || [];
+  state.providerSmokeSummary = smokeSummary.items || [];
   if (state.selectedReportId && !state.reportHistory.some((item) => item.id === state.selectedReportId)) {
     state.selectedReportId = "";
   }
@@ -2053,6 +2057,33 @@ function renderProviderSmokeRecords(items) {
           ${item.note ? `<div class="muted">${escapeHTML(item.note)}</div>` : ""}
           <div class="muted">operations: ${escapeHTML((item.operations || []).join(", ") || "-")}</div>
           <div class="muted">createdAt: <code>${escapeHTML(stringifyValue(item.createdAt, "-"))}</code></div>
+        </div>
+      `,
+    )
+    .join("");
+}
+
+function renderProviderSmokeSummary(items) {
+  if (!Array.isArray(items) || !items.length) {
+    return `<div class="directory-empty">暂无真实样本矩阵。</div>`;
+  }
+  return items
+    .map(
+      (item) => `
+        <div class="directory-row tree-node">
+          <div class="directory-row-header">
+            <strong>${escapeHTML(stringifyValue(item.protocolGroup, "-"))}</strong>
+            <code>${escapeHTML(stringifyValue(item.sampleRecordId, "-"))}</code>
+          </div>
+          <div class="directory-metrics">
+            <span class="pill">smokes ${stringifyValue(item.smokeCount, "0")}</span>
+            <span class="pill">success ${stringifyValue(item.successCount, "0")}</span>
+            <span class="pill">failure ${stringifyValue(item.failureCount, "0")}</span>
+            <span class="pill">providers ${stringifyValue(item.providerCount, "0")}</span>
+          </div>
+          <div class="muted">providers: ${escapeHTML((item.providerKeys || []).join(", ") || "-")}</div>
+          <div class="muted">sample: ${escapeHTML(stringifyValue(item.sampleTitle, "-"))} / ${escapeHTML(stringifyValue(item.sampleProviderKey, "-"))}</div>
+          <div class="muted">latestSmokeAt: <code>${escapeHTML(stringifyValue(item.latestSmokeAt, "-"))}</code></div>
         </div>
       `,
     )

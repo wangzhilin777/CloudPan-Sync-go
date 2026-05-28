@@ -96,6 +96,7 @@ func (a *App) routes() http.Handler {
 	mux.HandleFunc("/api/evidence/reports", a.handleEvidenceReports)
 	mux.HandleFunc("/api/evidence/reports/", a.handleEvidenceReportByID)
 	mux.HandleFunc("/api/provider-smokes", a.handleProviderSmokeRecords)
+	mux.HandleFunc("/api/provider-smokes/summary", a.handleProviderSmokeSummary)
 	mux.HandleFunc("/api/provider-smokes/", a.handleProviderSmokeRecordByID)
 	mux.HandleFunc("/api/status/providers", a.handleProviderStatuses)
 	return a.loggingMiddleware(mux)
@@ -623,6 +624,19 @@ func (a *App) handleProviderSmokeRecords(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	writeOK(w, http.StatusOK, record)
+}
+
+func (a *App) handleProviderSmokeSummary(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		writeError(w, http.StatusMethodNotAllowed, "method_not_allowed", "Method not allowed.")
+		return
+	}
+	items, err := a.tasks.ProviderSmokeSummary(r.Context())
+	if err != nil {
+		handleError(w, err)
+		return
+	}
+	writeOK(w, http.StatusOK, map[string]interface{}{"items": items})
 }
 
 func (a *App) handleProviderSmokeRecordByID(w http.ResponseWriter, r *http.Request) {

@@ -3012,4 +3012,21 @@ func TestServiceProviderSmokeRecords(t *testing.T) {
 	if len(fetched.Operations) != 3 {
 		t.Fatalf("expected 3 operations, got %#v", fetched.Operations)
 	}
+
+	summary, err := svc.ProviderSmokeSummary(ctx)
+	if err != nil {
+		t.Fatalf("ProviderSmokeSummary() error = %v", err)
+	}
+	if len(summary) == 0 {
+		t.Fatal("expected smoke summary")
+	}
+	if got := summary[0].ProtocolGroup; got != "aliyun_123_open" {
+		t.Fatalf("expected smoke summary protocol group aliyun_123_open, got %s", got)
+	}
+	if got := summary[0].SmokeCount; got != 1 {
+		t.Fatalf("expected smoke summary count 1, got %d", got)
+	}
+	if !summary[0].HasRealSuccessSample {
+		t.Fatal("expected smoke summary success sample")
+	}
 }

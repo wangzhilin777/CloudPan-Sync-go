@@ -387,6 +387,15 @@ func TestAppWorkflowMainline(t *testing.T) {
 		t.Fatalf("expected latest smoke id %s, got %s", smokeID, got)
 	}
 
+	smokeSummaryResp := invokeJSON(t, handler, http.MethodGet, "/api/provider-smokes/summary", nil)
+	smokeSummary := smokeSummaryResp.Data.(map[string]interface{})["items"].([]interface{})
+	if len(smokeSummary) == 0 {
+		t.Fatal("expected smoke summary items")
+	}
+	if got := smokeSummary[0].(map[string]interface{})["protocolGroup"].(string); got != "aliyun_123_open" {
+		t.Fatalf("expected smoke summary protocolGroup aliyun_123_open, got %s", got)
+	}
+
 	retryResp := invokeJSON(t, handler, http.MethodPost, "/api/tasks/"+taskID+"/retry", nil)
 	retryData := retryResp.Data.(map[string]interface{})
 	if got := retryData["task"].(map[string]interface{})["state"].(string); got != "ready" {

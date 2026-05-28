@@ -90,6 +90,21 @@ type ProviderSmokeRecord struct {
 	CreatedAt     string            `json:"createdAt"`
 }
 
+type ProviderSmokeSummary struct {
+	ProtocolGroup        string   `json:"protocolGroup"`
+	SmokeCount           int      `json:"smokeCount"`
+	SuccessCount         int      `json:"successCount"`
+	FailureCount         int      `json:"failureCount"`
+	ProviderCount        int      `json:"providerCount"`
+	ProviderKeys         []string `json:"providerKeys,omitempty"`
+	SampleRecordID       string   `json:"sampleRecordId,omitempty"`
+	SampleTitle          string   `json:"sampleTitle,omitempty"`
+	SampleProviderKey    string   `json:"sampleProviderKey,omitempty"`
+	SampleResult         string   `json:"sampleResult,omitempty"`
+	LatestSmokeAt        string   `json:"latestSmokeAt,omitempty"`
+	HasRealSuccessSample bool     `json:"hasRealSuccessSample"`
+}
+
 type EvidenceSample struct {
 	ProviderKey       string `json:"providerKey"`
 	TaskID            string `json:"taskId"`
@@ -772,6 +787,14 @@ func (s *Service) ListProviderSmokeRecords(ctx context.Context) ([]ProviderSmoke
 
 func (s *Service) GetProviderSmokeRecord(ctx context.Context, id string) (ProviderSmokeRecord, bool, error) {
 	return getProviderSmokeRecord(ctx, s.store, id)
+}
+
+func (s *Service) ProviderSmokeSummary(ctx context.Context) ([]ProviderSmokeSummary, error) {
+	records, err := s.ListProviderSmokeRecords(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return summarizeProviderSmokeRecords(records), nil
 }
 
 func (s *Service) RecoverBlockedTasks(ctx context.Context) (int, error) {
@@ -1905,6 +1928,72 @@ func markdownCell(value string) string {
 		return "-"
 	}
 	return value
+}
+
+func summarizeProviderSmokeRecords(records []ProviderSmokeRecord) []ProviderSmokeSummary {
+	if len(records) == 0 {
+		return nil
+	}
+	type smokeGroupState struct {
+		row          ProviderSmokeSummary
+		providerSeen map[string]struct{}
+	}
+	states := make(map[string]*smokeGroupState)
+	order := make([]string, 0)
+	for _, record := range records {
+		group := strings.TrimSpace(record.ProtocolGroup)
+		if group == "" {
+			group = strings.TrimSpace(record.ProviderKey)
+		}
+		state, ok := states[group]
+		if !ok {
+			state = &smokeGroupState{
+				row: ProviderSmokeSummary{
+					ProtocolGroup: group,
+				},
+				providerSeen: make(map[string]struct{}),
+			}
+			states[group] = state
+			order = append(order, group)
+		}
+		state.row.SmokeCount++
+		if strings.EqualFold(record.Result, "success") {
+			state.row.SuccessCount++
+		} else {
+			state.row.FailureCount++
+		}
+		if _, ok := state.providerSeen[record.ProviderKey]; !ok {
+			state.providerSeen[record.ProviderKey] = struct{}{}
+			state.row.ProviderCount++
+			state.row.ProviderKeys = append(state.row.ProviderKeys, record.ProviderKey)
+		}
+		if state.row.SampleRecordID == "" {
+			state.row.SampleRecordID = record.ID
+			state.row.SampleTitle = record.Title
+			state.row.SampleProviderKey = record.ProviderKey
+			state.row.SampleResult = record.Result
+			state.row.LatestSmokeAt = record.CreatedAt
+		}
+		if strings.EqualFold(record.Result, "success") {
+			state.row.HasRealSuccessSample = true
+		}
+		if record.CreatedAt != "" && (state.row.LatestSmokeAt == "" || record.CreatedAt > state.row.LatestSmokeAt) {
+			state.row.SampleRecordID = record.ID
+			state.row.SampleTitle = record.Title
+			state.row.SampleProviderKey = record.ProviderKey
+			state.row.SampleResult = record.Result
+			state.row.LatestSmokeAt = record.CreatedAt
+		}
+	}
+	rows := make([]ProviderSmokeSummary, 0, len(order))
+	for _, group := range order {
+		state := states[group]
+		if len(state.row.ProviderKeys) == 0 {
+			state.row.ProviderKeys = nil
+		}
+		rows = append(rows, state.row)
+	}
+	return rows
 }
 
 func maxInt(left, right int) int {
