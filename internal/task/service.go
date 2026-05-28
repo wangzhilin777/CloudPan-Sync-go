@@ -78,9 +78,10 @@ type StatusSummary struct {
 }
 
 type Service struct {
-	store    *sqlitestore.Store
-	registry *provider.Registry
-	authSvc  *auth.Service
+	store         *sqlitestore.Store
+	registry      *provider.Registry
+	authSvc       *auth.Service
+	throttleSleep func(context.Context, time.Duration) error
 }
 
 func NewService(store *sqlitestore.Store, registry *provider.Registry, authSvc *auth.Service) *Service {
@@ -181,6 +182,11 @@ func (s *Service) Run(ctx context.Context, id string) (Detail, bool, error) {
 
 	results := append([]Result(nil), detail.Results...)
 	startIndex := len(results)
+	riskProfile := riskProfileFromMetadata(detail.Plan.Metadata)
+	previousItemPath := ""
+	if len(results) > 0 {
+		previousItemPath = stringValue(results[len(results)-1].Payload["path"])
+	}
 	syncRuntimeCountsFromResults(&detail.Runtime, results)
 	syncRuntimeRiskEvidence(&detail.Runtime, detail.Plan.Metadata, results)
 	syncRuntimePendingTree(&detail.Runtime, detail.Plan.Metadata, results)
@@ -198,6 +204,13 @@ func (s *Service) Run(ctx context.Context, id string) (Detail, bool, error) {
 				"path": item.Path,
 			},
 			CreatedAt: time.Now().UTC().Format(time.RFC3339),
+		}
+		throttleEvidence, throttleErr := s.applyRuntimeThrottle(ctx, riskProfile, previousItemPath, item.Path)
+		if throttleErr != nil {
+			return Detail{}, true, throttleErr
+		}
+		if len(throttleEvidence) > 0 {
+			result.Payload["throttle"] = throttleEvidence
 		}
 		updateRuntimeBeforeItem(&detail, item.Path, i)
 		localPath := lookupLocalPath(detail.SourceEntries, item.Path)
@@ -228,6 +241,7 @@ func (s *Service) Run(ctx context.Context, id string) (Detail, bool, error) {
 			if err := replaceTaskDetailAndResults(ctx, s.store, detail); err != nil {
 				return Detail{}, true, err
 			}
+			previousItemPath = item.Path
 			continue
 		case "overwrite", "create":
 			result.Payload["syncDecision"] = targetState.Decision
@@ -305,6 +319,7 @@ func (s *Service) Run(ctx context.Context, id string) (Detail, bool, error) {
 		if err := replaceTaskDetailAndResults(ctx, s.store, detail); err != nil {
 			return Detail{}, true, err
 		}
+		previousItemPath = item.Path
 	}
 
 	failed := detail.Runtime.FailedCount
@@ -835,6 +850,52 @@ func supportsFallback(modes []string, expected string) bool {
 		}
 	}
 	return false
+}
+
+func (s *Service) applyRuntimeThrottle(ctx context.Context, riskProfile planner.RiskProfile, previousPath string, currentPath string) (map[string]interface{}, error) {
+	if strings.TrimSpace(previousPath) == "" {
+		return nil, nil
+	}
+	requestInterval := riskProfile.RequestIntervalMS
+	directoryInterval := 0
+	if parentDirectory(previousPath) != parentDirectory(currentPath) {
+		directoryInterval = riskProfile.DirectoryIntervalMS
+	}
+	waitMS := maxInt(requestInterval, directoryInterval)
+	if waitMS <= 0 {
+		return nil, nil
+	}
+	if err := s.sleepForThrottle(ctx, time.Duration(waitMS)*time.Millisecond); err != nil {
+		return nil, err
+	}
+	evidence := map[string]interface{}{
+		"waitMs":            waitMS,
+		"requestIntervalMs": requestInterval,
+		"previousPath":      previousPath,
+		"currentPath":       currentPath,
+	}
+	if directoryInterval > 0 {
+		evidence["directoryIntervalMs"] = directoryInterval
+		evidence["directoryChanged"] = true
+	}
+	return evidence, nil
+}
+
+func (s *Service) sleepForThrottle(ctx context.Context, delay time.Duration) error {
+	if delay <= 0 {
+		return nil
+	}
+	if s.throttleSleep != nil {
+		return s.throttleSleep(ctx, delay)
+	}
+	timer := time.NewTimer(delay)
+	defer timer.Stop()
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-timer.C:
+		return nil
+	}
 }
 
 func completionKindFromResults(results []Result) CompletionKind {

@@ -1040,6 +1040,100 @@ func TestServiceRetryNarrowsToPendingRelayEntriesAndReplaysOnlyPendingItems(t *t
 	}
 }
 
+func TestServiceAppliesRiskProfileRuntimeThrottle(t *testing.T) {
+	ctx := context.Background()
+	store, err := sqlitestore.New(ctx, filepath.Join(t.TempDir(), "runtime-throttle.db"))
+	if err != nil {
+		t.Fatalf("new store: %v", err)
+	}
+	defer func() { _ = store.Close() }()
+
+	uploaded := []string{}
+	target := &scriptedAdapter{
+		meta: provider.Provider{
+			Key:              "throttle_target",
+			DisplayName:      "Throttle Target",
+			FastUploadInputs: []string{"md5"},
+			FallbackModes:    []string{"download_upload"},
+			ConflictPolicies: []provider.ConflictPolicy{provider.ConflictPolicyAutoRenameNew},
+		},
+		capability: provider.CapabilitySet{
+			SupportsAuthValidation: true,
+			SupportsMetadata:       true,
+			SupportsUpload:         true,
+		},
+		uploadFunc: func(req provider.UploadRequest) provider.UploadResult {
+			uploaded = append(uploaded, req.Path)
+			return provider.UploadResult{OperationResult: provider.OperationResult{OK: true, Status: "ok", Message: "ok", Mode: "scripted_upload"}}
+		},
+	}
+	registry := provider.NewRegistry(target)
+	authSvc := auth.NewService(store, registry)
+	svc := NewService(store, registry, authSvc)
+	sleeps := []time.Duration{}
+	svc.throttleSleep = func(ctx context.Context, delay time.Duration) error {
+		sleeps = append(sleeps, delay)
+		return nil
+	}
+
+	localDir := t.TempDir()
+	localA := filepath.Join(localDir, "a.bin")
+	localB := filepath.Join(localDir, "b.bin")
+	localC := filepath.Join(localDir, "c.bin")
+	for _, path := range []string{localA, localB, localC} {
+		if err := os.WriteFile(path, []byte("x"), 0o600); err != nil {
+			t.Fatalf("write local file: %v", err)
+		}
+	}
+
+	detail, err := svc.Create(ctx, CreateRequest{
+		SourceProvider: "source",
+		TargetProvider: "throttle_target",
+		ThresholdMB:    1,
+		RiskMode:       planner.RiskModeCustom,
+		RiskOverride: &planner.RiskProfileOverride{
+			RequestIntervalMS:   intPtrTask(7),
+			DirectoryIntervalMS: intPtrTask(31),
+		},
+		ExecutionMode: planner.ExecutionModePreScanFlat,
+		Entries: []planner.SourceEntry{
+			{Path: "/a/one.bin", Size: 1, LocalPath: localA},
+			{Path: "/a/two.bin", Size: 1, LocalPath: localB},
+			{Path: "/b/three.bin", Size: 1, LocalPath: localC},
+		},
+	})
+	if err != nil {
+		t.Fatalf("Create() error = %v", err)
+	}
+	running, ok, err := svc.Run(ctx, detail.Task.ID)
+	if err != nil || !ok {
+		t.Fatalf("Run() error=%v ok=%v", err, ok)
+	}
+	if len(uploaded) != 3 {
+		t.Fatalf("expected 3 uploads, got %#v", uploaded)
+	}
+	wantSleeps := []time.Duration{7 * time.Millisecond, 31 * time.Millisecond}
+	if len(sleeps) != len(wantSleeps) {
+		t.Fatalf("expected sleeps %#v, got %#v", wantSleeps, sleeps)
+	}
+	for idx, want := range wantSleeps {
+		if sleeps[idx] != want {
+			t.Fatalf("sleep %d expected %v, got %v", idx, want, sleeps[idx])
+		}
+	}
+	if _, exists := running.Results[0].Payload["throttle"]; exists {
+		t.Fatalf("did not expect throttle evidence on first item, got %+v", running.Results[0].Payload)
+	}
+	secondThrottle, _ := running.Results[1].Payload["throttle"].(map[string]interface{})
+	if intNumber(secondThrottle["waitMs"]) != 7 {
+		t.Fatalf("expected second throttle waitMs 7, got %+v", secondThrottle)
+	}
+	thirdThrottle, _ := running.Results[2].Payload["throttle"].(map[string]interface{})
+	if intNumber(thirdThrottle["waitMs"]) != 31 || !boolMapValue(thirdThrottle, "directoryChanged") {
+		t.Fatalf("expected directory throttle waitMs 31, got %+v", thirdThrottle)
+	}
+}
+
 func TestServiceRetryQueueHonorsCooldownForRateLimitedItems(t *testing.T) {
 	ctx := context.Background()
 	store, err := sqlitestore.New(ctx, filepath.Join(t.TempDir(), "retry-cooldown.db"))

@@ -28,7 +28,7 @@
 | Auth Profile | CRUD、校验、脱敏持久化、按 provider 映射 | 已完成 | 真实 provider 字段口径补充 | 更多真实鉴权模式 |
 | Planner | 预览计划、策略判定、阈值判断、冲突降级、执行模式推荐、风控档位元数据 | 已完成 | 结合真实 provider 与增量规则继续校准 | 更细推荐规则与真实联调校准 |
 | 同步执行模型 | 已支持 `leaf_first_lazy`、`pre_scan_flat`、按需扫描骨架、fallback、目录状态持久化、断点继续当前子树、目标端 metadata 预检查、`create / overwrite / skip` 判定闭环、待补传树聚合、待补传子集重试、失败重试队列分类、`blocked` 运行态、单机 worker 自动补传调度、启动即恢复扫描、`retryLimit` 次数耗尽阻断、`fast_upload` 预检后直回退、upload-session 级自动续跑 | 部分完成 | 任务级执行模式、runtime checkpoint、待补传树与目录树展示已接入 planner / task / evidence / UI，`retry` 已支持 pending-only 重建，并识别 rate-limit cooldown、retry limit、冷却自动恢复与 upload checkpoint 自动续跑 | 更完整目录树交互、更细后台补传策略 |
-| 风控与频率策略 | 已支持 `safe / balanced / fast / custom` 基线、默认风险模板、任务级 `riskOverride`、风控命中证据 | 部分完成 | 已接入 planner / task metadata / runtime evidence / UI | 真实 provider 校准、更易用的表单化配置 |
+| 风控与频率策略 | 已支持 `safe / balanced / fast / custom` 基线、默认风险模板、任务级 `riskOverride`、风控命中证据、runtime 基础节流和 `throttle` 证据 | 部分完成 | 已接入 planner / task metadata / runtime evidence / UI，运行时会按 `requestIntervalMs / directoryIntervalMs` 控制 item 间隔 | 真实 provider 校准、更易用的表单化配置、更细 provider 级限流 |
 | Task Runtime | 创建、查询、运行、暂停、恢复、重试、结果落库，结果证据包含 `fastCheck / fallbackUsed / fallbackFrom / upload / uploadedParts / failedPartNumber / nextPartNumber`，并能区分 `completionKind`；runtime / retry queue / status 已可展示 `uploadCheckpoint`，`Retry` 会保留 `retryUploadCheckpoints`，并支持 `providerData` 级恢复线索透传 | 已完成 | 后续将挂接执行模型和风控策略 | 真实上传链路接入后补更细运行态 |
 | Runtime Evidence | 最近结果、最近探针、状态快照、状态矩阵 API | 已完成 | 无 | 真实联调样本沉淀 |
 | 控制台前端 | 登录、授权、任务向导、任务列表详情、状态矩阵/证据、执行模式可视化、目录状态展示、目录树/待补传树筛选与叶子视角、重试队列分类视图、上传恢复检查点展示 | 已完成 | 异常场景提示可继续增强 | 更产品化视觉与更细交互 |
@@ -107,6 +107,8 @@
   - 按任务传 `riskOverride`
   - 让 planner 产出最终生效的 `riskProfile`
   - 在 runtime / result / probe / snapshot 中记录 `riskHit`
+  - runtime 按 `requestIntervalMs` 和 `directoryIntervalMs` 做基础节流
+  - 每条被节流的 result payload 会记录 `throttle.waitMs / previousPath / currentPath`
 - 当前可覆盖的参数包括：
   - `requestIntervalMs`
   - `pageSize`

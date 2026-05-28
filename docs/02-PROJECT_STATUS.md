@@ -267,6 +267,7 @@
   - provider 默认风险关键词与默认参数模板
   - 任务级 `riskOverride`
   - 风控命中证据回写到 runtime / result / probe / snapshot
+  - runtime 已按 `requestIntervalMs` 和 `directoryIntervalMs` 执行基础节流，并在 result payload 写入 `throttle` 证据
 - 当前状态：
   - 已形成第一版统一风控档位模型，并进入 planner / task metadata
   - 已支持覆盖：
@@ -478,6 +479,7 @@
 - 当前还缺：
   - 更友好的表单化任务级参数配置
   - 真实 provider 样本校准后的更细默认模板
+  - 更细的 provider 级并发、时间窗和账号级限流策略
 
 ## 当前最清晰的完成度判断
 
