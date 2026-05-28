@@ -77,6 +77,19 @@ type EvidenceReportRecord struct {
 	Samples     []EvidenceSample `json:"samples"`
 }
 
+type ProviderSmokeRecord struct {
+	ID            string            `json:"id"`
+	ProviderKey   string            `json:"providerKey"`
+	ProtocolGroup string            `json:"protocolGroup,omitempty"`
+	AuthMode      string            `json:"authMode,omitempty"`
+	Result        string            `json:"result"`
+	Title         string            `json:"title"`
+	Note          string            `json:"note,omitempty"`
+	Operations    []string          `json:"operations,omitempty"`
+	Environment   map[string]string `json:"environment,omitempty"`
+	CreatedAt     string            `json:"createdAt"`
+}
+
 type EvidenceSample struct {
 	ProviderKey       string `json:"providerKey"`
 	TaskID            string `json:"taskId"`
@@ -723,6 +736,42 @@ func (s *Service) ListEvidenceReports(ctx context.Context) ([]EvidenceReportReco
 
 func (s *Service) GetEvidenceReport(ctx context.Context, id string) (EvidenceReportRecord, bool, error) {
 	return getEvidenceReport(ctx, s.store, id)
+}
+
+func (s *Service) SaveProviderSmokeRecord(ctx context.Context, record ProviderSmokeRecord) (ProviderSmokeRecord, error) {
+	if strings.TrimSpace(record.ProviderKey) == "" {
+		return ProviderSmokeRecord{}, fmt.Errorf("provider_key_required")
+	}
+	if strings.TrimSpace(record.Result) == "" {
+		record.Result = "success"
+	}
+	if strings.TrimSpace(record.Title) == "" {
+		record.Title = strings.TrimSpace(record.ProviderKey) + " 真实 smoke 记录"
+	}
+	now := time.Now().UTC().Format(time.RFC3339)
+	record.ID = uuid.NewString()
+	record.Title = strings.TrimSpace(record.Title)
+	record.Note = strings.TrimSpace(record.Note)
+	record.ProviderKey = strings.TrimSpace(record.ProviderKey)
+	record.ProtocolGroup = strings.TrimSpace(record.ProtocolGroup)
+	record.AuthMode = strings.TrimSpace(record.AuthMode)
+	record.Result = strings.TrimSpace(record.Result)
+	record.CreatedAt = now
+	if len(record.Operations) == 0 {
+		record.Operations = []string{"ValidateAuth", "List", "Metadata", "CreateDir", "FastUploadCheck", "Upload"}
+	}
+	if record.Environment == nil {
+		record.Environment = map[string]string{}
+	}
+	return saveProviderSmokeRecord(ctx, s.store, record)
+}
+
+func (s *Service) ListProviderSmokeRecords(ctx context.Context) ([]ProviderSmokeRecord, error) {
+	return listProviderSmokeRecords(ctx, s.store)
+}
+
+func (s *Service) GetProviderSmokeRecord(ctx context.Context, id string) (ProviderSmokeRecord, bool, error) {
+	return getProviderSmokeRecord(ctx, s.store, id)
 }
 
 func (s *Service) RecoverBlockedTasks(ctx context.Context) (int, error) {

@@ -357,6 +357,36 @@ func TestAppWorkflowMainline(t *testing.T) {
 		t.Fatalf("expected custom title in saved report markdown, got %s", got)
 	}
 
+	smokeResp := invokeJSON(t, handler, http.MethodPost, "/api/provider-smokes", map[string]interface{}{
+		"providerKey":   "123_open",
+		"protocolGroup": "aliyun_123_open",
+		"authMode":      "manual_token",
+		"result":        "success",
+		"title":         "工作流真实 smoke",
+		"note":          "ValidateAuth/List/Metadata",
+		"operations":    []string{"ValidateAuth", "List", "Metadata"},
+		"environment": map[string]interface{}{
+			"os": "windows",
+		},
+	})
+	smokeData := smokeResp.Data.(map[string]interface{})
+	smokeID := smokeData["id"].(string)
+	if smokeID == "" {
+		t.Fatal("expected smoke record id")
+	}
+	if got := smokeData["providerKey"].(string); got != "123_open" {
+		t.Fatalf("expected smoke providerKey 123_open, got %s", got)
+	}
+
+	smokeListResp := invokeJSON(t, handler, http.MethodGet, "/api/provider-smokes", nil)
+	smokeList := smokeListResp.Data.(map[string]interface{})["items"].([]interface{})
+	if len(smokeList) == 0 {
+		t.Fatal("expected smoke record history items")
+	}
+	if got := smokeList[0].(map[string]interface{})["id"].(string); got != smokeID {
+		t.Fatalf("expected latest smoke id %s, got %s", smokeID, got)
+	}
+
 	retryResp := invokeJSON(t, handler, http.MethodPost, "/api/tasks/"+taskID+"/retry", nil)
 	retryData := retryResp.Data.(map[string]interface{})
 	if got := retryData["task"].(map[string]interface{})["state"].(string); got != "ready" {

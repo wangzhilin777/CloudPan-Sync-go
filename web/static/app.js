@@ -11,6 +11,7 @@ const state = {
   report: null,
   reportHistory: [],
   selectedReportId: "",
+  providerSmokes: [],
   treeGroupsCollapsed: {},
   treeFilters: {
     taskDirectory: { query: "", status: "" },
@@ -1705,6 +1706,7 @@ function renderStatus() {
   $("#evidence-report").innerHTML = renderEvidenceReport(currentReport);
   $("#report-history").innerHTML = renderReportHistory(state.reportHistory || []);
   hydrateReportForm(currentReport);
+  $("#provider-smoke-records").innerHTML = renderProviderSmokeRecords(state.providerSmokes || []);
 
   $("#status-table").innerHTML = `
     <table>
@@ -1949,16 +1951,18 @@ async function loadTasks() {
 }
 
 async function loadStatus() {
-  const [evidence, statuses, report, history] = await Promise.all([
+  const [evidence, statuses, report, history, smokes] = await Promise.all([
     api("/api/evidence/runtime"),
     api("/api/status/providers"),
     api("/api/evidence/report"),
     api("/api/evidence/reports"),
+    api("/api/provider-smokes"),
   ]);
   state.evidence = evidence;
   state.statuses = statuses.items || [];
   state.report = report;
   state.reportHistory = history.items || [];
+  state.providerSmokes = smokes.items || [];
   if (state.selectedReportId && !state.reportHistory.some((item) => item.id === state.selectedReportId)) {
     state.selectedReportId = "";
   }
@@ -2028,6 +2032,33 @@ function renderEvidenceReport(report) {
   `;
 }
 
+function renderProviderSmokeRecords(items) {
+  if (!Array.isArray(items) || !items.length) {
+    return `<div class="directory-empty">暂无真实 provider smoke 记录。</div>`;
+  }
+  return items
+    .map(
+      (item) => `
+        <div class="directory-row tree-node">
+          <div class="directory-row-header">
+            <strong>${escapeHTML(item.title || item.providerKey || "-")}</strong>
+            <code>${escapeHTML(item.id || "-")}</code>
+          </div>
+          <div class="directory-metrics">
+            <span class="pill">${escapeHTML(stringifyValue(item.providerKey, "-"))}</span>
+            <span class="pill">${escapeHTML(stringifyValue(item.protocolGroup, "-"))}</span>
+            <span class="pill">${escapeHTML(stringifyValue(item.authMode, "-"))}</span>
+            <span class="pill">${escapeHTML(stringifyValue(item.result, "-"))}</span>
+          </div>
+          ${item.note ? `<div class="muted">${escapeHTML(item.note)}</div>` : ""}
+          <div class="muted">operations: ${escapeHTML((item.operations || []).join(", ") || "-")}</div>
+          <div class="muted">createdAt: <code>${escapeHTML(stringifyValue(item.createdAt, "-"))}</code></div>
+        </div>
+      `,
+    )
+    .join("");
+}
+
 function hydrateReportForm(report) {
   if (!report || typeof report !== "object") {
     return;
@@ -2040,6 +2071,26 @@ function hydrateReportForm(report) {
   if (noteInput) {
     noteInput.value = report.note || "";
   }
+}
+
+function hydrateProviderSmokeForm(record) {
+  if (!record || typeof record !== "object") {
+    return;
+  }
+  const providerKeyInput = $("#provider-smoke-provider-key");
+  const protocolGroupInput = $("#provider-smoke-protocol-group");
+  const authModeInput = $("#provider-smoke-auth-mode");
+  const resultInput = $("#provider-smoke-result");
+  const titleInput = $("#provider-smoke-title");
+  const noteInput = $("#provider-smoke-note");
+  const operationsInput = $("#provider-smoke-operations");
+  if (providerKeyInput) providerKeyInput.value = record.providerKey || "";
+  if (protocolGroupInput) protocolGroupInput.value = record.protocolGroup || "";
+  if (authModeInput) authModeInput.value = record.authMode || "";
+  if (resultInput) resultInput.value = record.result || "success";
+  if (titleInput) titleInput.value = record.title || "";
+  if (noteInput) noteInput.value = record.note || "";
+  if (operationsInput) operationsInput.value = Array.isArray(record.operations) ? record.operations.join(",") : "";
 }
 
 async function bootstrapData() {
@@ -2256,6 +2307,35 @@ function wireStatus() {
       showFlash(error.message, true);
     }
   });
+  $("#save-provider-smoke").addEventListener("click", async () => {
+    try {
+      const payload = {
+        providerKey: $("#provider-smoke-provider-key").value.trim(),
+        protocolGroup: $("#provider-smoke-protocol-group").value.trim(),
+        authMode: $("#provider-smoke-auth-mode").value.trim(),
+        result: $("#provider-smoke-result").value,
+        title: $("#provider-smoke-title").value.trim(),
+        note: $("#provider-smoke-note").value.trim(),
+        operations: $("#provider-smoke-operations")
+          .value.split(",")
+          .map((item) => item.trim())
+          .filter(Boolean),
+        environment: {
+          os: navigator.platform || "",
+          userAgent: navigator.userAgent || "",
+        },
+      };
+      const record = await api("/api/provider-smokes", {
+        method: "POST",
+        body: payload,
+      });
+      hydrateProviderSmokeForm(record);
+      showFlash("Provider smoke 记录已保存");
+      await loadStatus();
+    } catch (error) {
+      showFlash(error.message, true);
+    }
+  });
   $("#refresh-report").addEventListener("click", async () => {
     try {
       await loadStatus();
@@ -2280,6 +2360,35 @@ function wireStatus() {
       if (state.selectedReportId) {
         $("#report-history").querySelector(`[data-report-view="${state.selectedReportId}"]`)?.focus?.();
       }
+    } catch (error) {
+      showFlash(error.message, true);
+    }
+  });
+  $("#save-provider-smoke").addEventListener("click", async () => {
+    try {
+      const payload = {
+        providerKey: $("#provider-smoke-provider-key").value.trim(),
+        protocolGroup: $("#provider-smoke-protocol-group").value.trim(),
+        authMode: $("#provider-smoke-auth-mode").value.trim(),
+        result: $("#provider-smoke-result").value,
+        title: $("#provider-smoke-title").value.trim(),
+        note: $("#provider-smoke-note").value.trim(),
+        operations: $("#provider-smoke-operations").value
+          .split(",")
+          .map((item) => item.trim())
+          .filter(Boolean),
+        environment: {
+          os: navigator.platform || "",
+          userAgent: navigator.userAgent || "",
+        },
+      };
+      const record = await api("/api/provider-smokes", {
+        method: "POST",
+        body: payload,
+      });
+      hydrateProviderSmokeForm(record);
+      showFlash("Provider smoke 记录已保存");
+      await loadStatus();
     } catch (error) {
       showFlash(error.message, true);
     }

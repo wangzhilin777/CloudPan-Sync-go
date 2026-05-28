@@ -134,6 +134,14 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 		waitForText(`#report-history`, "UI Smoke 里程碑报告"),
 		chromedp.Click(`#report-history [data-report-view]`, chromedp.ByQuery),
 		waitForText(`#evidence-report`, "UI Smoke 里程碑报告"),
+		chromedp.SetValue(`#provider-smoke-provider-key`, "123_open", chromedp.ByID),
+		chromedp.SetValue(`#provider-smoke-protocol-group`, "aliyun_123_open", chromedp.ByID),
+		chromedp.SetValue(`#provider-smoke-auth-mode`, "manual_token", chromedp.ByID),
+		chromedp.SetValue(`#provider-smoke-title`, "UI Smoke Provider Smoke", chromedp.ByID),
+		chromedp.SetValue(`#provider-smoke-note`, "用于验证真实 smoke 记录保存", chromedp.ByID),
+		chromedp.SetValue(`#provider-smoke-operations`, "ValidateAuth,List,Metadata", chromedp.ByID),
+		chromedp.Click(`#save-provider-smoke`, chromedp.ByID),
+		waitForText(`#provider-smoke-records`, "UI Smoke Provider Smoke"),
 	)
 }
 

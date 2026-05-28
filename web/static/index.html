@@ -380,6 +380,27 @@
               </div>
               <div id="evidence-report" class="result-box">等待报告数据...</div>
               <div id="report-history" class="directory-state-list"></div>
+              <div class="section-head compact-head">
+                <h3>真实 Provider Smoke</h3>
+                <div class="actions compact">
+                  <button type="button" class="ghost" id="save-provider-smoke">保存</button>
+                </div>
+              </div>
+              <div class="filter-bar">
+                <input id="provider-smoke-provider-key" type="text" placeholder="providerKey，例如 123_open" />
+                <input id="provider-smoke-protocol-group" type="text" placeholder="protocolGroup，例如 aliyun_123_open" />
+                <input id="provider-smoke-auth-mode" type="text" placeholder="authMode，例如 manual_token" />
+                <select id="provider-smoke-result">
+                  <option value="success">success</option>
+                  <option value="failure">failure</option>
+                </select>
+              </div>
+              <div class="filter-bar">
+                <input id="provider-smoke-title" type="text" placeholder="记录标题，默认使用 provider 名称" />
+                <input id="provider-smoke-note" type="text" placeholder="备注，例如 验证了 ValidateAuth/List/Metadata" />
+                <input id="provider-smoke-operations" type="text" placeholder="操作清单，用逗号分隔，例如 ValidateAuth,List,Upload" />
+              </div>
+              <div id="provider-smoke-records" class="directory-state-list"></div>
             </article>
             <article class="card">
               <h2>Provider 状态矩阵</h2>

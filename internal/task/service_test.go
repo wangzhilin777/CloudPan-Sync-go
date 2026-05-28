@@ -2956,3 +2956,60 @@ func intTaskValue(raw interface{}) int {
 func intPtrTask(value int) *int {
 	return &value
 }
+
+func TestServiceProviderSmokeRecords(t *testing.T) {
+	ctx := context.Background()
+	store, err := sqlitestore.New(ctx, filepath.Join(t.TempDir(), "provider-smoke.db"))
+	if err != nil {
+		t.Fatalf("new store: %v", err)
+	}
+	defer func() { _ = store.Close() }()
+
+	registry := provider.NewRegistry(provider.DefaultCatalog()...)
+	authSvc := auth.NewService(store, registry)
+	svc := NewService(store, registry, authSvc)
+
+	record, err := svc.SaveProviderSmokeRecord(ctx, ProviderSmokeRecord{
+		ProviderKey:   "123_open",
+		ProtocolGroup: "aliyun_123_open",
+		AuthMode:      "manual_token",
+		Result:        "success",
+		Title:         "123_open 真实 smoke",
+		Note:          "ValidateAuth/List/Metadata",
+		Operations:    []string{"ValidateAuth", "List", "Metadata"},
+		Environment: map[string]string{
+			"os": "windows",
+		},
+	})
+	if err != nil {
+		t.Fatalf("SaveProviderSmokeRecord() error = %v", err)
+	}
+	if record.ID == "" {
+		t.Fatal("expected smoke record id")
+	}
+
+	items, err := svc.ListProviderSmokeRecords(ctx)
+	if err != nil {
+		t.Fatalf("ListProviderSmokeRecords() error = %v", err)
+	}
+	if len(items) == 0 {
+		t.Fatal("expected smoke record history")
+	}
+	if got := items[0].ID; got != record.ID {
+		t.Fatalf("expected latest smoke record id %s, got %s", record.ID, got)
+	}
+
+	fetched, ok, err := svc.GetProviderSmokeRecord(ctx, record.ID)
+	if err != nil {
+		t.Fatalf("GetProviderSmokeRecord() error = %v", err)
+	}
+	if !ok {
+		t.Fatal("expected smoke record to exist")
+	}
+	if fetched.ProviderKey != "123_open" || fetched.Result != "success" {
+		t.Fatalf("unexpected fetched smoke record: %#v", fetched)
+	}
+	if len(fetched.Operations) != 3 {
+		t.Fatalf("expected 3 operations, got %#v", fetched.Operations)
+	}
+}

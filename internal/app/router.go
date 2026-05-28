@@ -67,6 +67,17 @@ type evidenceReportRequest struct {
 	Note  string `json:"note"`
 }
 
+type providerSmokeRecordRequest struct {
+	ProviderKey   string            `json:"providerKey"`
+	ProtocolGroup string            `json:"protocolGroup"`
+	AuthMode      string            `json:"authMode"`
+	Result        string            `json:"result"`
+	Title         string            `json:"title"`
+	Note          string            `json:"note"`
+	Operations    []string          `json:"operations"`
+	Environment   map[string]string `json:"environment"`
+}
+
 func (a *App) routes() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", a.handleIndex)
@@ -84,6 +95,8 @@ func (a *App) routes() http.Handler {
 	mux.HandleFunc("/api/evidence/report", a.handleEvidenceReport)
 	mux.HandleFunc("/api/evidence/reports", a.handleEvidenceReports)
 	mux.HandleFunc("/api/evidence/reports/", a.handleEvidenceReportByID)
+	mux.HandleFunc("/api/provider-smokes", a.handleProviderSmokeRecords)
+	mux.HandleFunc("/api/provider-smokes/", a.handleProviderSmokeRecordByID)
 	mux.HandleFunc("/api/status/providers", a.handleProviderStatuses)
 	return a.loggingMiddleware(mux)
 }
@@ -576,6 +589,61 @@ func (a *App) handleEvidenceReportByID(w http.ResponseWriter, r *http.Request) {
 	writeOK(w, http.StatusOK, record)
 }
 
+func (a *App) handleProviderSmokeRecords(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodGet {
+		items, err := a.tasks.ListProviderSmokeRecords(r.Context())
+		if err != nil {
+			handleError(w, err)
+			return
+		}
+		writeOK(w, http.StatusOK, map[string]interface{}{"items": items})
+		return
+	}
+	if r.Method != http.MethodPost {
+		writeError(w, http.StatusMethodNotAllowed, "method_not_allowed", "Method not allowed.")
+		return
+	}
+	var req providerSmokeRecordRequest
+	if err := decodeJSON(r, &req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid_json", "Invalid JSON payload.")
+		return
+	}
+	record, err := a.tasks.SaveProviderSmokeRecord(r.Context(), task.ProviderSmokeRecord{
+		ProviderKey:   req.ProviderKey,
+		ProtocolGroup: req.ProtocolGroup,
+		AuthMode:      req.AuthMode,
+		Result:        req.Result,
+		Title:         req.Title,
+		Note:          req.Note,
+		Operations:    req.Operations,
+		Environment:   req.Environment,
+	})
+	if err != nil {
+		handleServiceError(w, err)
+		return
+	}
+	writeOK(w, http.StatusOK, record)
+}
+
+func (a *App) handleProviderSmokeRecordByID(w http.ResponseWriter, r *http.Request) {
+	id := strings.TrimPrefix(r.URL.Path, "/api/provider-smokes/")
+	id = strings.Trim(id, "/")
+	if id == "" {
+		writeError(w, http.StatusNotFound, "not_found", "Resource not found.")
+		return
+	}
+	record, ok, err := a.tasks.GetProviderSmokeRecord(r.Context(), id)
+	if err != nil {
+		handleError(w, err)
+		return
+	}
+	if !ok {
+		writeError(w, http.StatusNotFound, "provider_smoke_not_found", "Provider smoke record was not found.")
+		return
+	}
+	writeOK(w, http.StatusOK, record)
+}
+
 func (a *App) handleProviderStatuses(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		writeError(w, http.StatusMethodNotAllowed, "method_not_allowed", "Method not allowed.")
@@ -601,6 +669,8 @@ func handleServiceError(w http.ResponseWriter, err error) {
 		writeError(w, http.StatusBadRequest, "auth_mode_not_supported", "Auth mode is not supported by the provider.")
 	case err != nil && err.Error() == "display_name_required":
 		writeError(w, http.StatusBadRequest, "display_name_required", "Display name is required.")
+	case err != nil && err.Error() == "provider_key_required":
+		writeError(w, http.StatusBadRequest, "provider_key_required", "Provider key is required.")
 	case err != nil && err.Error() == "task_not_runnable":
 		writeError(w, http.StatusBadRequest, "task_not_runnable", "Task cannot be run from the current state.")
 	case err != nil && err.Error() == "task_state_transition_not_allowed":
