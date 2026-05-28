@@ -142,6 +142,7 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 		chromedp.SetValue(`#provider-smoke-note`, "用于验证真实 smoke 记录保存", chromedp.ByID),
 		chromedp.SetValue(`#provider-smoke-operations`, "ValidateAuth,List,Metadata", chromedp.ByID),
 		chromedp.Click(`#save-provider-smoke`, chromedp.ByID),
+		waitForText(`#evidence-summary`, "Accepted Groups"),
 		waitForText(`#provider-smoke-summary`, "aliyun_123_open"),
 		waitForText(`#provider-smoke-matrix`, "accepted"),
 		waitForText(`#provider-smoke-matrix`, "aliyun_123_open"),

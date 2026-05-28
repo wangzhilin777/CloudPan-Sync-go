@@ -454,6 +454,9 @@ func TestAppWorkflowMainline(t *testing.T) {
 	if !strings.Contains(reportData["markdown"].(string), "Missing") {
 		t.Fatalf("expected report markdown to include missing reasons column, got %s", reportData["markdown"].(string))
 	}
+	if !strings.Contains(reportData["markdown"].(string), "已验收协议组") || !strings.Contains(reportData["markdown"].(string), "进行中协议组") || !strings.Contains(reportData["markdown"].(string), "待补齐协议组") {
+		t.Fatalf("expected report markdown to include acceptance counters, got %s", reportData["markdown"].(string))
+	}
 
 	retryResp := invokeJSON(t, handler, http.MethodPost, "/api/tasks/"+taskID+"/retry", nil)
 	retryData := retryResp.Data.(map[string]interface{})

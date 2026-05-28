@@ -1948,12 +1948,23 @@ func buildEvidenceReport(summary EvidenceSummary, statuses []StatusSummary, smok
 		b.WriteString("- 当前没有真实样本矩阵数据。\n")
 	} else {
 		acceptedCount := 0
+		inProgressCount := 0
+		pendingCount := 0
 		for _, item := range smokeMatrix {
 			if item.Accepted {
 				acceptedCount++
+				continue
+			}
+			switch item.AcceptanceStatus {
+			case "in_progress":
+				inProgressCount++
+			default:
+				pendingCount++
 			}
 		}
 		fmt.Fprintf(&b, "- 已验收协议组: %d / %d\n", acceptedCount, len(smokeMatrix))
+		fmt.Fprintf(&b, "- 进行中协议组: %d\n", inProgressCount)
+		fmt.Fprintf(&b, "- 待补齐协议组: %d\n", pendingCount)
 		b.WriteString("\n## 真实联调验收\n\n")
 		b.WriteString("| ProtocolGroup | Acceptance | Missing | Advice | Smoke | Coverage | Sample | Latest Smoke |\n")
 		b.WriteString("| --- | --- | --- | --- | --- | --- | --- | --- |\n")

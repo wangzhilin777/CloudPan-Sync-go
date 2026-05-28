@@ -1691,6 +1691,10 @@ function renderStatus() {
   };
   const protocolCoverage = Array.isArray(evidence.protocolCoverage) ? evidence.protocolCoverage : [];
   const protocolCoverageWithSamples = protocolCoverage.filter((item) => item?.hasRealSuccessSample).length;
+  const providerSmokeMatrix = Array.isArray(state.providerSmokeMatrix) ? state.providerSmokeMatrix : [];
+  const acceptedSmokeGroups = providerSmokeMatrix.filter((item) => item?.accepted).length;
+  const inProgressSmokeGroups = providerSmokeMatrix.filter((item) => item?.acceptanceStatus === "in_progress").length;
+  const pendingSmokeGroups = providerSmokeMatrix.filter((item) => item?.acceptanceStatus === "pending").length;
   $("#evidence-summary").innerHTML = `
     <div class="metric"><span>Total Tasks</span><strong>${evidence.totalTasks}</strong></div>
     <div class="metric"><span>Completed</span><strong>${evidence.completedTasks}</strong></div>
@@ -1702,6 +1706,9 @@ function renderStatus() {
     <div class="metric"><span>Risk Hits</span><strong>${evidence.riskHitCount}</strong></div>
     <div class="metric"><span>Protocol Groups</span><strong>${protocolCoverage.length}</strong></div>
     <div class="metric"><span>Sampled Groups</span><strong>${protocolCoverageWithSamples}</strong></div>
+    <div class="metric"><span>Accepted Groups</span><strong>${acceptedSmokeGroups}</strong></div>
+    <div class="metric"><span>In Progress</span><strong>${inProgressSmokeGroups}</strong></div>
+    <div class="metric"><span>Pending Groups</span><strong>${pendingSmokeGroups}</strong></div>
   `;
   $("#blocked-actions-summary").innerHTML = renderBlockedActionsSummary(evidence.blockedActions || []);
   wireBlockedActionsSummary();
