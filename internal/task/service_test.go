@@ -2656,6 +2656,9 @@ func TestServiceAutoRecoverPoolSummaryAndPriority(t *testing.T) {
 	if len(cooldownLane.RetryClasses) != 1 || cooldownLane.RetryClasses[0] != "rate_limited" {
 		t.Fatalf("expected cooldown lane retryClasses [rate_limited], got %#v", cooldownLane.RetryClasses)
 	}
+	if len(cooldownLane.BlockedActions) != 1 || cooldownLane.BlockedActions[0] != "wait_for_cooldown" {
+		t.Fatalf("expected cooldown lane blockedActions [wait_for_cooldown], got %#v", cooldownLane.BlockedActions)
+	}
 
 	statuses, err := svc.ProviderStatuses(ctx)
 	if err != nil {
@@ -2906,17 +2909,23 @@ func TestServiceRecoverBlockedTasksWithOptionsFiltersModeProviderAndLimit(t *tes
 	if stillBlocked.Task.State != StateBlocked {
 		t.Fatalf("expected cooldown task to stay blocked, got %s", stillBlocked.Task.State)
 	}
+	syncRuntimeRetryQueue(&stillBlocked.Runtime, stillBlocked.Plan.Metadata, stillBlocked.Results)
+	applyRetryQueueSummary(&stillBlocked.Runtime, stillBlocked.Plan.Metadata)
+	if effectiveBlockedAction(stillBlocked) != "wait_for_cooldown" {
+		t.Fatalf("expected effective blockedAction wait_for_cooldown, got %s", effectiveBlockedAction(stillBlocked))
+	}
 
-	second, err := svc.RecoverBlockedTasksWithOptions(ctx, RecoverOptions{
-		ProviderKey: "recover_options_cooldown_target",
-		Limit:       1,
+	blockedActionOnly, err := svc.RecoverBlockedTasksWithOptions(ctx, RecoverOptions{
+		BlockedAction: "wait_for_cooldown",
+		Limit:         1,
 	})
 	if err != nil {
-		t.Fatalf("RecoverBlockedTasksWithOptions(cooldown) error = %v", err)
+		t.Fatalf("RecoverBlockedTasksWithOptions(blockedAction) error = %v", err)
 	}
-	if second.MatchedCount != 1 || second.RecoveredCount != 1 || second.ProviderKey != "recover_options_cooldown_target" {
-		t.Fatalf("unexpected cooldown recover result: %#v", second)
+	if blockedActionOnly.MatchedCount != 1 || blockedActionOnly.RecoveredCount != 1 || blockedActionOnly.BlockedAction != "wait_for_cooldown" {
+		t.Fatalf("unexpected blockedAction recover result: %#v", blockedActionOnly)
 	}
+
 	finalCooldown, ok, err := svc.Get(ctx, cooldownTask.Task.ID)
 	if err != nil || !ok {
 		t.Fatalf("Get(final cooldown) error=%v ok=%v", err, ok)

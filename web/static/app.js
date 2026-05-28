@@ -26,6 +26,7 @@ const state = {
     mode: "",
     providerKey: "",
     retryClass: "",
+    blockedAction: "",
     limit: "",
   },
   treeGroupsCollapsed: {},
@@ -1799,6 +1800,7 @@ function renderProviders() {
   syncSourceProfiles();
   syncTargetProfiles();
   syncAutoRecoverProviders();
+  syncAutoRecoverBlockedActions();
   syncExecutionModeHint();
 }
 
@@ -1940,6 +1942,34 @@ function syncAutoRecoverProviders() {
     .map((key) => `<option value="${key}">${key}</option>`)
     .join("")}`;
   setSelectValueIfPresent("#auto-recover-provider", current);
+}
+
+function syncAutoRecoverBlockedActions() {
+  const select = $("#auto-recover-blocked-action");
+  if (!select) {
+    return;
+  }
+  const current = state.autoRecoverFilters.blockedAction || select.value || "";
+  const actions = new Set();
+  (state.evidence?.blockedActions || []).forEach((item) => {
+    const action = String(item?.action || "").trim();
+    if (action) {
+      actions.add(action);
+    }
+  });
+  (state.evidence?.autoRecoverPool || []).forEach((item) => {
+    (item?.blockedActions || []).forEach((action) => {
+      const normalized = String(action || "").trim();
+      if (normalized) {
+        actions.add(normalized);
+      }
+    });
+  });
+  const values = Array.from(actions).sort();
+  select.innerHTML = `<option value="">全部阻塞动作</option>${values
+    .map((value) => `<option value="${value}">${value}</option>`)
+    .join("")}`;
+  setSelectValueIfPresent("#auto-recover-blocked-action", current);
 }
 
 function syncExecutionModeHint() {
@@ -2201,6 +2231,7 @@ function renderStatus() {
   const acceptedSmokeGroups = providerSmokeMatrix.filter((item) => item?.accepted).length;
   const inProgressSmokeGroups = providerSmokeMatrix.filter((item) => item?.acceptanceStatus === "in_progress").length;
   const pendingSmokeGroups = providerSmokeMatrix.filter((item) => item?.acceptanceStatus === "pending").length;
+  syncAutoRecoverBlockedActions();
   $("#evidence-summary").innerHTML = `
     <div class="metric"><span>Total Tasks</span><strong>${evidence.totalTasks}</strong></div>
     <div class="metric"><span>Completed</span><strong>${evidence.completedTasks}</strong></div>
@@ -2342,6 +2373,7 @@ function filterAutoRecoverItems(items, filters = state.autoRecoverFilters) {
   const mode = String(filters?.mode || "").trim();
   const providerKey = String(filters?.providerKey || "").trim();
   const retryClass = String(filters?.retryClass || "").trim();
+  const blockedAction = String(filters?.blockedAction || "").trim();
   const source = Array.isArray(items) ? items : [];
   return source.filter((item) => {
     if (mode && String(item?.mode || "").trim() !== mode) {
@@ -2356,6 +2388,12 @@ function filterAutoRecoverItems(items, filters = state.autoRecoverFilters) {
         return false;
       }
     }
+    if (blockedAction) {
+      const sampleActions = Array.isArray(item?.blockedActions) ? item.blockedActions.map((value) => String(value || "").trim()) : [];
+      if (!sampleActions.includes(blockedAction)) {
+        return false;
+      }
+    }
     return true;
   });
 }
@@ -2366,6 +2404,7 @@ function renderAutoRecoverFilterSummary(visibleItems, allItems) {
   const mode = String(state.autoRecoverFilters.mode || "").trim();
   const providerKey = String(state.autoRecoverFilters.providerKey || "").trim();
   const retryClass = String(state.autoRecoverFilters.retryClass || "").trim();
+  const blockedAction = String(state.autoRecoverFilters.blockedAction || "").trim();
   const limit = String(state.autoRecoverFilters.limit || "").trim();
   const parts = [];
   if (mode) {
@@ -2376,6 +2415,9 @@ function renderAutoRecoverFilterSummary(visibleItems, allItems) {
   }
   if (retryClass) {
     parts.push(`retryClass=${retryClass}`);
+  }
+  if (blockedAction) {
+    parts.push(`blockedAction=${blockedAction}`);
   }
   if (limit) {
     parts.push(`limit=${limit}`);
@@ -2410,6 +2452,7 @@ function renderAutoRecoverSummary(items) {
             <span class="pill">cooldown ${stringifyValue(item.cooldownCount, "0")}</span>
             <span class="pill">checkpoint ${stringifyValue(item.uploadCheckpointEligible, "0")}</span>
             <span class="pill">classes ${(item.retryClasses || []).join(", ") || "-"}</span>
+            <span class="pill">actions ${(item.blockedActions || []).join(", ") || "-"}</span>
           </div>
           <div class="muted">${escapeHTML(stringifyValue(item.advice, "-"))}</div>
           <div class="actions compact">
@@ -2419,6 +2462,24 @@ function renderAutoRecoverSummary(items) {
               class="ghost"
               data-auto-recover-focus-mode="${escapeHTML(stringifyValue(item.mode, ""))}"
             >只看该模式</button>
+            ${
+              Array.isArray(item.blockedActions) && item.blockedActions.length
+                ? `<button
+              type="button"
+              class="ghost"
+              data-auto-recover-focus-blocked-action="${escapeHTML(stringifyValue(item.blockedActions[0], ""))}"
+            >只看该阻塞动作</button>`
+                : ""
+            }
+            ${
+              Array.isArray(item.blockedActions) && item.blockedActions.length
+                ? `<button
+              type="button"
+              class="ghost"
+              data-auto-recover-run-blocked-action="${escapeHTML(stringifyValue(item.blockedActions[0], ""))}"
+            >执行该阻塞动作</button>`
+                : ""
+            }
             <button
               type="button"
               class="ghost"
@@ -2705,11 +2766,31 @@ function wireAutoRecoverSummary() {
       showFlash(`已按 ${mode} 收敛后台补传候选`);
     });
   });
+  wrap.querySelectorAll("[data-auto-recover-focus-blocked-action]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const blockedAction = button.dataset.autoRecoverFocusBlockedAction || "";
+      state.autoRecoverFilters.blockedAction = blockedAction;
+      setFilterControlValue("#auto-recover-blocked-action", blockedAction);
+      renderStatus();
+      showFlash(`已按 ${blockedAction} 收敛后台补传候选`);
+    });
+  });
   wrap.querySelectorAll("[data-auto-recover-run-mode]").forEach((button) => {
     button.addEventListener("click", async () => {
       try {
         state.autoRecoverFilters.mode = button.dataset.autoRecoverRunMode || "";
         setFilterControlValue("#auto-recover-mode", state.autoRecoverFilters.mode);
+        await triggerAutoRecover();
+      } catch (error) {
+        showFlash(error.message, true);
+      }
+    });
+  });
+  wrap.querySelectorAll("[data-auto-recover-run-blocked-action]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      try {
+        state.autoRecoverFilters.blockedAction = button.dataset.autoRecoverRunBlockedAction || "";
+        setFilterControlValue("#auto-recover-blocked-action", state.autoRecoverFilters.blockedAction);
         await triggerAutoRecover();
       } catch (error) {
         showFlash(error.message, true);
@@ -2734,6 +2815,7 @@ function currentAutoRecoverRequest() {
     mode: String($("#auto-recover-mode")?.value || "").trim(),
     providerKey: String($("#auto-recover-provider")?.value || "").trim(),
     retryClass: String($("#auto-recover-retry-class")?.value || "").trim(),
+    blockedAction: String($("#auto-recover-blocked-action")?.value || "").trim(),
     limit: Number.isFinite(limit) && limit > 0 ? limit : 0,
   };
 }
@@ -2743,6 +2825,7 @@ async function triggerAutoRecover() {
   state.autoRecoverFilters.mode = payload.mode;
   state.autoRecoverFilters.providerKey = payload.providerKey;
   state.autoRecoverFilters.retryClass = payload.retryClass;
+  state.autoRecoverFilters.blockedAction = payload.blockedAction;
   state.autoRecoverFilters.limit = payload.limit ? String(payload.limit) : "";
   const result = await api("/api/tasks/recover", {
     method: "POST",
@@ -2758,10 +2841,12 @@ function resetAutoRecoverFilters() {
   state.autoRecoverFilters.mode = "";
   state.autoRecoverFilters.providerKey = "";
   state.autoRecoverFilters.retryClass = "";
+  state.autoRecoverFilters.blockedAction = "";
   state.autoRecoverFilters.limit = "";
   setFilterControlValue("#auto-recover-mode", "");
   setFilterControlValue("#auto-recover-provider", "");
   setFilterControlValue("#auto-recover-retry-class", "");
+  setFilterControlValue("#auto-recover-blocked-action", "");
   setInputValueIfPresent("#auto-recover-limit", "");
   renderStatus();
   showFlash("后台补传筛选已清空");
@@ -3380,6 +3465,10 @@ function wireStatus() {
   });
   $("#auto-recover-retry-class").addEventListener("change", () => {
     state.autoRecoverFilters.retryClass = $("#auto-recover-retry-class").value;
+    renderStatus();
+  });
+  $("#auto-recover-blocked-action").addEventListener("change", () => {
+    state.autoRecoverFilters.blockedAction = $("#auto-recover-blocked-action").value;
     renderStatus();
   });
   $("#auto-recover-limit").addEventListener("input", () => {

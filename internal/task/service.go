@@ -36,16 +36,18 @@ type RetryOptions struct {
 }
 
 type RecoverOptions struct {
-	Mode        string `json:"mode,omitempty"`
-	ProviderKey string `json:"providerKey,omitempty"`
-	RetryClass  string `json:"retryClass,omitempty"`
-	Limit       int    `json:"limit,omitempty"`
+	Mode          string `json:"mode,omitempty"`
+	ProviderKey   string `json:"providerKey,omitempty"`
+	RetryClass    string `json:"retryClass,omitempty"`
+	BlockedAction string `json:"blockedAction,omitempty"`
+	Limit         int    `json:"limit,omitempty"`
 }
 
 type RecoverResult struct {
 	Mode           string `json:"mode,omitempty"`
 	ProviderKey    string `json:"providerKey,omitempty"`
 	RetryClass     string `json:"retryClass,omitempty"`
+	BlockedAction  string `json:"blockedAction,omitempty"`
 	Limit          int    `json:"limit,omitempty"`
 	MatchedCount   int    `json:"matchedCount"`
 	RecoveredCount int    `json:"recoveredCount"`
@@ -91,6 +93,7 @@ type AutoRecoverLane struct {
 	CooldownCount            int      `json:"cooldownCount"`
 	UploadCheckpointEligible int      `json:"uploadCheckpointEligible"`
 	RetryClasses             []string `json:"retryClasses,omitempty"`
+	BlockedActions           []string `json:"blockedActions,omitempty"`
 	NextRetryAt              string   `json:"nextRetryAt,omitempty"`
 	SampleTaskID             string   `json:"sampleTaskId,omitempty"`
 	SampleProvider           string   `json:"sampleProvider,omitempty"`
@@ -957,11 +960,13 @@ func (s *Service) RecoverBlockedTasksWithOptions(ctx context.Context, opts Recov
 	opts.Mode = strings.TrimSpace(opts.Mode)
 	opts.ProviderKey = strings.TrimSpace(opts.ProviderKey)
 	opts.RetryClass = strings.TrimSpace(opts.RetryClass)
+	opts.BlockedAction = strings.TrimSpace(opts.BlockedAction)
 	result := RecoverResult{
-		Mode:        opts.Mode,
-		ProviderKey: opts.ProviderKey,
-		RetryClass:  opts.RetryClass,
-		Limit:       opts.Limit,
+		Mode:          opts.Mode,
+		ProviderKey:   opts.ProviderKey,
+		RetryClass:    opts.RetryClass,
+		BlockedAction: opts.BlockedAction,
+		Limit:         opts.Limit,
 	}
 	items, err := s.List(ctx)
 	if err != nil {
@@ -985,6 +990,9 @@ func (s *Service) RecoverBlockedTasksWithOptions(ctx context.Context, opts Recov
 			continue
 		}
 		if opts.RetryClass != "" && !retryQueueContainsClass(detail.Runtime.RetryQueue, opts.RetryClass) {
+			continue
+		}
+		if opts.BlockedAction != "" && !detailMatchesBlockedAction(detail, opts.BlockedAction) {
 			continue
 		}
 		candidates = append(candidates, detail)
@@ -1058,6 +1066,33 @@ func retryQueueContainsClass(queue []RetryQueueItem, retryClass string) bool {
 		}
 	}
 	return false
+}
+
+func detailMatchesBlockedAction(detail Detail, blockedAction string) bool {
+	blockedAction = strings.TrimSpace(blockedAction)
+	if blockedAction == "" {
+		return true
+	}
+	return strings.EqualFold(strings.TrimSpace(effectiveBlockedAction(detail)), blockedAction)
+}
+
+func effectiveBlockedAction(detail Detail) string {
+	action := strings.TrimSpace(detail.Runtime.BlockedAction)
+	if action != "" {
+		return action
+	}
+	summary := summarizeRetryQueue(detail.Runtime.RetryQueue)
+	action = strings.TrimSpace(summary.BlockedAction)
+	if action != "" {
+		return action
+	}
+	if detail.Task.State == StateBlocked && retryQueueContainsClass(detail.Runtime.RetryQueue, "rate_limited") {
+		return "wait_for_cooldown"
+	}
+	if autoRecoverReason(detail) == "cooldown_elapsed_auto_retry" && retryQueueContainsClass(detail.Runtime.RetryQueue, "rate_limited") {
+		return "wait_for_cooldown"
+	}
+	return ""
 }
 
 func (s *Service) transitionState(ctx context.Context, id string, allowed []State, target State) (Detail, bool, error) {

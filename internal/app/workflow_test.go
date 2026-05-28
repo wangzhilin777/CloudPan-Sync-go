@@ -792,9 +792,10 @@ func TestAppRecoverTasksEndpointReturnsSummary(t *testing.T) {
 	}
 
 	recoverResp := invokeJSON(t, handler, http.MethodPost, "/api/tasks/recover", map[string]interface{}{
-		"mode":        "upload_checkpoint_auto_resume",
-		"providerKey": "recover_api_target",
-		"limit":       1,
+		"mode":          "upload_checkpoint_auto_resume",
+		"providerKey":   "recover_api_target",
+		"blockedAction": "",
+		"limit":         1,
 	})
 	recoverData := recoverResp.Data.(map[string]interface{})
 	if got := int(recoverData["matchedCount"].(float64)); got != 1 {
@@ -805,6 +806,11 @@ func TestAppRecoverTasksEndpointReturnsSummary(t *testing.T) {
 	}
 	if got := recoverData["mode"].(string); got != "upload_checkpoint_auto_resume" {
 		t.Fatalf("expected mode upload_checkpoint_auto_resume, got %s", got)
+	}
+	if raw, ok := recoverData["blockedAction"]; ok {
+		if got, _ := raw.(string); got != "" {
+			t.Fatalf("expected blockedAction empty, got %s", got)
+		}
 	}
 
 	detailResp := invokeJSON(t, handler, http.MethodGet, "/api/tasks/"+taskID, nil)

@@ -34,6 +34,7 @@
   - `completed_with_errors` 中“全队列均带 upload checkpoint / providerData 的 upload-session 恢复型失败”可自动补跑
   - 普通 `remote_error` 之类的泛化失败不会被后台盲目自动重试
   - 手动触发后台补传时，已经支持按 `mode / providerKey / retryClass / limit` 精准筛选放行
+  - 当前也已支持按 `blockedAction` 做历史阻塞原因口径的精准筛选与手动放行
 
 ## 先用业务语言理解当前规则
 

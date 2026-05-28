@@ -342,6 +342,7 @@ type autoRecoverLaneAccumulator struct {
 	taskIDs                  map[string]struct{}
 	providers                map[string]struct{}
 	retryClasses             map[string]struct{}
+	blockedActions           map[string]struct{}
 	queueItemCount           int
 	retryableNowCount        int
 	cooldownCount            int
@@ -456,17 +457,21 @@ func summarizeAutoRecoverPool(details []Detail) ([]AutoRecoverLane, int) {
 		acc, ok := accumulators[mode]
 		if !ok {
 			acc = &autoRecoverLaneAccumulator{
-				mode:         mode,
-				advice:       autoRecoverGuidance(mode),
-				taskIDs:      make(map[string]struct{}),
-				providers:    make(map[string]struct{}),
-				retryClasses: make(map[string]struct{}),
+				mode:           mode,
+				advice:         autoRecoverGuidance(mode),
+				taskIDs:        make(map[string]struct{}),
+				providers:      make(map[string]struct{}),
+				retryClasses:   make(map[string]struct{}),
+				blockedActions: make(map[string]struct{}),
 			}
 			accumulators[mode] = acc
 			order = append(order, mode)
 		}
 		acc.taskIDs[detail.Task.ID] = struct{}{}
 		acc.providers[detail.Task.TargetProvider] = struct{}{}
+		if blockedAction := strings.TrimSpace(effectiveBlockedAction(detail)); blockedAction != "" {
+			acc.blockedActions[blockedAction] = struct{}{}
+		}
 		for _, item := range detail.Runtime.RetryQueue {
 			retryClass := strings.TrimSpace(item.RetryClass)
 			if retryClass == "" {
@@ -491,6 +496,7 @@ func summarizeAutoRecoverPool(details []Detail) ([]AutoRecoverLane, int) {
 	for _, mode := range order {
 		acc := accumulators[mode]
 		retryClasses := sortedMapKeys(acc.retryClasses)
+		blockedActions := sortedMapKeys(acc.blockedActions)
 		items = append(items, AutoRecoverLane{
 			Mode:                     acc.mode,
 			Advice:                   acc.advice,
@@ -501,6 +507,7 @@ func summarizeAutoRecoverPool(details []Detail) ([]AutoRecoverLane, int) {
 			CooldownCount:            acc.cooldownCount,
 			UploadCheckpointEligible: acc.uploadCheckpointEligible,
 			RetryClasses:             retryClasses,
+			BlockedActions:           blockedActions,
 			NextRetryAt:              acc.nextRetryAt,
 			SampleTaskID:             acc.sampleTaskID,
 			SampleProvider:           acc.sampleProvider,
