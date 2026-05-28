@@ -46,15 +46,31 @@ type EvidenceSummary struct {
 	TotalTasks         int                `json:"totalTasks"`
 	CompletedTasks     int                `json:"completedTasks"`
 	BlockedTasks       int                `json:"blockedTasks"`
+	AutoRecoverTasks   int                `json:"autoRecoverTasks"`
 	FailedResultCount  int                `json:"failedResultCount"`
 	DoneResultCount    int                `json:"doneResultCount"`
 	SkippedResultCount int                `json:"skippedResultCount"`
 	PendingResultCount int                `json:"pendingResultCount"`
 	RiskHitCount       int                `json:"riskHitCount"`
 	BlockedActions     []BlockedAction    `json:"blockedActions,omitempty"`
+	AutoRecoverPool    []AutoRecoverLane  `json:"autoRecoverPool,omitempty"`
 	ProtocolCoverage   []ProtocolCoverage `json:"protocolCoverage,omitempty"`
 	RecentResults      []Result           `json:"recentResults"`
 	RecentProbes       []ProviderProbe    `json:"recentProbes"`
+}
+
+type AutoRecoverLane struct {
+	Mode                     string `json:"mode"`
+	Advice                   string `json:"advice,omitempty"`
+	TaskCount                int    `json:"taskCount"`
+	ProviderCount            int    `json:"providerCount"`
+	QueueItemCount           int    `json:"queueItemCount"`
+	RetryableNowCount        int    `json:"retryableNowCount"`
+	CooldownCount            int    `json:"cooldownCount"`
+	UploadCheckpointEligible int    `json:"uploadCheckpointEligible"`
+	NextRetryAt              string `json:"nextRetryAt,omitempty"`
+	SampleTaskID             string `json:"sampleTaskId,omitempty"`
+	SampleProvider           string `json:"sampleProvider,omitempty"`
 }
 
 type EvidenceReport struct {
@@ -178,6 +194,7 @@ type StatusSummary struct {
 	TaskCount        int                    `json:"taskCount"`
 	CompletedCount   int                    `json:"completedCount"`
 	BlockedCount     int                    `json:"blockedCount"`
+	AutoRecoverCount int                    `json:"autoRecoverCount"`
 	ProtocolCoverage *ProtocolCoverage      `json:"protocolCoverage,omitempty"`
 	LastTaskState    string                 `json:"lastTaskState,omitempty"`
 	LatestProbe      string                 `json:"latestProbe,omitempty"`
@@ -897,7 +914,7 @@ func (s *Service) RecoverBlockedTasks(ctx context.Context) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	recovered := 0
+	candidates := make([]Detail, 0)
 	for _, detail := range items {
 		if detail.Task.State != StateBlocked && detail.Task.State != StateCompletedWithErrors {
 			continue
@@ -907,6 +924,34 @@ func (s *Service) RecoverBlockedTasks(ctx context.Context) (int, error) {
 		if !taskCanAutoRecover(detail) {
 			continue
 		}
+		candidates = append(candidates, detail)
+	}
+	sort.SliceStable(candidates, func(i, j int) bool {
+		leftMode := autoRecoverReason(candidates[i])
+		rightMode := autoRecoverReason(candidates[j])
+		leftPriority := autoRecoverModePriority(leftMode)
+		rightPriority := autoRecoverModePriority(rightMode)
+		if leftPriority != rightPriority {
+			return leftPriority < rightPriority
+		}
+		leftNextRetryAt := strings.TrimSpace(candidates[i].Runtime.NextRetryAt)
+		rightNextRetryAt := strings.TrimSpace(candidates[j].Runtime.NextRetryAt)
+		if leftNextRetryAt != rightNextRetryAt {
+			if leftNextRetryAt == "" {
+				return true
+			}
+			if rightNextRetryAt == "" {
+				return false
+			}
+			return leftNextRetryAt < rightNextRetryAt
+		}
+		if candidates[i].Task.UpdatedAt != candidates[j].Task.UpdatedAt {
+			return candidates[i].Task.UpdatedAt < candidates[j].Task.UpdatedAt
+		}
+		return candidates[i].Task.ID < candidates[j].Task.ID
+	})
+	recovered := 0
+	for _, detail := range candidates {
 		retried, err := s.buildRetryDetail(detail)
 		if err != nil {
 			if strings.HasPrefix(err.Error(), "retry_cooldown_active:") {
@@ -2854,6 +2899,19 @@ func autoRecoverGuidance(mode string) string {
 		return "当前队列不存在人工确认/授权/本地文件硬阻塞，满足条件时可由后台自动接管重试。"
 	default:
 		return ""
+	}
+}
+
+func autoRecoverModePriority(mode string) int {
+	switch mode {
+	case "upload_checkpoint_auto_resume":
+		return 0
+	case "retry_queue_auto_retry":
+		return 1
+	case "cooldown_elapsed_auto_retry":
+		return 2
+	default:
+		return 9
 	}
 }
 

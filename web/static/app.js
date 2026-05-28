@@ -1965,12 +1965,14 @@ function renderStatus() {
     totalTasks: 0,
     completedTasks: 0,
     blockedTasks: 0,
+    autoRecoverTasks: 0,
     failedResultCount: 0,
     doneResultCount: 0,
     skippedResultCount: 0,
     pendingResultCount: 0,
     riskHitCount: 0,
     blockedActions: [],
+    autoRecoverPool: [],
     protocolCoverage: [],
     recentResults: [],
     recentProbes: [],
@@ -1985,6 +1987,7 @@ function renderStatus() {
     <div class="metric"><span>Total Tasks</span><strong>${evidence.totalTasks}</strong></div>
     <div class="metric"><span>Completed</span><strong>${evidence.completedTasks}</strong></div>
     <div class="metric"><span>Blocked Tasks</span><strong>${evidence.blockedTasks}</strong></div>
+    <div class="metric"><span>Auto Recover</span><strong>${stringifyValue(evidence.autoRecoverTasks, "0")}</strong></div>
     <div class="metric"><span>Done Results</span><strong>${evidence.doneResultCount}</strong></div>
     <div class="metric"><span>Skipped Results</span><strong>${evidence.skippedResultCount}</strong></div>
     <div class="metric"><span>Pending Manual</span><strong>${evidence.pendingResultCount}</strong></div>
@@ -1998,6 +2001,8 @@ function renderStatus() {
   `;
   $("#blocked-actions-summary").innerHTML = renderBlockedActionsSummary(evidence.blockedActions || []);
   wireBlockedActionsSummary();
+  $("#auto-recover-summary").innerHTML = renderAutoRecoverSummary(evidence.autoRecoverPool || []);
+  wireAutoRecoverSummary();
   $("#protocol-coverage-summary").innerHTML = renderProtocolCoverageSummary(protocolCoverage);
   $("#provider-smoke-summary").innerHTML = `
     ${renderProviderSmokeMatrixControls(state.providerSmokeMatrix || [])}
@@ -2029,6 +2034,7 @@ function renderStatus() {
           <th>Latest Probe</th>
           <th>Last Task State</th>
           <th>Blocked</th>
+          <th>Auto Recover</th>
           <th>Main Action</th>
           <th>Snapshot Summary</th>
         </tr>
@@ -2050,6 +2056,7 @@ function renderStatus() {
                 <td>${item.latestProbe || "-"}</td>
                 <td>${item.lastTaskState || "-"}</td>
                 <td>${stringifyValue(item.blockedCount, "0")}</td>
+                <td>${stringifyValue(item.autoRecoverCount, "0")}</td>
                 <td>${stringifyValue(item.snapshotSummary?.blockedActions?.[0]?.action, "-")}</td>
                 <td>
                   <div class="summary-block">
@@ -2109,6 +2116,41 @@ function renderBlockedActionsSummary(items) {
     .join("");
 }
 
+function renderAutoRecoverSummary(items) {
+  if (!Array.isArray(items) || !items.length) {
+    return `<div class="directory-empty">当前没有进入后台补传候选池的任务。</div>`;
+  }
+  return items
+    .map(
+      (item) => `
+        <div class="directory-row tree-node">
+          <div class="directory-row-header">
+            <strong>${escapeHTML(stringifyValue(item.mode))}</strong>
+            <code>${escapeHTML(stringifyValue(item.sampleProvider, "-"))}</code>
+          </div>
+          <div class="directory-metrics">
+            <span class="pill">tasks ${stringifyValue(item.taskCount, "0")}</span>
+            <span class="pill">providers ${stringifyValue(item.providerCount, "0")}</span>
+            <span class="pill">queue ${stringifyValue(item.queueItemCount, "0")}</span>
+            <span class="pill">ready ${stringifyValue(item.retryableNowCount, "0")}</span>
+            <span class="pill">cooldown ${stringifyValue(item.cooldownCount, "0")}</span>
+            <span class="pill">checkpoint ${stringifyValue(item.uploadCheckpointEligible, "0")}</span>
+          </div>
+          <div class="muted">${escapeHTML(stringifyValue(item.advice, "-"))}</div>
+          <div class="actions compact">
+            <span class="pill">next ${escapeHTML(stringifyValue(item.nextRetryAt, "-"))}</span>
+            <button
+              type="button"
+              class="ghost"
+              data-auto-recover-open-task="${escapeHTML(stringifyValue(item.sampleTaskId || item.sampleTaskID, ""))}"
+            >打开样本任务</button>
+          </div>
+        </div>
+      `,
+    )
+    .join("");
+}
+
 function renderProtocolCoverageSummary(items) {
   if (!Array.isArray(items) || !items.length) {
     return `<div class="directory-empty">当前没有协议族覆盖数据。</div>`;
@@ -2145,6 +2187,7 @@ function renderSnapshotSummary(summary) {
     return `
       <div><strong>lastTaskState</strong> <code>${escapeHTML(stringifyValue(summary.lastTaskState))}</code></div>
       <div><strong>blockedCount</strong> <code>${escapeHTML(stringifyValue(summary.blockedCount, "0"))}</code></div>
+      <div><strong>autoRecoverCount</strong> <code>${escapeHTML(stringifyValue(summary.autoRecoverCount, "0"))}</code></div>
       <div><strong>retryBlocked</strong> <code>${escapeHTML(stringifyValue(retrySummary.blockedReason, "-"))}</code></div>
       <div><strong>blockedAction</strong> <code>${escapeHTML(stringifyValue(retrySummary.blockedAction, "-"))}</code></div>
       <div><strong>blockedTop</strong> <code>${escapeHTML(stringifyValue(blockedActions[0]?.action, "-"))}</code></div>
@@ -2152,6 +2195,7 @@ function renderSnapshotSummary(summary) {
       <div><strong>queueSize</strong> <code>${escapeHTML(stringifyValue(retrySummary.queueSize, "0"))}</code></div>
       <div><strong>autoRecover</strong> <code>${escapeHTML(renderAutoRecoverMode(retrySummary))}</code></div>
       <div><strong>queueBreakdown</strong> <code>${escapeHTML(renderRetrySummaryBreakdown(retrySummary))}</code></div>
+      <div><strong>autoRecoverPool</strong> <code>${escapeHTML(stringifyValue((summary.autoRecoverPool || []).map((item) => item.mode).join(", "), "-"))}</code></div>
       <div><strong>protocolCoverage</strong> <code>${escapeHTML(stringifyValue(summary.protocolCoverage?.protocolGroup, "-"))} / ${escapeHTML(stringifyValue(summary.protocolCoverage?.realSuccessTaskCount, "0"))}</code></div>
     `;
   }
@@ -2358,6 +2402,22 @@ function wireRuntimePathFocus(scope, selector = null) {
       const path = button.dataset.runtimeFocusPath || "";
       const focusScope = button.dataset.runtimeFocusScope || scope;
       focusRuntimeTreeByPath(focusScope, path, button.dataset.runtimeFocusKind || "roots");
+    });
+  });
+}
+
+function wireAutoRecoverSummary() {
+  const wrap = $("#auto-recover-summary");
+  if (!wrap) {
+    return;
+  }
+  wrap.querySelectorAll("[data-auto-recover-open-task]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      try {
+        await openTaskByID(button.dataset.autoRecoverOpenTask);
+      } catch (error) {
+        showFlash(error.message, true);
+      }
     });
   });
 }

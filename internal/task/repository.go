@@ -336,6 +336,20 @@ type blockedActionAccumulator struct {
 	sampleProvider string
 }
 
+type autoRecoverLaneAccumulator struct {
+	mode                     string
+	advice                   string
+	taskIDs                  map[string]struct{}
+	providers                map[string]struct{}
+	queueItemCount           int
+	retryableNowCount        int
+	cooldownCount            int
+	uploadCheckpointEligible int
+	nextRetryAt              string
+	sampleTaskID             string
+	sampleProvider           string
+}
+
 func summarizeBlockedActions(details []Detail) []BlockedAction {
 	if len(details) == 0 {
 		return nil
@@ -397,6 +411,109 @@ func summarizeBlockedActions(details []Detail) []BlockedAction {
 	return items
 }
 
+func summarizeAutoRecoverPool(details []Detail) ([]AutoRecoverLane, int) {
+	if len(details) == 0 {
+		return nil, 0
+	}
+	accumulators := make(map[string]*autoRecoverLaneAccumulator)
+	order := make([]string, 0)
+	totalTasks := 0
+	for _, detail := range details {
+		if detail.Task.State != StateBlocked && detail.Task.State != StateCompletedWithErrors {
+			continue
+		}
+		ensureRuntimeState(&detail)
+		syncRuntimeRetryQueue(&detail.Runtime, detail.Plan.Metadata, detail.Results)
+		applyRetryQueueSummary(&detail.Runtime, detail.Plan.Metadata)
+		summary := summarizeRetryQueue(detail.Runtime.RetryQueue)
+		if !shouldIncludeAutoRecoverPool(detail, summary) {
+			continue
+		}
+		mode := autoRecoverReason(detail)
+		if mode == "" {
+			mode = summary.AutoRecoverMode
+		}
+		if mode == "" {
+			continue
+		}
+		totalTasks++
+		acc, ok := accumulators[mode]
+		if !ok {
+			acc = &autoRecoverLaneAccumulator{
+				mode:      mode,
+				advice:    autoRecoverGuidance(mode),
+				taskIDs:   make(map[string]struct{}),
+				providers: make(map[string]struct{}),
+			}
+			accumulators[mode] = acc
+			order = append(order, mode)
+		}
+		acc.taskIDs[detail.Task.ID] = struct{}{}
+		acc.providers[detail.Task.TargetProvider] = struct{}{}
+		acc.queueItemCount += len(detail.Runtime.RetryQueue)
+		acc.retryableNowCount += summary.RetryableNowCount
+		acc.cooldownCount += summary.CooldownCount
+		acc.uploadCheckpointEligible += summary.UploadCheckpointEligible
+		if acc.sampleTaskID == "" {
+			acc.sampleTaskID = detail.Task.ID
+			acc.sampleProvider = detail.Task.TargetProvider
+		}
+		nextRetryAt := strings.TrimSpace(summary.NextRetryAt)
+		if nextRetryAt != "" && (acc.nextRetryAt == "" || nextRetryAt < acc.nextRetryAt) {
+			acc.nextRetryAt = nextRetryAt
+		}
+	}
+	items := make([]AutoRecoverLane, 0, len(order))
+	for _, mode := range order {
+		acc := accumulators[mode]
+		items = append(items, AutoRecoverLane{
+			Mode:                     acc.mode,
+			Advice:                   acc.advice,
+			TaskCount:                len(acc.taskIDs),
+			ProviderCount:            len(acc.providers),
+			QueueItemCount:           acc.queueItemCount,
+			RetryableNowCount:        acc.retryableNowCount,
+			CooldownCount:            acc.cooldownCount,
+			UploadCheckpointEligible: acc.uploadCheckpointEligible,
+			NextRetryAt:              acc.nextRetryAt,
+			SampleTaskID:             acc.sampleTaskID,
+			SampleProvider:           acc.sampleProvider,
+		})
+	}
+	sort.SliceStable(items, func(i, j int) bool {
+		leftPriority := autoRecoverModePriority(items[i].Mode)
+		rightPriority := autoRecoverModePriority(items[j].Mode)
+		if leftPriority != rightPriority {
+			return leftPriority < rightPriority
+		}
+		if items[i].TaskCount != items[j].TaskCount {
+			return items[i].TaskCount > items[j].TaskCount
+		}
+		if items[i].NextRetryAt != items[j].NextRetryAt {
+			if items[i].NextRetryAt == "" {
+				return true
+			}
+			if items[j].NextRetryAt == "" {
+				return false
+			}
+			return items[i].NextRetryAt < items[j].NextRetryAt
+		}
+		return items[i].Mode < items[j].Mode
+	})
+	return items, totalTasks
+}
+
+func shouldIncludeAutoRecoverPool(detail Detail, summary retryQueueSummary) bool {
+	switch detail.Task.State {
+	case StateBlocked:
+		return summary.AutoRecoverEligible
+	case StateCompletedWithErrors:
+		return retryQueueCanAutoResumeUploads(detail.Runtime.RetryQueue)
+	default:
+		return false
+	}
+}
+
 func taskEvidenceSummary(ctx context.Context, store *sqlitestore.Store, providers []provider.Entry) (EvidenceSummary, error) {
 	var summary EvidenceSummary
 	if err := store.DB().QueryRowContext(ctx, `SELECT COUNT(1) FROM tasks`).Scan(&summary.TotalTasks); err != nil {
@@ -454,6 +571,7 @@ func taskEvidenceSummary(ctx context.Context, store *sqlitestore.Store, provider
 		blockedDetails = append(blockedDetails, detail)
 	}
 	summary.BlockedActions = summarizeBlockedActions(blockedDetails)
+	summary.AutoRecoverPool, summary.AutoRecoverTasks = summarizeAutoRecoverPool(details)
 	results, err := recentTaskResults(ctx, store, 10)
 	if err != nil {
 		return summary, err
@@ -494,8 +612,13 @@ func providerStatusSummary(ctx context.Context, store *sqlitestore.Store, provid
 			return nil, err
 		}
 		blockedDetails := make([]Detail, 0)
+		providerDetails := make([]Detail, 0)
 		for _, detail := range allDetails {
-			if detail.Task.TargetProvider != entry.Meta.Key || detail.Task.State != StateBlocked {
+			if detail.Task.TargetProvider != entry.Meta.Key {
+				continue
+			}
+			providerDetails = append(providerDetails, detail)
+			if detail.Task.State != StateBlocked {
 				continue
 			}
 			item.BlockedCount++
@@ -521,6 +644,8 @@ func providerStatusSummary(ctx context.Context, store *sqlitestore.Store, provid
 		}
 		item.SnapshotSummary["blockedCount"] = item.BlockedCount
 		item.SnapshotSummary["blockedActions"] = summarizeBlockedActions(blockedDetails)
+		item.SnapshotSummary["autoRecoverPool"], item.AutoRecoverCount = summarizeAutoRecoverPool(providerDetails)
+		item.SnapshotSummary["autoRecoverCount"] = item.AutoRecoverCount
 		items = append(items, item)
 	}
 	return items, nil

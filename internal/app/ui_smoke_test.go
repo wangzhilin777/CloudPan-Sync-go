@@ -136,6 +136,8 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 
 	runStep(t, runCtx, "status evidence and retry",
 		chromedp.Evaluate(`(() => document.querySelector('button[data-view="status"]')?.click())()`, nil),
+		waitForText(`#evidence-summary`, "Auto Recover"),
+		waitForText(`#auto-recover-summary`, "当前没有进入后台补传候选池的任务"),
 		waitForText(`#status-runtime-checkpoints`, "SELECTED ROOTS"),
 		waitForText(`#status-runtime-checkpoints`, "SCAN TRACE"),
 		chromedp.Click(`#status-directory-states [data-tree-sync-panel="directory"][data-tree-sync-path="/demo"]`, chromedp.ByQuery),

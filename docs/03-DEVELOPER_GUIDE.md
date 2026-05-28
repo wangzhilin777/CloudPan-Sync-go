@@ -173,7 +173,12 @@
   - 手动 `retry` 会返回 `retry_blocked`
   - 自动补传调度不会继续接管这类任务
 - 当前应用内已接入单机 tick 版自动补传调度：
-  - 只会自动恢复冷却到期、且不存在人工确认/授权/本地文件硬阻塞的任务
+  - 启动时会先扫描一次候选任务
+  - 后续按 tick 持续检查后台补传候选池
+  - 当前调度优先级固定为：
+    - `upload_checkpoint_auto_resume`
+    - `retry_queue_auto_retry`
+    - `cooldown_elapsed_auto_retry`
 - 当前控制台任务详情页也会直接显示：
   - 当前是否处于 `pending_only` 重试范围
   - 当前重试队列里的 `retryable / blocked` 计数
@@ -185,6 +190,9 @@
   - `后台补传候选`
   - `队列拆分`
   - `自动补传提示`
+- 当前状态页的运行证据摘要还新增了：
+  - `自动补传候选池`
+  - 会按模式聚合 `taskCount / providerCount / queueItemCount / retryableNowCount / cooldownCount / uploadCheckpointEligible`
 - 这几个字段主要用来判断：
   - 当前队列是不是“冷却到期后自动重试”
   - 是不是“upload checkpoint 自动续跑”

@@ -354,7 +354,7 @@
   - 当前 `rate_limited` 会按冷却时间阻断过早重试
   - 当前任务在“只有冷却 / 人工确认 / 授权失效 / 本地文件缺失”时会进入 `blocked`
   - 当前 runtime / probe / status 已回写 `blockedReason` 与 `nextRetryAt`
-  - 当前已接入单机 worker 版后台自动补传调度，启动时会先恢复一次，随后按 `CLOUDPAN_AUTO_RETRY_TICK` 自动恢复冷却到期的 `blocked` 任务
+  - 当前已接入单机 worker 版后台自动补传调度，启动时会先恢复一次，随后按 `CLOUDPAN_AUTO_RETRY_TICK` 自动检查候选任务
   - 当前 `metadata.retrySummary` 已细化为：
     - `retryableNowCount / cooldownCount / pendingManualCount / authExpiredCount / localMissingCount / exhaustedCount`
     - `uploadCheckpointEligible`
@@ -363,6 +363,13 @@
     - `cooldown_elapsed_auto_retry`
     - `upload_checkpoint_auto_resume`
     - `retry_queue_auto_retry`
+  - 当前 worker 的优先级顺序也已经固定：
+    - 先处理 `upload_checkpoint_auto_resume`
+    - 再处理 `retry_queue_auto_retry`
+    - 最后才处理 `cooldown_elapsed_auto_retry`
+  - 当前 `/api/evidence/runtime` 与 `/api/status/providers` 已新增 `autoRecoverTasks / autoRecoverPool`
+    - 可直接看出哪些任务已经进入后台补传候选池
+    - 也能看出每种模式的任务数、provider 数、queue 大小、冷却量和 checkpoint 量
   - 当前自动恢复会在 runtime / result / provider probe / provider status 中留下 `autoRecovered / autoRecoverReason / autoRecoverCount / autoRecoveredAt / autoRecoverState` 证据，便于判断任务是用户手动重试还是 worker 自动续跑
   - 当前 `retryLimit` 已真正接入重试队列，支持累计次数、剩余次数与 exhausted 阻断
   - 当前 `blockedReason` 已补充统一的 `blockedAction / blockedAdvice`，便于状态矩阵直接给出处理建议
@@ -457,6 +464,7 @@
   - 验收矩阵可以按状态筛选，并直接打开对应 smoke 样本或样本任务，方便继续补齐真实联调材料
   - 验收矩阵现在还能一键按协议组预填 smoke 表单，并把下方 smoke 记录收敛到当前协议组，补样本时不用再手动回填一遍字段
   - 任务详情、运行检查点和状态快照都已同步展示 `后台补传候选 / 队列拆分 / 自动补传提示`，便于直接判断当前失败队列更适合冷却后自动重试、upload checkpoint 续跑，还是人工处理
+  - 运行证据摘要页还新增了“自动补传候选池”，可以按模式直接看 worker 当前会优先接管哪一类任务
   - 从重试队列一键定位待补传树或收敛到同类失败项
     - 从 blocked 聚合摘要一键跳到样本任务或当前阻塞动作
     - 从任务详情 blocked 引导卡片一键收敛当前任务问题子集

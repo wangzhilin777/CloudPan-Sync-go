@@ -2187,6 +2187,233 @@ func TestServiceRecoverBlockedTasksDoesNotAutoRetryGenericCompletedErrors(t *tes
 	}
 }
 
+func TestServiceAutoRecoverPoolSummaryAndPriority(t *testing.T) {
+	ctx := context.Background()
+	store, err := sqlitestore.New(ctx, filepath.Join(t.TempDir(), "auto-recover-pool.db"))
+	if err != nil {
+		t.Fatalf("new store: %v", err)
+	}
+	defer func() { _ = store.Close() }()
+
+	recoveryOrder := make([]string, 0, 2)
+	cooldownUploadCalls := 0
+	checkpointUploadCalls := 0
+	cooldownAdapter := &scriptedAdapter{
+		meta: provider.Provider{
+			Key:              "auto_recover_cooldown_target",
+			DisplayName:      "Auto Recover Cooldown Target",
+			ProtocolGroup:    "fake",
+			AuthModes:        []string{"manual_token"},
+			FastUploadInputs: []string{"md5", "size"},
+			FallbackModes:    []string{"download_upload"},
+			Status:           "planned",
+		},
+		capability: provider.CapabilitySet{
+			SupportsAuthValidation: true,
+			SupportsUpload:         true,
+		},
+		uploadFunc: func(req provider.UploadRequest) provider.UploadResult {
+			cooldownUploadCalls++
+			if cooldownUploadCalls == 1 {
+				return provider.UploadResult{
+					OperationResult: provider.OperationResult{
+						Status:  "rate_limited",
+						Message: "rate limited",
+						Mode:    "fake_rate_limit",
+					},
+				}
+			}
+			recoveryOrder = append(recoveryOrder, "cooldown")
+			return provider.UploadResult{
+				OperationResult: provider.OperationResult{
+					OK:      true,
+					Status:  "ok",
+					Message: "cooldown recovered",
+					Mode:    "fake_cooldown_ok",
+				},
+			}
+		},
+	}
+	checkpointAdapter := &scriptedAdapter{
+		meta: provider.Provider{
+			Key:              "auto_recover_checkpoint_target",
+			DisplayName:      "Auto Recover Checkpoint Target",
+			ProtocolGroup:    "fake",
+			AuthModes:        []string{"manual_token"},
+			FastUploadInputs: []string{"md5", "size"},
+			FallbackModes:    []string{"download_upload"},
+			Status:           "planned",
+		},
+		capability: provider.CapabilitySet{
+			SupportsAuthValidation: true,
+			SupportsUpload:         true,
+		},
+		uploadFunc: func(req provider.UploadRequest) provider.UploadResult {
+			checkpointUploadCalls++
+			if req.ResumeUpload != nil {
+				recoveryOrder = append(recoveryOrder, "checkpoint")
+				return provider.UploadResult{
+					OperationResult: provider.OperationResult{
+						OK:      true,
+						Status:  "ok",
+						Message: "checkpoint resumed",
+						Mode:    "fake_checkpoint_resume_ok",
+						Payload: map[string]interface{}{
+							"fileId":   req.ResumeUpload.FileID,
+							"uploadId": req.ResumeUpload.UploadID,
+						},
+					},
+				}
+			}
+			return provider.UploadResult{
+				OperationResult: provider.OperationResult{
+					Status:  "provider_request_failed",
+					Message: "checkpoint interrupted",
+					Mode:    "fake_checkpoint_failed",
+					Payload: map[string]interface{}{
+						"fileId":           "checkpoint-file-1",
+						"uploadId":         "checkpoint-upload-1",
+						"nextPartNumber":   2,
+						"failedPartNumber": 2,
+					},
+				},
+			}
+		},
+	}
+
+	registry := provider.NewRegistry(cooldownAdapter, checkpointAdapter)
+	authSvc := auth.NewService(store, registry)
+	svc := NewService(store, registry, authSvc)
+	cooldownProfile, err := authSvc.CreateProfile(ctx, auth.CreateProfileInput{
+		ProviderKey: "auto_recover_cooldown_target",
+		AuthMode:    "manual_token",
+		DisplayName: "auto recover cooldown target",
+		Token:       "token-cooldown",
+	})
+	if err != nil {
+		t.Fatalf("CreateProfile(cooldown) error = %v", err)
+	}
+	checkpointProfile, err := authSvc.CreateProfile(ctx, auth.CreateProfileInput{
+		ProviderKey: "auto_recover_checkpoint_target",
+		AuthMode:    "manual_token",
+		DisplayName: "auto recover checkpoint target",
+		Token:       "token-checkpoint",
+	})
+	if err != nil {
+		t.Fatalf("CreateProfile(checkpoint) error = %v", err)
+	}
+
+	cooldownTask, err := svc.Create(ctx, CreateRequest{
+		SourceProvider:  "guangya",
+		TargetProvider:  "auto_recover_cooldown_target",
+		TargetProfileID: cooldownProfile.ID,
+		ThresholdMB:     1,
+		RiskOverride: &planner.RiskProfileOverride{
+			CooldownSeconds: intPtrTask(3600),
+		},
+		Entries: []planner.SourceEntry{
+			{Path: "/cooldown.bin", Size: 1024, MD5: "cooldown-md5"},
+		},
+	})
+	if err != nil {
+		t.Fatalf("Create(cooldown) error = %v", err)
+	}
+	if _, ok, err := svc.Run(ctx, cooldownTask.Task.ID); err != nil || !ok {
+		t.Fatalf("Run(cooldown) error=%v ok=%v", err, ok)
+	}
+
+	localFile := filepath.Join(t.TempDir(), "checkpoint.bin")
+	if err := os.WriteFile(localFile, []byte("checkpoint"), 0o644); err != nil {
+		t.Fatalf("WriteFile(checkpoint) error = %v", err)
+	}
+	checkpointTask, err := svc.Create(ctx, CreateRequest{
+		SourceProvider:  "guangya",
+		TargetProvider:  "auto_recover_checkpoint_target",
+		TargetProfileID: checkpointProfile.ID,
+		ThresholdMB:     1,
+		Entries: []planner.SourceEntry{
+			{Path: "/checkpoint.bin", Size: 2048, MD5: "checkpoint-md5", LocalPath: localFile},
+		},
+	})
+	if err != nil {
+		t.Fatalf("Create(checkpoint) error = %v", err)
+	}
+	if _, ok, err := svc.Run(ctx, checkpointTask.Task.ID); err != nil || !ok {
+		t.Fatalf("Run(checkpoint) error=%v ok=%v", err, ok)
+	}
+
+	evidence, err := svc.RuntimeEvidence(ctx)
+	if err != nil {
+		t.Fatalf("RuntimeEvidence() error = %v", err)
+	}
+	if evidence.AutoRecoverTasks != 2 {
+		t.Fatalf("expected autoRecoverTasks 2, got %d", evidence.AutoRecoverTasks)
+	}
+	if len(evidence.AutoRecoverPool) != 2 {
+		t.Fatalf("expected autoRecoverPool len 2, got %#v", evidence.AutoRecoverPool)
+	}
+	if evidence.AutoRecoverPool[0].Mode != "upload_checkpoint_auto_resume" {
+		t.Fatalf("expected checkpoint lane first, got %#v", evidence.AutoRecoverPool)
+	}
+	checkpointLane := autoRecoverLaneByMode(evidence.AutoRecoverPool, "upload_checkpoint_auto_resume")
+	if checkpointLane.TaskCount != 1 || checkpointLane.UploadCheckpointEligible != 1 {
+		t.Fatalf("unexpected checkpoint lane: %#v", checkpointLane)
+	}
+	cooldownLane := autoRecoverLaneByMode(evidence.AutoRecoverPool, "cooldown_elapsed_auto_retry")
+	if cooldownLane.TaskCount != 1 || cooldownLane.CooldownCount != 1 {
+		t.Fatalf("unexpected cooldown lane: %#v", cooldownLane)
+	}
+
+	statuses, err := svc.ProviderStatuses(ctx)
+	if err != nil {
+		t.Fatalf("ProviderStatuses() error = %v", err)
+	}
+	for _, status := range statuses {
+		switch status.ProviderKey {
+		case "auto_recover_cooldown_target":
+			if status.AutoRecoverCount != 1 {
+				t.Fatalf("expected cooldown provider autoRecoverCount 1, got %#v", status)
+			}
+		case "auto_recover_checkpoint_target":
+			if status.AutoRecoverCount != 1 {
+				t.Fatalf("expected checkpoint provider autoRecoverCount 1, got %#v", status)
+			}
+		}
+	}
+
+	cooldownDetail, ok, err := svc.Get(ctx, cooldownTask.Task.ID)
+	if err != nil || !ok {
+		t.Fatalf("Get(cooldown) error=%v ok=%v", err, ok)
+	}
+	cooldownDetail.Results[0].CreatedAt = time.Now().Add(-2 * time.Hour).UTC().Format(time.RFC3339)
+	syncRuntimeRetryQueue(&cooldownDetail.Runtime, cooldownDetail.Plan.Metadata, cooldownDetail.Results)
+	applyRetryQueueSummary(&cooldownDetail.Runtime, cooldownDetail.Plan.Metadata)
+	cooldownDetail.Task.UpdatedAt = time.Now().Add(-10 * time.Minute).UTC().Format(time.RFC3339)
+	if err := replaceTaskDetailAndResults(ctx, store, cooldownDetail); err != nil {
+		t.Fatalf("replaceTaskDetailAndResults(cooldown) error = %v", err)
+	}
+
+	recovered, err := svc.RecoverBlockedTasks(ctx)
+	if err != nil {
+		t.Fatalf("RecoverBlockedTasks() error = %v", err)
+	}
+	if recovered != 2 {
+		t.Fatalf("expected recovered count 2, got %d", recovered)
+	}
+	if len(recoveryOrder) != 2 {
+		t.Fatalf("expected two recovery operations, got %#v", recoveryOrder)
+	}
+	if recoveryOrder[0] != "checkpoint" || recoveryOrder[1] != "cooldown" {
+		t.Fatalf("expected checkpoint recovery before cooldown, got %#v", recoveryOrder)
+	}
+	if cooldownUploadCalls != 2 {
+		t.Fatalf("expected cooldown upload calls 2, got %d", cooldownUploadCalls)
+	}
+	if checkpointUploadCalls != 2 {
+		t.Fatalf("expected checkpoint upload calls 2, got %d", checkpointUploadCalls)
+	}
+}
+
 func TestServiceRetryBlockedForLocalFileMissingDoesNotResetTask(t *testing.T) {
 	ctx := context.Background()
 	store, err := sqlitestore.New(ctx, filepath.Join(t.TempDir(), "retry-blocked-local.db"))
@@ -3332,4 +3559,13 @@ func TestServiceProviderSmokeRecords(t *testing.T) {
 func boolValue(value interface{}) bool {
 	typed, ok := value.(bool)
 	return ok && typed
+}
+
+func autoRecoverLaneByMode(items []AutoRecoverLane, mode string) AutoRecoverLane {
+	for _, item := range items {
+		if item.Mode == mode {
+			return item
+		}
+	}
+	return AutoRecoverLane{}
 }
