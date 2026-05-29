@@ -138,6 +138,7 @@ type EvidenceSummary struct {
 	BlockedActions                     []BlockedAction    `json:"blockedActions,omitempty"`
 	AutoRecoverPool                    []AutoRecoverLane  `json:"autoRecoverPool,omitempty"`
 	ProtocolCoverage                   []ProtocolCoverage `json:"protocolCoverage,omitempty"`
+	UploadSuccessGroups                int                `json:"uploadSuccessGroups"`
 	RecentResults                      []Result           `json:"recentResults"`
 	RecentProbes                       []ProviderProbe    `json:"recentProbes"`
 }
@@ -989,7 +990,20 @@ func (s *Service) buildRetryDetail(detail Detail, opts RetryOptions) (Detail, er
 }
 
 func (s *Service) RuntimeEvidence(ctx context.Context) (EvidenceSummary, error) {
-	return taskEvidenceSummary(ctx, s.store, s.registry.List())
+	summary, err := taskEvidenceSummary(ctx, s.store, s.registry.List())
+	if err != nil {
+		return EvidenceSummary{}, err
+	}
+	records, err := s.ListProviderSmokeRecords(ctx)
+	if err != nil {
+		return EvidenceSummary{}, err
+	}
+	for _, item := range summarizeProviderSmokeRecords(records) {
+		if item.HasUploadSuccessSample {
+			summary.UploadSuccessGroups++
+		}
+	}
+	return summary, nil
 }
 
 func (s *Service) ProviderStatuses(ctx context.Context) ([]StatusSummary, error) {
@@ -1030,6 +1044,13 @@ func (s *Service) EvidenceReport(ctx context.Context) (EvidenceReport, error) {
 		return EvidenceReport{}, err
 	}
 	smokeMatrix := buildProviderSmokeMatrix(summary, smokeSummaries)
+	uploadSuccessGroups := 0
+	for _, row := range smokeMatrix {
+		if row.HasUploadSuccessSample {
+			uploadSuccessGroups++
+		}
+	}
+	summary.UploadSuccessGroups = uploadSuccessGroups
 	details, err := s.List(ctx)
 	if err != nil {
 		return EvidenceReport{}, err
@@ -2879,6 +2900,7 @@ func buildEvidenceReport(summary EvidenceSummary, statuses []StatusSummary, smok
 	fmt.Fprintf(&b, "- 源端删除记录: %d\n", summary.SourceDeletionCount)
 	fmt.Fprintf(&b, "- 失败结果: %d\n", summary.FailedResultCount)
 	fmt.Fprintf(&b, "- 风控命中: %d\n", summary.RiskHitCount)
+	fmt.Fprintf(&b, "- 上传成功协议组: %d\n", summary.UploadSuccessGroups)
 	b.WriteString("\n## 阻塞动作\n\n")
 	if len(summary.BlockedActions) == 0 {
 		b.WriteString("- 当前没有需要人工处理的阻塞动作。\n")

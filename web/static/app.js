@@ -2758,6 +2758,7 @@ function renderStatus() {
   const acceptedSmokeGroups = providerSmokeMatrix.filter((item) => item?.accepted).length;
   const inProgressSmokeGroups = providerSmokeMatrix.filter((item) => item?.acceptanceStatus === "in_progress").length;
   const pendingSmokeGroups = providerSmokeMatrix.filter((item) => item?.acceptanceStatus === "pending").length;
+  const uploadSuccessSmokeGroups = providerSmokeMatrix.filter((item) => item?.hasUploadSuccessSample).length;
   syncAutoRecoverProtocolGroups();
   syncAutoRecoverProfiles();
   syncAutoRecoverBlockedActions();
@@ -2784,6 +2785,7 @@ function renderStatus() {
     <div class="metric"><span>Accepted Groups</span><strong>${acceptedSmokeGroups}</strong></div>
     <div class="metric"><span>In Progress</span><strong>${inProgressSmokeGroups}</strong></div>
     <div class="metric"><span>Pending Groups</span><strong>${pendingSmokeGroups}</strong></div>
+    <div class="metric"><span>Upload Success Groups</span><strong>${stringifyValue(evidence.uploadSuccessGroups, String(uploadSuccessSmokeGroups))}</strong></div>
   `;
   $("#blocked-actions-summary").innerHTML = renderBlockedActionsSummary(evidence.blockedActions || []);
   wireBlockedActionsSummary();

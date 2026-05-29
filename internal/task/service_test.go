@@ -6987,6 +6987,25 @@ func TestServiceProviderSmokeMatrixTracksUploadSuccessSample(t *testing.T) {
 	if matrix[0].UploadSuccessCount != 1 {
 		t.Fatalf("expected upload success count 1 in smoke matrix, got %d", matrix[0].UploadSuccessCount)
 	}
+
+	evidence, err := svc.RuntimeEvidence(ctx)
+	if err != nil {
+		t.Fatalf("RuntimeEvidence() error = %v", err)
+	}
+	if evidence.UploadSuccessGroups != 1 {
+		t.Fatalf("expected runtime upload success groups 1, got %d", evidence.UploadSuccessGroups)
+	}
+
+	report, err := svc.EvidenceReport(ctx)
+	if err != nil {
+		t.Fatalf("EvidenceReport() error = %v", err)
+	}
+	if report.Summary.UploadSuccessGroups != 1 {
+		t.Fatalf("expected report upload success groups 1, got %d", report.Summary.UploadSuccessGroups)
+	}
+	if !strings.Contains(report.Markdown, "上传成功协议组: 1") {
+		t.Fatalf("expected upload success groups line in report markdown, got %s", report.Markdown)
+	}
 }
 
 func TestRecoverBudgetsPreferPlannerMetadataAndFallback(t *testing.T) {

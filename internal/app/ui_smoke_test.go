@@ -183,6 +183,7 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 		chromedp.SetValue(`#provider-smoke-operations`, "ValidateAuth,List,Metadata,Upload", chromedp.ByID),
 		chromedp.Click(`#save-provider-smoke`, chromedp.ByID),
 		waitForText(`#evidence-summary`, "Accepted Groups"),
+		waitForText(`#evidence-summary`, "Upload Success Groups"),
 		waitForText(`#provider-smoke-summary`, "aliyun_123_open"),
 		waitForText(`#provider-smoke-matrix`, "accepted"),
 		waitForText(`#provider-smoke-matrix`, "aliyun_123_open"),
