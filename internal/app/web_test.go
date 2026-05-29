@@ -68,6 +68,9 @@ func TestHandleIndexServesHTML(t *testing.T) {
 	if !strings.Contains(body, `id="auto-recover-last-result-summary"`) {
 		t.Fatalf("expected auto recover result summary in html body, got %q", body)
 	}
+	if !strings.Contains(body, `id="auto-recover-last-result-detail"`) {
+		t.Fatalf("expected auto recover result detail in html body, got %q", body)
+	}
 	if !strings.Contains(body, `id="risk-max-concurrent"`) {
 		t.Fatalf("expected risk concurrency input in html body, got %q", body)
 	}

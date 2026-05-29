@@ -42,6 +42,7 @@
 - 当前 `/api/tasks/recover` 也支持额外带 `profileId`，可把后台补传进一步精准约束到某个授权档案
 - 当前 `/api/tasks/recover` 也支持额外带 `protocolGroup`，可把后台补传进一步压缩到某个协议族，便于协议族级排障或联调分批
 - 当前 `/api/tasks/recover` 还支持 `dryRun=true` 预演本轮会放行多少、会被哪些预算或等待态挡住，便于先试算再真正执行
+- 当前 `/api/tasks/recover` 的返回里还会附带 `decisions` 决策明细，直接列出样本任务 / provider / profile / path / recoverState / outcome / message，方便联调时定位到底是哪一层预算或等待条件拦住了它
 - 当前 `/api/tasks/recover` 还支持额外带 `limitPerProtocolGroup / limitPerProvider / limitPerProfile`，可把同一轮放行预算进一步压到协议族级、provider 级或账号级
   - 当前同优先级档位下的后台补传候选会先按 provider 轮转，再在同 provider 内按授权档案轮转，避免同一个账号长时间独占当前批次
   - 当前如果任务本身已经满足自动补传条件，但不在 `autoRetryStartHour / autoRetryEndHour` 时间窗内，也会被显式标记为 `wait_for_retry_window`，并继续留在候选池里等待下一个允许时间点
@@ -523,6 +524,7 @@
 - 候选池现在还会额外拆出“可立即执行 / 等冷却 / 等时间窗 / 其它等待”四类任务数，避免看到候选后却不知道为什么此刻没有真正开始跑
 - 自动补传候选池现在还能直接按主重试类型、主阻塞动作或 lane 级口径一键聚焦与执行，减少手动回填筛选条件
 - 状态页当前还新增了“预演当前筛选”和 lane 级“预演该 lane”入口，可直接复用当前筛选或建议预算先做 dry-run 试算
+- 状态页现在还会把最近一次预演或执行的 `decisions` 逐条列出来，便于直接看见是哪些任务已放行，哪些任务被 `limit / providerBudget / profileBudget / retryWindow / cooldown` 等口径挡住
 - 状态页手动放行还可直接按 `recoverState` 先收敛到“只放行当前能跑的 / 只看等冷却 / 只看等时间窗 / 只看其它等待”，也可继续填写 `limit / limitPerMode / limitPerLane / limitPerProtocolGroup / limitPerProvider / limitPerProfile`
   - 对当前命中但暂时不能执行的候选，状态页放行结果也会显式区分 cooldownWait / retryWindowWait / blocked，不再把这类跳过静默吞掉
     - 便于把补传节奏同时控制在“小批次 + 模式分流 + lane 分流 + 多账号轮转”

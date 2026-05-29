@@ -350,6 +350,23 @@ Invoke-RestMethod `
   -ContentType "application/json" | ConvertTo-Json -Depth 12
 ```
 
+后台补传预演示例：
+
+```powershell
+Invoke-RestMethod `
+  -Method Post `
+  -Uri "$base/api/tasks/recover" `
+  -Body (@{
+    mode        = "retry_queue_auto_retry"
+    protocolGroup = "aliyun_123_open"
+    limit       = 3
+    limitPerProvider = 1
+    limitPerProfile  = 1
+    dryRun      = $true
+  } | ConvertTo-Json -Depth 8) `
+  -ContentType "application/json" | ConvertTo-Json -Depth 12
+```
+
 按当前筛选结果只放行多棵子树示例：
 
 ```powershell
@@ -388,7 +405,10 @@ Invoke-RestMethod `
 - `matchedCount`
   - 当前筛选命中的后台补传候选数量
 - `recoveredCount`
-  - 本轮实际成功接管并重跑的任务数量
+  - 正式执行时表示本轮实际成功接管并重跑的任务数量
+  - `dryRun=true` 时表示“在当前筛选与预算下可放行”的任务数量
+- `dryRun`
+  - `true` 表示这次只是预演，没有真正改任务状态或触发运行
 - `skippedByLimit`
   - 因为本轮 `limit` 被保留到下一轮的候选数量
 - `skippedByProviderBudget`
@@ -397,6 +417,22 @@ Invoke-RestMethod `
   - 因为当前授权档案已达到本轮账号预算而被保留到下一轮的候选数量
 - `mode / providerKey / limit / limitPerProvider / limitPerProfile`
   - 便于 UI 和脚本确认本轮到底按什么条件执行
+- `decisions`
+  - 最近一批样本决策明细
+  - 每条会带：
+    - `taskId / providerKey / profileId / path`
+    - `mode / protocolGroup / retryClass / blockedAction / recoverState`
+    - `outcome`
+    - `message`
+  - 常见 `outcome`：
+    - `dry_run_recoverable`
+    - `recovered`
+    - `skipped_limit`
+    - `skipped_provider_budget`
+    - `skipped_profile_budget`
+    - `waiting_cooldown`
+    - `waiting_retry_window`
+    - `blocked`
 - `taskId / retryClass / blockedAction / path / scope`
   - 便于确认本轮是否只放行了某种失败类型、某个阻塞动作，或某一棵指定子树
 - `profileId`

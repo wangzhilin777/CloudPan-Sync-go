@@ -2723,6 +2723,7 @@ function renderStatus() {
   );
   $("#auto-recover-budget-summary").textContent = renderAutoRecoverBudgetSummary(autoRetryPolicy);
   $("#auto-recover-last-result-summary").textContent = renderAutoRecoverLastResultSummary();
+  $("#auto-recover-last-result-detail").innerHTML = renderAutoRecoverLastResultDetail();
   $("#auto-recover-summary").innerHTML = renderAutoRecoverSummary(evidence.autoRecoverPool || []);
   wireAutoRecoverSummary();
   $("#protocol-coverage-summary").innerHTML = renderProtocolCoverageSummary(protocolCoverage);
@@ -2937,6 +2938,38 @@ function renderAutoRecoverLastResultSummary() {
   const label = result.dryRun ? "最近预演" : "最近执行";
   const recoveredLabel = result.dryRun ? "可放行" : "recovered";
   return `${label}：matched ${stringifyValue(result.matchedCount, "0")} / ${recoveredLabel} ${stringifyValue(result.recoveredCount, "0")} / limit ${stringifyValue(result.skippedByLimit, "0")} / modeBudget ${stringifyValue(result.skippedByModeBudget, "0")} / laneBudget ${stringifyValue(result.skippedByLaneBudget, "0")} / protocolGroupBudget ${stringifyValue(result.skippedByProtocolGroupBudget, "0")} / providerBudget ${stringifyValue(result.skippedByProviderBudget, "0")} / profileBudget ${stringifyValue(result.skippedByProfileBudget, "0")} / cooldownWait ${stringifyValue(result.skippedByCooldownWait, "0")} / retryWindowWait ${stringifyValue(result.skippedByRetryWindowWait, "0")} / blocked ${stringifyValue(result.skippedByBlockedReason, "0")}`;
+}
+
+function renderAutoRecoverLastResultDetail() {
+  const result = state.autoRecoverLastResult;
+  const decisions = Array.isArray(result?.decisions) ? result.decisions : [];
+  if (!decisions.length) {
+    return `<div class="directory-empty">最近一次后台补传预演或执行暂无决策明细。</div>`;
+  }
+  return decisions
+    .map(
+      (item) => `
+        <div class="directory-row tree-node">
+          <div class="directory-row-header">
+            <strong>${escapeHTML(stringifyValue(item.outcome, "-"))}</strong>
+            <code>${escapeHTML(stringifyValue(item.taskId, "-"))}</code>
+          </div>
+          <div class="directory-metrics">
+            <span class="pill">provider ${escapeHTML(stringifyValue(item.providerKey, "-"))}</span>
+            <span class="pill">profile ${escapeHTML(stringifyValue(item.profileId, "-"))}</span>
+            <span class="pill">mode ${escapeHTML(stringifyValue(item.mode, "-"))}</span>
+            <span class="pill">state ${escapeHTML(stringifyValue(item.recoverState, "-"))}</span>
+            <span class="pill">group budget ${escapeHTML(stringifyValue(item.suggestedProtocolGroupBudget, "-"))}</span>
+            <span class="pill">provider budget ${escapeHTML(stringifyValue(item.suggestedProviderBudget, "-"))}</span>
+            <span class="pill">profile budget ${escapeHTML(stringifyValue(item.suggestedProfileBudget, "-"))}</span>
+          </div>
+          <div class="muted">path: <code>${escapeHTML(stringifyValue(item.path, "-"))}</code> / protocolGroup: <code>${escapeHTML(stringifyValue(item.protocolGroup, "-"))}</code></div>
+          <div class="muted">retryClass: <code>${escapeHTML(stringifyValue(item.retryClass, "-"))}</code> / blockedAction: <code>${escapeHTML(stringifyValue(item.blockedAction, "-"))}</code> / nextRetryAt: <code>${escapeHTML(stringifyValue(item.nextRetryAt, "-"))}</code></div>
+          <div class="muted">${escapeHTML(stringifyValue(item.message, "-"))}</div>
+        </div>
+      `,
+    )
+    .join("");
 }
 
 function renderAutoRecoverFilterSummary(visibleItems, allItems) {
@@ -3852,6 +3885,7 @@ async function triggerAutoRecover(options = {}) {
   state.autoRecoverLastResult = result;
   if (dryRun) {
     $("#auto-recover-last-result-summary").textContent = renderAutoRecoverLastResultSummary();
+    $("#auto-recover-last-result-detail").innerHTML = renderAutoRecoverLastResultDetail();
     showFlash(
       `后台补传预演完成：matched ${stringifyValue(result.matchedCount, "0")} / 可放行 ${stringifyValue(result.recoveredCount, "0")} / providerBudget ${stringifyValue(result.skippedByProviderBudget, "0")} / profileBudget ${stringifyValue(result.skippedByProfileBudget, "0")}`,
     );

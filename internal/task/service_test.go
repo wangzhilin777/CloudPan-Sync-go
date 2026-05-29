@@ -3476,6 +3476,9 @@ func TestServiceRecoverBlockedTasksWithOptionsDryRunDoesNotMutateTasks(t *testin
 	if !preview.DryRun || preview.MatchedCount != 1 || preview.RecoveredCount != 1 {
 		t.Fatalf("unexpected dry run preview result: %#v", preview)
 	}
+	if len(preview.Decisions) == 0 || preview.Decisions[0].Outcome != "dry_run_recoverable" {
+		t.Fatalf("expected dry run decisions, got %#v", preview.Decisions)
+	}
 	if uploadCalls != 1 {
 		t.Fatalf("expected dry run not to trigger extra upload, got %d", uploadCalls)
 	}
@@ -3500,6 +3503,9 @@ func TestServiceRecoverBlockedTasksWithOptionsDryRunDoesNotMutateTasks(t *testin
 	}
 	if executed.DryRun || executed.RecoveredCount != 1 {
 		t.Fatalf("unexpected execute recover result: %#v", executed)
+	}
+	if len(executed.Decisions) == 0 || executed.Decisions[0].Outcome != "recovered" {
+		t.Fatalf("expected execute decisions, got %#v", executed.Decisions)
 	}
 	if uploadCalls != 2 {
 		t.Fatalf("expected execute to trigger second upload, got %d", uploadCalls)

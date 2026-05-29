@@ -1173,6 +1173,11 @@ func TestAppRecoverTasksEndpointDryRunDoesNotMutateTask(t *testing.T) {
 	if got, _ := previewData["dryRun"].(bool); !got {
 		t.Fatalf("expected dryRun true, got %#v", previewData["dryRun"])
 	}
+	if decisions, ok := previewData["decisions"].([]interface{}); !ok || len(decisions) == 0 {
+		t.Fatalf("expected preview decisions, got %#v", previewData["decisions"])
+	} else if got := decisions[0].(map[string]interface{})["outcome"].(string); got != "dry_run_recoverable" {
+		t.Fatalf("expected preview outcome dry_run_recoverable, got %s", got)
+	}
 	if got := int(previewData["matchedCount"].(float64)); got != 1 {
 		t.Fatalf("expected matchedCount 1, got %d", got)
 	}
@@ -1196,6 +1201,11 @@ func TestAppRecoverTasksEndpointDryRunDoesNotMutateTask(t *testing.T) {
 	recoverData := recoverResp.Data.(map[string]interface{})
 	if got, _ := recoverData["dryRun"].(bool); got {
 		t.Fatalf("expected dryRun false for execute, got %#v", recoverData["dryRun"])
+	}
+	if decisions, ok := recoverData["decisions"].([]interface{}); !ok || len(decisions) == 0 {
+		t.Fatalf("expected execute decisions, got %#v", recoverData["decisions"])
+	} else if got := decisions[0].(map[string]interface{})["outcome"].(string); got != "recovered" {
+		t.Fatalf("expected execute outcome recovered, got %s", got)
 	}
 	if got := int(recoverData["recoveredCount"].(float64)); got != 1 {
 		t.Fatalf("expected recoveredCount 1, got %d", got)
