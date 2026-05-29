@@ -4371,6 +4371,7 @@ function renderProviderSmokeMatrix(items) {
           </div>
           <div class="directory-metrics">
             <span class="pill">smoke ${stringifyValue(item.smokeCount, "0")}</span>
+            <span class="pill">upload-smoke ${item.hasUploadSuccessSample ? "ready" : "pending"}</span>
             <span class="pill">coverage ${stringifyValue(item.coverageRealSuccessTaskCount, "0")}/${stringifyValue(item.coverageTaskCount, "0")}</span>
             <span class="pill">${item.accepted ? "accepted" : item.acceptanceStatus || "pending"}</span>
           </div>

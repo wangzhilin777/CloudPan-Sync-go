@@ -37,6 +37,7 @@
   - 当前也已支持按 `blockedAction` 做历史阻塞原因口径的精准筛选与手动放行
   - 当前混合失败队列的后台补传候选也已进入统一优先级排序：会综合 `mode / primaryRetryClass / primaryBlockedAction / nextRetryAt` 做稳定拆批
 - 当前状态页候选池已可直接按 `protocolGroup / recoverState / primaryRetryClass / primaryBlockedAction / lane(mode + class + action)` 一键聚焦或放行
+- 当前真实样本矩阵除了区分 `accepted / in_progress / pending`，还会单独标记协议组是否已经具备“真实上传成功样本”，避免把 `browse_only` 成功和真实上传成功混成一类
 - 当前 `/api/tasks/recover` 也已支持按 `path/paths + scope` 只放行一棵或多棵子树，便于和叶子目录优先排障结合使用
 - 当前 `/api/tasks/recover` 还支持额外带 `taskId`，可把后台补传精准约束到单个任务样本，避免状态页排障时误打到同 provider 的其它任务
 - 当前 `/api/tasks/recover` 也支持额外带 `profileId`，可把后台补传进一步精准约束到某个授权档案

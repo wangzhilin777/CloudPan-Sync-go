@@ -517,6 +517,9 @@ func TestAppWorkflowMainline(t *testing.T) {
 	if got := smokeSummary[0].(map[string]interface{})["hasRealSuccessSample"].(bool); !got {
 		t.Fatal("expected smoke summary hasRealSuccessSample true")
 	}
+	if got := smokeSummary[0].(map[string]interface{})["hasUploadSuccessSample"].(bool); got {
+		t.Fatal("expected browse-only smoke summary hasUploadSuccessSample false")
+	}
 
 	smokeMatrixResp := invokeJSON(t, handler, http.MethodGet, "/api/provider-smokes/matrix", nil)
 	smokeMatrix := smokeMatrixResp.Data.(map[string]interface{})["items"].([]interface{})
@@ -528,6 +531,9 @@ func TestAppWorkflowMainline(t *testing.T) {
 	}
 	if got := smokeMatrix[0].(map[string]interface{})["coverageRealSuccessTaskCount"].(float64); got == 0 {
 		t.Fatal("expected smoke matrix coverageRealSuccessTaskCount to be non-zero")
+	}
+	if got := smokeMatrix[0].(map[string]interface{})["hasUploadSuccessSample"].(bool); got {
+		t.Fatal("expected browse-only smoke matrix hasUploadSuccessSample false")
 	}
 	if got := smokeMatrix[0].(map[string]interface{})["acceptanceStatus"].(string); got != "accepted" {
 		t.Fatalf("expected smoke matrix acceptanceStatus accepted, got %s", got)

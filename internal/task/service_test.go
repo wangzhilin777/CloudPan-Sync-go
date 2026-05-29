@@ -6903,6 +6903,9 @@ func TestServiceProviderSmokeRecords(t *testing.T) {
 	if !summary[0].HasRealSuccessSample {
 		t.Fatal("expected smoke summary success sample")
 	}
+	if summary[0].HasUploadSuccessSample {
+		t.Fatal("expected browse-only smoke summary to keep upload success false")
+	}
 	if summary[0].SampleCategory != "browse_only" {
 		t.Fatalf("expected smoke summary sample category browse_only, got %s", summary[0].SampleCategory)
 	}
@@ -6917,6 +6920,9 @@ func TestServiceProviderSmokeRecords(t *testing.T) {
 	if matrix[0].AcceptanceStatus != "in_progress" {
 		t.Fatalf("expected smoke matrix in_progress status, got %s", matrix[0].AcceptanceStatus)
 	}
+	if matrix[0].HasUploadSuccessSample {
+		t.Fatal("expected browse-only smoke matrix to keep upload success false")
+	}
 	if len(matrix[0].AcceptanceMissing) == 0 {
 		t.Fatal("expected smoke matrix missing reasons")
 	}
@@ -6925,6 +6931,55 @@ func TestServiceProviderSmokeRecords(t *testing.T) {
 	}
 	if !strings.Contains(matrix[0].AcceptanceAdvice, "真实任务覆盖样本") {
 		t.Fatalf("expected advice to mention task coverage, got %s", matrix[0].AcceptanceAdvice)
+	}
+}
+
+func TestServiceProviderSmokeMatrixTracksUploadSuccessSample(t *testing.T) {
+	ctx := context.Background()
+	store, err := sqlitestore.New(ctx, filepath.Join(t.TempDir(), "provider-smoke-upload.db"))
+	if err != nil {
+		t.Fatalf("new store: %v", err)
+	}
+	defer func() { _ = store.Close() }()
+
+	registry := provider.NewRegistry(provider.DefaultCatalog()...)
+	authSvc := auth.NewService(store, registry)
+	svc := NewService(store, registry, authSvc)
+
+	_, err = svc.SaveProviderSmokeRecord(ctx, ProviderSmokeRecord{
+		ProviderKey:   "123_open",
+		ProtocolGroup: "aliyun_123_open",
+		AuthMode:      "manual_token",
+		Category:      "binary_upload_success",
+		Result:        "success",
+		Title:         "123_open 上传 smoke",
+		Note:          "Upload success",
+		Operations:    []string{"ValidateAuth", "Upload"},
+	})
+	if err != nil {
+		t.Fatalf("SaveProviderSmokeRecord(upload) error = %v", err)
+	}
+
+	summary, err := svc.ProviderSmokeSummary(ctx)
+	if err != nil {
+		t.Fatalf("ProviderSmokeSummary() error = %v", err)
+	}
+	if len(summary) == 0 {
+		t.Fatal("expected smoke summary")
+	}
+	if !summary[0].HasUploadSuccessSample {
+		t.Fatal("expected upload success sample in smoke summary")
+	}
+
+	matrix, err := svc.ProviderSmokeMatrix(ctx)
+	if err != nil {
+		t.Fatalf("ProviderSmokeMatrix() error = %v", err)
+	}
+	if len(matrix) == 0 {
+		t.Fatal("expected smoke matrix")
+	}
+	if !matrix[0].HasUploadSuccessSample {
+		t.Fatal("expected upload success sample in smoke matrix")
 	}
 }
 
