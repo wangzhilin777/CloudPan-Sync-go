@@ -337,29 +337,30 @@ type blockedActionAccumulator struct {
 }
 
 type autoRecoverLaneAccumulator struct {
-	mode                        string
-	advice                      string
-	taskIDs                     map[string]struct{}
-	providers                   map[string]struct{}
-	profiles                    map[string]struct{}
-	protocolGroups              map[string]struct{}
-	retryClasses                map[string]struct{}
-	blockedActions              map[string]struct{}
-	suggestedProviderBudget     int
-	suggestedProfileBudget      int
-	queueItemCount              int
-	retryableNowCount           int
-	cooldownCount               int
-	runnableTaskCount           int
-	waitingCooldownTaskCount    int
-	waitingRetryWindowTaskCount int
-	waitingOtherTaskCount       int
-	uploadCheckpointEligible    int
-	nextRetryAt                 string
-	sampleTaskID                string
-	sampleProvider              string
-	sampleProtocolGroup         string
-	sampleProfileID             string
+	mode                         string
+	advice                       string
+	taskIDs                      map[string]struct{}
+	providers                    map[string]struct{}
+	profiles                     map[string]struct{}
+	protocolGroups               map[string]struct{}
+	retryClasses                 map[string]struct{}
+	blockedActions               map[string]struct{}
+	suggestedProtocolGroupBudget int
+	suggestedProviderBudget      int
+	suggestedProfileBudget       int
+	queueItemCount               int
+	retryableNowCount            int
+	cooldownCount                int
+	runnableTaskCount            int
+	waitingCooldownTaskCount     int
+	waitingRetryWindowTaskCount  int
+	waitingOtherTaskCount        int
+	uploadCheckpointEligible     int
+	nextRetryAt                  string
+	sampleTaskID                 string
+	sampleProvider               string
+	sampleProtocolGroup          string
+	sampleProfileID              string
 }
 
 func minPositiveBudget(current, next int) int {
@@ -547,6 +548,7 @@ func summarizeAutoRecoverPool(details []Detail, providers []provider.Entry) ([]A
 				acc.retryClasses[retryClass] = struct{}{}
 			}
 		}
+		acc.suggestedProtocolGroupBudget = minPositiveBudget(acc.suggestedProtocolGroupBudget, recoverProtocolGroupBudget(detail))
 		acc.suggestedProviderBudget = minPositiveBudget(acc.suggestedProviderBudget, recoverProviderBudget(detail))
 		acc.suggestedProfileBudget = minPositiveBudget(acc.suggestedProfileBudget, recoverProfileBudget(detail))
 		acc.queueItemCount += len(detail.Runtime.RetryQueue)
@@ -589,32 +591,33 @@ func summarizeAutoRecoverPool(details []Detail, providers []provider.Entry) ([]A
 			sampleProtocolGroup = firstStringValue(protocolGroups)
 		}
 		items = append(items, AutoRecoverLane{
-			Mode:                        acc.mode,
-			Advice:                      acc.advice,
-			TaskCount:                   len(acc.taskIDs),
-			ProviderCount:               len(acc.providers),
-			ProfileCount:                len(acc.profiles),
-			SuggestedProviderBudget:     acc.suggestedProviderBudget,
-			SuggestedProfileBudget:      acc.suggestedProfileBudget,
-			QueueItemCount:              acc.queueItemCount,
-			RetryableNowCount:           acc.retryableNowCount,
-			CooldownCount:               acc.cooldownCount,
-			RunnableTaskCount:           acc.runnableTaskCount,
-			WaitingCooldownTaskCount:    acc.waitingCooldownTaskCount,
-			WaitingRetryWindowTaskCount: acc.waitingRetryWindowTaskCount,
-			WaitingOtherTaskCount:       acc.waitingOtherTaskCount,
-			UploadCheckpointEligible:    acc.uploadCheckpointEligible,
-			ProtocolGroups:              protocolGroups,
-			RetryClasses:                retryClasses,
-			BlockedActions:              blockedActions,
-			ProfileIDs:                  profileIDs,
-			PrimaryRetryClass:           firstStringValue(retryClasses),
-			PrimaryBlockedAction:        firstStringValue(blockedActions),
-			NextRetryAt:                 acc.nextRetryAt,
-			SampleTaskID:                acc.sampleTaskID,
-			SampleProvider:              acc.sampleProvider,
-			SampleProtocolGroup:         sampleProtocolGroup,
-			SampleProfileID:             acc.sampleProfileID,
+			Mode:                         acc.mode,
+			Advice:                       acc.advice,
+			TaskCount:                    len(acc.taskIDs),
+			ProviderCount:                len(acc.providers),
+			ProfileCount:                 len(acc.profiles),
+			SuggestedProtocolGroupBudget: acc.suggestedProtocolGroupBudget,
+			SuggestedProviderBudget:      acc.suggestedProviderBudget,
+			SuggestedProfileBudget:       acc.suggestedProfileBudget,
+			QueueItemCount:               acc.queueItemCount,
+			RetryableNowCount:            acc.retryableNowCount,
+			CooldownCount:                acc.cooldownCount,
+			RunnableTaskCount:            acc.runnableTaskCount,
+			WaitingCooldownTaskCount:     acc.waitingCooldownTaskCount,
+			WaitingRetryWindowTaskCount:  acc.waitingRetryWindowTaskCount,
+			WaitingOtherTaskCount:        acc.waitingOtherTaskCount,
+			UploadCheckpointEligible:     acc.uploadCheckpointEligible,
+			ProtocolGroups:               protocolGroups,
+			RetryClasses:                 retryClasses,
+			BlockedActions:               blockedActions,
+			ProfileIDs:                   profileIDs,
+			PrimaryRetryClass:            firstStringValue(retryClasses),
+			PrimaryBlockedAction:         firstStringValue(blockedActions),
+			NextRetryAt:                  acc.nextRetryAt,
+			SampleTaskID:                 acc.sampleTaskID,
+			SampleProvider:               acc.sampleProvider,
+			SampleProtocolGroup:          sampleProtocolGroup,
+			SampleProfileID:              acc.sampleProfileID,
 		})
 	}
 	sort.SliceStable(items, func(i, j int) bool {

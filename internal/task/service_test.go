@@ -2888,6 +2888,9 @@ func TestServiceAutoRecoverPoolSummaryAndPriority(t *testing.T) {
 	if checkpointLane.TaskCount != 1 || checkpointLane.UploadCheckpointEligible != 1 {
 		t.Fatalf("unexpected checkpoint lane: %#v", checkpointLane)
 	}
+	if checkpointLane.SuggestedProtocolGroupBudget != 1 {
+		t.Fatalf("expected checkpoint lane protocol group budget 1, got %#v", checkpointLane)
+	}
 	if checkpointLane.RunnableTaskCount != 1 || checkpointLane.WaitingCooldownTaskCount != 0 || checkpointLane.WaitingRetryWindowTaskCount != 0 || checkpointLane.WaitingOtherTaskCount != 0 {
 		t.Fatalf("expected checkpoint lane runnable split 1/0/0/0, got %#v", checkpointLane)
 	}

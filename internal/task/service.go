@@ -116,32 +116,33 @@ type EvidenceSummary struct {
 }
 
 type AutoRecoverLane struct {
-	Mode                        string   `json:"mode"`
-	Advice                      string   `json:"advice,omitempty"`
-	TaskCount                   int      `json:"taskCount"`
-	ProviderCount               int      `json:"providerCount"`
-	ProfileCount                int      `json:"profileCount"`
-	SuggestedProviderBudget     int      `json:"suggestedProviderBudget,omitempty"`
-	SuggestedProfileBudget      int      `json:"suggestedProfileBudget,omitempty"`
-	QueueItemCount              int      `json:"queueItemCount"`
-	RetryableNowCount           int      `json:"retryableNowCount"`
-	CooldownCount               int      `json:"cooldownCount"`
-	RunnableTaskCount           int      `json:"runnableTaskCount"`
-	WaitingCooldownTaskCount    int      `json:"waitingCooldownTaskCount"`
-	WaitingRetryWindowTaskCount int      `json:"waitingRetryWindowTaskCount"`
-	WaitingOtherTaskCount       int      `json:"waitingOtherTaskCount"`
-	UploadCheckpointEligible    int      `json:"uploadCheckpointEligible"`
-	ProtocolGroups              []string `json:"protocolGroups,omitempty"`
-	RetryClasses                []string `json:"retryClasses,omitempty"`
-	BlockedActions              []string `json:"blockedActions,omitempty"`
-	ProfileIDs                  []string `json:"profileIds,omitempty"`
-	PrimaryRetryClass           string   `json:"primaryRetryClass,omitempty"`
-	PrimaryBlockedAction        string   `json:"primaryBlockedAction,omitempty"`
-	NextRetryAt                 string   `json:"nextRetryAt,omitempty"`
-	SampleTaskID                string   `json:"sampleTaskId,omitempty"`
-	SampleProvider              string   `json:"sampleProvider,omitempty"`
-	SampleProtocolGroup         string   `json:"sampleProtocolGroup,omitempty"`
-	SampleProfileID             string   `json:"sampleProfileId,omitempty"`
+	Mode                         string   `json:"mode"`
+	Advice                       string   `json:"advice,omitempty"`
+	TaskCount                    int      `json:"taskCount"`
+	ProviderCount                int      `json:"providerCount"`
+	ProfileCount                 int      `json:"profileCount"`
+	SuggestedProtocolGroupBudget int      `json:"suggestedProtocolGroupBudget,omitempty"`
+	SuggestedProviderBudget      int      `json:"suggestedProviderBudget,omitempty"`
+	SuggestedProfileBudget       int      `json:"suggestedProfileBudget,omitempty"`
+	QueueItemCount               int      `json:"queueItemCount"`
+	RetryableNowCount            int      `json:"retryableNowCount"`
+	CooldownCount                int      `json:"cooldownCount"`
+	RunnableTaskCount            int      `json:"runnableTaskCount"`
+	WaitingCooldownTaskCount     int      `json:"waitingCooldownTaskCount"`
+	WaitingRetryWindowTaskCount  int      `json:"waitingRetryWindowTaskCount"`
+	WaitingOtherTaskCount        int      `json:"waitingOtherTaskCount"`
+	UploadCheckpointEligible     int      `json:"uploadCheckpointEligible"`
+	ProtocolGroups               []string `json:"protocolGroups,omitempty"`
+	RetryClasses                 []string `json:"retryClasses,omitempty"`
+	BlockedActions               []string `json:"blockedActions,omitempty"`
+	ProfileIDs                   []string `json:"profileIds,omitempty"`
+	PrimaryRetryClass            string   `json:"primaryRetryClass,omitempty"`
+	PrimaryBlockedAction         string   `json:"primaryBlockedAction,omitempty"`
+	NextRetryAt                  string   `json:"nextRetryAt,omitempty"`
+	SampleTaskID                 string   `json:"sampleTaskId,omitempty"`
+	SampleProvider               string   `json:"sampleProvider,omitempty"`
+	SampleProtocolGroup          string   `json:"sampleProtocolGroup,omitempty"`
+	SampleProfileID              string   `json:"sampleProfileId,omitempty"`
 }
 
 type EvidenceReport struct {
@@ -1326,6 +1327,21 @@ func firstRecoverSelectionPath(paths []string) string {
 		return ""
 	}
 	return normalizeScanPath(paths[0])
+}
+
+func recoverProtocolGroupBudget(detail Detail) int {
+	riskProfile := riskProfileFromMetadata(detail.Plan.Metadata)
+	if riskProfile.MaxConcurrent <= 0 {
+		return 0
+	}
+	if riskProfile.MaxConcurrent <= 2 {
+		return 1
+	}
+	return minInt(riskProfile.MaxConcurrent, 2)
+}
+
+func recoverProtocolGroupBudgetWithOverride(detail Detail, override int) int {
+	return applyRecoverBudgetOverride(recoverProtocolGroupBudget(detail), override)
 }
 
 func recoverProviderBudget(detail Detail) int {

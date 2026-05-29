@@ -155,6 +155,7 @@ CloudPan Sync 的 Go 重构版工作区。
 - 当前还没有接通的是：
   - 更复杂的补传批量选择与筛选
   - 更精细的后台补传策略编排
+- 当前状态页已经可以直接看到后台自动补传的默认五级预算，以及当前手动放行时实际生效的 `group / provider / profile` 预算摘要，便于做协议族级排障和分批联调
 
 ## 快速启动
 
@@ -177,3 +178,4 @@ go build ./...
 - API 主工作流、runtime 场景、provider 契约测试已经在仓库内。
 - 控制台主流程也已加入浏览器级 UI smoke 回归。
 - UI smoke 依赖本机 Chrome 或 Edge；如需手工指定浏览器，可设置环境变量 `CHROMEDP_EXEC_PATH`。
+

@@ -3049,6 +3049,7 @@ function renderAutoRecoverSummary(items) {
             <span class="pill">providers ${stringifyValue(item.providerCount, "0")}</span>
             <span class="pill">profiles ${stringifyValue(item.profileCount, "0")}</span>
             <span class="pill">queue ${stringifyValue(item.queueItemCount, "0")}</span>
+            <span class="pill">group budget ${stringifyValue(item.suggestedProtocolGroupBudget, "-")}</span>
             <span class="pill">provider budget ${stringifyValue(item.suggestedProviderBudget, "-")}</span>
             <span class="pill">profile budget ${stringifyValue(item.suggestedProfileBudget, "-")}</span>
             <span class="pill">ready ${stringifyValue(item.retryableNowCount, "0")}</span>
@@ -3072,7 +3073,7 @@ function renderAutoRecoverSummary(items) {
               : ""
           }
           <div class="muted">可执行态 ${escapeHTML(stringifyValue(item.runnableTaskCount, "0"))} / 等冷却 ${escapeHTML(stringifyValue(item.waitingCooldownTaskCount, "0"))} / 等时间窗 ${escapeHTML(stringifyValue(item.waitingRetryWindowTaskCount, "0"))} / 其它等待 ${escapeHTML(stringifyValue(item.waitingOtherTaskCount, "0"))}。</div>
-          <div class="muted">同档位会先按 provider 轮转，再在同 provider 内按授权档案轮转；默认建议 provider 预算 <code>${escapeHTML(stringifyValue(item.suggestedProviderBudget, "-"))}</code> / profile 预算 <code>${escapeHTML(stringifyValue(item.suggestedProfileBudget, "-"))}</code>。</div>
+          <div class="muted">同档位会先按协议族、provider 再到授权档案轮转；默认建议 group 预算 <code>${escapeHTML(stringifyValue(item.suggestedProtocolGroupBudget, "-"))}</code> / provider 预算 <code>${escapeHTML(stringifyValue(item.suggestedProviderBudget, "-"))}</code> / profile 预算 <code>${escapeHTML(stringifyValue(item.suggestedProfileBudget, "-"))}</code>。</div>
           <div class="muted">协议族：${escapeHTML((item.protocolGroups || []).join(", ") || stringifyValue(item.sampleProtocolGroup, "-"))}</div>
           <div class="muted">${escapeHTML(stringifyValue(item.advice, "-"))}</div>
           <div class="actions compact">
@@ -4976,5 +4977,4 @@ async function init() {
 }
 
 window.addEventListener("DOMContentLoaded", init);
-
 
