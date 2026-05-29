@@ -122,7 +122,13 @@ func (a *App) runAutoRetryScheduler(ctx context.Context) {
 }
 
 func (a *App) runAutoRetryOnce(ctx context.Context, reason string) {
-	result, err := a.recoverBlockedTasks(ctx, task.RecoverOptions{Limit: a.cfg.AutoRetryBatchLimit})
+	result, err := a.recoverBlockedTasks(ctx, task.RecoverOptions{
+		Limit:                 a.cfg.AutoRetryBatchLimit,
+		LimitPerMode:          a.cfg.AutoRetryLimitPerMode,
+		LimitPerProtocolGroup: a.cfg.AutoRetryLimitPerProtocolGroup,
+		LimitPerProvider:      a.cfg.AutoRetryLimitPerProvider,
+		LimitPerProfile:       a.cfg.AutoRetryLimitPerProfile,
+	})
 	if err != nil {
 		a.logger.Warn("auto retry recovery failed", "reason", reason, "error", err)
 		return
@@ -134,7 +140,15 @@ func (a *App) runAutoRetryOnce(ctx context.Context, reason string) {
 			"count", result.RecoveredCount,
 			"matched", result.MatchedCount,
 			"skipped_by_limit", result.SkippedByLimit,
+			"skipped_by_mode_budget", result.SkippedByModeBudget,
+			"skipped_by_protocol_group_budget", result.SkippedByProtocolGroupBudget,
+			"skipped_by_provider_budget", result.SkippedByProviderBudget,
+			"skipped_by_profile_budget", result.SkippedByProfileBudget,
 			"limit", result.Limit,
+			"limit_per_mode", result.LimitPerMode,
+			"limit_per_protocol_group", result.LimitPerProtocolGroup,
+			"limit_per_provider", result.LimitPerProvider,
+			"limit_per_profile", result.LimitPerProfile,
 		)
 	}
 }
