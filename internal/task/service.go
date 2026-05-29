@@ -1536,58 +1536,93 @@ func interleaveRecoverCandidateBand(candidates []recoverCandidate) []recoverCand
 	if len(candidates) <= 2 {
 		return candidates
 	}
-	providerOrder := make([]string, 0)
-	providerQueues := make(map[string]map[string][]recoverCandidate)
-	profileOrders := make(map[string][]string)
-	profileCursor := make(map[string]int)
+	type providerGroupQueues struct {
+		providerOrder  []string
+		providerQueues map[string]map[string][]recoverCandidate
+		profileOrders  map[string][]string
+		profileCursor  map[string]int
+		providerCursor int
+	}
+
+	protocolGroupOrder := make([]string, 0)
+	protocolGroupQueues := make(map[string]*providerGroupQueues)
 	for _, candidate := range candidates {
+		protocolGroup := recoverProtocolGroupBudgetKey(candidate.ProtocolGroup)
 		providerKey := strings.TrimSpace(candidate.Detail.Task.TargetProvider)
 		if providerKey == "" {
 			providerKey = "_unknown"
 		}
-		profileID := strings.TrimSpace(candidate.Detail.TargetProfileID)
-		if profileID == "" {
-			profileID = "_unknown_profile"
+		profileID := normalizedRecoverProfileID(candidate.Detail.TargetProfileID)
+		groupQueues, ok := protocolGroupQueues[protocolGroup]
+		if !ok {
+			groupQueues = &providerGroupQueues{
+				providerQueues: make(map[string]map[string][]recoverCandidate),
+				profileOrders:  make(map[string][]string),
+				profileCursor:  make(map[string]int),
+			}
+			protocolGroupQueues[protocolGroup] = groupQueues
+			protocolGroupOrder = append(protocolGroupOrder, protocolGroup)
 		}
-		if _, ok := providerQueues[providerKey]; !ok {
-			providerOrder = append(providerOrder, providerKey)
-			providerQueues[providerKey] = make(map[string][]recoverCandidate)
+		if _, ok := groupQueues.providerQueues[providerKey]; !ok {
+			groupQueues.providerOrder = append(groupQueues.providerOrder, providerKey)
+			groupQueues.providerQueues[providerKey] = make(map[string][]recoverCandidate)
 		}
-		if _, ok := providerQueues[providerKey][profileID]; !ok {
-			profileOrders[providerKey] = append(profileOrders[providerKey], profileID)
+		if _, ok := groupQueues.providerQueues[providerKey][profileID]; !ok {
+			groupQueues.profileOrders[providerKey] = append(groupQueues.profileOrders[providerKey], profileID)
 		}
-		providerQueues[providerKey][profileID] = append(providerQueues[providerKey][profileID], candidate)
+		groupQueues.providerQueues[providerKey][profileID] = append(groupQueues.providerQueues[providerKey][profileID], candidate)
 	}
-	if len(providerOrder) == 0 {
+	if len(protocolGroupOrder) == 0 {
 		return candidates
 	}
-	if len(providerOrder) == 1 {
-		singleProvider := providerOrder[0]
-		if len(profileOrders[singleProvider]) <= 1 {
-			return candidates
+	if len(protocolGroupOrder) == 1 {
+		singleGroup := protocolGroupQueues[protocolGroupOrder[0]]
+		if len(singleGroup.providerOrder) == 1 {
+			singleProvider := singleGroup.providerOrder[0]
+			if len(singleGroup.profileOrders[singleProvider]) <= 1 {
+				return candidates
+			}
 		}
 	}
-	result := make([]recoverCandidate, 0, len(candidates))
-	for {
-		progressed := false
-		for _, providerKey := range providerOrder {
-			profiles := profileOrders[providerKey]
+
+	nextCandidateForGroup := func(groupQueues *providerGroupQueues) (recoverCandidate, bool) {
+		if groupQueues == nil || len(groupQueues.providerOrder) == 0 {
+			return recoverCandidate{}, false
+		}
+		startProvider := groupQueues.providerCursor % len(groupQueues.providerOrder)
+		for providerOffset := 0; providerOffset < len(groupQueues.providerOrder); providerOffset++ {
+			providerKey := groupQueues.providerOrder[(startProvider+providerOffset)%len(groupQueues.providerOrder)]
+			profiles := groupQueues.profileOrders[providerKey]
 			if len(profiles) == 0 {
 				continue
 			}
-			start := profileCursor[providerKey] % len(profiles)
-			for offset := 0; offset < len(profiles); offset++ {
-				profileID := profiles[(start+offset)%len(profiles)]
-				queue := providerQueues[providerKey][profileID]
+			startProfile := groupQueues.profileCursor[providerKey] % len(profiles)
+			for profileOffset := 0; profileOffset < len(profiles); profileOffset++ {
+				profileID := profiles[(startProfile+profileOffset)%len(profiles)]
+				queue := groupQueues.providerQueues[providerKey][profileID]
 				if len(queue) == 0 {
 					continue
 				}
-				result = append(result, queue[0])
-				providerQueues[providerKey][profileID] = queue[1:]
-				profileCursor[providerKey] = (start + offset + 1) % len(profiles)
-				progressed = true
-				break
+				candidate := queue[0]
+				groupQueues.providerQueues[providerKey][profileID] = queue[1:]
+				groupQueues.profileCursor[providerKey] = (startProfile + profileOffset + 1) % len(profiles)
+				groupQueues.providerCursor = (startProvider + providerOffset + 1) % len(groupQueues.providerOrder)
+				return candidate, true
 			}
+		}
+		return recoverCandidate{}, false
+	}
+
+	result := make([]recoverCandidate, 0, len(candidates))
+	for {
+		progressed := false
+		for _, protocolGroup := range protocolGroupOrder {
+			candidate, ok := nextCandidateForGroup(protocolGroupQueues[protocolGroup])
+			if !ok {
+				continue
+			}
+			result = append(result, candidate)
+			progressed = true
 		}
 		if !progressed {
 			break

@@ -44,7 +44,7 @@
 - 当前 `/api/tasks/recover` 还支持 `dryRun=true` 预演本轮会放行多少、会被哪些预算或等待态挡住，便于先试算再真正执行
 - 当前 `/api/tasks/recover` 的返回里还会附带 `decisions` 决策明细，直接列出样本任务 / provider / profile / path / recoverState / outcome / message，方便联调时定位到底是哪一层预算或等待条件拦住了它
 - 当前 `/api/tasks/recover` 还支持额外带 `limitPerProtocolGroup / limitPerProvider / limitPerProfile`，可把同一轮放行预算进一步压到协议族级、provider 级或账号级
-  - 当前同优先级档位下的后台补传候选会先按 provider 轮转，再在同 provider 内按授权档案轮转，避免同一个账号长时间独占当前批次
+  - 当前同优先级档位下的后台补传候选会先按协议族轮转，再在协议族内部按 provider 轮转，最后在同 provider 内按授权档案轮转，避免单一协议族或单一账号长时间独占当前批次
   - 当前如果任务本身已经满足自动补传条件，但不在 `autoRetryStartHour / autoRetryEndHour` 时间窗内，也会被显式标记为 `wait_for_retry_window`，并继续留在候选池里等待下一个允许时间点
 
 ## 先用业务语言理解当前规则
