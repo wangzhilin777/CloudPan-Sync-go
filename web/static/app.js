@@ -2720,6 +2720,7 @@ function renderStatus() {
     filterAutoRecoverItems(evidence.autoRecoverPool || []),
     evidence.autoRecoverPool || [],
   );
+  $("#auto-recover-budget-summary").textContent = renderAutoRecoverBudgetSummary(autoRetryPolicy);
   $("#auto-recover-summary").innerHTML = renderAutoRecoverSummary(evidence.autoRecoverPool || []);
   wireAutoRecoverSummary();
   $("#protocol-coverage-summary").innerHTML = renderProtocolCoverageSummary(protocolCoverage);
@@ -2902,6 +2903,28 @@ function filterAutoRecoverItems(items, filters = state.autoRecoverFilters) {
     }
     return true;
   });
+}
+
+function renderAutoRecoverBudgetSummary(autoRetryPolicy) {
+  const applied = [];
+  const limit = String(state.autoRecoverFilters.limit || "").trim();
+  const limitPerMode = String(state.autoRecoverFilters.limitPerMode || "").trim();
+  const limitPerLane = String(state.autoRecoverFilters.limitPerLane || "").trim();
+  const limitPerProtocolGroup = String(state.autoRecoverFilters.limitPerProtocolGroup || "").trim();
+  const limitPerProvider = String(state.autoRecoverFilters.limitPerProvider || "").trim();
+  const limitPerProfile = String(state.autoRecoverFilters.limitPerProfile || "").trim();
+  if (limit) {
+    applied.push(`batch ${limit}`);
+  }
+  applied.push(`mode ${limitPerMode || stringifyValue(autoRetryPolicy.limitPerMode, "-")}`);
+  applied.push(`lane ${limitPerLane || stringifyValue(autoRetryPolicy.limitPerLane, "-")}`);
+  applied.push(`group ${limitPerProtocolGroup || stringifyValue(autoRetryPolicy.limitPerProtocolGroup, "-")}`);
+  applied.push(`provider ${limitPerProvider || stringifyValue(autoRetryPolicy.limitPerProvider, "-")}`);
+  applied.push(`profile ${limitPerProfile || stringifyValue(autoRetryPolicy.limitPerProfile, "-")}`);
+  const source = limit || limitPerMode || limitPerLane || limitPerProtocolGroup || limitPerProvider || limitPerProfile
+    ? "当前手动放行预算"
+    : "当前生效预算（默认）";
+  return `${source}：${applied.join(" / ")}`;
 }
 
 function renderAutoRecoverFilterSummary(visibleItems, allItems) {
@@ -4558,6 +4581,7 @@ function wireStatus() {
       filterAutoRecoverItems(state.evidence?.autoRecoverPool || []),
       state.evidence?.autoRecoverPool || [],
     );
+    $("#auto-recover-budget-summary").textContent = renderAutoRecoverBudgetSummary(state.evidence?.autoRetryPolicy || {});
   });
   $("#auto-recover-limit-per-mode").addEventListener("input", () => {
     state.autoRecoverFilters.limitPerMode = $("#auto-recover-limit-per-mode").value.trim();
@@ -4565,6 +4589,7 @@ function wireStatus() {
       filterAutoRecoverItems(state.evidence?.autoRecoverPool || []),
       state.evidence?.autoRecoverPool || [],
     );
+    $("#auto-recover-budget-summary").textContent = renderAutoRecoverBudgetSummary(state.evidence?.autoRetryPolicy || {});
   });
   $("#auto-recover-limit-per-lane").addEventListener("input", () => {
     state.autoRecoverFilters.limitPerLane = $("#auto-recover-limit-per-lane").value.trim();
@@ -4572,6 +4597,7 @@ function wireStatus() {
       filterAutoRecoverItems(state.evidence?.autoRecoverPool || []),
       state.evidence?.autoRecoverPool || [],
     );
+    $("#auto-recover-budget-summary").textContent = renderAutoRecoverBudgetSummary(state.evidence?.autoRetryPolicy || {});
   });
   $("#auto-recover-limit-per-protocol-group").addEventListener("input", () => {
     state.autoRecoverFilters.limitPerProtocolGroup = $("#auto-recover-limit-per-protocol-group").value.trim();
@@ -4579,6 +4605,7 @@ function wireStatus() {
       filterAutoRecoverItems(state.evidence?.autoRecoverPool || []),
       state.evidence?.autoRecoverPool || [],
     );
+    $("#auto-recover-budget-summary").textContent = renderAutoRecoverBudgetSummary(state.evidence?.autoRetryPolicy || {});
   });
   $("#auto-recover-limit-per-provider").addEventListener("input", () => {
     state.autoRecoverFilters.limitPerProvider = $("#auto-recover-limit-per-provider").value.trim();
@@ -4586,6 +4613,7 @@ function wireStatus() {
       filterAutoRecoverItems(state.evidence?.autoRecoverPool || []),
       state.evidence?.autoRecoverPool || [],
     );
+    $("#auto-recover-budget-summary").textContent = renderAutoRecoverBudgetSummary(state.evidence?.autoRetryPolicy || {});
   });
   $("#auto-recover-limit-per-profile").addEventListener("input", () => {
     state.autoRecoverFilters.limitPerProfile = $("#auto-recover-limit-per-profile").value.trim();
@@ -4593,6 +4621,7 @@ function wireStatus() {
       filterAutoRecoverItems(state.evidence?.autoRecoverPool || []),
       state.evidence?.autoRecoverPool || [],
     );
+    $("#auto-recover-budget-summary").textContent = renderAutoRecoverBudgetSummary(state.evidence?.autoRetryPolicy || {});
   });
   $("#auto-recover-run").addEventListener("click", async () => {
     try {

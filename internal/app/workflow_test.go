@@ -216,6 +216,9 @@ func TestAppWorkflowMainline(t *testing.T) {
 	if got := int(autoRetryPolicy["limitPerLane"].(float64)); got != 1 {
 		t.Fatalf("expected autoRetryPolicy.limitPerLane 1, got %d", got)
 	}
+	if got := int(autoRetryPolicy["limitPerProtocolGroup"].(float64)); got != 1 {
+		t.Fatalf("expected autoRetryPolicy.limitPerProtocolGroup 1, got %d", got)
+	}
 	if got := int(evidenceData["pendingResultCount"].(float64)); got != 1 {
 		t.Fatalf("expected pendingResultCount=1, got %d", got)
 	}
