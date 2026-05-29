@@ -368,6 +368,9 @@ go build ./...
   - `internal/task/service_test.go`
 - provider 契约级测试：
   - `internal/provider/*_test.go`
+  - `internal/provider/catalog_contract_test.go`
+    - 锁定 10 家 provider 的目录注册、协议族分组、全量能力声明
+    - 锁定缺凭证时 `ValidateAuth` 不能误报成功
 
 ## 接手开发时的注意点
 

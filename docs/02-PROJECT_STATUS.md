@@ -122,6 +122,7 @@
 - 当前状态：
   - 协议族和能力面已经统一
   - 各 provider 已能参与 API、planner、task、evidence 全链路
+  - `internal/provider/catalog_contract_test.go` 现已把 10 家 provider 的目录注册、协议族分组、全量能力声明和缺凭证校验锁成统一门禁，避免后续继续落地真实链路时把 v1 契约面改漂
   - `aliyundrive_open` 已接入真实 `ValidateAuth`，并已落地最小目录链路：
     - `List`
     - `Metadata`
