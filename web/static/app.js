@@ -3166,6 +3166,14 @@ function renderAutoRecoverSummary(items) {
             >只看该 lane</button>`
                 : ""
             }
+            <button
+              type="button"
+              class="ghost"
+              data-auto-recover-apply-budgets="1"
+              data-auto-recover-apply-group-budget="${escapeHTML(stringifyValue(item.suggestedProtocolGroupBudget, ""))}"
+              data-auto-recover-apply-provider-budget="${escapeHTML(stringifyValue(item.suggestedProviderBudget, ""))}"
+              data-auto-recover-apply-profile-budget="${escapeHTML(stringifyValue(item.suggestedProfileBudget, ""))}"
+            >采用建议预算</button>
             ${
               Array.isArray(item.blockedActions) && item.blockedActions.length
                 ? `<button
@@ -3634,6 +3642,19 @@ function wireAutoRecoverSummary() {
       const blockedAction = button.dataset.autoRecoverFocusLaneBlockedAction || "";
       applyAutoRecoverFilters({ mode, retryClass, blockedAction });
       showFlash(`已按 lane 收敛后台补传候选：${[mode, retryClass, blockedAction].filter(Boolean).join(" / ")}`);
+    });
+  });
+  wrap.querySelectorAll("[data-auto-recover-apply-budgets]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const limitPerProtocolGroup = button.dataset.autoRecoverApplyGroupBudget || "";
+      const limitPerProvider = button.dataset.autoRecoverApplyProviderBudget || "";
+      const limitPerProfile = button.dataset.autoRecoverApplyProfileBudget || "";
+      applyAutoRecoverFilters({
+        limitPerProtocolGroup,
+        limitPerProvider,
+        limitPerProfile,
+      });
+      showFlash(`已采用建议预算：group ${limitPerProtocolGroup || "-"} / provider ${limitPerProvider || "-"} / profile ${limitPerProfile || "-"}`);
     });
   });
   wrap.querySelectorAll("[data-auto-recover-run-mode]").forEach((button) => {
@@ -4977,4 +4998,3 @@ async function init() {
 }
 
 window.addEventListener("DOMContentLoaded", init);
-
