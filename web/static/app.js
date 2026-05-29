@@ -3925,7 +3925,7 @@ function currentAutoRecoverRequest(dryRun = false) {
     profileId: String($("#auto-recover-profile")?.value || "").trim(),
     retryClass: String($("#auto-recover-retry-class")?.value || "").trim(),
     blockedAction: selectedBlockedAction || autoRecoverBlockedActionFromRecoverState(selectedRecoverState),
-    recoverState: selectedRecoverState === "runnable_now" ? selectedRecoverState : "",
+    recoverState: selectedRecoverState,
     limit: Number.isFinite(limit) && limit > 0 ? limit : 0,
     limitPerMode: Number.isFinite(limitPerMode) && limitPerMode > 0 ? limitPerMode : 0,
     limitPerLane: Number.isFinite(limitPerLane) && limitPerLane > 0 ? limitPerLane : 0,

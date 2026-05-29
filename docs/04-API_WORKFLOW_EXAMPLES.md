@@ -453,6 +453,7 @@ Invoke-RestMethod `
   - 适合在手动放行时明确要求“同一轮最多放行几个 provider 任务 / 同一账号最多放行几个任务”，避免一次性打满风控配额
 - `mode=retry_window_waiting_auto_retry`
   - 适合只查看“已经满足自动补传条件，但还不在允许时间窗内”的候选
+- 当前状态页手动预演/执行后台补传时，也会把 `recoverState` 原样透传给 Go API，不再只对 `runnable_now` 生效。
 - `taskId`
   - 适合把后台补传明确约束在某一个任务样本上，避免同 provider 的其它任务被一起命中
 - `path + scope=selected_retry_subset`

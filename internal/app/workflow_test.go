@@ -1662,6 +1662,120 @@ func TestAppRecoverTasksEndpointFiltersProtocolGroup(t *testing.T) {
 		t.Fatalf("expected /api-group-b.bin upload calls 2, got %d", uploadCallsByPath["/api-group-b.bin"])
 	}
 }
+
+func TestAppRecoverTasksEndpointFiltersWaitingRetryWindowState(t *testing.T) {
+	ctx := context.Background()
+	application := mustNewTestApp(t, ctx)
+
+	uploadCalls := 0
+	adapter := &appScriptedAdapter{
+		meta: provider.Provider{
+			Key:              "recover_waiting_window_api_target",
+			DisplayName:      "Recover Waiting Window API Target",
+			ProtocolGroup:    "recover_waiting_window_group",
+			AuthModes:        []string{"manual_token"},
+			FastUploadInputs: []string{"md5", "size"},
+			FallbackModes:    []string{"download_upload"},
+			Status:           "planned",
+		},
+		capability: provider.CapabilitySet{
+			SupportsAuthValidation: true,
+			SupportsUpload:         true,
+		},
+		uploadFunc: func(req provider.UploadRequest) provider.UploadResult {
+			uploadCalls++
+			return provider.UploadResult{
+				OperationResult: provider.OperationResult{
+					Status:  "rate_limited",
+					Message: "rate limited",
+					Mode:    "fake_rate_limit",
+				},
+			}
+		},
+	}
+
+	registry := provider.NewRegistry(adapter)
+	authSvc := auth.NewService(application.store, registry)
+	taskSvc := task.NewService(application.store, registry, authSvc)
+	application.providers = registry
+	application.auth = authSvc
+	application.tasks = taskSvc
+	handler := application.routes()
+
+	profileResp := invokeJSON(t, handler, http.MethodPost, "/api/auth/profiles", map[string]interface{}{
+		"providerKey": "recover_waiting_window_api_target",
+		"authMode":    "manual_token",
+		"displayName": "Recover Waiting Window API Target",
+		"token":       "token-recover-waiting-window-api",
+	})
+	profileID := profileResp.Data.(map[string]interface{})["id"].(string)
+
+	nowHour := time.Now().UTC().Hour()
+	startHour := (nowHour + 2) % 24
+	endHour := (startHour + 1) % 24
+	if endHour == nowHour {
+		endHour = (endHour + 1) % 24
+	}
+
+	taskResp := invokeJSON(t, handler, http.MethodPost, "/api/tasks", map[string]interface{}{
+		"sourceProvider":  "recover_waiting_window_api_target",
+		"targetProvider":  "recover_waiting_window_api_target",
+		"targetProfileId": profileID,
+		"thresholdMB":     1,
+		"riskOverride": map[string]interface{}{
+			"cooldownSeconds":    0,
+			"autoRetryStartHour": startHour,
+			"autoRetryEndHour":   endHour,
+		},
+		"entries": []map[string]interface{}{
+			{"path": "/waiting-window.bin", "size": 1024, "md5": "waiting-window-md5"},
+		},
+	})
+	taskID := taskResp.Data.(map[string]interface{})["task"].(map[string]interface{})["id"].(string)
+
+	runResp := invokeJSON(t, handler, http.MethodPost, "/api/tasks/"+taskID+"/run", nil)
+	if got := runResp.Data.(map[string]interface{})["task"].(map[string]interface{})["state"].(string); got != "blocked" {
+		t.Fatalf("expected blocked task, got %s", got)
+	}
+	if _, err := application.store.DB().ExecContext(ctx, `UPDATE task_results SET created_at = ? WHERE task_id = ?`,
+		time.Now().Add(-2*time.Hour).UTC().Format(time.RFC3339), taskID,
+	); err != nil {
+		t.Fatalf("update task_results created_at error = %v", err)
+	}
+
+	previewResp := invokeJSON(t, handler, http.MethodPost, "/api/tasks/recover", map[string]interface{}{
+		"recoverState": "waiting_retry_window",
+		"dryRun":       true,
+		"limit":        1,
+	})
+	previewData := previewResp.Data.(map[string]interface{})
+	if got := previewData["recoverState"].(string); got != "waiting_retry_window" {
+		t.Fatalf("expected recoverState waiting_retry_window, got %s", got)
+	}
+	if got := int(previewData["matchedCount"].(float64)); got != 1 {
+		t.Fatalf("expected matchedCount 1, got %d", got)
+	}
+	if got := int(previewData["recoveredCount"].(float64)); got != 0 {
+		t.Fatalf("expected recoveredCount 0, got %d", got)
+	}
+	if got := int(previewData["skippedByRetryWindowWait"].(float64)); got != 1 {
+		t.Fatalf("expected skippedByRetryWindowWait 1, got %d", got)
+	}
+	if decisions, ok := previewData["decisions"].([]interface{}); !ok || len(decisions) == 0 {
+		t.Fatalf("expected preview decisions, got %#v", previewData["decisions"])
+	} else if got := decisions[0].(map[string]interface{})["outcome"].(string); got != "waiting_retry_window" {
+		t.Fatalf("expected preview outcome waiting_retry_window, got %s", got)
+	}
+	if uploadCalls != 1 {
+		t.Fatalf("expected preview not to trigger extra upload, got %d", uploadCalls)
+	}
+
+	detailResp := invokeJSON(t, handler, http.MethodGet, "/api/tasks/"+taskID, nil)
+	if got := detailResp.Data.(map[string]interface{})["task"].(map[string]interface{})["state"].(string); got != "blocked" {
+		t.Fatalf("expected task to stay blocked after preview, got %s", got)
+	}
+}
+
 func mustNewTestApp(t *testing.T, ctx context.Context) *App {
 	t.Helper()
 
