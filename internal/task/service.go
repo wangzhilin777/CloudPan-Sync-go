@@ -121,21 +121,25 @@ type Detail struct {
 }
 
 type EvidenceSummary struct {
-	TotalTasks          int                `json:"totalTasks"`
-	CompletedTasks      int                `json:"completedTasks"`
-	BlockedTasks        int                `json:"blockedTasks"`
-	AutoRecoverTasks    int                `json:"autoRecoverTasks"`
-	FailedResultCount   int                `json:"failedResultCount"`
-	DoneResultCount     int                `json:"doneResultCount"`
-	SkippedResultCount  int                `json:"skippedResultCount"`
-	PendingResultCount  int                `json:"pendingResultCount"`
-	SourceDeletionCount int                `json:"sourceDeletionCount"`
-	RiskHitCount        int                `json:"riskHitCount"`
-	BlockedActions      []BlockedAction    `json:"blockedActions,omitempty"`
-	AutoRecoverPool     []AutoRecoverLane  `json:"autoRecoverPool,omitempty"`
-	ProtocolCoverage    []ProtocolCoverage `json:"protocolCoverage,omitempty"`
-	RecentResults       []Result           `json:"recentResults"`
-	RecentProbes        []ProviderProbe    `json:"recentProbes"`
+	TotalTasks                         int                `json:"totalTasks"`
+	CompletedTasks                     int                `json:"completedTasks"`
+	BlockedTasks                       int                `json:"blockedTasks"`
+	AutoRecoverTasks                   int                `json:"autoRecoverTasks"`
+	AutoRecoverRunnableTasks           int                `json:"autoRecoverRunnableTasks"`
+	AutoRecoverWaitingCooldownTasks    int                `json:"autoRecoverWaitingCooldownTasks"`
+	AutoRecoverWaitingRetryWindowTasks int                `json:"autoRecoverWaitingRetryWindowTasks"`
+	AutoRecoverWaitingOtherTasks       int                `json:"autoRecoverWaitingOtherTasks"`
+	FailedResultCount                  int                `json:"failedResultCount"`
+	DoneResultCount                    int                `json:"doneResultCount"`
+	SkippedResultCount                 int                `json:"skippedResultCount"`
+	PendingResultCount                 int                `json:"pendingResultCount"`
+	SourceDeletionCount                int                `json:"sourceDeletionCount"`
+	RiskHitCount                       int                `json:"riskHitCount"`
+	BlockedActions                     []BlockedAction    `json:"blockedActions,omitempty"`
+	AutoRecoverPool                    []AutoRecoverLane  `json:"autoRecoverPool,omitempty"`
+	ProtocolCoverage                   []ProtocolCoverage `json:"protocolCoverage,omitempty"`
+	RecentResults                      []Result           `json:"recentResults"`
+	RecentProbes                       []ProviderProbe    `json:"recentProbes"`
 }
 
 type AutoRecoverLane struct {

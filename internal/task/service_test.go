@@ -2936,6 +2936,14 @@ func TestServiceAutoRecoverPoolSummaryAndPriority(t *testing.T) {
 	if evidence.AutoRecoverTasks != 2 {
 		t.Fatalf("expected autoRecoverTasks 2, got %d", evidence.AutoRecoverTasks)
 	}
+	if evidence.AutoRecoverRunnableTasks != 1 || evidence.AutoRecoverWaitingCooldownTasks != 1 || evidence.AutoRecoverWaitingRetryWindowTasks != 0 || evidence.AutoRecoverWaitingOtherTasks != 0 {
+		t.Fatalf("expected global auto recover split 1/1/0/0, got runnable=%d cooldown=%d window=%d other=%d",
+			evidence.AutoRecoverRunnableTasks,
+			evidence.AutoRecoverWaitingCooldownTasks,
+			evidence.AutoRecoverWaitingRetryWindowTasks,
+			evidence.AutoRecoverWaitingOtherTasks,
+		)
+	}
 	if len(evidence.AutoRecoverPool) != 2 {
 		t.Fatalf("expected autoRecoverPool len 2, got %#v", evidence.AutoRecoverPool)
 	}
@@ -2985,9 +2993,15 @@ func TestServiceAutoRecoverPoolSummaryAndPriority(t *testing.T) {
 			if status.AutoRecoverCount != 1 {
 				t.Fatalf("expected cooldown provider autoRecoverCount 1, got %#v", status)
 			}
+			if got := intNumber(status.SnapshotSummary["autoRecoverWaitingCooldownTasks"]); got != 1 {
+				t.Fatalf("expected cooldown provider waiting cooldown 1, got %#v", status.SnapshotSummary["autoRecoverWaitingCooldownTasks"])
+			}
 		case "auto_recover_checkpoint_target":
 			if status.AutoRecoverCount != 1 {
 				t.Fatalf("expected checkpoint provider autoRecoverCount 1, got %#v", status)
+			}
+			if got := intNumber(status.SnapshotSummary["autoRecoverRunnableTasks"]); got != 1 {
+				t.Fatalf("expected checkpoint provider runnable 1, got %#v", status.SnapshotSummary["autoRecoverRunnableTasks"])
 			}
 		}
 	}

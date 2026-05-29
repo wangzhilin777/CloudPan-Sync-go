@@ -650,6 +650,20 @@ func summarizeAutoRecoverPool(details []Detail, providers []provider.Entry) ([]A
 	return items, totalTasks
 }
 
+func summarizeAutoRecoverStateCounts(items []AutoRecoverLane) (int, int, int, int) {
+	runnable := 0
+	waitingCooldown := 0
+	waitingRetryWindow := 0
+	waitingOther := 0
+	for _, item := range items {
+		runnable += item.RunnableTaskCount
+		waitingCooldown += item.WaitingCooldownTaskCount
+		waitingRetryWindow += item.WaitingRetryWindowTaskCount
+		waitingOther += item.WaitingOtherTaskCount
+	}
+	return runnable, waitingCooldown, waitingRetryWindow, waitingOther
+}
+
 func taskEvidenceSummary(ctx context.Context, store *sqlitestore.Store, providers []provider.Entry) (EvidenceSummary, error) {
 	var summary EvidenceSummary
 	if err := store.DB().QueryRowContext(ctx, `SELECT COUNT(1) FROM tasks`).Scan(&summary.TotalTasks); err != nil {
@@ -710,6 +724,10 @@ func taskEvidenceSummary(ctx context.Context, store *sqlitestore.Store, provider
 	}
 	summary.BlockedActions = summarizeBlockedActions(blockedDetails)
 	summary.AutoRecoverPool, summary.AutoRecoverTasks = summarizeAutoRecoverPool(details, providers)
+	summary.AutoRecoverRunnableTasks,
+		summary.AutoRecoverWaitingCooldownTasks,
+		summary.AutoRecoverWaitingRetryWindowTasks,
+		summary.AutoRecoverWaitingOtherTasks = summarizeAutoRecoverStateCounts(summary.AutoRecoverPool)
 	results, err := recentTaskResults(ctx, store, 10)
 	if err != nil {
 		return summary, err
@@ -782,8 +800,15 @@ func providerStatusSummary(ctx context.Context, store *sqlitestore.Store, provid
 		}
 		item.SnapshotSummary["blockedCount"] = item.BlockedCount
 		item.SnapshotSummary["blockedActions"] = summarizeBlockedActions(blockedDetails)
-		item.SnapshotSummary["autoRecoverPool"], item.AutoRecoverCount = summarizeAutoRecoverPool(providerDetails, providers)
+		autoRecoverPool, autoRecoverCount := summarizeAutoRecoverPool(providerDetails, providers)
+		item.AutoRecoverCount = autoRecoverCount
+		item.SnapshotSummary["autoRecoverPool"] = autoRecoverPool
 		item.SnapshotSummary["autoRecoverCount"] = item.AutoRecoverCount
+		runnable, waitingCooldown, waitingRetryWindow, waitingOther := summarizeAutoRecoverStateCounts(autoRecoverPool)
+		item.SnapshotSummary["autoRecoverRunnableTasks"] = runnable
+		item.SnapshotSummary["autoRecoverWaitingCooldownTasks"] = waitingCooldown
+		item.SnapshotSummary["autoRecoverWaitingRetryWindowTasks"] = waitingRetryWindow
+		item.SnapshotSummary["autoRecoverWaitingOtherTasks"] = waitingOther
 		items = append(items, item)
 	}
 	return items, nil

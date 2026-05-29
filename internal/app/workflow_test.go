@@ -233,6 +233,18 @@ func TestAppWorkflowMainline(t *testing.T) {
 	if got := int(evidenceData["autoRecoverTasks"].(float64)); got != 0 {
 		t.Fatalf("expected autoRecoverTasks=0, got %d", got)
 	}
+	if got := int(evidenceData["autoRecoverRunnableTasks"].(float64)); got != 0 {
+		t.Fatalf("expected autoRecoverRunnableTasks=0, got %d", got)
+	}
+	if got := int(evidenceData["autoRecoverWaitingCooldownTasks"].(float64)); got != 0 {
+		t.Fatalf("expected autoRecoverWaitingCooldownTasks=0, got %d", got)
+	}
+	if got := int(evidenceData["autoRecoverWaitingRetryWindowTasks"].(float64)); got != 0 {
+		t.Fatalf("expected autoRecoverWaitingRetryWindowTasks=0, got %d", got)
+	}
+	if got := int(evidenceData["autoRecoverWaitingOtherTasks"].(float64)); got != 0 {
+		t.Fatalf("expected autoRecoverWaitingOtherTasks=0, got %d", got)
+	}
 	autoRetryPolicy := evidenceData["autoRetryPolicy"].(map[string]interface{})
 	if got := autoRetryPolicy["tick"].(string); got == "" {
 		t.Fatal("expected autoRetryPolicy.tick in evidence summary")
@@ -377,6 +389,18 @@ func TestAppWorkflowMainline(t *testing.T) {
 		}
 		if got := int(item["autoRecoverCount"].(float64)); got != 0 {
 			t.Fatalf("expected provider autoRecoverCount 0, got %d", got)
+		}
+		if got := int(summary["autoRecoverRunnableTasks"].(float64)); got != 0 {
+			t.Fatalf("expected status summary autoRecoverRunnableTasks 0, got %d", got)
+		}
+		if got := int(summary["autoRecoverWaitingCooldownTasks"].(float64)); got != 0 {
+			t.Fatalf("expected status summary autoRecoverWaitingCooldownTasks 0, got %d", got)
+		}
+		if got := int(summary["autoRecoverWaitingRetryWindowTasks"].(float64)); got != 0 {
+			t.Fatalf("expected status summary autoRecoverWaitingRetryWindowTasks 0, got %d", got)
+		}
+		if got := int(summary["autoRecoverWaitingOtherTasks"].(float64)); got != 0 {
+			t.Fatalf("expected status summary autoRecoverWaitingOtherTasks 0, got %d", got)
 		}
 		blockedActions, ok := summary["blockedActions"].([]interface{})
 		if !ok || len(blockedActions) == 0 {

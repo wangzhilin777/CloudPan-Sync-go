@@ -2735,6 +2735,10 @@ function renderStatus() {
     completedTasks: 0,
     blockedTasks: 0,
     autoRecoverTasks: 0,
+    autoRecoverRunnableTasks: 0,
+    autoRecoverWaitingCooldownTasks: 0,
+    autoRecoverWaitingRetryWindowTasks: 0,
+    autoRecoverWaitingOtherTasks: 0,
     failedResultCount: 0,
     doneResultCount: 0,
     skippedResultCount: 0,
@@ -2762,6 +2766,10 @@ function renderStatus() {
     <div class="metric"><span>Completed</span><strong>${evidence.completedTasks}</strong></div>
     <div class="metric"><span>Blocked Tasks</span><strong>${evidence.blockedTasks}</strong></div>
     <div class="metric"><span>Auto Recover</span><strong>${stringifyValue(evidence.autoRecoverTasks, "0")}</strong></div>
+    <div class="metric"><span>Recover Runnable</span><strong>${stringifyValue(evidence.autoRecoverRunnableTasks, "0")}</strong></div>
+    <div class="metric"><span>Recover Cooldown</span><strong>${stringifyValue(evidence.autoRecoverWaitingCooldownTasks, "0")}</strong></div>
+    <div class="metric"><span>Recover Window</span><strong>${stringifyValue(evidence.autoRecoverWaitingRetryWindowTasks, "0")}</strong></div>
+    <div class="metric"><span>Recover Other</span><strong>${stringifyValue(evidence.autoRecoverWaitingOtherTasks, "0")}</strong></div>
     <div class="metric"><span>Done Results</span><strong>${evidence.doneResultCount}</strong></div>
     <div class="metric"><span>Skipped Results</span><strong>${evidence.skippedResultCount}</strong></div>
     <div class="metric"><span>Pending Manual</span><strong>${evidence.pendingResultCount}</strong></div>
@@ -3503,6 +3511,10 @@ function renderSnapshotSummary(summary) {
       <div><strong>nextRetryAt</strong> <code>${escapeHTML(stringifyValue(retrySummary.nextRetryAt, "-"))}</code></div>
       <div><strong>queueSize</strong> <code>${escapeHTML(stringifyValue(retrySummary.queueSize, "0"))}</code></div>
       <div><strong>autoRecover</strong> <code>${escapeHTML(renderAutoRecoverMode(retrySummary))}</code></div>
+      <div><strong>autoRecoverRunnableTasks</strong> <code>${escapeHTML(stringifyValue(summary.autoRecoverRunnableTasks, "0"))}</code></div>
+      <div><strong>autoRecoverWaitingCooldownTasks</strong> <code>${escapeHTML(stringifyValue(summary.autoRecoverWaitingCooldownTasks, "0"))}</code></div>
+      <div><strong>autoRecoverWaitingRetryWindowTasks</strong> <code>${escapeHTML(stringifyValue(summary.autoRecoverWaitingRetryWindowTasks, "0"))}</code></div>
+      <div><strong>autoRecoverWaitingOtherTasks</strong> <code>${escapeHTML(stringifyValue(summary.autoRecoverWaitingOtherTasks, "0"))}</code></div>
       <div><strong>queueBreakdown</strong> <code>${escapeHTML(renderRetrySummaryBreakdown(retrySummary))}</code></div>
       <div><strong>sourceDeletePolicy</strong> <code>${escapeHTML(renderSourceDeletePolicy(summary.sourceDeletePolicy))}</code></div>
       <div><strong>sourceDeletes</strong> <code>${escapeHTML(stringifyValue(summary.sourceDeletionCount, "0"))}</code></div>
