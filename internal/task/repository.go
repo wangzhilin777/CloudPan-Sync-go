@@ -337,25 +337,29 @@ type blockedActionAccumulator struct {
 }
 
 type autoRecoverLaneAccumulator struct {
-	mode                     string
-	advice                   string
-	taskIDs                  map[string]struct{}
-	providers                map[string]struct{}
-	profiles                 map[string]struct{}
-	protocolGroups           map[string]struct{}
-	retryClasses             map[string]struct{}
-	blockedActions           map[string]struct{}
-	suggestedProviderBudget  int
-	suggestedProfileBudget   int
-	queueItemCount           int
-	retryableNowCount        int
-	cooldownCount            int
-	uploadCheckpointEligible int
-	nextRetryAt              string
-	sampleTaskID             string
-	sampleProvider           string
-	sampleProtocolGroup      string
-	sampleProfileID          string
+	mode                        string
+	advice                      string
+	taskIDs                     map[string]struct{}
+	providers                   map[string]struct{}
+	profiles                    map[string]struct{}
+	protocolGroups              map[string]struct{}
+	retryClasses                map[string]struct{}
+	blockedActions              map[string]struct{}
+	suggestedProviderBudget     int
+	suggestedProfileBudget      int
+	queueItemCount              int
+	retryableNowCount           int
+	cooldownCount               int
+	runnableTaskCount           int
+	waitingCooldownTaskCount    int
+	waitingRetryWindowTaskCount int
+	waitingOtherTaskCount       int
+	uploadCheckpointEligible    int
+	nextRetryAt                 string
+	sampleTaskID                string
+	sampleProvider              string
+	sampleProtocolGroup         string
+	sampleProfileID             string
 }
 
 func minPositiveBudget(current, next int) int {
@@ -451,6 +455,33 @@ func summarizeBlockedActions(details []Detail) []BlockedAction {
 	return items
 }
 
+type autoRecoverLaneState struct {
+	runnableNow        bool
+	waitingCooldown    bool
+	waitingRetryWindow bool
+	waitingOther       bool
+}
+
+func classifyAutoRecoverLaneState(detail Detail, summary retryQueueSummary) autoRecoverLaneState {
+	state := autoRecoverLaneState{}
+	if taskCanAutoRecover(detail) {
+		state.runnableNow = true
+		return state
+	}
+	if summary.WindowBlocked {
+		state.waitingRetryWindow = true
+		return state
+	}
+	if summary.CooldownCount > 0 {
+		state.waitingCooldown = true
+		return state
+	}
+	if summary.UploadCheckpointEligible > 0 || summary.AutoRecoverEligible {
+		state.waitingOther = true
+	}
+	return state
+}
+
 func summarizeAutoRecoverPool(details []Detail, providers []provider.Entry) ([]AutoRecoverLane, int) {
 	if len(details) == 0 {
 		return nil, 0
@@ -521,6 +552,19 @@ func summarizeAutoRecoverPool(details []Detail, providers []provider.Entry) ([]A
 		acc.queueItemCount += len(detail.Runtime.RetryQueue)
 		acc.retryableNowCount += candidate.Summary.RetryableNowCount
 		acc.cooldownCount += candidate.Summary.CooldownCount
+		laneState := classifyAutoRecoverLaneState(detail, candidate.Summary)
+		if laneState.runnableNow {
+			acc.runnableTaskCount++
+		}
+		if laneState.waitingCooldown {
+			acc.waitingCooldownTaskCount++
+		}
+		if laneState.waitingRetryWindow {
+			acc.waitingRetryWindowTaskCount++
+		}
+		if laneState.waitingOther {
+			acc.waitingOtherTaskCount++
+		}
 		acc.uploadCheckpointEligible += candidate.Summary.UploadCheckpointEligible
 		if acc.sampleTaskID == "" {
 			acc.sampleTaskID = detail.Task.ID
@@ -545,28 +589,32 @@ func summarizeAutoRecoverPool(details []Detail, providers []provider.Entry) ([]A
 			sampleProtocolGroup = firstStringValue(protocolGroups)
 		}
 		items = append(items, AutoRecoverLane{
-			Mode:                     acc.mode,
-			Advice:                   acc.advice,
-			TaskCount:                len(acc.taskIDs),
-			ProviderCount:            len(acc.providers),
-			ProfileCount:             len(acc.profiles),
-			SuggestedProviderBudget:  acc.suggestedProviderBudget,
-			SuggestedProfileBudget:   acc.suggestedProfileBudget,
-			QueueItemCount:           acc.queueItemCount,
-			RetryableNowCount:        acc.retryableNowCount,
-			CooldownCount:            acc.cooldownCount,
-			UploadCheckpointEligible: acc.uploadCheckpointEligible,
-			ProtocolGroups:           protocolGroups,
-			RetryClasses:             retryClasses,
-			BlockedActions:           blockedActions,
-			ProfileIDs:               profileIDs,
-			PrimaryRetryClass:        firstStringValue(retryClasses),
-			PrimaryBlockedAction:     firstStringValue(blockedActions),
-			NextRetryAt:              acc.nextRetryAt,
-			SampleTaskID:             acc.sampleTaskID,
-			SampleProvider:           acc.sampleProvider,
-			SampleProtocolGroup:      sampleProtocolGroup,
-			SampleProfileID:          acc.sampleProfileID,
+			Mode:                        acc.mode,
+			Advice:                      acc.advice,
+			TaskCount:                   len(acc.taskIDs),
+			ProviderCount:               len(acc.providers),
+			ProfileCount:                len(acc.profiles),
+			SuggestedProviderBudget:     acc.suggestedProviderBudget,
+			SuggestedProfileBudget:      acc.suggestedProfileBudget,
+			QueueItemCount:              acc.queueItemCount,
+			RetryableNowCount:           acc.retryableNowCount,
+			CooldownCount:               acc.cooldownCount,
+			RunnableTaskCount:           acc.runnableTaskCount,
+			WaitingCooldownTaskCount:    acc.waitingCooldownTaskCount,
+			WaitingRetryWindowTaskCount: acc.waitingRetryWindowTaskCount,
+			WaitingOtherTaskCount:       acc.waitingOtherTaskCount,
+			UploadCheckpointEligible:    acc.uploadCheckpointEligible,
+			ProtocolGroups:              protocolGroups,
+			RetryClasses:                retryClasses,
+			BlockedActions:              blockedActions,
+			ProfileIDs:                  profileIDs,
+			PrimaryRetryClass:           firstStringValue(retryClasses),
+			PrimaryBlockedAction:        firstStringValue(blockedActions),
+			NextRetryAt:                 acc.nextRetryAt,
+			SampleTaskID:                acc.sampleTaskID,
+			SampleProvider:              acc.sampleProvider,
+			SampleProtocolGroup:         sampleProtocolGroup,
+			SampleProfileID:             acc.sampleProfileID,
 		})
 	}
 	sort.SliceStable(items, func(i, j int) bool {

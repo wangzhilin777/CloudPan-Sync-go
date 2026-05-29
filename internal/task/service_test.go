@@ -2888,6 +2888,9 @@ func TestServiceAutoRecoverPoolSummaryAndPriority(t *testing.T) {
 	if checkpointLane.TaskCount != 1 || checkpointLane.UploadCheckpointEligible != 1 {
 		t.Fatalf("unexpected checkpoint lane: %#v", checkpointLane)
 	}
+	if checkpointLane.RunnableTaskCount != 1 || checkpointLane.WaitingCooldownTaskCount != 0 || checkpointLane.WaitingRetryWindowTaskCount != 0 || checkpointLane.WaitingOtherTaskCount != 0 {
+		t.Fatalf("expected checkpoint lane runnable split 1/0/0/0, got %#v", checkpointLane)
+	}
 	if checkpointLane.PrimaryRetryClass != "retry_failed" {
 		t.Fatalf("expected checkpoint primaryRetryClass retry_failed, got %#v", checkpointLane)
 	}
@@ -2897,6 +2900,9 @@ func TestServiceAutoRecoverPoolSummaryAndPriority(t *testing.T) {
 	cooldownLane := autoRecoverLaneByMode(evidence.AutoRecoverPool, "cooldown_elapsed_auto_retry")
 	if cooldownLane.TaskCount != 1 || cooldownLane.CooldownCount != 1 {
 		t.Fatalf("unexpected cooldown lane: %#v", cooldownLane)
+	}
+	if cooldownLane.RunnableTaskCount != 0 || cooldownLane.WaitingCooldownTaskCount != 1 || cooldownLane.WaitingRetryWindowTaskCount != 0 || cooldownLane.WaitingOtherTaskCount != 0 {
+		t.Fatalf("expected cooldown lane runnable split 0/1/0/0, got %#v", cooldownLane)
 	}
 	if cooldownLane.PrimaryRetryClass != "rate_limited" || cooldownLane.PrimaryBlockedAction != "wait_for_cooldown" {
 		t.Fatalf("expected cooldown primary fields rate_limited/wait_for_cooldown, got %#v", cooldownLane)
@@ -3320,6 +3326,9 @@ func TestServiceAutoRecoverPoolShowsRetryWindowWaitingAndSkipsExecutionUntilWind
 	}
 	if windowLane.TaskCount != 1 || windowLane.PrimaryBlockedAction != "wait_for_retry_window" {
 		t.Fatalf("unexpected window lane %#v", windowLane)
+	}
+	if windowLane.RunnableTaskCount != 0 || windowLane.WaitingCooldownTaskCount != 0 || windowLane.WaitingRetryWindowTaskCount != 1 || windowLane.WaitingOtherTaskCount != 0 {
+		t.Fatalf("expected window lane runnable split 0/0/1/0, got %#v", windowLane)
 	}
 	if windowLane.PrimaryRetryClass != "rate_limited" {
 		t.Fatalf("expected window lane primary retryClass rate_limited, got %#v", windowLane)

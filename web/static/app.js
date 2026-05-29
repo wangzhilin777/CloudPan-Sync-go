@@ -2925,10 +2925,34 @@ function renderAutoRecoverFilterSummary(visibleItems, allItems) {
   if (limitPerProfile) {
     parts.push(`limitPerProfile=${limitPerProfile}`);
   }
+  const visibleSummary = summarizeAutoRecoverVisibleItems(visibleItems);
+  const stateSummary = [
+    `可立即执行 ${visibleSummary.runnable}`,
+    `等冷却 ${visibleSummary.waitingCooldown}`,
+    `等时间窗 ${visibleSummary.waitingRetryWindow}`,
+    `其它等待 ${visibleSummary.waitingOther}`,
+  ].join(" / ");
   if (!parts.length) {
-    return total ? `当前显示全部 ${current}/${total} 条后台补传候选。` : "显示全部后台补传候选。";
+    return total
+      ? `当前显示全部 ${current}/${total} 条后台补传候选，涉及任务 ${visibleSummary.tasks} 个；${stateSummary}。`
+      : `显示全部后台补传候选；${stateSummary}。`;
   }
-  return `当前显示 ${current}/${total} 条后台补传候选，筛选条件：${parts.join(" / ")}。`;
+  return `当前显示 ${current}/${total} 条后台补传候选，涉及任务 ${visibleSummary.tasks} 个；${stateSummary}；筛选条件：${parts.join(" / ")}。`;
+}
+
+function summarizeAutoRecoverVisibleItems(items) {
+  const source = Array.isArray(items) ? items : [];
+  return source.reduce(
+    (summary, item) => {
+      summary.tasks += Number(item?.taskCount || 0);
+      summary.runnable += Number(item?.runnableTaskCount || 0);
+      summary.waitingCooldown += Number(item?.waitingCooldownTaskCount || 0);
+      summary.waitingRetryWindow += Number(item?.waitingRetryWindowTaskCount || 0);
+      summary.waitingOther += Number(item?.waitingOtherTaskCount || 0);
+      return summary;
+    },
+    { tasks: 0, runnable: 0, waitingCooldown: 0, waitingRetryWindow: 0, waitingOther: 0 },
+  );
 }
 
 function renderAutoRecoverSummary(items) {
@@ -2939,7 +2963,22 @@ function renderAutoRecoverSummary(items) {
     }
     return `<div class="directory-empty">当前没有进入后台补传候选池的任务。</div>`;
   }
-  return visibleItems
+  const aggregate = summarizeAutoRecoverVisibleItems(visibleItems);
+  return `
+    <div class="directory-row tree-node">
+      <div class="directory-row-header">
+        <strong>当前可见候选池摘要</strong>
+        <code>${escapeHTML(`${visibleItems.length} lanes / ${aggregate.tasks} tasks`)}</code>
+      </div>
+      <div class="directory-metrics">
+        <span class="pill">runnable ${stringifyValue(aggregate.runnable, "0")}</span>
+        <span class="pill">wait cooldown ${stringifyValue(aggregate.waitingCooldown, "0")}</span>
+        <span class="pill">wait window ${stringifyValue(aggregate.waitingRetryWindow, "0")}</span>
+        <span class="pill">wait other ${stringifyValue(aggregate.waitingOther, "0")}</span>
+      </div>
+      <div class="muted">这里的等待态表示候选已经进入后台补传池，但当前还不能立即执行，常见原因是冷却窗口、自动补传时间窗或其它仍待放行的条件。</div>
+    </div>
+  ` + visibleItems
     .map(
       (item) => `
         <div class="directory-row tree-node">
@@ -2956,6 +2995,10 @@ function renderAutoRecoverSummary(items) {
             <span class="pill">profile budget ${stringifyValue(item.suggestedProfileBudget, "-")}</span>
             <span class="pill">ready ${stringifyValue(item.retryableNowCount, "0")}</span>
             <span class="pill">cooldown ${stringifyValue(item.cooldownCount, "0")}</span>
+            <span class="pill">runnable tasks ${stringifyValue(item.runnableTaskCount, "0")}</span>
+            <span class="pill">wait cooldown ${stringifyValue(item.waitingCooldownTaskCount, "0")}</span>
+            <span class="pill">wait window ${stringifyValue(item.waitingRetryWindowTaskCount, "0")}</span>
+            <span class="pill">wait other ${stringifyValue(item.waitingOtherTaskCount, "0")}</span>
             <span class="pill">checkpoint ${stringifyValue(item.uploadCheckpointEligible, "0")}</span>
             <span class="pill">sample group ${stringifyValue(item.sampleProtocolGroup, "-")}</span>
             <span class="pill">groups ${(item.protocolGroups || []).join(", ") || "-"}</span>
@@ -2970,6 +3013,7 @@ function renderAutoRecoverSummary(items) {
               ? `<div class="muted">主失败口径：retryClass <code>${escapeHTML(stringifyValue(item.primaryRetryClass, "-"))}</code> / blockedAction <code>${escapeHTML(stringifyValue(item.primaryBlockedAction, "-"))}</code></div>`
               : ""
           }
+          <div class="muted">可执行态 ${escapeHTML(stringifyValue(item.runnableTaskCount, "0"))} / 等冷却 ${escapeHTML(stringifyValue(item.waitingCooldownTaskCount, "0"))} / 等时间窗 ${escapeHTML(stringifyValue(item.waitingRetryWindowTaskCount, "0"))} / 其它等待 ${escapeHTML(stringifyValue(item.waitingOtherTaskCount, "0"))}。</div>
           <div class="muted">同档位会先按 provider 轮转，再在同 provider 内按授权档案轮转；默认建议 provider 预算 <code>${escapeHTML(stringifyValue(item.suggestedProviderBudget, "-"))}</code> / profile 预算 <code>${escapeHTML(stringifyValue(item.suggestedProfileBudget, "-"))}</code>。</div>
           <div class="muted">协议族：${escapeHTML((item.protocolGroups || []).join(", ") || stringifyValue(item.sampleProtocolGroup, "-"))}</div>
           <div class="muted">${escapeHTML(stringifyValue(item.advice, "-"))}</div>

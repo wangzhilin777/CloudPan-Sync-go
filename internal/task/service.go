@@ -114,28 +114,32 @@ type EvidenceSummary struct {
 }
 
 type AutoRecoverLane struct {
-	Mode                     string   `json:"mode"`
-	Advice                   string   `json:"advice,omitempty"`
-	TaskCount                int      `json:"taskCount"`
-	ProviderCount            int      `json:"providerCount"`
-	ProfileCount             int      `json:"profileCount"`
-	SuggestedProviderBudget  int      `json:"suggestedProviderBudget,omitempty"`
-	SuggestedProfileBudget   int      `json:"suggestedProfileBudget,omitempty"`
-	QueueItemCount           int      `json:"queueItemCount"`
-	RetryableNowCount        int      `json:"retryableNowCount"`
-	CooldownCount            int      `json:"cooldownCount"`
-	UploadCheckpointEligible int      `json:"uploadCheckpointEligible"`
-	ProtocolGroups           []string `json:"protocolGroups,omitempty"`
-	RetryClasses             []string `json:"retryClasses,omitempty"`
-	BlockedActions           []string `json:"blockedActions,omitempty"`
-	ProfileIDs               []string `json:"profileIds,omitempty"`
-	PrimaryRetryClass        string   `json:"primaryRetryClass,omitempty"`
-	PrimaryBlockedAction     string   `json:"primaryBlockedAction,omitempty"`
-	NextRetryAt              string   `json:"nextRetryAt,omitempty"`
-	SampleTaskID             string   `json:"sampleTaskId,omitempty"`
-	SampleProvider           string   `json:"sampleProvider,omitempty"`
-	SampleProtocolGroup      string   `json:"sampleProtocolGroup,omitempty"`
-	SampleProfileID          string   `json:"sampleProfileId,omitempty"`
+	Mode                        string   `json:"mode"`
+	Advice                      string   `json:"advice,omitempty"`
+	TaskCount                   int      `json:"taskCount"`
+	ProviderCount               int      `json:"providerCount"`
+	ProfileCount                int      `json:"profileCount"`
+	SuggestedProviderBudget     int      `json:"suggestedProviderBudget,omitempty"`
+	SuggestedProfileBudget      int      `json:"suggestedProfileBudget,omitempty"`
+	QueueItemCount              int      `json:"queueItemCount"`
+	RetryableNowCount           int      `json:"retryableNowCount"`
+	CooldownCount               int      `json:"cooldownCount"`
+	RunnableTaskCount           int      `json:"runnableTaskCount"`
+	WaitingCooldownTaskCount    int      `json:"waitingCooldownTaskCount"`
+	WaitingRetryWindowTaskCount int      `json:"waitingRetryWindowTaskCount"`
+	WaitingOtherTaskCount       int      `json:"waitingOtherTaskCount"`
+	UploadCheckpointEligible    int      `json:"uploadCheckpointEligible"`
+	ProtocolGroups              []string `json:"protocolGroups,omitempty"`
+	RetryClasses                []string `json:"retryClasses,omitempty"`
+	BlockedActions              []string `json:"blockedActions,omitempty"`
+	ProfileIDs                  []string `json:"profileIds,omitempty"`
+	PrimaryRetryClass           string   `json:"primaryRetryClass,omitempty"`
+	PrimaryBlockedAction        string   `json:"primaryBlockedAction,omitempty"`
+	NextRetryAt                 string   `json:"nextRetryAt,omitempty"`
+	SampleTaskID                string   `json:"sampleTaskId,omitempty"`
+	SampleProvider              string   `json:"sampleProvider,omitempty"`
+	SampleProtocolGroup         string   `json:"sampleProtocolGroup,omitempty"`
+	SampleProfileID             string   `json:"sampleProfileId,omitempty"`
 }
 
 type EvidenceReport struct {
