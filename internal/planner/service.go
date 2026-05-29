@@ -14,6 +14,9 @@ var ErrInvalidExecutionMode = errors.New("invalid_execution_mode")
 type SourceEntry struct {
 	Path         string                 `json:"path"`
 	Size         int64                  `json:"size"`
+	Deleted      bool                   `json:"deleted,omitempty"`
+	DeletedAt    string                 `json:"deletedAt,omitempty"`
+	DeleteReason string                 `json:"deleteReason,omitempty"`
 	MD5          string                 `json:"md5,omitempty"`
 	SHA1         string                 `json:"sha1,omitempty"`
 	SHA256       string                 `json:"sha256,omitempty"`
@@ -57,6 +60,7 @@ func BuildPreview(registry *provider.Registry, req PreviewRequest) (Plan, error)
 	riskProfile := riskResolution.Applied
 	recommendedMode, recommendedReason := recommendExecutionMode(req, riskProfile)
 	orderedEntries := orderEntriesByMode(req.Entries, executionMode)
+	deletedRecords := buildDeletedEntryMetadata(orderedEntries, req.SelectedRoots)
 
 	items := make([]Item, 0, len(orderedEntries))
 	summary := map[string]int{
@@ -66,6 +70,9 @@ func BuildPreview(registry *provider.Registry, req PreviewRequest) (Plan, error)
 	}
 
 	for idx, entry := range orderedEntries {
+		if entry.Deleted {
+			continue
+		}
 		strategy := decideStrategy(target.Meta.FastUploadInputs, entry, thresholdBytes)
 		items = append(items, Item{
 			Path:           entry.Path,
@@ -86,6 +93,9 @@ func BuildPreview(registry *provider.Registry, req PreviewRequest) (Plan, error)
 		Metadata: map[string]interface{}{
 			"selectedRoots":                  req.SelectedRoots,
 			"entryCount":                     len(req.Entries),
+			"activeEntryCount":               len(items),
+			"deletedEntryCount":              len(deletedRecords),
+			"sourceDeletionRecords":          deletedRecords,
 			"executionMode":                  executionMode,
 			"recommendedExecutionMode":       recommendedMode,
 			"recommendedExecutionModeReason": recommendedReason,
@@ -95,6 +105,77 @@ func BuildPreview(registry *provider.Registry, req PreviewRequest) (Plan, error)
 			"riskOverride":                   req.RiskOverride,
 		},
 	}, nil
+}
+
+func buildDeletedEntryMetadata(entries []SourceEntry, selectedRoots []string) []map[string]interface{} {
+	items := make([]map[string]interface{}, 0)
+	for _, entry := range entries {
+		if !entry.Deleted {
+			continue
+		}
+		path := normalizePlannerPath(entry.Path)
+		items = append(items, map[string]interface{}{
+			"path":         path,
+			"name":         inferEntryName(path),
+			"rootPath":     plannerMatchRootPath(path, selectedRoots),
+			"deletedAt":    strings.TrimSpace(entry.DeletedAt),
+			"deleteReason": strings.TrimSpace(entry.DeleteReason),
+		})
+	}
+	return items
+}
+
+func plannerMatchRootPath(path string, roots []string) string {
+	normalized := normalizePlannerPath(path)
+	for _, root := range roots {
+		root = normalizePlannerPath(root)
+		if normalized == root || strings.HasPrefix(normalized, root+"/") {
+			return root
+		}
+	}
+	if len(roots) == 1 {
+		return normalizePlannerPath(roots[0])
+	}
+	return plannerParentDirectory(normalized)
+}
+
+func plannerParentDirectory(path string) string {
+	normalized := normalizePlannerPath(path)
+	if normalized == "/" {
+		return "/"
+	}
+	index := strings.LastIndex(normalized, "/")
+	if index <= 0 {
+		return "/"
+	}
+	return normalized[:index]
+}
+
+func normalizePlannerPath(path string) string {
+	path = strings.ReplaceAll(strings.TrimSpace(path), "\\", "/")
+	if path == "" {
+		return "/"
+	}
+	if !strings.HasPrefix(path, "/") {
+		path = "/" + path
+	}
+	path = strings.TrimRight(path, "/")
+	if path == "" {
+		return "/"
+	}
+	return path
+}
+
+func inferEntryName(path string) string {
+	normalized := normalizePlannerPath(path)
+	if normalized == "/" {
+		return "/"
+	}
+	index := strings.LastIndex(normalized, "/")
+	if index >= 0 && index < len(normalized)-1 {
+		return normalized[index+1:]
+	}
+	return normalized
 }
 
 func decideStrategy(required []string, entry SourceEntry, thresholdBytes int64) Strategy {

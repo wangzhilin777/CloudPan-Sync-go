@@ -116,6 +116,12 @@ $previewPayload = @{
       md5  = "md5-a"
     },
     @{
+      path         = "/demo/deleted.bin"
+      deleted      = $true
+      deletedAt    = "2026-05-29T10:00:00Z"
+      deleteReason = "source_removed"
+    },
+    @{
       path = "/demo/large.bin"
       size = 20971520
     }
@@ -155,7 +161,10 @@ $preview | ConvertTo-Json -Depth 10
 - `riskProfile.maxConcurrent`
 - `riskProfile.autoRetryStartHour`
 - `riskProfile.autoRetryEndHour`
+- `deletedEntryCount`
+- `sourceDeletionRecords`
 - 当目录较大或 provider 风控敏感时，通常会优先推荐 `leaf_first_lazy`。
+- 如果某些源文件已在源端删除，可通过 `deleted=true` 只记录删除事件，不会把它们加入执行项，也不会默认删除目标端文件。
 
 ## 7. 创建任务
 
@@ -631,6 +640,7 @@ Invoke-RestMethod `
 - 当任务详情里出现 `metadata.retryPendingOnly=true` 时，表示这次重试已经缩成待补传子集。
 - 当 runtime / probe / snapshot 中出现 `retryQueue` 时，表示当前任务已经具备失败分类后的重试队列证据。
 - 当 runtime / retryQueue / probe / snapshot 中出现 `uploadCheckpoint` 时，表示当前任务已经具备上传恢复检查点证据。
+- 当预览 metadata、runtime 或 status summary 中出现 `sourceDeletionCount / sourceDeletionRecords` 时，表示当前任务已记录到源端删除样本，但不会默认删除目标端真实文件。
 - 当 `metadata.retryUploadCheckpoints` 出现时，表示后续 `retry` 会把这批恢复线索继续传给 provider 上传链路。
 - 当 `retryQueue` item 出现 `attemptCount / retryLimit / remainingCount / exhausted` 时，表示当前任务已经具备累计重试次数证据。
 - 当任务状态为 `blocked` 且 `runtime.nextRetryAt` 已到时，单机 tick 调度器会尝试自动恢复仅受冷却影响的任务。

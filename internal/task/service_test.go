@@ -139,6 +139,60 @@ func TestServiceCreateRunRetryTask(t *testing.T) {
 	}
 }
 
+func TestServiceCreateCarriesSourceDeletionRecordsIntoRuntimeAndEvidence(t *testing.T) {
+	ctx := context.Background()
+	store, err := sqlitestore.New(ctx, filepath.Join(t.TempDir(), "source-deletion.db"))
+	if err != nil {
+		t.Fatalf("new store: %v", err)
+	}
+	defer func() { _ = store.Close() }()
+
+	registry := provider.NewRegistry(provider.DefaultCatalog()...)
+	authSvc := auth.NewService(store, registry)
+	svc := NewService(store, registry, authSvc)
+	profile, err := authSvc.CreateProfile(ctx, auth.CreateProfileInput{
+		ProviderKey: "123_open",
+		AuthMode:    "manual_token",
+		DisplayName: "123 deletion smoke",
+		Token:       "token-delete",
+	})
+	if err != nil {
+		t.Fatalf("CreateProfile() error = %v", err)
+	}
+
+	detail, err := svc.Create(ctx, CreateRequest{
+		SourceProvider:  "guangya",
+		TargetProvider:  "123_open",
+		TargetProfileID: profile.ID,
+		ThresholdMB:     10,
+		SelectedRoots:   []string{"/demo"},
+		Entries: []planner.SourceEntry{
+			{Path: "/demo/a.bin", Size: 1024, MD5: "md5-a"},
+			{Path: "/demo/deleted.bin", Deleted: true, DeletedAt: "2026-05-29T10:00:00Z", DeleteReason: "source_removed"},
+		},
+	})
+	if err != nil {
+		t.Fatalf("Create() error = %v", err)
+	}
+	if got := detail.Runtime.SourceDeletionCount; got != 1 {
+		t.Fatalf("expected runtime source deletion count 1, got %d", got)
+	}
+	if len(detail.Runtime.SourceDeletionRecords) != 1 {
+		t.Fatalf("expected 1 runtime source deletion record, got %#v", detail.Runtime.SourceDeletionRecords)
+	}
+	if got := detail.Runtime.SourceDeletionRecords[0].Path; got != "/demo/deleted.bin" {
+		t.Fatalf("expected source deletion record path /demo/deleted.bin, got %s", got)
+	}
+
+	evidence, err := svc.RuntimeEvidence(ctx)
+	if err != nil {
+		t.Fatalf("RuntimeEvidence() error = %v", err)
+	}
+	if got := evidence.SourceDeletionCount; got != 1 {
+		t.Fatalf("expected evidence source deletion count 1, got %d", got)
+	}
+}
+
 func TestServiceProtocolCoverageSummary(t *testing.T) {
 	ctx := context.Background()
 	store, err := sqlitestore.New(ctx, filepath.Join(t.TempDir(), "protocol-coverage.db"))

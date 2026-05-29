@@ -62,6 +62,7 @@
   - 目标存在但指纹变化：覆盖上传或按冲突策略降级
   - 目标已同步且指纹一致：跳过
   - 源端删除：默认只记录，不默认删除目标端
+  - 源端删除记录会进入预览 metadata、task runtime、provider status 和 evidence/report，便于排查最近源端变更
 - 当前风控语义也不再只有档位名：
   - 可以按任务覆盖节流参数
   - 可以按任务覆盖风险关键词
@@ -255,6 +256,7 @@
   - 当前扫描方式
   - 当前根目录 / 当前目录 / 上次完成路径
   - 目录级状态、完成数、跳过数、失败数
+  - 源端删除记录数量与样本
   - 最近待补传树
   - 当前重试是否已缩小为待补传子集
   - 当前任务结果证据已可直接看到：
@@ -459,6 +461,8 @@
   - `skippedCount`
   - `failedCount`
   - `pendingCount`
+  - `sourceDeletionCount`
+  - `sourceDeletionRecords`
   - `pendingTree`
   - `riskHitCount`
   - `lastRiskStatus`

@@ -73,6 +73,14 @@ type DirectoryState struct {
 	LastItemPath   string `json:"lastItemPath,omitempty"`
 }
 
+type SourceDeletionRecord struct {
+	Path         string `json:"path"`
+	Name         string `json:"name,omitempty"`
+	RootPath     string `json:"rootPath,omitempty"`
+	DeletedAt    string `json:"deletedAt,omitempty"`
+	DeleteReason string `json:"deleteReason,omitempty"`
+}
+
 type UploadCheckpoint struct {
 	ItemPath          string                   `json:"itemPath"`
 	ProviderStatus    string                   `json:"providerStatus,omitempty"`
@@ -88,38 +96,40 @@ type UploadCheckpoint struct {
 }
 
 type RuntimeState struct {
-	ExecutionState     string            `json:"executionState"`
-	PauseRequested     bool              `json:"pauseRequested,omitempty"`
-	PauseRequestedAt   string            `json:"pauseRequestedAt,omitempty"`
-	PauseRequestSource string            `json:"pauseRequestSource,omitempty"`
-	CurrentRoot        string            `json:"currentRoot,omitempty"`
-	CurrentDirectory   string            `json:"currentDirectory,omitempty"`
-	CurrentItemPath    string            `json:"currentItemPath,omitempty"`
-	LastCompletedPath  string            `json:"lastCompletedPath,omitempty"`
-	BlockedReason      string            `json:"blockedReason,omitempty"`
-	BlockedAction      string            `json:"blockedAction,omitempty"`
-	BlockedAdvice      string            `json:"blockedAdvice,omitempty"`
-	NextRetryAt        string            `json:"nextRetryAt,omitempty"`
-	AutoRecovered      bool              `json:"autoRecovered,omitempty"`
-	AutoRecoverReason  string            `json:"autoRecoverReason,omitempty"`
-	AutoRecoverCount   int               `json:"autoRecoverCount,omitempty"`
-	AutoRecoveredAt    string            `json:"autoRecoveredAt,omitempty"`
-	AutoRecoverState   string            `json:"autoRecoverState,omitempty"`
-	ProcessedCount     int               `json:"processedCount"`
-	DoneCount          int               `json:"doneCount"`
-	SkippedCount       int               `json:"skippedCount"`
-	FailedCount        int               `json:"failedCount"`
-	PendingCount       int               `json:"pendingCount"`
-	RiskHitCount       int               `json:"riskHitCount"`
-	LastRiskStatus     string            `json:"lastRiskStatus,omitempty"`
-	RiskHits           []RiskHit         `json:"riskHits,omitempty"`
-	PendingTree        []PendingNode     `json:"pendingTree,omitempty"`
-	RetryQueue         []RetryQueueItem  `json:"retryQueue,omitempty"`
-	RetryableCount     int               `json:"retryableCount"`
-	BlockedRetryCount  int               `json:"blockedRetryCount"`
-	NextSequence       int               `json:"nextSequence"`
-	DirectoryStates    []DirectoryState  `json:"directoryStates,omitempty"`
-	UploadCheckpoint   *UploadCheckpoint `json:"uploadCheckpoint,omitempty"`
+	ExecutionState        string                 `json:"executionState"`
+	PauseRequested        bool                   `json:"pauseRequested,omitempty"`
+	PauseRequestedAt      string                 `json:"pauseRequestedAt,omitempty"`
+	PauseRequestSource    string                 `json:"pauseRequestSource,omitempty"`
+	CurrentRoot           string                 `json:"currentRoot,omitempty"`
+	CurrentDirectory      string                 `json:"currentDirectory,omitempty"`
+	CurrentItemPath       string                 `json:"currentItemPath,omitempty"`
+	LastCompletedPath     string                 `json:"lastCompletedPath,omitempty"`
+	BlockedReason         string                 `json:"blockedReason,omitempty"`
+	BlockedAction         string                 `json:"blockedAction,omitempty"`
+	BlockedAdvice         string                 `json:"blockedAdvice,omitempty"`
+	NextRetryAt           string                 `json:"nextRetryAt,omitempty"`
+	AutoRecovered         bool                   `json:"autoRecovered,omitempty"`
+	AutoRecoverReason     string                 `json:"autoRecoverReason,omitempty"`
+	AutoRecoverCount      int                    `json:"autoRecoverCount,omitempty"`
+	AutoRecoveredAt       string                 `json:"autoRecoveredAt,omitempty"`
+	AutoRecoverState      string                 `json:"autoRecoverState,omitempty"`
+	ProcessedCount        int                    `json:"processedCount"`
+	DoneCount             int                    `json:"doneCount"`
+	SkippedCount          int                    `json:"skippedCount"`
+	FailedCount           int                    `json:"failedCount"`
+	PendingCount          int                    `json:"pendingCount"`
+	SourceDeletionCount   int                    `json:"sourceDeletionCount,omitempty"`
+	RiskHitCount          int                    `json:"riskHitCount"`
+	LastRiskStatus        string                 `json:"lastRiskStatus,omitempty"`
+	RiskHits              []RiskHit              `json:"riskHits,omitempty"`
+	PendingTree           []PendingNode          `json:"pendingTree,omitempty"`
+	SourceDeletionRecords []SourceDeletionRecord `json:"sourceDeletionRecords,omitempty"`
+	RetryQueue            []RetryQueueItem       `json:"retryQueue,omitempty"`
+	RetryableCount        int                    `json:"retryableCount"`
+	BlockedRetryCount     int                    `json:"blockedRetryCount"`
+	NextSequence          int                    `json:"nextSequence"`
+	DirectoryStates       []DirectoryState       `json:"directoryStates,omitempty"`
+	UploadCheckpoint      *UploadCheckpoint      `json:"uploadCheckpoint,omitempty"`
 }
 
 type RiskHit struct {

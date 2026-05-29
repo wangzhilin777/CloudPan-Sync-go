@@ -80,6 +80,7 @@ func TestAppWorkflowMainline(t *testing.T) {
 		"selectedRoots":  []string{"/demo"},
 		"entries": []map[string]interface{}{
 			{"path": "/demo/a.bin", "size": 2048, "md5": "md5-a"},
+			{"path": "/demo/deleted.bin", "deleted": true, "deletedAt": "2026-05-29T10:00:00Z", "deleteReason": "source_removed"},
 			{"path": "/demo/missing.bin", "size": 512},
 			{"path": "/demo/pending.bin", "size": 10 * 1024 * 1024},
 		},
@@ -90,6 +91,13 @@ func TestAppWorkflowMainline(t *testing.T) {
 		t.Fatalf("expected 3 preview items, got %d", len(items))
 	}
 	metadata := previewData["metadata"].(map[string]interface{})
+	if got := int(metadata["deletedEntryCount"].(float64)); got != 1 {
+		t.Fatalf("expected preview deletedEntryCount 1, got %d", got)
+	}
+	deletionRecords := metadata["sourceDeletionRecords"].([]interface{})
+	if len(deletionRecords) != 1 {
+		t.Fatalf("expected preview sourceDeletionRecords 1, got %#v", deletionRecords)
+	}
 	if got := metadata["executionMode"].(string); got != "pre_scan_flat" {
 		t.Fatalf("expected preview executionMode pre_scan_flat, got %s", got)
 	}
@@ -137,6 +145,7 @@ func TestAppWorkflowMainline(t *testing.T) {
 		"selectedRoots":  []string{"/demo"},
 		"entries": []map[string]interface{}{
 			{"path": "/demo/a.bin", "size": 2048, "md5": "md5-a", "localPath": localFile},
+			{"path": "/demo/deleted.bin", "deleted": true, "deletedAt": "2026-05-29T10:00:00Z", "deleteReason": "source_removed"},
 			{"path": "/demo/missing.bin", "size": 512},
 			{"path": "/demo/pending.bin", "size": 10 * 1024 * 1024},
 		},
@@ -147,6 +156,9 @@ func TestAppWorkflowMainline(t *testing.T) {
 		t.Fatal("expected task id")
 	}
 	createdMetadata := taskData["plan"].(map[string]interface{})["metadata"].(map[string]interface{})
+	if got := int(createdMetadata["deletedEntryCount"].(float64)); got != 1 {
+		t.Fatalf("expected task deletedEntryCount 1, got %d", got)
+	}
 	if got := createdMetadata["executionMode"].(string); got != "pre_scan_flat" {
 		t.Fatalf("expected task executionMode pre_scan_flat, got %s", got)
 	}
@@ -186,6 +198,12 @@ func TestAppWorkflowMainline(t *testing.T) {
 		t.Fatalf("expected result executionMode pre_scan_flat, got %s", got)
 	}
 	runtimeData := runData["runtime"].(map[string]interface{})
+	if got := int(runtimeData["sourceDeletionCount"].(float64)); got != 1 {
+		t.Fatalf("expected runtime sourceDeletionCount 1, got %d", got)
+	}
+	if got := len(runtimeData["sourceDeletionRecords"].([]interface{})); got != 1 {
+		t.Fatalf("expected runtime sourceDeletionRecords 1, got %d", got)
+	}
 	if got := runtimeData["blockedReason"].(string); got != "retry_queue_requires_local_file_restore" {
 		t.Fatalf("expected blockedReason retry_queue_requires_local_file_restore, got %s", got)
 	}
@@ -222,6 +240,9 @@ func TestAppWorkflowMainline(t *testing.T) {
 	}
 	if got := int(evidenceData["pendingResultCount"].(float64)); got != 1 {
 		t.Fatalf("expected pendingResultCount=1, got %d", got)
+	}
+	if got := int(evidenceData["sourceDeletionCount"].(float64)); got != 1 {
+		t.Fatalf("expected sourceDeletionCount=1, got %d", got)
 	}
 	blockedActions := evidenceData["blockedActions"].([]interface{})
 	if len(blockedActions) == 0 {
@@ -324,6 +345,9 @@ func TestAppWorkflowMainline(t *testing.T) {
 		}
 		if got := int(summary["pendingCount"].(float64)); got != 1 {
 			t.Fatalf("expected status summary pendingCount 1, got %d", got)
+		}
+		if got := int(summary["sourceDeletionCount"].(float64)); got != 1 {
+			t.Fatalf("expected status summary sourceDeletionCount 1, got %d", got)
 		}
 		if got := int(summary["retryableCount"].(float64)); got != 1 {
 			t.Fatalf("expected status summary retryableCount 1, got %d", got)

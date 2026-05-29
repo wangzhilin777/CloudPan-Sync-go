@@ -700,6 +700,8 @@ func taskEvidenceSummary(ctx context.Context, store *sqlitestore.Store, provider
 	}
 	blockedDetails := make([]Detail, 0)
 	for _, detail := range details {
+		ensureRuntimeState(&detail)
+		summary.SourceDeletionCount += detail.Runtime.SourceDeletionCount
 		if detail.Task.State != StateBlocked {
 			continue
 		}
@@ -1209,6 +1211,8 @@ func buildProviderStatusSnapshot(ctx context.Context, store *sqlitestore.Store, 
 			"skippedCount":                   detail.Runtime.SkippedCount,
 			"failedCount":                    detail.Runtime.FailedCount,
 			"pendingCount":                   detail.Runtime.PendingCount,
+			"sourceDeletionCount":            detail.Runtime.SourceDeletionCount,
+			"sourceDeletionRecords":          detail.Runtime.SourceDeletionRecords,
 			"pendingTree":                    detail.Runtime.PendingTree,
 			"retryableCount":                 detail.Runtime.RetryableCount,
 			"blockedRetryCount":              detail.Runtime.BlockedRetryCount,

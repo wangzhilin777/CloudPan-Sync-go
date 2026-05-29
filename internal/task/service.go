@@ -120,20 +120,21 @@ type Detail struct {
 }
 
 type EvidenceSummary struct {
-	TotalTasks         int                `json:"totalTasks"`
-	CompletedTasks     int                `json:"completedTasks"`
-	BlockedTasks       int                `json:"blockedTasks"`
-	AutoRecoverTasks   int                `json:"autoRecoverTasks"`
-	FailedResultCount  int                `json:"failedResultCount"`
-	DoneResultCount    int                `json:"doneResultCount"`
-	SkippedResultCount int                `json:"skippedResultCount"`
-	PendingResultCount int                `json:"pendingResultCount"`
-	RiskHitCount       int                `json:"riskHitCount"`
-	BlockedActions     []BlockedAction    `json:"blockedActions,omitempty"`
-	AutoRecoverPool    []AutoRecoverLane  `json:"autoRecoverPool,omitempty"`
-	ProtocolCoverage   []ProtocolCoverage `json:"protocolCoverage,omitempty"`
-	RecentResults      []Result           `json:"recentResults"`
-	RecentProbes       []ProviderProbe    `json:"recentProbes"`
+	TotalTasks          int                `json:"totalTasks"`
+	CompletedTasks      int                `json:"completedTasks"`
+	BlockedTasks        int                `json:"blockedTasks"`
+	AutoRecoverTasks    int                `json:"autoRecoverTasks"`
+	FailedResultCount   int                `json:"failedResultCount"`
+	DoneResultCount     int                `json:"doneResultCount"`
+	SkippedResultCount  int                `json:"skippedResultCount"`
+	PendingResultCount  int                `json:"pendingResultCount"`
+	SourceDeletionCount int                `json:"sourceDeletionCount"`
+	RiskHitCount        int                `json:"riskHitCount"`
+	BlockedActions      []BlockedAction    `json:"blockedActions,omitempty"`
+	AutoRecoverPool     []AutoRecoverLane  `json:"autoRecoverPool,omitempty"`
+	ProtocolCoverage    []ProtocolCoverage `json:"protocolCoverage,omitempty"`
+	RecentResults       []Result           `json:"recentResults"`
+	RecentProbes        []ProviderProbe    `json:"recentProbes"`
 }
 
 type AutoRecoverLane struct {
@@ -2374,16 +2375,19 @@ func intPointerFromRaw(raw interface{}) (*int, bool) {
 
 func initializeRuntimeState(plan planner.Plan) RuntimeState {
 	directoryStates := collectDirectoryStates(plan)
+	sourceDeletionRecords := sourceDeletionRecordsFromMetadata(plan.Metadata)
 	return RuntimeState{
-		ExecutionState:  "idle",
-		ProcessedCount:  0,
-		DoneCount:       0,
-		SkippedCount:    0,
-		FailedCount:     0,
-		PendingCount:    0,
-		RiskHitCount:    0,
-		NextSequence:    1,
-		DirectoryStates: directoryStates,
+		ExecutionState:        "idle",
+		ProcessedCount:        0,
+		DoneCount:             0,
+		SkippedCount:          0,
+		FailedCount:           0,
+		PendingCount:          0,
+		SourceDeletionCount:   len(sourceDeletionRecords),
+		SourceDeletionRecords: sourceDeletionRecords,
+		RiskHitCount:          0,
+		NextSequence:          1,
+		DirectoryStates:       directoryStates,
 	}
 }
 
@@ -2408,6 +2412,56 @@ func ensureRuntimeState(detail *Detail) {
 	}
 	if detail.Runtime.NextSequence <= 0 {
 		detail.Runtime.NextSequence = len(detail.Results) + 1
+	}
+	if len(detail.Runtime.SourceDeletionRecords) == 0 {
+		detail.Runtime.SourceDeletionRecords = sourceDeletionRecordsFromMetadata(detail.Plan.Metadata)
+	}
+	if detail.Runtime.SourceDeletionCount == 0 && len(detail.Runtime.SourceDeletionRecords) > 0 {
+		detail.Runtime.SourceDeletionCount = len(detail.Runtime.SourceDeletionRecords)
+	}
+}
+
+func sourceDeletionRecordsFromMetadata(metadata map[string]interface{}) []SourceDeletionRecord {
+	if len(metadata) == 0 {
+		return nil
+	}
+	raw, ok := metadata["sourceDeletionRecords"]
+	if !ok {
+		return nil
+	}
+	switch typed := raw.(type) {
+	case []SourceDeletionRecord:
+		return append([]SourceDeletionRecord(nil), typed...)
+	case []map[string]interface{}:
+		items := make([]SourceDeletionRecord, 0, len(typed))
+		for _, entry := range typed {
+			items = append(items, SourceDeletionRecord{
+				Path:         normalizeScanPath(stringMapValue(entry, "path")),
+				Name:         strings.TrimSpace(stringMapValue(entry, "name")),
+				RootPath:     normalizeScanPath(stringMapValue(entry, "rootPath")),
+				DeletedAt:    strings.TrimSpace(stringMapValue(entry, "deletedAt")),
+				DeleteReason: strings.TrimSpace(stringMapValue(entry, "deleteReason")),
+			})
+		}
+		return items
+	case []interface{}:
+		items := make([]SourceDeletionRecord, 0, len(typed))
+		for _, rawItem := range typed {
+			entry, _ := rawItem.(map[string]interface{})
+			if entry == nil {
+				continue
+			}
+			items = append(items, SourceDeletionRecord{
+				Path:         normalizeScanPath(stringMapValue(entry, "path")),
+				Name:         strings.TrimSpace(stringMapValue(entry, "name")),
+				RootPath:     normalizeScanPath(stringMapValue(entry, "rootPath")),
+				DeletedAt:    strings.TrimSpace(stringMapValue(entry, "deletedAt")),
+				DeleteReason: strings.TrimSpace(stringMapValue(entry, "deleteReason")),
+			})
+		}
+		return items
+	default:
+		return nil
 	}
 }
 
@@ -2753,6 +2807,7 @@ func buildEvidenceReport(summary EvidenceSummary, statuses []StatusSummary, smok
 	fmt.Fprintf(&b, "- 成功结果: %d\n", summary.DoneResultCount)
 	fmt.Fprintf(&b, "- 跳过结果: %d\n", summary.SkippedResultCount)
 	fmt.Fprintf(&b, "- 待补传结果: %d\n", summary.PendingResultCount)
+	fmt.Fprintf(&b, "- 源端删除记录: %d\n", summary.SourceDeletionCount)
 	fmt.Fprintf(&b, "- 失败结果: %d\n", summary.FailedResultCount)
 	fmt.Fprintf(&b, "- 风控命中: %d\n", summary.RiskHitCount)
 	b.WriteString("\n## 阻塞动作\n\n")
@@ -4508,6 +4563,8 @@ func buildProviderProbe(detail Detail, profile provider.AuthProfile, results []R
 			"riskOverride":                   detail.Plan.Metadata["riskOverride"],
 			"runtime":                        detail.Runtime,
 			"pendingCount":                   detail.Runtime.PendingCount,
+			"sourceDeletionCount":            detail.Runtime.SourceDeletionCount,
+			"sourceDeletionRecords":          detail.Runtime.SourceDeletionRecords,
 			"pendingTree":                    detail.Runtime.PendingTree,
 			"retryableCount":                 detail.Runtime.RetryableCount,
 			"blockedRetryCount":              detail.Runtime.BlockedRetryCount,

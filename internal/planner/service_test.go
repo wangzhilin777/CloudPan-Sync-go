@@ -309,6 +309,50 @@ func TestBuildPreviewSupportsPreScanFlatMode(t *testing.T) {
 	}
 }
 
+func TestBuildPreviewTracksSourceDeletionRecords(t *testing.T) {
+	registry := provider.NewRegistry(provider.DefaultCatalog()...)
+	plan, err := BuildPreview(registry, PreviewRequest{
+		SourceProvider: "guangya",
+		TargetProvider: "123_open",
+		SelectedRoots:  []string{"/demo"},
+		Entries: []SourceEntry{
+			{Path: "/demo/live/a.bin", Size: 10, MD5: "md5-a"},
+			{Path: "/demo/deleted.bin", Deleted: true, DeletedAt: "2026-05-29T10:00:00Z", DeleteReason: "source_removed"},
+		},
+	})
+	if err != nil {
+		t.Fatalf("BuildPreview() error = %v", err)
+	}
+	if len(plan.Items) != 1 {
+		t.Fatalf("expected only active entries to become plan items, got %d", len(plan.Items))
+	}
+	if got := plan.Items[0].Path; got != "/demo/live/a.bin" {
+		t.Fatalf("expected active entry path /demo/live/a.bin, got %s", got)
+	}
+	if got, _ := plan.Metadata["activeEntryCount"].(int); got != 1 {
+		t.Fatalf("expected activeEntryCount 1, got %#v", plan.Metadata["activeEntryCount"])
+	}
+	if got, _ := plan.Metadata["deletedEntryCount"].(int); got != 1 {
+		t.Fatalf("expected deletedEntryCount 1, got %#v", plan.Metadata["deletedEntryCount"])
+	}
+	records, ok := plan.Metadata["sourceDeletionRecords"].([]map[string]interface{})
+	if !ok {
+		t.Fatalf("expected sourceDeletionRecords metadata, got %#v", plan.Metadata["sourceDeletionRecords"])
+	}
+	if len(records) != 1 {
+		t.Fatalf("expected 1 source deletion record, got %#v", records)
+	}
+	if records[0]["path"] != "/demo/deleted.bin" {
+		t.Fatalf("expected deleted path /demo/deleted.bin, got %#v", records[0]["path"])
+	}
+	if records[0]["rootPath"] != "/demo" {
+		t.Fatalf("expected deleted rootPath /demo, got %#v", records[0]["rootPath"])
+	}
+	if records[0]["deleteReason"] != "source_removed" {
+		t.Fatalf("expected deleteReason source_removed, got %#v", records[0]["deleteReason"])
+	}
+}
+
 func TestBuildPreviewClampsAutoRetryWindowOverride(t *testing.T) {
 	registry := provider.NewRegistry(provider.DefaultCatalog()...)
 	plan, err := BuildPreview(registry, PreviewRequest{

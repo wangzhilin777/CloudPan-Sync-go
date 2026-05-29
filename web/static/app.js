@@ -753,6 +753,10 @@ function renderRuntimeCheckpoint(runtime, metadata = null, scope = "task") {
       <span>done ${stringifyValue(runtime.doneCount, "0")} / skipped ${stringifyValue(runtime.skippedCount, "0")} / failed ${stringifyValue(runtime.failedCount, "0")}</span>
     </div>
     <div class="insight-card checkpoint-card">
+      <strong>源端删除记录</strong>
+      <span>${stringifyValue(runtime.sourceDeletionCount, "0")}</span>
+    </div>
+    <div class="insight-card checkpoint-card">
       <strong>风控命中</strong>
       <span>${stringifyValue(runtime.riskHitCount, "0")} / last ${stringifyValue(runtime.lastRiskStatus, "-")}</span>
     </div>
@@ -794,7 +798,44 @@ function renderRuntimeCheckpoint(runtime, metadata = null, scope = "task") {
         `
         : ""
     }
+    ${renderSourceDeletionSummary(runtime.sourceDeletionRecords || metadata?.sourceDeletionRecords || [], runtime.sourceDeletionCount || metadata?.deletedEntryCount || 0, scope)}
     ${renderUploadCheckpoint(runtime.uploadCheckpoint)}
+  `;
+}
+
+function renderSourceDeletionSummary(records, count = 0, scope = "task") {
+  const items = Array.isArray(records) ? records.filter((item) => item && typeof item === "object") : [];
+  const resolvedCount = Number(count || items.length || 0);
+  if (!resolvedCount && !items.length) {
+    return "";
+  }
+  const shown = items.slice(0, 4);
+  const rows = shown
+    .map((item) => {
+      const path = firstNonEmpty(item.path, "-");
+      const reason = firstNonEmpty(item.deleteReason, item.reason, "-");
+      const deletedAt = firstNonEmpty(item.deletedAt, "-");
+      return `
+        <div class="muted">
+          <button
+            type="button"
+            class="ghost path-chip"
+            data-runtime-focus-path="${escapeHTML(path)}"
+            data-runtime-focus-scope="${escapeHTML(scope)}"
+            data-runtime-focus-kind="roots"
+          >${escapeHTML(path)}</button>
+          <span> | reason ${escapeHTML(reason)} | deletedAt ${escapeHTML(deletedAt)}</span>
+        </div>
+      `;
+    })
+    .join("");
+  return `
+    <div class="insight-card checkpoint-card">
+      <strong>删除记录摘要</strong>
+      <div>${resolvedCount} 条，默认只记录，不会自动删除目标端真实文件。</div>
+      ${rows || '<div class="muted">暂无可展开样本。</div>'}
+      ${items.length > shown.length ? `<div class="muted">还有 ${items.length - shown.length} 条未展开。</div>` : ""}
+    </div>
   `;
 }
 
@@ -2582,6 +2623,10 @@ function renderSelectedTask() {
       <span>${stringifyValue(metadata.retrySummary?.blockedReason || (metadata.retrySummary?.shouldBlock ? "blocked" : "ready"), "-")}</span>
     </div>
     <div class="insight-card">
+      <strong>源端删除记录</strong>
+      <span>${stringifyValue(runtime.sourceDeletionCount || metadata.deletedEntryCount, "0")}</span>
+    </div>
+    <div class="insight-card">
       <strong>建议动作</strong>
       <span>${stringifyValue(metadata.retrySummary?.blockedAction, "-")}</span>
     </div>
@@ -2655,6 +2700,11 @@ function renderPreview() {
       <strong>自动补传时间窗</strong>
       <span>${escapeHTML(renderRiskWindow(metadata.riskProfile))}</span>
     </div>
+    <div class="insight-card">
+      <strong>有效条目 / 删除记录</strong>
+      <span>${stringifyValue(metadata.activeEntryCount, "0")} / ${stringifyValue(metadata.deletedEntryCount, "0")}</span>
+    </div>
+    ${renderSourceDeletionSummary(metadata.sourceDeletionRecords || [], metadata.deletedEntryCount || 0, "task")}
   `;
   $("#plan-preview").textContent = formatJSON(state.preview);
 }
@@ -2669,6 +2719,7 @@ function renderStatus() {
     doneResultCount: 0,
     skippedResultCount: 0,
     pendingResultCount: 0,
+    sourceDeletionCount: 0,
     riskHitCount: 0,
     blockedActions: [],
     autoRecoverPool: [],
@@ -2694,6 +2745,7 @@ function renderStatus() {
     <div class="metric"><span>Done Results</span><strong>${evidence.doneResultCount}</strong></div>
     <div class="metric"><span>Skipped Results</span><strong>${evidence.skippedResultCount}</strong></div>
     <div class="metric"><span>Pending Manual</span><strong>${evidence.pendingResultCount}</strong></div>
+    <div class="metric"><span>Source Deletes</span><strong>${stringifyValue(evidence.sourceDeletionCount, "0")}</strong></div>
     <div class="metric"><span>Failed Results</span><strong>${evidence.failedResultCount}</strong></div>
     <div class="metric"><span>Risk Hits</span><strong>${evidence.riskHitCount}</strong></div>
     <div class="metric"><span>Auto Tick</span><strong>${escapeHTML(stringifyValue(autoRetryPolicy.tick, "-"))}</strong></div>
@@ -3432,6 +3484,7 @@ function renderSnapshotSummary(summary) {
       <div><strong>queueSize</strong> <code>${escapeHTML(stringifyValue(retrySummary.queueSize, "0"))}</code></div>
       <div><strong>autoRecover</strong> <code>${escapeHTML(renderAutoRecoverMode(retrySummary))}</code></div>
       <div><strong>queueBreakdown</strong> <code>${escapeHTML(renderRetrySummaryBreakdown(retrySummary))}</code></div>
+      <div><strong>sourceDeletes</strong> <code>${escapeHTML(stringifyValue(summary.sourceDeletionCount, "0"))}</code></div>
       <div><strong>autoRecoverPool</strong> <code>${escapeHTML(stringifyValue((summary.autoRecoverPool || []).map((item) => item.mode).join(", "), "-"))}</code></div>
       <div><strong>protocolCoverage</strong> <code>${escapeHTML(stringifyValue(summary.protocolCoverage?.protocolGroup, "-"))} / ${escapeHTML(stringifyValue(summary.protocolCoverage?.realSuccessTaskCount, "0"))}</code></div>
     `;
