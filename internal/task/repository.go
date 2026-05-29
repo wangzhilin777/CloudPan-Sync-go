@@ -354,6 +354,10 @@ type autoRecoverLaneAccumulator struct {
 	runnableTaskCount            int
 	waitingCooldownTaskCount     int
 	waitingRetryWindowTaskCount  int
+	waitingAuthRefreshTaskCount  int
+	waitingLocalRestoreTaskCount int
+	waitingManualTaskCount       int
+	waitingRetryLimitTaskCount   int
 	waitingOtherTaskCount        int
 	uploadCheckpointEligible     int
 	nextRetryAt                  string
@@ -457,27 +461,34 @@ func summarizeBlockedActions(details []Detail) []BlockedAction {
 }
 
 type autoRecoverLaneState struct {
-	runnableNow        bool
-	waitingCooldown    bool
-	waitingRetryWindow bool
-	waitingOther       bool
+	runnableNow               bool
+	waitingCooldown           bool
+	waitingRetryWindow        bool
+	waitingAuthRefresh        bool
+	waitingLocalRestore       bool
+	waitingManualConfirmation bool
+	waitingRetryLimit         bool
+	waitingOther              bool
 }
 
 func classifyAutoRecoverLaneState(detail Detail, summary retryQueueSummary) autoRecoverLaneState {
 	state := autoRecoverLaneState{}
-	if taskCanAutoRecover(detail) {
+	switch recoverDecisionCategory(detail, summary) {
+	case "runnable_now":
 		state.runnableNow = true
-		return state
-	}
-	if summary.WindowBlocked || summary.BlockedReason == "retry_queue_waiting_for_retry_window" || detail.Runtime.BlockedAction == "wait_for_retry_window" {
-		state.waitingRetryWindow = true
-		return state
-	}
-	if summary.CooldownCount > 0 || summary.BlockedReason == "retry_queue_waiting_for_cooldown" || detail.Runtime.BlockedAction == "wait_for_cooldown" {
+	case "waiting_cooldown":
 		state.waitingCooldown = true
-		return state
-	}
-	if summary.UploadCheckpointEligible > 0 || summary.AutoRecoverEligible || strings.TrimSpace(detail.Runtime.BlockedAction) != "" {
+	case "waiting_retry_window":
+		state.waitingRetryWindow = true
+	case "waiting_auth_refresh":
+		state.waitingAuthRefresh = true
+	case "waiting_local_restore":
+		state.waitingLocalRestore = true
+	case "waiting_manual_confirmation":
+		state.waitingManualConfirmation = true
+	case "waiting_retry_limit":
+		state.waitingRetryLimit = true
+	case "waiting_other":
 		state.waitingOther = true
 	}
 	return state
@@ -564,6 +575,18 @@ func summarizeAutoRecoverPool(details []Detail, providers []provider.Entry) ([]A
 		if laneState.waitingRetryWindow {
 			acc.waitingRetryWindowTaskCount++
 		}
+		if laneState.waitingAuthRefresh {
+			acc.waitingAuthRefreshTaskCount++
+		}
+		if laneState.waitingLocalRestore {
+			acc.waitingLocalRestoreTaskCount++
+		}
+		if laneState.waitingManualConfirmation {
+			acc.waitingManualTaskCount++
+		}
+		if laneState.waitingRetryLimit {
+			acc.waitingRetryLimitTaskCount++
+		}
 		if laneState.waitingOther {
 			acc.waitingOtherTaskCount++
 		}
@@ -605,6 +628,10 @@ func summarizeAutoRecoverPool(details []Detail, providers []provider.Entry) ([]A
 			RunnableTaskCount:            acc.runnableTaskCount,
 			WaitingCooldownTaskCount:     acc.waitingCooldownTaskCount,
 			WaitingRetryWindowTaskCount:  acc.waitingRetryWindowTaskCount,
+			WaitingAuthRefreshTaskCount:  acc.waitingAuthRefreshTaskCount,
+			WaitingLocalRestoreTaskCount: acc.waitingLocalRestoreTaskCount,
+			WaitingManualTaskCount:       acc.waitingManualTaskCount,
+			WaitingRetryLimitTaskCount:   acc.waitingRetryLimitTaskCount,
 			WaitingOtherTaskCount:        acc.waitingOtherTaskCount,
 			UploadCheckpointEligible:     acc.uploadCheckpointEligible,
 			ProtocolGroups:               protocolGroups,

@@ -2977,9 +2977,17 @@ function filterAutoRecoverItems(items, filters = state.autoRecoverFilters) {
             ? Number(item?.waitingCooldownTaskCount || 0)
             : recoverState === "waiting_retry_window"
               ? Number(item?.waitingRetryWindowTaskCount || 0)
-              : recoverState === "waiting_other"
-                ? Number(item?.waitingOtherTaskCount || 0)
-                : 0;
+              : recoverState === "waiting_auth_refresh"
+                ? Number(item?.waitingAuthRefreshTaskCount || 0)
+                : recoverState === "waiting_local_restore"
+                  ? Number(item?.waitingLocalRestoreTaskCount || 0)
+                  : recoverState === "waiting_manual_confirmation"
+                    ? Number(item?.waitingManualTaskCount || 0)
+                    : recoverState === "waiting_retry_limit"
+                      ? Number(item?.waitingRetryLimitTaskCount || 0)
+                : recoverState === "waiting_other"
+                  ? Number(item?.waitingOtherTaskCount || 0)
+                  : 0;
       if (stateCount <= 0) {
         return false;
       }
@@ -3197,7 +3205,7 @@ function renderAutoRecoverSummary(items) {
               ? `<div class="muted">主失败口径：retryClass <code>${escapeHTML(stringifyValue(item.primaryRetryClass, "-"))}</code> / blockedAction <code>${escapeHTML(stringifyValue(item.primaryBlockedAction, "-"))}</code></div>`
               : ""
           }
-          <div class="muted">可执行态 ${escapeHTML(stringifyValue(item.runnableTaskCount, "0"))} / 等冷却 ${escapeHTML(stringifyValue(item.waitingCooldownTaskCount, "0"))} / 等时间窗 ${escapeHTML(stringifyValue(item.waitingRetryWindowTaskCount, "0"))} / 其它等待 ${escapeHTML(stringifyValue(item.waitingOtherTaskCount, "0"))}。</div>
+          <div class="muted">可执行态 ${escapeHTML(stringifyValue(item.runnableTaskCount, "0"))} / 等冷却 ${escapeHTML(stringifyValue(item.waitingCooldownTaskCount, "0"))} / 等时间窗 ${escapeHTML(stringifyValue(item.waitingRetryWindowTaskCount, "0"))} / 等刷新授权 ${escapeHTML(stringifyValue(item.waitingAuthRefreshTaskCount, "0"))} / 等补源文件 ${escapeHTML(stringifyValue(item.waitingLocalRestoreTaskCount, "0"))} / 等人工确认 ${escapeHTML(stringifyValue(item.waitingManualTaskCount, "0"))} / 重试耗尽 ${escapeHTML(stringifyValue(item.waitingRetryLimitTaskCount, "0"))} / 其它等待 ${escapeHTML(stringifyValue(item.waitingOtherTaskCount, "0"))}。</div>
           <div class="muted">同档位会先按协议族、provider 再到授权档案轮转；默认建议 group 预算 <code>${escapeHTML(stringifyValue(item.suggestedProtocolGroupBudget, "-"))}</code> / provider 预算 <code>${escapeHTML(stringifyValue(item.suggestedProviderBudget, "-"))}</code> / profile 预算 <code>${escapeHTML(stringifyValue(item.suggestedProfileBudget, "-"))}</code>。</div>
           <div class="muted">协议族：${escapeHTML((item.protocolGroups || []).join(", ") || stringifyValue(item.sampleProtocolGroup, "-"))}</div>
           <div class="muted">${escapeHTML(stringifyValue(item.advice, "-"))}</div>
@@ -3242,6 +3250,42 @@ function renderAutoRecoverSummary(items) {
               class="ghost"
               data-auto-recover-focus-state="waiting_retry_window"
             >只看等时间窗</button>`
+                : ""
+            }
+            ${
+              Number(item?.waitingAuthRefreshTaskCount || 0) > 0
+                ? `<button
+              type="button"
+              class="ghost"
+              data-auto-recover-focus-state="waiting_auth_refresh"
+            >只看等刷新授权</button>`
+                : ""
+            }
+            ${
+              Number(item?.waitingLocalRestoreTaskCount || 0) > 0
+                ? `<button
+              type="button"
+              class="ghost"
+              data-auto-recover-focus-state="waiting_local_restore"
+            >只看等补源文件</button>`
+                : ""
+            }
+            ${
+              Number(item?.waitingManualTaskCount || 0) > 0
+                ? `<button
+              type="button"
+              class="ghost"
+              data-auto-recover-focus-state="waiting_manual_confirmation"
+            >只看等人工确认</button>`
+                : ""
+            }
+            ${
+              Number(item?.waitingRetryLimitTaskCount || 0) > 0
+                ? `<button
+              type="button"
+              class="ghost"
+              data-auto-recover-focus-state="waiting_retry_limit"
+            >只看重试耗尽</button>`
                 : ""
             }
             ${
@@ -3352,6 +3396,42 @@ function renderAutoRecoverSummary(items) {
               class="ghost"
               data-auto-recover-run-state="waiting_retry_window"
             >只执行等时间窗</button>`
+                : ""
+            }
+            ${
+              Number(item?.waitingAuthRefreshTaskCount || 0) > 0
+                ? `<button
+              type="button"
+              class="ghost"
+              data-auto-recover-run-state="waiting_auth_refresh"
+            >只执行等刷新授权</button>`
+                : ""
+            }
+            ${
+              Number(item?.waitingLocalRestoreTaskCount || 0) > 0
+                ? `<button
+              type="button"
+              class="ghost"
+              data-auto-recover-run-state="waiting_local_restore"
+            >只执行等补源文件</button>`
+                : ""
+            }
+            ${
+              Number(item?.waitingManualTaskCount || 0) > 0
+                ? `<button
+              type="button"
+              class="ghost"
+              data-auto-recover-run-state="waiting_manual_confirmation"
+            >只执行等人工确认</button>`
+                : ""
+            }
+            ${
+              Number(item?.waitingRetryLimitTaskCount || 0) > 0
+                ? `<button
+              type="button"
+              class="ghost"
+              data-auto-recover-run-state="waiting_retry_limit"
+            >只执行重试耗尽</button>`
                 : ""
             }
             ${
@@ -3909,6 +3989,14 @@ function autoRecoverBlockedActionFromRecoverState(recoverState) {
       return "wait_for_cooldown";
     case "waiting_retry_window":
       return "wait_for_retry_window";
+    case "waiting_auth_refresh":
+      return "refresh_auth_profile";
+    case "waiting_local_restore":
+      return "restore_local_source_file";
+    case "waiting_manual_confirmation":
+      return "manual_confirmation_required";
+    case "waiting_retry_limit":
+      return "review_and_reset_retry_strategy";
     default:
       return "";
   }

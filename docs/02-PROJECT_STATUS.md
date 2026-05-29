@@ -421,6 +421,12 @@
   - `autoRecoverWaitingCooldownTasks`
   - `autoRecoverWaitingRetryWindowTasks`
   - `autoRecoverWaitingOtherTasks`
+- 当前 `autoRecoverPool` 的 lane 内部也已经细分出更明确的等待态计数：
+  - `waiting_auth_refresh`
+  - `waiting_local_restore`
+  - `waiting_manual_confirmation`
+  - `waiting_retry_limit`
+  - 其中 `waiting_other` 现在只表示剩余未细分等待态，不再把上述几类硬阻塞都混在一起
 - 当前 `/api/evidence/runtime` 还会直接返回自动 worker 的默认调度策略摘要，能看到 `tick / batchLimit / limitPerMode / limitPerLane / limitPerProtocolGroup / limitPerProvider / limitPerProfile`
     - 可直接看出哪些任务已经进入后台补传候选池
     - 也能看出每种模式的任务数、provider 数、queue 大小、冷却量和 checkpoint 量
@@ -539,6 +545,13 @@
 - 状态页当前还新增了“预演当前筛选”和 lane 级“预演该 lane”入口，可直接复用当前筛选或建议预算先做 dry-run 试算
 - 状态页现在还会把最近一次预演或执行的 `decisions` 逐条列出来，便于直接看见是哪些任务已放行，哪些任务被 `limit / providerBudget / profileBudget / retryWindow / cooldown` 等口径挡住
 - 状态页手动放行还可直接按 `recoverState` 先收敛到“只放行当前能跑的 / 只看等冷却 / 只看等时间窗 / 只看其它等待”，也可继续填写 `limit / limitPerMode / limitPerLane / limitPerProtocolGroup / limitPerProvider / limitPerProfile`
+  - 当前 `recoverState` 还支持更细的硬阻塞筛选：
+    - `waiting_auth_refresh`
+    - `waiting_local_restore`
+    - `waiting_manual_confirmation`
+    - `waiting_retry_limit`
+  - 便于把状态页操作直接收敛到“等授权刷新 / 等补回本地文件 / 等人工确认 / 等重置重试策略”这四类任务
+  - 当 `path / paths` 为空时，后台补传 API 不再误把空筛选当成根路径筛选
   - 对当前命中但暂时不能执行的候选，状态页放行结果也会显式区分 cooldownWait / retryWindowWait / blocked，不再把这类跳过静默吞掉
     - 便于把补传节奏同时控制在“小批次 + 模式分流 + lane 分流 + 多账号轮转”
   - 任务目录树和待补传树节点现在也能直接触发“后台补传当前路径 / 当前 root”，方便只放行当前子树

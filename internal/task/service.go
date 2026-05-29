@@ -157,6 +157,10 @@ type AutoRecoverLane struct {
 	RunnableTaskCount            int      `json:"runnableTaskCount"`
 	WaitingCooldownTaskCount     int      `json:"waitingCooldownTaskCount"`
 	WaitingRetryWindowTaskCount  int      `json:"waitingRetryWindowTaskCount"`
+	WaitingAuthRefreshTaskCount  int      `json:"waitingAuthRefreshTaskCount"`
+	WaitingLocalRestoreTaskCount int      `json:"waitingLocalRestoreTaskCount"`
+	WaitingManualTaskCount       int      `json:"waitingManualTaskCount"`
+	WaitingRetryLimitTaskCount   int      `json:"waitingRetryLimitTaskCount"`
 	WaitingOtherTaskCount        int      `json:"waitingOtherTaskCount"`
 	UploadCheckpointEligible     int      `json:"uploadCheckpointEligible"`
 	ProtocolGroups               []string `json:"protocolGroups,omitempty"`
@@ -1300,35 +1304,54 @@ func (s *Service) RecoverBlockedTasksWithOptions(ctx context.Context, opts Recov
 }
 
 func recoverStateFallbackMatch(detail Detail, summary retryQueueSummary, recoverState string) bool {
-	recoverState = strings.TrimSpace(recoverState)
-	switch recoverState {
-	case "waiting_cooldown":
-		return summary.BlockedReason == "retry_queue_waiting_for_cooldown" || summary.BlockedAction == "wait_for_cooldown" || detail.Runtime.BlockedAction == "wait_for_cooldown"
-	case "waiting_retry_window":
-		return summary.BlockedReason == "retry_queue_waiting_for_retry_window" || summary.BlockedAction == "wait_for_retry_window" || detail.Runtime.BlockedAction == "wait_for_retry_window"
-	default:
-		return false
-	}
+	return recoverStateMatchesCandidate(detail, summary, recoverState)
 }
 
 func recoverStateMatchesCandidate(detail Detail, summary retryQueueSummary, recoverState string) bool {
-	state := classifyAutoRecoverLaneState(detail, summary)
-	mode := strings.TrimSpace(summary.AutoRecoverMode)
-	if mode == "" {
-		mode = autoRecoverReason(detail)
-	}
+	actualState := recoverDecisionState(detail, summary)
 	switch strings.TrimSpace(recoverState) {
-	case "runnable_now":
-		return state.runnableNow || mode == "retry_queue_auto_retry" || mode == "upload_checkpoint_auto_resume"
-	case "waiting_cooldown":
-		return state.waitingCooldown || mode == "cooldown_elapsed_auto_retry"
-	case "waiting_retry_window":
-		return state.waitingRetryWindow || mode == "retry_window_waiting_auto_retry"
 	case "waiting_other":
-		return state.waitingOther || (mode != "" && mode != "retry_queue_auto_retry" && mode != "upload_checkpoint_auto_resume" && mode != "cooldown_elapsed_auto_retry" && mode != "retry_window_waiting_auto_retry")
+		return actualState == "waiting_other" ||
+			actualState == "waiting_auth_refresh" ||
+			actualState == "waiting_local_restore" ||
+			actualState == "waiting_manual_confirmation" ||
+			actualState == "waiting_retry_limit"
 	default:
-		return false
+		return actualState != "" && actualState == strings.TrimSpace(recoverState)
 	}
+}
+
+func recoverDecisionCategory(detail Detail, summary retryQueueSummary) string {
+	if taskCanAutoRecover(detail) {
+		return "runnable_now"
+	}
+	switch strings.TrimSpace(summary.BlockedReason) {
+	case "retry_queue_waiting_for_cooldown":
+		return "waiting_cooldown"
+	case "retry_queue_waiting_for_retry_window":
+		return "waiting_retry_window"
+	}
+
+	blockedAction := strings.TrimSpace(firstNonEmpty(summary.BlockedAction, detail.Runtime.BlockedAction))
+	blockedReason := strings.TrimSpace(firstNonEmpty(summary.BlockedReason, detail.Runtime.BlockedReason))
+	switch {
+	case blockedAction == "refresh_auth_profile" || blockedReason == "retry_queue_requires_auth_refresh":
+		return "waiting_auth_refresh"
+	case blockedAction == "restore_local_source_file" || blockedAction == "restore_local_file" || blockedReason == "retry_queue_requires_local_file_restore":
+		return "waiting_local_restore"
+	case blockedAction == "manual_confirmation_required" || blockedReason == "retry_queue_pending_manual_confirmation":
+		return "waiting_manual_confirmation"
+	case blockedAction == "review_and_reset_retry_strategy" || blockedAction == "manual_intervention_required" || blockedReason == "retry_queue_retry_limit_exhausted":
+		return "waiting_retry_limit"
+	}
+
+	if detail.Task.State == StateCompletedWithErrors && retryQueueCanAutoResumeUploads(detail.Runtime.RetryQueue) {
+		return "waiting_other"
+	}
+	if blockedAction != "" || blockedReason != "" || summary.AutoRecoverEligible || summary.UploadCheckpointEligible > 0 {
+		return "waiting_other"
+	}
+	return ""
 }
 
 func recoverModeBudgetKey(mode string) string {
@@ -1369,8 +1392,12 @@ func normalizeRecoverSelectionPaths(paths []string, singlePath string) []string 
 	if len(selected) > 0 {
 		return selected
 	}
-	singlePath = normalizeScanPath(singlePath)
+	singlePath = strings.TrimSpace(singlePath)
 	if singlePath == "" {
+		return nil
+	}
+	singlePath = normalizeScanPath(singlePath)
+	if singlePath == "/" {
 		return nil
 	}
 	return []string{singlePath}
@@ -1384,19 +1411,7 @@ func firstRecoverSelectionPath(paths []string) string {
 }
 
 func recoverDecisionState(detail Detail, summary retryQueueSummary) string {
-	state := classifyAutoRecoverLaneState(detail, summary)
-	switch {
-	case state.runnableNow:
-		return "runnable_now"
-	case state.waitingCooldown:
-		return "waiting_cooldown"
-	case state.waitingRetryWindow:
-		return "waiting_retry_window"
-	case state.waitingOther:
-		return "waiting_other"
-	default:
-		return ""
-	}
+	return recoverDecisionCategory(detail, summary)
 }
 
 func recoverDecisionPath(detail Detail) string {
@@ -1653,10 +1668,10 @@ func detailMatchesBlockedAction(detail Detail, blockedAction string) bool {
 }
 
 func buildRecoverCandidate(detail Detail, protocolGroup string) recoverCandidate {
-	mode := autoRecoverReason(detail)
 	summary := summarizeRetryQueueWithRisk(detail.Runtime.RetryQueue, riskProfileFromMetadata(detail.Plan.Metadata), time.Now().UTC())
+	mode := summary.AutoRecoverMode
 	if mode == "" {
-		mode = summary.AutoRecoverMode
+		mode = autoRecoverReason(detail)
 	}
 	return recoverCandidate{
 		Detail:            detail,
@@ -3804,7 +3819,10 @@ func syncRuntimeRetryQueue(runtime *RuntimeState, metadata map[string]interface{
 	if runtime == nil {
 		return
 	}
-	runtime.RetryQueue = buildRetryQueue(metadata, results)
+	rebuilt := buildRetryQueue(metadata, results)
+	if len(rebuilt) > 0 || len(results) > 0 || len(runtime.RetryQueue) == 0 {
+		runtime.RetryQueue = rebuilt
+	}
 	runtime.RetryableCount = 0
 	runtime.BlockedRetryCount = 0
 	for _, item := range runtime.RetryQueue {
@@ -3867,6 +3885,16 @@ func autoRecoverReason(detail Detail) string {
 		return "upload_checkpoint_auto_resume"
 	}
 	summary := summarizeRetryQueueWithRisk(detail.Runtime.RetryQueue, riskProfileFromMetadata(detail.Plan.Metadata), time.Now().UTC())
+	switch summary.BlockedReason {
+	case "retry_queue_requires_auth_refresh":
+		return "auth_refresh_required"
+	case "retry_queue_requires_local_file_restore":
+		return "local_restore_required"
+	case "retry_queue_pending_manual_confirmation":
+		return "manual_confirmation_required"
+	case "retry_queue_retry_limit_exhausted":
+		return "retry_limit_blocked"
+	}
 	if summary.BlockedReason == "retry_queue_waiting_for_retry_window" {
 		return "retry_window_waiting_auto_retry"
 	}
@@ -3962,6 +3990,14 @@ func autoRecoverGuidance(mode string) string {
 	switch mode {
 	case "upload_checkpoint_auto_resume":
 		return "当前失败队列都带可恢复的 upload checkpoint，单机 worker 会优先尝试续跑上传会话。"
+	case "auth_refresh_required":
+		return "当前队列主要受授权失效阻塞，需要先刷新或重建授权档案，再考虑继续后台补传。"
+	case "local_restore_required":
+		return "当前队列主要受本地源文件缺失阻塞，需要先补回文件或调整执行策略。"
+	case "manual_confirmation_required":
+		return "当前队列存在 pending_manual 项，需要人工确认或等待后续真实 fallback 运行时能力。"
+	case "retry_limit_blocked":
+		return "当前队列已经耗尽任务级 retryLimit，需要先复盘失败原因并重建策略。"
 	case "cooldown_elapsed_auto_retry":
 		return "当前队列主要受冷却窗口阻塞，窗口结束后单机 worker 会自动重试。"
 	case "retry_window_waiting_auto_retry":
@@ -3983,6 +4019,14 @@ func autoRecoverModePriority(mode string) int {
 		return 2
 	case "cooldown_elapsed_auto_retry":
 		return 3
+	case "auth_refresh_required":
+		return 4
+	case "local_restore_required":
+		return 5
+	case "manual_confirmation_required":
+		return 6
+	case "retry_limit_blocked":
+		return 7
 	default:
 		return 9
 	}
@@ -4196,23 +4240,7 @@ func taskCanAutoRecover(detail Detail) bool {
 }
 
 func shouldIncludeAutoRecoverPool(detail Detail, summary retryQueueSummary) bool {
-	if taskCanAutoRecover(detail) {
-		return true
-	}
-	if summary.UploadCheckpointEligible > 0 {
-		return true
-	}
-	if summary.AutoRecoverEligible {
-		return true
-	}
-	if summary.CooldownCount > 0 || summary.BlockedReason == "retry_queue_waiting_for_cooldown" || detail.Runtime.BlockedAction == "wait_for_cooldown" {
-		return true
-	}
-	if summary.WindowBlocked || summary.BlockedReason == "retry_queue_waiting_for_retry_window" || detail.Runtime.BlockedAction == "wait_for_retry_window" {
-		return true
-	}
-	mode := autoRecoverReason(detail)
-	return mode == "cooldown_elapsed_auto_retry" || mode == "retry_window_waiting_auto_retry"
+	return recoverDecisionState(detail, summary) != ""
 }
 
 func autoRetryAllowedNow(riskProfile planner.RiskProfile, now time.Time) bool {

@@ -4513,7 +4513,15 @@ func TestServiceRecoverBlockedTasksWithOptionsFiltersRecoverState(t *testing.T) 
 		}
 	}
 
-	registry := provider.NewRegistry(newAdapter("recover_state_runnable_target"), newAdapter("recover_state_window_target"), newAdapter("recover_state_cooldown_target"))
+	registry := provider.NewRegistry(
+		newAdapter("recover_state_runnable_target"),
+		newAdapter("recover_state_window_target"),
+		newAdapter("recover_state_cooldown_target"),
+		newAdapter("recover_state_auth_target"),
+		newAdapter("recover_state_local_target"),
+		newAdapter("recover_state_manual_target"),
+		newAdapter("recover_state_retry_limit_target"),
+	)
 	authSvc := auth.NewService(store, registry)
 	svc := NewService(store, registry, authSvc)
 
@@ -4557,6 +4565,32 @@ func TestServiceRecoverBlockedTasksWithOptionsFiltersRecoverState(t *testing.T) 
 		return detail.Task.ID
 	}
 
+	createInjectedBlockedTask := func(providerKey, profileID, path string, queue []RetryQueueItem, updatedAt string) string {
+		detail, err := svc.Create(ctx, CreateRequest{
+			SourceProvider:  "guangya",
+			TargetProvider:  providerKey,
+			TargetProfileID: profileID,
+			ThresholdMB:     1,
+			Entries:         []planner.SourceEntry{{Path: path, Size: 128, MD5: strings.Trim(path, "/")}},
+		})
+		if err != nil {
+			t.Fatalf("Create(injected %s %s) error = %v", providerKey, path, err)
+		}
+		blocked, ok, err := svc.Get(ctx, detail.Task.ID)
+		if err != nil || !ok {
+			t.Fatalf("Get(injected %s %s) error=%v ok=%v", providerKey, path, err, ok)
+		}
+		blocked.Task.State = StateBlocked
+		blocked.Task.UpdatedAt = updatedAt
+		blocked.Runtime.ExecutionState = string(StateBlocked)
+		blocked.Runtime.RetryQueue = queue
+		applyRetryQueueSummary(&blocked.Runtime, blocked.Plan.Metadata)
+		if err := replaceTaskDetailAndResults(ctx, store, blocked); err != nil {
+			t.Fatalf("replaceTaskDetailAndResults(injected %s %s) error = %v", providerKey, path, err)
+		}
+		return detail.Task.ID
+	}
+
 	nowHour := time.Now().UTC().Hour()
 	startHour := (nowHour + 1) % 24
 	endHour := (nowHour + 2) % 24
@@ -4578,6 +4612,89 @@ func TestServiceRecoverBlockedTasksWithOptionsFiltersRecoverState(t *testing.T) 
 	runnableTask, ok, err := svc.Get(ctx, runnableID)
 	if err != nil || !ok || runnableTask.Task.State != StateCompleted {
 		t.Fatalf("expected runnable task completed, got ok=%v err=%v detail=%#v", ok, err, runnableTask)
+	}
+
+	authProfile := createProfile("recover_state_auth_target")
+	localProfile := createProfile("recover_state_local_target")
+	manualProfile := createProfile("recover_state_manual_target")
+	retryLimitProfile := createProfile("recover_state_retry_limit_target")
+	injectedTimestamp := time.Now().Add(-90 * time.Minute).UTC().Format(time.RFC3339)
+	_ = createInjectedBlockedTask("recover_state_auth_target", authProfile, "/auth.bin", []RetryQueueItem{
+		{Path: "/auth.bin", RetryClass: "auth_expired", RetryAction: "refresh_auth", Retryable: false, Blocked: true, RemainingCount: 1},
+	}, injectedTimestamp)
+	_ = createInjectedBlockedTask("recover_state_local_target", localProfile, "/local.bin", []RetryQueueItem{
+		{Path: "/local.bin", RetryClass: "local_file_missing", RetryAction: "restore_local", Retryable: false, Blocked: true, RemainingCount: 1},
+	}, injectedTimestamp)
+	_ = createInjectedBlockedTask("recover_state_manual_target", manualProfile, "/manual.bin", []RetryQueueItem{
+		{Path: "/manual.bin", RetryClass: "pending_manual", RetryAction: "manual_confirm", Retryable: false, Blocked: true, RemainingCount: 1},
+	}, injectedTimestamp)
+	_ = createInjectedBlockedTask("recover_state_retry_limit_target", retryLimitProfile, "/retry-limit.bin", []RetryQueueItem{
+		{Path: "/retry-limit.bin", RetryClass: "retry_failed", RetryAction: "retry", Retryable: false, Blocked: true, Exhausted: true, AttemptCount: 3, RetryLimit: 3, RemainingCount: 0},
+	}, injectedTimestamp)
+
+	evidence, err := svc.RuntimeEvidence(ctx)
+	if err != nil {
+		t.Fatalf("RuntimeEvidence(state filter) error = %v", err)
+	}
+	authLane := autoRecoverLaneByMode(evidence.AutoRecoverPool, "auth_refresh_required")
+	if authLane.Mode == "" || authLane.WaitingAuthRefreshTaskCount != 1 {
+		t.Fatalf("expected auth_refresh_required lane with count 1, got %#v", authLane)
+	}
+	localLane := autoRecoverLaneByMode(evidence.AutoRecoverPool, "local_restore_required")
+	if localLane.Mode == "" || localLane.WaitingLocalRestoreTaskCount != 1 {
+		t.Fatalf("expected local_restore_required lane with count 1, got %#v", localLane)
+	}
+	manualLane := autoRecoverLaneByMode(evidence.AutoRecoverPool, "manual_confirmation_required")
+	if manualLane.Mode == "" || manualLane.WaitingManualTaskCount != 1 {
+		t.Fatalf("expected manual_confirmation_required lane with count 1, got %#v", manualLane)
+	}
+	retryLimitLane := autoRecoverLaneByMode(evidence.AutoRecoverPool, "retry_limit_blocked")
+	if retryLimitLane.Mode == "" || retryLimitLane.WaitingRetryLimitTaskCount != 1 {
+		t.Fatalf("expected retry_limit_blocked lane with count 1, got %#v", retryLimitLane)
+	}
+
+	authResult, err := svc.RecoverBlockedTasksWithOptions(ctx, RecoverOptions{RecoverState: "waiting_auth_refresh", Limit: 5, IncludeNonRunnable: true, DryRun: true})
+	if err != nil {
+		t.Fatalf("RecoverBlockedTasksWithOptions(waiting_auth_refresh) error = %v", err)
+	}
+	if authResult.MatchedCount != 1 || authResult.RecoveredCount != 0 || authResult.SkippedByBlockedReason != 1 {
+		t.Fatalf("unexpected auth refresh recover result: %#v", authResult)
+	}
+	if len(authResult.Decisions) == 0 || authResult.Decisions[0].RecoverState != "waiting_auth_refresh" {
+		t.Fatalf("expected auth refresh decision state, got %#v", authResult.Decisions)
+	}
+
+	localResult, err := svc.RecoverBlockedTasksWithOptions(ctx, RecoverOptions{RecoverState: "waiting_local_restore", Limit: 5, IncludeNonRunnable: true, DryRun: true})
+	if err != nil {
+		t.Fatalf("RecoverBlockedTasksWithOptions(waiting_local_restore) error = %v", err)
+	}
+	if localResult.MatchedCount != 1 || localResult.RecoveredCount != 0 || localResult.SkippedByBlockedReason != 1 {
+		t.Fatalf("unexpected local restore recover result: %#v", localResult)
+	}
+	if len(localResult.Decisions) == 0 || localResult.Decisions[0].RecoverState != "waiting_local_restore" {
+		t.Fatalf("expected local restore decision state, got %#v", localResult.Decisions)
+	}
+
+	manualResult, err := svc.RecoverBlockedTasksWithOptions(ctx, RecoverOptions{RecoverState: "waiting_manual_confirmation", Limit: 5, IncludeNonRunnable: true, DryRun: true})
+	if err != nil {
+		t.Fatalf("RecoverBlockedTasksWithOptions(waiting_manual_confirmation) error = %v", err)
+	}
+	if manualResult.MatchedCount != 1 || manualResult.RecoveredCount != 0 || manualResult.SkippedByBlockedReason != 1 {
+		t.Fatalf("unexpected manual confirmation recover result: %#v", manualResult)
+	}
+	if len(manualResult.Decisions) == 0 || manualResult.Decisions[0].RecoverState != "waiting_manual_confirmation" {
+		t.Fatalf("expected manual confirmation decision state, got %#v", manualResult.Decisions)
+	}
+
+	retryLimitResult, err := svc.RecoverBlockedTasksWithOptions(ctx, RecoverOptions{RecoverState: "waiting_retry_limit", Limit: 5, IncludeNonRunnable: true, DryRun: true})
+	if err != nil {
+		t.Fatalf("RecoverBlockedTasksWithOptions(waiting_retry_limit) error = %v", err)
+	}
+	if retryLimitResult.MatchedCount != 1 || retryLimitResult.RecoveredCount != 0 || retryLimitResult.SkippedByBlockedReason != 1 {
+		t.Fatalf("unexpected retry limit recover result: %#v", retryLimitResult)
+	}
+	if len(retryLimitResult.Decisions) == 0 || retryLimitResult.Decisions[0].RecoverState != "waiting_retry_limit" {
+		t.Fatalf("expected retry limit decision state, got %#v", retryLimitResult.Decisions)
 	}
 }
 

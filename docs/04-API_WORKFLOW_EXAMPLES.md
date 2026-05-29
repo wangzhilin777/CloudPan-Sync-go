@@ -454,6 +454,19 @@ Invoke-RestMethod `
 - `mode=retry_window_waiting_auto_retry`
   - 适合只查看“已经满足自动补传条件，但还不在允许时间窗内”的候选
 - 当前状态页手动预演/执行后台补传时，也会把 `recoverState` 原样透传给 Go API，不再只对 `runnable_now` 生效。
+- `recoverState`
+  - 当前可直接传：
+    - `runnable_now`
+    - `waiting_cooldown`
+    - `waiting_retry_window`
+    - `waiting_auth_refresh`
+    - `waiting_local_restore`
+    - `waiting_manual_confirmation`
+    - `waiting_retry_limit`
+    - `waiting_other`
+  - 其中 `waiting_other` 现在只表示剩余未细分等待态，不再把授权失效、本地文件缺失、人工确认、retry limit 耗尽混在一起
+- `path / paths`
+  - 如果这次不想按路径收敛，直接省略即可；空路径不会再被误判成根路径 `/`
 - `taskId`
   - 适合把后台补传明确约束在某一个任务样本上，避免同 provider 的其它任务被一起命中
 - `path + scope=selected_retry_subset`

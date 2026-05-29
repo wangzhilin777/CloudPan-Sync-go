@@ -230,8 +230,8 @@ func TestAppWorkflowMainline(t *testing.T) {
 	if got := int(evidenceData["blockedTasks"].(float64)); got != 1 {
 		t.Fatalf("expected blockedTasks=1, got %d", got)
 	}
-	if got := int(evidenceData["autoRecoverTasks"].(float64)); got != 0 {
-		t.Fatalf("expected autoRecoverTasks=0, got %d", got)
+	if got := int(evidenceData["autoRecoverTasks"].(float64)); got != 1 {
+		t.Fatalf("expected autoRecoverTasks=1, got %d", got)
 	}
 	if got := int(evidenceData["autoRecoverRunnableTasks"].(float64)); got != 0 {
 		t.Fatalf("expected autoRecoverRunnableTasks=0, got %d", got)
@@ -387,8 +387,8 @@ func TestAppWorkflowMainline(t *testing.T) {
 		if got := int(item["blockedCount"].(float64)); got != 1 {
 			t.Fatalf("expected provider blockedCount 1, got %d", got)
 		}
-		if got := int(item["autoRecoverCount"].(float64)); got != 0 {
-			t.Fatalf("expected provider autoRecoverCount 0, got %d", got)
+		if got := int(item["autoRecoverCount"].(float64)); got != 1 {
+			t.Fatalf("expected provider autoRecoverCount 1, got %d", got)
 		}
 		if got := int(summary["autoRecoverRunnableTasks"].(float64)); got != 0 {
 			t.Fatalf("expected status summary autoRecoverRunnableTasks 0, got %d", got)

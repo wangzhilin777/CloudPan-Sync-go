@@ -164,6 +164,12 @@
   - `autoRecoverTasks`
   - `autoRecoverPool`
 - 当前任务详情、运行检查点和状态快照会直接显示：
+- 当前候选池 lane 内部还会细分等待态计数：
+  - `waiting_auth_refresh`
+  - `waiting_local_restore`
+  - `waiting_manual_confirmation`
+  - `waiting_retry_limit`
+  - `waiting_other` 仅表示剩余未细分等待态
   - `后台补传候选`
   - `队列拆分`
   - `自动补传提示`
