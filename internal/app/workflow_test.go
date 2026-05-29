@@ -206,6 +206,16 @@ func TestAppWorkflowMainline(t *testing.T) {
 	if got := int(evidenceData["autoRecoverTasks"].(float64)); got != 0 {
 		t.Fatalf("expected autoRecoverTasks=0, got %d", got)
 	}
+	autoRetryPolicy := evidenceData["autoRetryPolicy"].(map[string]interface{})
+	if got := autoRetryPolicy["tick"].(string); got == "" {
+		t.Fatal("expected autoRetryPolicy.tick in evidence summary")
+	}
+	if got := int(autoRetryPolicy["batchLimit"].(float64)); got != 3 {
+		t.Fatalf("expected autoRetryPolicy.batchLimit 3, got %d", got)
+	}
+	if got := int(autoRetryPolicy["limitPerLane"].(float64)); got != 1 {
+		t.Fatalf("expected autoRetryPolicy.limitPerLane 1, got %d", got)
+	}
 	if got := int(evidenceData["pendingResultCount"].(float64)); got != 1 {
 		t.Fatalf("expected pendingResultCount=1, got %d", got)
 	}
@@ -1439,13 +1449,20 @@ func mustNewTestApp(t *testing.T, ctx context.Context) *App {
 	t.Helper()
 
 	cfg := Config{
-		AppName:       "CloudPan Sync Go Test",
-		Env:           "test",
-		Addr:          ":0",
-		DataDir:       t.TempDir(),
-		DBPath:        filepath.Join(t.TempDir(), "app.db"),
-		AdminPassword: "admin",
-		LogLevel:      slog.LevelError,
+		AppName:                        "CloudPan Sync Go Test",
+		Env:                            "test",
+		Addr:                           ":0",
+		DataDir:                        t.TempDir(),
+		DBPath:                         filepath.Join(t.TempDir(), "app.db"),
+		AdminPassword:                  "admin",
+		LogLevel:                       slog.LevelError,
+		AutoRetryTick:                  3 * time.Second,
+		AutoRetryBatchLimit:            3,
+		AutoRetryLimitPerMode:          1,
+		AutoRetryLimitPerLane:          1,
+		AutoRetryLimitPerProtocolGroup: 1,
+		AutoRetryLimitPerProvider:      1,
+		AutoRetryLimitPerProfile:       1,
 	}
 	app, err := New(ctx, cfg)
 	if err != nil {

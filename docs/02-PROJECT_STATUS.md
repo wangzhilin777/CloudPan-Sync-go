@@ -408,6 +408,7 @@
     - 再处理 `retry_window_waiting_auto_retry`
     - 最后才处理 `cooldown_elapsed_auto_retry`
   - 当前 `/api/evidence/runtime` 与 `/api/status/providers` 已新增 `autoRecoverTasks / autoRecoverPool`
+  - 当前 `/api/evidence/runtime` 还会直接返回自动 worker 的默认调度策略摘要，能看到 `tick / batchLimit / limitPerMode / limitPerLane / limitPerProtocolGroup / limitPerProvider / limitPerProfile`
     - 可直接看出哪些任务已经进入后台补传候选池
     - 也能看出每种模式的任务数、provider 数、queue 大小、冷却量和 checkpoint 量
   - 当前还新增 `POST /api/tasks/recover`

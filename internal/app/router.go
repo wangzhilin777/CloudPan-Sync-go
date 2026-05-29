@@ -84,6 +84,11 @@ type retryTaskRequest struct {
 	Scope string   `json:"scope"`
 }
 
+type runtimeEvidenceResponse struct {
+	task.EvidenceSummary
+	AutoRetryPolicy map[string]interface{} `json:"autoRetryPolicy,omitempty"`
+}
+
 type recoverTasksRequest struct {
 	Mode                  string   `json:"mode"`
 	TaskID                string   `json:"taskId"`
@@ -590,7 +595,18 @@ func (a *App) handleRuntimeEvidence(w http.ResponseWriter, r *http.Request) {
 		handleError(w, err)
 		return
 	}
-	writeOK(w, http.StatusOK, item)
+	writeOK(w, http.StatusOK, runtimeEvidenceResponse{
+		EvidenceSummary: item,
+		AutoRetryPolicy: map[string]interface{}{
+			"tick":                  a.cfg.AutoRetryTick.String(),
+			"batchLimit":            a.cfg.AutoRetryBatchLimit,
+			"limitPerMode":          a.cfg.AutoRetryLimitPerMode,
+			"limitPerLane":          a.cfg.AutoRetryLimitPerLane,
+			"limitPerProtocolGroup": a.cfg.AutoRetryLimitPerProtocolGroup,
+			"limitPerProvider":      a.cfg.AutoRetryLimitPerProvider,
+			"limitPerProfile":       a.cfg.AutoRetryLimitPerProfile,
+		},
+	})
 }
 
 func (a *App) handleEvidenceReport(w http.ResponseWriter, r *http.Request) {

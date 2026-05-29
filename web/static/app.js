@@ -2677,6 +2677,7 @@ function renderStatus() {
   };
   const protocolCoverage = Array.isArray(evidence.protocolCoverage) ? evidence.protocolCoverage : [];
   const protocolCoverageWithSamples = protocolCoverage.filter((item) => item?.hasRealSuccessSample).length;
+  const autoRetryPolicy = evidence.autoRetryPolicy && typeof evidence.autoRetryPolicy === "object" ? evidence.autoRetryPolicy : {};
   const providerSmokeMatrix = Array.isArray(state.providerSmokeMatrix) ? state.providerSmokeMatrix : [];
   const acceptedSmokeGroups = providerSmokeMatrix.filter((item) => item?.accepted).length;
   const inProgressSmokeGroups = providerSmokeMatrix.filter((item) => item?.acceptanceStatus === "in_progress").length;
@@ -2694,6 +2695,9 @@ function renderStatus() {
     <div class="metric"><span>Pending Manual</span><strong>${evidence.pendingResultCount}</strong></div>
     <div class="metric"><span>Failed Results</span><strong>${evidence.failedResultCount}</strong></div>
     <div class="metric"><span>Risk Hits</span><strong>${evidence.riskHitCount}</strong></div>
+    <div class="metric"><span>Auto Tick</span><strong>${escapeHTML(stringifyValue(autoRetryPolicy.tick, "-"))}</strong></div>
+    <div class="metric"><span>Auto Batch</span><strong>${stringifyValue(autoRetryPolicy.batchLimit, "-")}</strong></div>
+    <div class="metric"><span>Auto Lane Limit</span><strong>${stringifyValue(autoRetryPolicy.limitPerLane, "-")}</strong></div>
     <div class="metric"><span>Protocol Groups</span><strong>${protocolCoverage.length}</strong></div>
     <div class="metric"><span>Sampled Groups</span><strong>${protocolCoverageWithSamples}</strong></div>
     <div class="metric"><span>Accepted Groups</span><strong>${acceptedSmokeGroups}</strong></div>
@@ -2702,6 +2706,16 @@ function renderStatus() {
   `;
   $("#blocked-actions-summary").innerHTML = renderBlockedActionsSummary(evidence.blockedActions || []);
   wireBlockedActionsSummary();
+  const autoRetryPolicySummary = [
+    `tick ${stringifyValue(autoRetryPolicy.tick, "-")}`,
+    `batch ${stringifyValue(autoRetryPolicy.batchLimit, "-")}`,
+    `mode ${stringifyValue(autoRetryPolicy.limitPerMode, "-")}`,
+    `lane ${stringifyValue(autoRetryPolicy.limitPerLane, "-")}`,
+    `group ${stringifyValue(autoRetryPolicy.limitPerProtocolGroup, "-")}`,
+    `provider ${stringifyValue(autoRetryPolicy.limitPerProvider, "-")}`,
+    `profile ${stringifyValue(autoRetryPolicy.limitPerProfile, "-")}`,
+  ].join(" / ");
+  $("#auto-retry-policy-summary").textContent = `自动补传默认调度：${autoRetryPolicySummary}`;
   $("#auto-recover-filter-summary").textContent = renderAutoRecoverFilterSummary(
     filterAutoRecoverItems(evidence.autoRecoverPool || []),
     evidence.autoRecoverPool || [],
@@ -4933,3 +4947,5 @@ async function init() {
 }
 
 window.addEventListener("DOMContentLoaded", init);
+
+

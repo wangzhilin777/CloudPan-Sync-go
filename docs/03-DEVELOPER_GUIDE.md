@@ -204,6 +204,7 @@
   - `自动补传提示`
 - 当前状态页的运行证据摘要还新增了：
   - `自动补传候选池`
+  - `自动补传默认调度策略摘要`
   - 会按模式聚合 `taskCount / providerCount / queueItemCount / retryableNowCount / cooldownCount / uploadCheckpointEligible`
 - 当前状态页还支持直接手动触发后台补传：
   - 可按 `mode`
