@@ -2937,11 +2937,22 @@ func TestServiceAutoRecoverPoolSummaryAndPriority(t *testing.T) {
 	if evidence.AutoRecoverTasks != 2 {
 		t.Fatalf("expected autoRecoverTasks 2, got %d", evidence.AutoRecoverTasks)
 	}
-	if evidence.AutoRecoverRunnableTasks != 1 || evidence.AutoRecoverWaitingCooldownTasks != 1 || evidence.AutoRecoverWaitingRetryWindowTasks != 0 || evidence.AutoRecoverWaitingOtherTasks != 0 {
-		t.Fatalf("expected global auto recover split 1/1/0/0, got runnable=%d cooldown=%d window=%d other=%d",
+	if evidence.AutoRecoverRunnableTasks != 1 ||
+		evidence.AutoRecoverWaitingCooldownTasks != 1 ||
+		evidence.AutoRecoverWaitingRetryWindowTasks != 0 ||
+		evidence.AutoRecoverWaitingAuthRefreshTasks != 0 ||
+		evidence.AutoRecoverWaitingLocalRestoreTasks != 0 ||
+		evidence.AutoRecoverWaitingManualTasks != 0 ||
+		evidence.AutoRecoverWaitingRetryLimitTasks != 0 ||
+		evidence.AutoRecoverWaitingOtherTasks != 0 {
+		t.Fatalf("expected global auto recover split 1/1/0/0/0/0/0/0, got runnable=%d cooldown=%d window=%d auth=%d local=%d manual=%d retryLimit=%d other=%d",
 			evidence.AutoRecoverRunnableTasks,
 			evidence.AutoRecoverWaitingCooldownTasks,
 			evidence.AutoRecoverWaitingRetryWindowTasks,
+			evidence.AutoRecoverWaitingAuthRefreshTasks,
+			evidence.AutoRecoverWaitingLocalRestoreTasks,
+			evidence.AutoRecoverWaitingManualTasks,
+			evidence.AutoRecoverWaitingRetryLimitTasks,
 			evidence.AutoRecoverWaitingOtherTasks,
 		)
 	}
@@ -4652,6 +4663,17 @@ func TestServiceRecoverBlockedTasksWithOptionsFiltersRecoverState(t *testing.T) 
 	retryLimitLane := autoRecoverLaneByMode(evidence.AutoRecoverPool, "retry_limit_blocked")
 	if retryLimitLane.Mode == "" || retryLimitLane.WaitingRetryLimitTaskCount != 1 {
 		t.Fatalf("expected retry_limit_blocked lane with count 1, got %#v", retryLimitLane)
+	}
+	if evidence.AutoRecoverWaitingAuthRefreshTasks != 1 ||
+		evidence.AutoRecoverWaitingLocalRestoreTasks != 1 ||
+		evidence.AutoRecoverWaitingManualTasks != 1 ||
+		evidence.AutoRecoverWaitingRetryLimitTasks != 1 {
+		t.Fatalf("expected global detailed waiting counts 1/1/1/1, got auth=%d local=%d manual=%d retryLimit=%d",
+			evidence.AutoRecoverWaitingAuthRefreshTasks,
+			evidence.AutoRecoverWaitingLocalRestoreTasks,
+			evidence.AutoRecoverWaitingManualTasks,
+			evidence.AutoRecoverWaitingRetryLimitTasks,
+		)
 	}
 
 	authResult, err := svc.RecoverBlockedTasksWithOptions(ctx, RecoverOptions{RecoverState: "waiting_auth_refresh", Limit: 5, IncludeNonRunnable: true, DryRun: true})

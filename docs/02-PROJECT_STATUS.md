@@ -426,6 +426,10 @@
   - `autoRecoverRunnableTasks`
   - `autoRecoverWaitingCooldownTasks`
   - `autoRecoverWaitingRetryWindowTasks`
+  - `autoRecoverWaitingAuthRefreshTasks`
+  - `autoRecoverWaitingLocalRestoreTasks`
+  - `autoRecoverWaitingManualTasks`
+  - `autoRecoverWaitingRetryLimitTasks`
   - `autoRecoverWaitingOtherTasks`
 - 当前 `autoRecoverPool` 的 lane 内部也已经细分出更明确的等待态计数：
   - `waiting_auth_refresh`

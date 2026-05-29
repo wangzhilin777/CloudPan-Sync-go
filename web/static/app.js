@@ -2738,6 +2738,10 @@ function renderStatus() {
     autoRecoverRunnableTasks: 0,
     autoRecoverWaitingCooldownTasks: 0,
     autoRecoverWaitingRetryWindowTasks: 0,
+    autoRecoverWaitingAuthRefreshTasks: 0,
+    autoRecoverWaitingLocalRestoreTasks: 0,
+    autoRecoverWaitingManualTasks: 0,
+    autoRecoverWaitingRetryLimitTasks: 0,
     autoRecoverWaitingOtherTasks: 0,
     failedResultCount: 0,
     doneResultCount: 0,
@@ -2770,6 +2774,10 @@ function renderStatus() {
     <div class="metric"><span>Recover Runnable</span><strong>${stringifyValue(evidence.autoRecoverRunnableTasks, "0")}</strong></div>
     <div class="metric"><span>Recover Cooldown</span><strong>${stringifyValue(evidence.autoRecoverWaitingCooldownTasks, "0")}</strong></div>
     <div class="metric"><span>Recover Window</span><strong>${stringifyValue(evidence.autoRecoverWaitingRetryWindowTasks, "0")}</strong></div>
+    <div class="metric"><span>Recover Auth</span><strong>${stringifyValue(evidence.autoRecoverWaitingAuthRefreshTasks, "0")}</strong></div>
+    <div class="metric"><span>Recover Local</span><strong>${stringifyValue(evidence.autoRecoverWaitingLocalRestoreTasks, "0")}</strong></div>
+    <div class="metric"><span>Recover Manual</span><strong>${stringifyValue(evidence.autoRecoverWaitingManualTasks, "0")}</strong></div>
+    <div class="metric"><span>Recover Limit</span><strong>${stringifyValue(evidence.autoRecoverWaitingRetryLimitTasks, "0")}</strong></div>
     <div class="metric"><span>Recover Other</span><strong>${stringifyValue(evidence.autoRecoverWaitingOtherTasks, "0")}</strong></div>
     <div class="metric"><span>Done Results</span><strong>${evidence.doneResultCount}</strong></div>
     <div class="metric"><span>Skipped Results</span><strong>${evidence.skippedResultCount}</strong></div>

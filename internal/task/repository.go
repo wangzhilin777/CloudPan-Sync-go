@@ -677,18 +677,26 @@ func summarizeAutoRecoverPool(details []Detail, providers []provider.Entry) ([]A
 	return items, totalTasks
 }
 
-func summarizeAutoRecoverStateCounts(items []AutoRecoverLane) (int, int, int, int) {
+func summarizeAutoRecoverStateCounts(items []AutoRecoverLane) (int, int, int, int, int, int, int, int) {
 	runnable := 0
 	waitingCooldown := 0
 	waitingRetryWindow := 0
+	waitingAuthRefresh := 0
+	waitingLocalRestore := 0
+	waitingManual := 0
+	waitingRetryLimit := 0
 	waitingOther := 0
 	for _, item := range items {
 		runnable += item.RunnableTaskCount
 		waitingCooldown += item.WaitingCooldownTaskCount
 		waitingRetryWindow += item.WaitingRetryWindowTaskCount
+		waitingAuthRefresh += item.WaitingAuthRefreshTaskCount
+		waitingLocalRestore += item.WaitingLocalRestoreTaskCount
+		waitingManual += item.WaitingManualTaskCount
+		waitingRetryLimit += item.WaitingRetryLimitTaskCount
 		waitingOther += item.WaitingOtherTaskCount
 	}
-	return runnable, waitingCooldown, waitingRetryWindow, waitingOther
+	return runnable, waitingCooldown, waitingRetryWindow, waitingAuthRefresh, waitingLocalRestore, waitingManual, waitingRetryLimit, waitingOther
 }
 
 func taskEvidenceSummary(ctx context.Context, store *sqlitestore.Store, providers []provider.Entry) (EvidenceSummary, error) {
@@ -754,6 +762,10 @@ func taskEvidenceSummary(ctx context.Context, store *sqlitestore.Store, provider
 	summary.AutoRecoverRunnableTasks,
 		summary.AutoRecoverWaitingCooldownTasks,
 		summary.AutoRecoverWaitingRetryWindowTasks,
+		summary.AutoRecoverWaitingAuthRefreshTasks,
+		summary.AutoRecoverWaitingLocalRestoreTasks,
+		summary.AutoRecoverWaitingManualTasks,
+		summary.AutoRecoverWaitingRetryLimitTasks,
 		summary.AutoRecoverWaitingOtherTasks = summarizeAutoRecoverStateCounts(summary.AutoRecoverPool)
 	results, err := recentTaskResults(ctx, store, 10)
 	if err != nil {
@@ -831,10 +843,14 @@ func providerStatusSummary(ctx context.Context, store *sqlitestore.Store, provid
 		item.AutoRecoverCount = autoRecoverCount
 		item.SnapshotSummary["autoRecoverPool"] = autoRecoverPool
 		item.SnapshotSummary["autoRecoverCount"] = item.AutoRecoverCount
-		runnable, waitingCooldown, waitingRetryWindow, waitingOther := summarizeAutoRecoverStateCounts(autoRecoverPool)
+		runnable, waitingCooldown, waitingRetryWindow, waitingAuthRefresh, waitingLocalRestore, waitingManual, waitingRetryLimit, waitingOther := summarizeAutoRecoverStateCounts(autoRecoverPool)
 		item.SnapshotSummary["autoRecoverRunnableTasks"] = runnable
 		item.SnapshotSummary["autoRecoverWaitingCooldownTasks"] = waitingCooldown
 		item.SnapshotSummary["autoRecoverWaitingRetryWindowTasks"] = waitingRetryWindow
+		item.SnapshotSummary["autoRecoverWaitingAuthRefreshTasks"] = waitingAuthRefresh
+		item.SnapshotSummary["autoRecoverWaitingLocalRestoreTasks"] = waitingLocalRestore
+		item.SnapshotSummary["autoRecoverWaitingManualTasks"] = waitingManual
+		item.SnapshotSummary["autoRecoverWaitingRetryLimitTasks"] = waitingRetryLimit
 		item.SnapshotSummary["autoRecoverWaitingOtherTasks"] = waitingOther
 		items = append(items, item)
 	}
