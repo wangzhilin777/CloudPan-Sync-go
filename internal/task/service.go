@@ -230,6 +230,7 @@ type ProviderSmokeSummary struct {
 	SampleCategory         string   `json:"sampleCategory,omitempty"`
 	LatestSmokeAt          string   `json:"latestSmokeAt,omitempty"`
 	HasRealSuccessSample   bool     `json:"hasRealSuccessSample"`
+	UploadSuccessCount     int      `json:"uploadSuccessCount"`
 	HasUploadSuccessSample bool     `json:"hasUploadSuccessSample"`
 }
 
@@ -247,6 +248,7 @@ type ProviderSmokeMatrixRow struct {
 	SampleResult                 string   `json:"sampleResult,omitempty"`
 	LatestSmokeAt                string   `json:"latestSmokeAt,omitempty"`
 	HasRealSuccessSample         bool     `json:"hasRealSuccessSample"`
+	UploadSuccessCount           int      `json:"uploadSuccessCount"`
 	HasUploadSuccessSample       bool     `json:"hasUploadSuccessSample"`
 	CoverageTaskCount            int      `json:"coverageTaskCount"`
 	CoverageCompletedTaskCount   int      `json:"coverageCompletedTaskCount"`
@@ -2938,13 +2940,14 @@ func buildEvidenceReport(summary EvidenceSummary, statuses []StatusSummary, smok
 		b.WriteString("| ProtocolGroup | Acceptance | Missing | Advice | Smoke | Upload Smoke | Coverage | Sample | Latest Smoke |\n")
 		b.WriteString("| --- | --- | --- | --- | --- | --- | --- | --- | --- |\n")
 		for _, item := range smokeMatrix {
-			fmt.Fprintf(&b, "| %s | %s | %s | %s | %d/%d | %s | %d/%d/%d | %s / %s / %s | %s |\n",
+			fmt.Fprintf(&b, "| %s | %s | %s | %s | %d/%d | %d (%s) | %d/%d/%d | %s / %s / %s | %s |\n",
 				markdownCell(firstNonEmpty(item.ProtocolGroup, "-")),
 				markdownCell(firstNonEmpty(item.AcceptanceStatus, "-")),
 				markdownCell(strings.Join(item.AcceptanceMissing, ", ")),
 				markdownCell(firstNonEmpty(item.AcceptanceAdvice, "-")),
 				item.SuccessCount,
 				item.FailureCount,
+				item.UploadSuccessCount,
 				markdownCell(boolLabel(item.HasUploadSuccessSample, "ready", "pending")),
 				item.CoverageRealSuccessTaskCount,
 				item.CoverageTaskCount,
@@ -3179,6 +3182,7 @@ func summarizeProviderSmokeRecords(records []ProviderSmokeRecord) []ProviderSmok
 		if strings.EqualFold(record.Result, "success") {
 			state.row.HasRealSuccessSample = true
 			if isUploadSuccessCategory(record.Category) {
+				state.row.UploadSuccessCount++
 				state.row.HasUploadSuccessSample = true
 			}
 		}
@@ -3239,6 +3243,7 @@ func buildProviderSmokeMatrix(summary EvidenceSummary, smokeSummaries []Provider
 		state.row.SampleResult = item.SampleResult
 		state.row.LatestSmokeAt = item.LatestSmokeAt
 		state.row.HasRealSuccessSample = item.HasRealSuccessSample
+		state.row.UploadSuccessCount = item.UploadSuccessCount
 		state.row.HasUploadSuccessSample = item.HasUploadSuccessSample
 	}
 	for _, coverage := range summary.ProtocolCoverage {

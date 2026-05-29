@@ -4251,6 +4251,7 @@ function renderProviderSmokeSummary(items) {
           <div class="directory-metrics">
             <span class="pill">smokes ${stringifyValue(item.smokeCount, "0")}</span>
             <span class="pill">success ${stringifyValue(item.successCount, "0")}</span>
+            <span class="pill">upload ${stringifyValue(item.uploadSuccessCount, "0")}</span>
             <span class="pill">failure ${stringifyValue(item.failureCount, "0")}</span>
             <span class="pill">providers ${stringifyValue(item.providerCount, "0")}</span>
             <span class="pill">${item.hasRealSuccessSample ? "sampled" : "pending"}</span>
@@ -4371,7 +4372,7 @@ function renderProviderSmokeMatrix(items) {
           </div>
           <div class="directory-metrics">
             <span class="pill">smoke ${stringifyValue(item.smokeCount, "0")}</span>
-            <span class="pill">upload-smoke ${item.hasUploadSuccessSample ? "ready" : "pending"}</span>
+            <span class="pill">upload-smoke ${stringifyValue(item.uploadSuccessCount, "0")} / ${item.hasUploadSuccessSample ? "ready" : "pending"}</span>
             <span class="pill">coverage ${stringifyValue(item.coverageRealSuccessTaskCount, "0")}/${stringifyValue(item.coverageTaskCount, "0")}</span>
             <span class="pill">${item.accepted ? "accepted" : item.acceptanceStatus || "pending"}</span>
           </div>

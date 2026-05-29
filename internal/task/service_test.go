@@ -6970,6 +6970,9 @@ func TestServiceProviderSmokeMatrixTracksUploadSuccessSample(t *testing.T) {
 	if !summary[0].HasUploadSuccessSample {
 		t.Fatal("expected upload success sample in smoke summary")
 	}
+	if summary[0].UploadSuccessCount != 1 {
+		t.Fatalf("expected upload success count 1 in smoke summary, got %d", summary[0].UploadSuccessCount)
+	}
 
 	matrix, err := svc.ProviderSmokeMatrix(ctx)
 	if err != nil {
@@ -6980,6 +6983,9 @@ func TestServiceProviderSmokeMatrixTracksUploadSuccessSample(t *testing.T) {
 	}
 	if !matrix[0].HasUploadSuccessSample {
 		t.Fatal("expected upload success sample in smoke matrix")
+	}
+	if matrix[0].UploadSuccessCount != 1 {
+		t.Fatalf("expected upload success count 1 in smoke matrix, got %d", matrix[0].UploadSuccessCount)
 	}
 }
 
