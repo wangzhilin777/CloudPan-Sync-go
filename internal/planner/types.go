@@ -48,9 +48,18 @@ type RiskProfileResolution struct {
 	Base               RiskProfile          `json:"base"`
 	Calibrated         RiskProfile          `json:"calibrated"`
 	Applied            RiskProfile          `json:"applied"`
+	RecoverBudget      RecoverBudgetPolicy  `json:"recoverBudget"`
 	CalibrationReasons []string             `json:"calibrationReasons,omitempty"`
 	Override           *RiskProfileOverride `json:"override,omitempty"`
 	OverrideFields     []string             `json:"overrideFields,omitempty"`
+}
+
+type RecoverBudgetPolicy struct {
+	ProtocolGroupBudget int      `json:"protocolGroupBudget,omitempty"`
+	ProviderBudget      int      `json:"providerBudget,omitempty"`
+	ProfileBudget       int      `json:"profileBudget,omitempty"`
+	SensitiveProviders  []string `json:"sensitiveProviders,omitempty"`
+	Reason              string   `json:"reason,omitempty"`
 }
 
 type ExecutionMode string

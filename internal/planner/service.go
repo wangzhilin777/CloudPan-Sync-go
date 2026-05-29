@@ -286,12 +286,15 @@ func resolveRiskProfile(providerKey string, mode RiskMode, override *RiskProfile
 	base := baseRiskProfile(normalizedMode, providerKey)
 	calibrated, calibrationReasons := applyProviderRiskCalibrationWithReasons(providerKey, base)
 	applied, overrideFields := applyRiskProfileOverrideWithFields(calibrated, override)
+	// 根据最终的 RiskProfile 计算恢复预算策略，统一由 Planner 提供。
+	recoverBudget := deriveRecoverBudgetPolicy(providerKey, applied)
 	return RiskProfileResolution{
 		ProviderKey:        providerKey,
 		Mode:               normalizedMode,
 		Base:               base,
 		Calibrated:         calibrated,
 		Applied:            applied,
+		RecoverBudget:      recoverBudget,
 		CalibrationReasons: calibrationReasons,
 		Override:           override,
 		OverrideFields:     overrideFields,
@@ -417,6 +420,43 @@ func minPositive(current int, limit int) int {
 		return current
 	}
 	return limit
+}
+
+func deriveRecoverBudgetPolicy(providerKey string, profile RiskProfile) RecoverBudgetPolicy {
+	policy := RecoverBudgetPolicy{}
+	if profile.MaxConcurrent <= 0 {
+		return policy
+	}
+	policy.ProviderBudget = profile.MaxConcurrent
+	if profile.MaxConcurrent <= 2 {
+		policy.ProtocolGroupBudget = 1
+	} else {
+		policy.ProtocolGroupBudget = minPositive(profile.MaxConcurrent, 2)
+	}
+	sensitive := isSensitiveRecoverBudgetProvider(providerKey)
+	if sensitive {
+		policy.ProfileBudget = 1
+		policy.SensitiveProviders = []string{providerKey}
+		policy.Reason = "Sensitive provider defaults to single-profile recover budget."
+		return policy
+	}
+	if profile.MaxConcurrent <= 2 {
+		policy.ProfileBudget = 1
+		policy.Reason = "Low concurrency risk profile narrows recover budget to one profile per round."
+		return policy
+	}
+	policy.ProfileBudget = minPositive(profile.MaxConcurrent, 2)
+	policy.Reason = "Recover budgets inherit maxConcurrent and keep profile fairness within each provider."
+	return policy
+}
+
+func isSensitiveRecoverBudgetProvider(providerKey string) bool {
+	switch providerKey {
+	case "baidu_netdisk", "quark", "uc", "189cloud", "115_open", "guangya":
+		return true
+	default:
+		return false
+	}
 }
 
 func normalizeRiskMode(mode RiskMode) RiskMode {

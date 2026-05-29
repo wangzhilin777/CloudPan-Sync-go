@@ -1458,6 +1458,9 @@ func appendRecoverDecision(result *RecoverResult, decision RecoverDecision) {
 }
 
 func recoverProtocolGroupBudget(detail Detail) int {
+	if budget, ok := recoverBudgetPolicyFromMetadata(detail.Plan.Metadata); ok && budget.ProtocolGroupBudget > 0 {
+		return budget.ProtocolGroupBudget
+	}
 	riskProfile := riskProfileFromMetadata(detail.Plan.Metadata)
 	if riskProfile.MaxConcurrent <= 0 {
 		return 0
@@ -1473,6 +1476,9 @@ func recoverProtocolGroupBudgetWithOverride(detail Detail, override int) int {
 }
 
 func recoverProviderBudget(detail Detail) int {
+	if budget, ok := recoverBudgetPolicyFromMetadata(detail.Plan.Metadata); ok && budget.ProviderBudget > 0 {
+		return budget.ProviderBudget
+	}
 	riskProfile := riskProfileFromMetadata(detail.Plan.Metadata)
 	if riskProfile.MaxConcurrent <= 0 {
 		return 0
@@ -1485,6 +1491,9 @@ func recoverProviderBudgetWithOverride(detail Detail, override int) int {
 }
 
 func recoverProfileBudget(detail Detail) int {
+	if budget, ok := recoverBudgetPolicyFromMetadata(detail.Plan.Metadata); ok && budget.ProfileBudget > 0 {
+		return budget.ProfileBudget
+	}
 	riskProfile := riskProfileFromMetadata(detail.Plan.Metadata)
 	if riskProfile.MaxConcurrent <= 0 {
 		return 0
@@ -3720,6 +3729,54 @@ func riskProfileFromMetadata(metadata map[string]interface{}) planner.RiskProfil
 		return planner.RiskProfile{}
 	}
 	return riskProfileFromRaw(metadata["riskProfile"])
+}
+
+func recoverBudgetPolicyFromMetadata(metadata map[string]interface{}) (planner.RecoverBudgetPolicy, bool) {
+	if metadata == nil {
+		return planner.RecoverBudgetPolicy{}, false
+	}
+	resolution, ok := riskProfileResolutionFromRaw(metadata["riskProfileResolution"])
+	if !ok {
+		return planner.RecoverBudgetPolicy{}, false
+	}
+	return resolution.RecoverBudget, true
+}
+
+func riskProfileResolutionFromRaw(raw interface{}) (planner.RiskProfileResolution, bool) {
+	switch typed := raw.(type) {
+	case planner.RiskProfileResolution:
+		return typed, true
+	case map[string]interface{}:
+		return planner.RiskProfileResolution{
+			ProviderKey:        stringValue(typed["providerKey"]),
+			Mode:               planner.RiskMode(stringValue(typed["mode"])),
+			Base:               riskProfileFromRaw(typed["base"]),
+			Calibrated:         riskProfileFromRaw(typed["calibrated"]),
+			Applied:            riskProfileFromRaw(typed["applied"]),
+			RecoverBudget:      recoverBudgetPolicyFromRaw(typed["recoverBudget"]),
+			CalibrationReasons: metadataStringSlice(map[string]interface{}{"items": typed["calibrationReasons"]}, "items"),
+			OverrideFields:     metadataStringSlice(map[string]interface{}{"items": typed["overrideFields"]}, "items"),
+		}, true
+	default:
+		return planner.RiskProfileResolution{}, false
+	}
+}
+
+func recoverBudgetPolicyFromRaw(raw interface{}) planner.RecoverBudgetPolicy {
+	switch typed := raw.(type) {
+	case planner.RecoverBudgetPolicy:
+		return typed
+	case map[string]interface{}:
+		return planner.RecoverBudgetPolicy{
+			ProtocolGroupBudget: intNumber(typed["protocolGroupBudget"]),
+			ProviderBudget:      intNumber(typed["providerBudget"]),
+			ProfileBudget:       intNumber(typed["profileBudget"]),
+			SensitiveProviders:  metadataStringSlice(map[string]interface{}{"items": typed["sensitiveProviders"]}, "items"),
+			Reason:              stringValue(typed["reason"]),
+		}
+	default:
+		return planner.RecoverBudgetPolicy{}
+	}
 }
 
 func riskProfileFromRaw(raw interface{}) planner.RiskProfile {

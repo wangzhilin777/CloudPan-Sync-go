@@ -107,6 +107,53 @@ func TestBuildPreviewIncludesRiskProfileDefaults(t *testing.T) {
 	if resolution.Applied.RequestIntervalMS != riskProfile.RequestIntervalMS {
 		t.Fatalf("expected applied risk profile to match riskProfile metadata, got %+v vs %+v", resolution.Applied, riskProfile)
 	}
+	if resolution.RecoverBudget.ProviderBudget != riskProfile.MaxConcurrent {
+		t.Fatalf("expected provider recover budget to track maxConcurrent, got %+v vs %+v", resolution.RecoverBudget, riskProfile)
+	}
+	if resolution.RecoverBudget.ProtocolGroupBudget != 1 {
+		t.Fatalf("expected protocol group recover budget 1 for conservative profile, got %+v", resolution.RecoverBudget)
+	}
+	if resolution.RecoverBudget.ProfileBudget != 1 {
+		t.Fatalf("expected profile recover budget 1 for sensitive provider, got %+v", resolution.RecoverBudget)
+	}
+	if !containsString(resolution.RecoverBudget.SensitiveProviders, "189cloud") {
+		t.Fatalf("expected sensitive providers to include 189cloud, got %#v", resolution.RecoverBudget.SensitiveProviders)
+	}
+}
+
+func TestBuildPreviewDerivesRecoverBudgetPolicy(t *testing.T) {
+	registry := provider.NewRegistry(provider.DefaultCatalog()...)
+	plan, err := BuildPreview(registry, PreviewRequest{
+		SourceProvider: "guangya",
+		TargetProvider: "aliyundrive_open",
+		RiskMode:       RiskModeFast,
+		RiskOverride: &RiskProfileOverride{
+			MaxConcurrent: intPtr(4),
+		},
+		Entries: []SourceEntry{{Path: "/a.bin", Size: 10, SHA1: "sha1-a"}},
+	})
+	if err != nil {
+		t.Fatalf("BuildPreview() error = %v", err)
+	}
+	resolution, ok := plan.Metadata["riskProfileResolution"].(RiskProfileResolution)
+	if !ok {
+		t.Fatalf("expected riskProfileResolution metadata, got %#v", plan.Metadata["riskProfileResolution"])
+	}
+	if resolution.RecoverBudget.ProviderBudget != 4 {
+		t.Fatalf("expected provider budget 4, got %+v", resolution.RecoverBudget)
+	}
+	if resolution.RecoverBudget.ProtocolGroupBudget != 2 {
+		t.Fatalf("expected protocol group budget 2, got %+v", resolution.RecoverBudget)
+	}
+	if resolution.RecoverBudget.ProfileBudget != 2 {
+		t.Fatalf("expected profile budget 2 for non-sensitive provider, got %+v", resolution.RecoverBudget)
+	}
+	if len(resolution.RecoverBudget.SensitiveProviders) != 0 {
+		t.Fatalf("expected no sensitive providers, got %#v", resolution.RecoverBudget.SensitiveProviders)
+	}
+	if resolution.RecoverBudget.Reason == "" {
+		t.Fatalf("expected recover budget reason, got %+v", resolution.RecoverBudget)
+	}
 }
 
 func TestBuildPreviewCalibratesRiskProfileByProvider(t *testing.T) {

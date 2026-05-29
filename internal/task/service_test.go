@@ -6928,6 +6928,53 @@ func TestServiceProviderSmokeRecords(t *testing.T) {
 	}
 }
 
+func TestRecoverBudgetsPreferPlannerMetadataAndFallback(t *testing.T) {
+	detailWithBudget := Detail{
+		Task: Task{TargetProvider: "aliyundrive_open"},
+		Plan: planner.Plan{
+			Metadata: map[string]interface{}{
+				"riskProfile": planner.RiskProfile{MaxConcurrent: 6},
+				"riskProfileResolution": planner.RiskProfileResolution{
+					ProviderKey: "aliyundrive_open",
+					RecoverBudget: planner.RecoverBudgetPolicy{
+						ProtocolGroupBudget: 2,
+						ProviderBudget:      5,
+						ProfileBudget:       2,
+						Reason:              "test budget",
+					},
+				},
+			},
+		},
+	}
+	if got := recoverProtocolGroupBudget(detailWithBudget); got != 2 {
+		t.Fatalf("expected metadata protocol group budget 2, got %d", got)
+	}
+	if got := recoverProviderBudget(detailWithBudget); got != 5 {
+		t.Fatalf("expected metadata provider budget 5, got %d", got)
+	}
+	if got := recoverProfileBudget(detailWithBudget); got != 2 {
+		t.Fatalf("expected metadata profile budget 2, got %d", got)
+	}
+
+	detailFallback := Detail{
+		Task: Task{TargetProvider: "189cloud"},
+		Plan: planner.Plan{
+			Metadata: map[string]interface{}{
+				"riskProfile": planner.RiskProfile{MaxConcurrent: 4},
+			},
+		},
+	}
+	if got := recoverProtocolGroupBudget(detailFallback); got != 2 {
+		t.Fatalf("expected fallback protocol group budget 2, got %d", got)
+	}
+	if got := recoverProviderBudget(detailFallback); got != 4 {
+		t.Fatalf("expected fallback provider budget 4, got %d", got)
+	}
+	if got := recoverProfileBudget(detailFallback); got != 1 {
+		t.Fatalf("expected sensitive fallback profile budget 1, got %d", got)
+	}
+}
+
 func boolValue(value interface{}) bool {
 	typed, ok := value.(bool)
 	return ok && typed
