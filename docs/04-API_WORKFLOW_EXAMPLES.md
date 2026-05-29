@@ -107,6 +107,7 @@ $previewPayload = @{
   thresholdMB    = 10
   riskMode       = "balanced"
   executionMode  = "leaf_first_lazy"
+  sourceDeletePolicy = "record_only"
   conflictPolicy = "auto_rename_new"
   selectedRoots  = @("/demo")
   entries        = @(
@@ -161,6 +162,7 @@ $preview | ConvertTo-Json -Depth 10
 - `riskProfile.maxConcurrent`
 - `riskProfile.autoRetryStartHour`
 - `riskProfile.autoRetryEndHour`
+- `sourceDeletePolicy`
 - `deletedEntryCount`
 - `sourceDeletionRecords`
 - 当目录较大或 provider 风控敏感时，通常会优先推荐 `leaf_first_lazy`。
@@ -175,6 +177,7 @@ $taskPayload = @{
   targetProfileId = $profileId
   thresholdMB     = 10
   conflictPolicy  = "auto_rename_new"
+  sourceDeletePolicy = "record_only"
   selectedRoots   = @("/demo")
   entries         = @(
     @{
@@ -635,7 +638,11 @@ Invoke-RestMethod `
 - `executionMode` 当前支持：
   - `leaf_first_lazy`
   - `pre_scan_flat`
+- `sourceDeletePolicy` 当前显式支持：
+  - `record_only`
 - 不传 `executionMode` 时，默认按 `leaf_first_lazy`。
+- 不传 `sourceDeletePolicy` 时，默认按 `record_only`。
+- `record_only` 的含义是只记录源端删除事件，不默认删除目标端文件。
 - `pending_manual_requires_confirmation` 目前仍代表需要后续真实 fallback 运行时补全。
 - 当任务详情里出现 `metadata.retryPendingOnly=true` 时，表示这次重试已经缩成待补传子集。
 - 当 runtime / probe / snapshot 中出现 `retryQueue` 时，表示当前任务已经具备失败分类后的重试队列证据。

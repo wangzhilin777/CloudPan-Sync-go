@@ -312,9 +312,10 @@ func TestBuildPreviewSupportsPreScanFlatMode(t *testing.T) {
 func TestBuildPreviewTracksSourceDeletionRecords(t *testing.T) {
 	registry := provider.NewRegistry(provider.DefaultCatalog()...)
 	plan, err := BuildPreview(registry, PreviewRequest{
-		SourceProvider: "guangya",
-		TargetProvider: "123_open",
-		SelectedRoots:  []string{"/demo"},
+		SourceProvider:     "guangya",
+		TargetProvider:     "123_open",
+		SourceDeletePolicy: SourceDeletePolicyRecordOnly,
+		SelectedRoots:      []string{"/demo"},
 		Entries: []SourceEntry{
 			{Path: "/demo/live/a.bin", Size: 10, MD5: "md5-a"},
 			{Path: "/demo/deleted.bin", Deleted: true, DeletedAt: "2026-05-29T10:00:00Z", DeleteReason: "source_removed"},
@@ -335,6 +336,9 @@ func TestBuildPreviewTracksSourceDeletionRecords(t *testing.T) {
 	if got, _ := plan.Metadata["deletedEntryCount"].(int); got != 1 {
 		t.Fatalf("expected deletedEntryCount 1, got %#v", plan.Metadata["deletedEntryCount"])
 	}
+	if got, _ := plan.Metadata["sourceDeletePolicy"].(SourceDeletePolicy); got != SourceDeletePolicyRecordOnly {
+		t.Fatalf("expected sourceDeletePolicy record_only, got %#v", plan.Metadata["sourceDeletePolicy"])
+	}
 	records, ok := plan.Metadata["sourceDeletionRecords"].([]map[string]interface{})
 	if !ok {
 		t.Fatalf("expected sourceDeletionRecords metadata, got %#v", plan.Metadata["sourceDeletionRecords"])
@@ -350,6 +354,22 @@ func TestBuildPreviewTracksSourceDeletionRecords(t *testing.T) {
 	}
 	if records[0]["deleteReason"] != "source_removed" {
 		t.Fatalf("expected deleteReason source_removed, got %#v", records[0]["deleteReason"])
+	}
+}
+
+func TestBuildPreviewRejectsInvalidSourceDeletePolicy(t *testing.T) {
+	registry := provider.NewRegistry(provider.DefaultCatalog()...)
+	_, err := BuildPreview(registry, PreviewRequest{
+		SourceProvider:     "guangya",
+		TargetProvider:     "123_open",
+		SourceDeletePolicy: SourceDeletePolicy("delete_target"),
+		Entries:            []SourceEntry{{Path: "/a.bin", Size: 10}},
+	})
+	if err == nil {
+		t.Fatal("expected invalid source delete policy error")
+	}
+	if !errors.Is(err, ErrInvalidSourceDeletePolicy) {
+		t.Fatalf("expected ErrInvalidSourceDeletePolicy, got %v", err)
 	}
 }
 

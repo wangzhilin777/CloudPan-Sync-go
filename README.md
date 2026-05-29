@@ -96,12 +96,16 @@ CloudPan Sync 的 Go 重构版工作区。
   - 目标端不存在：`create`
   - 目标端存在但指纹变化：`overwrite`
   - 目标端已存在且指纹一致：`skip`
+  - 源端删除策略：当前显式任务级配置为 `sourceDeletePolicy=record_only`
+    - 含义是“只记录源端删除事件，不默认删除目标端”
+    - 当前首版仅支持这一种策略
 - 当前首版对“已存在”的判断是保守口径：
   - provider `Metadata` 需要显式返回 `status=exists`
   - 或 `entry.exists=true`
   - 否则会按“目标不存在或元数据不可用”处理，避免占位 provider 误判全量跳过
 - 当前控制台任务向导已经支持：
   - 选择 `executionMode`
+  - 选择 `sourceDeletePolicy`
   - 选择 `riskMode`
   - 通过 JSON 覆盖 `requestIntervalMs / pageSize / directoryIntervalMs / cooldownSeconds / retryLimit / riskKeywords`
   - 查看推荐模式与推荐原因

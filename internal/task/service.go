@@ -17,17 +17,18 @@ import (
 )
 
 type CreateRequest struct {
-	SourceProvider  string                       `json:"sourceProvider"`
-	SourceProfileID string                       `json:"sourceProfileId"`
-	TargetProvider  string                       `json:"targetProvider"`
-	TargetProfileID string                       `json:"targetProfileId"`
-	ThresholdMB     int                          `json:"thresholdMB"`
-	RiskMode        planner.RiskMode             `json:"riskMode"`
-	RiskOverride    *planner.RiskProfileOverride `json:"riskOverride,omitempty"`
-	ExecutionMode   planner.ExecutionMode        `json:"executionMode"`
-	ConflictPolicy  provider.ConflictPolicy      `json:"conflictPolicy"`
-	SelectedRoots   []string                     `json:"selectedRoots"`
-	Entries         []planner.SourceEntry        `json:"entries"`
+	SourceProvider     string                       `json:"sourceProvider"`
+	SourceProfileID    string                       `json:"sourceProfileId"`
+	TargetProvider     string                       `json:"targetProvider"`
+	TargetProfileID    string                       `json:"targetProfileId"`
+	ThresholdMB        int                          `json:"thresholdMB"`
+	RiskMode           planner.RiskMode             `json:"riskMode"`
+	RiskOverride       *planner.RiskProfileOverride `json:"riskOverride,omitempty"`
+	ExecutionMode      planner.ExecutionMode        `json:"executionMode"`
+	SourceDeletePolicy planner.SourceDeletePolicy   `json:"sourceDeletePolicy"`
+	ConflictPolicy     provider.ConflictPolicy      `json:"conflictPolicy"`
+	SelectedRoots      []string                     `json:"selectedRoots"`
+	Entries            []planner.SourceEntry        `json:"entries"`
 }
 
 type RetryOptions struct {
@@ -309,15 +310,16 @@ func NewService(store *sqlitestore.Store, registry *provider.Registry, authSvc *
 
 func (s *Service) Create(ctx context.Context, req CreateRequest) (Detail, error) {
 	plan, err := planner.BuildPreview(s.registry, planner.PreviewRequest{
-		SourceProvider: req.SourceProvider,
-		TargetProvider: req.TargetProvider,
-		ThresholdMB:    req.ThresholdMB,
-		RiskMode:       req.RiskMode,
-		RiskOverride:   req.RiskOverride,
-		ExecutionMode:  req.ExecutionMode,
-		ConflictPolicy: req.ConflictPolicy,
-		SelectedRoots:  req.SelectedRoots,
-		Entries:        req.Entries,
+		SourceProvider:     req.SourceProvider,
+		TargetProvider:     req.TargetProvider,
+		ThresholdMB:        req.ThresholdMB,
+		RiskMode:           req.RiskMode,
+		RiskOverride:       req.RiskOverride,
+		ExecutionMode:      req.ExecutionMode,
+		SourceDeletePolicy: req.SourceDeletePolicy,
+		ConflictPolicy:     req.ConflictPolicy,
+		SelectedRoots:      req.SelectedRoots,
+		Entries:            req.Entries,
 	})
 	if err != nil {
 		return Detail{}, err
@@ -4561,6 +4563,7 @@ func buildProviderProbe(detail Detail, profile provider.AuthProfile, results []R
 			"scanTrace":                      detail.Plan.Metadata["scanTrace"],
 			"riskProfile":                    detail.Plan.Metadata["riskProfile"],
 			"riskOverride":                   detail.Plan.Metadata["riskOverride"],
+			"sourceDeletePolicy":             detail.Plan.Metadata["sourceDeletePolicy"],
 			"runtime":                        detail.Runtime,
 			"pendingCount":                   detail.Runtime.PendingCount,
 			"sourceDeletionCount":            detail.Runtime.SourceDeletionCount,

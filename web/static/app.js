@@ -95,6 +95,14 @@ function stringifyValue(value, fallback = "-") {
   return String(value);
 }
 
+function renderSourceDeletePolicy(value, fallback = "record_only") {
+  const policy = stringifyValue(value, fallback);
+  if (policy === "record_only") {
+    return "record_only（只记录，不删目标端）";
+  }
+  return policy;
+}
+
 function firstNonEmpty(...values) {
   for (const value of values) {
     if (value !== undefined && value !== null && String(value).trim() !== "") {
@@ -1873,6 +1881,7 @@ function buildCreatePayloadFromTask(detail) {
     riskMode: detail.plan.metadata?.riskProfile?.mode || "balanced",
     riskOverride: detail.plan.metadata?.riskOverride || null,
     executionMode: detail.plan.metadata?.executionMode || "leaf_first_lazy",
+    sourceDeletePolicy: detail.plan.metadata?.sourceDeletePolicy || "record_only",
     conflictPolicy: detail.conflictPolicy || "auto_rename_new",
     selectedRoots: detail.plan.metadata?.selectedRoots || ["/"],
     entries: detail.sourceEntries || [],
@@ -1943,6 +1952,7 @@ function prefillWizardFromTask(detail) {
   syncTargetProfiles();
   setSelectValueIfPresent("#plan-target-profile", detail.targetProfileId || "");
   setSelectValueIfPresent("#plan-execution-mode", detail.plan.metadata?.executionMode || "leaf_first_lazy");
+  setSelectValueIfPresent("#plan-source-delete-policy", detail.plan.metadata?.sourceDeletePolicy || "record_only");
   setSelectValueIfPresent("#plan-risk-mode", detail.plan.metadata?.riskProfile?.mode || "balanced");
   setSelectValueIfPresent("#plan-conflict-policy", detail.conflictPolicy || "auto_rename_new");
   setInputValueIfPresent("#plan-threshold", detail.plan.thresholdMB || 0);
@@ -2228,6 +2238,7 @@ function prefillWizardFromTaskPath(detail, path) {
   syncTargetProfiles();
   setSelectValueIfPresent("#plan-target-profile", payload.targetProfileId || "");
   setSelectValueIfPresent("#plan-execution-mode", payload.executionMode || "leaf_first_lazy");
+  setSelectValueIfPresent("#plan-source-delete-policy", payload.sourceDeletePolicy || "record_only");
   setSelectValueIfPresent("#plan-risk-mode", payload.riskMode || "balanced");
   setSelectValueIfPresent("#plan-conflict-policy", payload.conflictPolicy || "auto_rename_new");
   setInputValueIfPresent("#plan-threshold", payload.thresholdMB || 0);
@@ -2253,6 +2264,7 @@ function prefillWizardFromTaskPaths(detail, paths, label = "当前筛选") {
   syncTargetProfiles();
   setSelectValueIfPresent("#plan-target-profile", payload.targetProfileId || "");
   setSelectValueIfPresent("#plan-execution-mode", payload.executionMode || "leaf_first_lazy");
+  setSelectValueIfPresent("#plan-source-delete-policy", payload.sourceDeletePolicy || "record_only");
   setSelectValueIfPresent("#plan-risk-mode", payload.riskMode || "balanced");
   setSelectValueIfPresent("#plan-conflict-policy", payload.conflictPolicy || "auto_rename_new");
   setInputValueIfPresent("#plan-threshold", payload.thresholdMB || 0);
@@ -2595,6 +2607,10 @@ function renderSelectedTask() {
       <span>${stringifyValue(metadata.riskProfile?.requestIntervalMs, "0")}ms / dir ${stringifyValue(metadata.riskProfile?.directoryIntervalMs, "0")}ms / retry ${stringifyValue(metadata.riskProfile?.retryLimit, "0")} / conc ${stringifyValue(metadata.riskProfile?.maxConcurrent, "0")}</span>
     </div>
     <div class="insight-card">
+      <strong>源端删除策略</strong>
+      <span>${renderSourceDeletePolicy(metadata.sourceDeletePolicy)}</span>
+    </div>
+    <div class="insight-card">
       <strong>风险模板解释</strong>
       <span>${escapeHTML(renderRiskResolutionSummary(metadata.riskProfileResolution))}</span>
     </div>
@@ -2699,6 +2715,10 @@ function renderPreview() {
     <div class="insight-card">
       <strong>自动补传时间窗</strong>
       <span>${escapeHTML(renderRiskWindow(metadata.riskProfile))}</span>
+    </div>
+    <div class="insight-card">
+      <strong>源端删除策略</strong>
+      <span>${renderSourceDeletePolicy(metadata.sourceDeletePolicy)}</span>
     </div>
     <div class="insight-card">
       <strong>有效条目 / 删除记录</strong>
@@ -3484,6 +3504,7 @@ function renderSnapshotSummary(summary) {
       <div><strong>queueSize</strong> <code>${escapeHTML(stringifyValue(retrySummary.queueSize, "0"))}</code></div>
       <div><strong>autoRecover</strong> <code>${escapeHTML(renderAutoRecoverMode(retrySummary))}</code></div>
       <div><strong>queueBreakdown</strong> <code>${escapeHTML(renderRetrySummaryBreakdown(retrySummary))}</code></div>
+      <div><strong>sourceDeletePolicy</strong> <code>${escapeHTML(renderSourceDeletePolicy(summary.sourceDeletePolicy))}</code></div>
       <div><strong>sourceDeletes</strong> <code>${escapeHTML(stringifyValue(summary.sourceDeletionCount, "0"))}</code></div>
       <div><strong>autoRecoverPool</strong> <code>${escapeHTML(stringifyValue((summary.autoRecoverPool || []).map((item) => item.mode).join(", "), "-"))}</code></div>
       <div><strong>protocolCoverage</strong> <code>${escapeHTML(stringifyValue(summary.protocolCoverage?.protocolGroup, "-"))} / ${escapeHTML(stringifyValue(summary.protocolCoverage?.realSuccessTaskCount, "0"))}</code></div>
@@ -4463,6 +4484,7 @@ function buildPlanPayload() {
     riskMode: $("#plan-risk-mode").value,
     riskOverride,
     executionMode: $("#plan-execution-mode").value,
+    sourceDeletePolicy: $("#plan-source-delete-policy").value || "record_only",
     conflictPolicy: $("#plan-conflict-policy").value,
     selectedRoots: parseJSONInput($("#plan-selected-roots").value, []),
     entries: parseJSONInput($("#plan-entries").value, []),
@@ -4513,6 +4535,7 @@ function wirePlanner() {
           riskMode: payload.riskMode,
           riskOverride: payload.riskOverride,
           executionMode: payload.executionMode,
+          sourceDeletePolicy: payload.sourceDeletePolicy,
           conflictPolicy: payload.conflictPolicy,
           selectedRoots: payload.selectedRoots,
           entries: payload.entries,

@@ -161,11 +161,12 @@ func TestServiceCreateCarriesSourceDeletionRecordsIntoRuntimeAndEvidence(t *test
 	}
 
 	detail, err := svc.Create(ctx, CreateRequest{
-		SourceProvider:  "guangya",
-		TargetProvider:  "123_open",
-		TargetProfileID: profile.ID,
-		ThresholdMB:     10,
-		SelectedRoots:   []string{"/demo"},
+		SourceProvider:     "guangya",
+		TargetProvider:     "123_open",
+		TargetProfileID:    profile.ID,
+		ThresholdMB:        10,
+		SourceDeletePolicy: planner.SourceDeletePolicyRecordOnly,
+		SelectedRoots:      []string{"/demo"},
 		Entries: []planner.SourceEntry{
 			{Path: "/demo/a.bin", Size: 1024, MD5: "md5-a"},
 			{Path: "/demo/deleted.bin", Deleted: true, DeletedAt: "2026-05-29T10:00:00Z", DeleteReason: "source_removed"},
@@ -179,6 +180,9 @@ func TestServiceCreateCarriesSourceDeletionRecordsIntoRuntimeAndEvidence(t *test
 	}
 	if len(detail.Runtime.SourceDeletionRecords) != 1 {
 		t.Fatalf("expected 1 runtime source deletion record, got %#v", detail.Runtime.SourceDeletionRecords)
+	}
+	if got, _ := detail.Plan.Metadata["sourceDeletePolicy"].(planner.SourceDeletePolicy); got != planner.SourceDeletePolicyRecordOnly {
+		t.Fatalf("expected sourceDeletePolicy record_only, got %#v", detail.Plan.Metadata["sourceDeletePolicy"])
 	}
 	if got := detail.Runtime.SourceDeletionRecords[0].Path; got != "/demo/deleted.bin" {
 		t.Fatalf("expected source deletion record path /demo/deleted.bin, got %s", got)

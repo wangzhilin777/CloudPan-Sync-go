@@ -208,8 +208,17 @@
                     <option value="pre_scan_flat">pre_scan_flat</option>
                   </select>
                 </label>
+                <label>
+                  <span>源端删除策略</span>
+                  <select id="plan-source-delete-policy" name="sourceDeletePolicy">
+                    <option value="record_only">record_only（只记录，不删目标端）</option>
+                  </select>
+                </label>
                 <div id="plan-execution-hint" class="inline-note">
                   默认优先推荐 `leaf_first_lazy`，适合大目录、风控敏感 provider 和按需扫描场景。
+                </div>
+                <div class="inline-note">
+                  当前首版仅支持 `record_only`，用于显式记录源端删除事件，不会默认删除目标端已有文件。
                 </div>
                 <div id="plan-recommendation-action" class="recommendation-card hidden">
                   <div>

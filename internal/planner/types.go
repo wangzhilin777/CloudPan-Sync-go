@@ -60,6 +60,12 @@ const (
 	ExecutionModePreScanFlat   ExecutionMode = "pre_scan_flat"
 )
 
+type SourceDeletePolicy string
+
+const (
+	SourceDeletePolicyRecordOnly SourceDeletePolicy = "record_only"
+)
+
 type Plan struct {
 	SourceProvider string                 `json:"sourceProvider"`
 	TargetProvider string                 `json:"targetProvider"`

@@ -10,6 +10,7 @@ import (
 
 var ErrTargetProviderNotFound = errors.New("target_provider_not_found")
 var ErrInvalidExecutionMode = errors.New("invalid_execution_mode")
+var ErrInvalidSourceDeletePolicy = errors.New("invalid_source_delete_policy")
 
 type SourceEntry struct {
 	Path         string                 `json:"path"`
@@ -30,15 +31,16 @@ type SourceEntry struct {
 }
 
 type PreviewRequest struct {
-	SourceProvider string                  `json:"sourceProvider"`
-	TargetProvider string                  `json:"targetProvider"`
-	ThresholdMB    int                     `json:"thresholdMB"`
-	RiskMode       RiskMode                `json:"riskMode"`
-	RiskOverride   *RiskProfileOverride    `json:"riskOverride,omitempty"`
-	ExecutionMode  ExecutionMode           `json:"executionMode"`
-	ConflictPolicy provider.ConflictPolicy `json:"conflictPolicy"`
-	SelectedRoots  []string                `json:"selectedRoots"`
-	Entries        []SourceEntry           `json:"entries"`
+	SourceProvider     string                  `json:"sourceProvider"`
+	TargetProvider     string                  `json:"targetProvider"`
+	ThresholdMB        int                     `json:"thresholdMB"`
+	RiskMode           RiskMode                `json:"riskMode"`
+	RiskOverride       *RiskProfileOverride    `json:"riskOverride,omitempty"`
+	ExecutionMode      ExecutionMode           `json:"executionMode"`
+	SourceDeletePolicy SourceDeletePolicy      `json:"sourceDeletePolicy"`
+	ConflictPolicy     provider.ConflictPolicy `json:"conflictPolicy"`
+	SelectedRoots      []string                `json:"selectedRoots"`
+	Entries            []SourceEntry           `json:"entries"`
 }
 
 func BuildPreview(registry *provider.Registry, req PreviewRequest) (Plan, error) {
@@ -53,6 +55,10 @@ func BuildPreview(registry *provider.Registry, req PreviewRequest) (Plan, error)
 		conflictPolicy = string(provider.ConflictPolicyAutoRenameNew)
 	}
 	executionMode, err := normalizeExecutionMode(req.ExecutionMode)
+	if err != nil {
+		return Plan{}, err
+	}
+	sourceDeletePolicy, err := normalizeSourceDeletePolicy(req.SourceDeletePolicy)
 	if err != nil {
 		return Plan{}, err
 	}
@@ -96,6 +102,7 @@ func BuildPreview(registry *provider.Registry, req PreviewRequest) (Plan, error)
 			"activeEntryCount":               len(items),
 			"deletedEntryCount":              len(deletedRecords),
 			"sourceDeletionRecords":          deletedRecords,
+			"sourceDeletePolicy":             sourceDeletePolicy,
 			"executionMode":                  executionMode,
 			"recommendedExecutionMode":       recommendedMode,
 			"recommendedExecutionModeReason": recommendedReason,
@@ -490,6 +497,15 @@ func normalizeExecutionMode(mode ExecutionMode) (ExecutionMode, error) {
 		return ExecutionModePreScanFlat, nil
 	default:
 		return "", ErrInvalidExecutionMode
+	}
+}
+
+func normalizeSourceDeletePolicy(policy SourceDeletePolicy) (SourceDeletePolicy, error) {
+	switch policy {
+	case "", SourceDeletePolicyRecordOnly:
+		return SourceDeletePolicyRecordOnly, nil
+	default:
+		return "", ErrInvalidSourceDeletePolicy
 	}
 }
 

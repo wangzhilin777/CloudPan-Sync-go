@@ -62,10 +62,11 @@ func TestAppWorkflowMainline(t *testing.T) {
 	}
 
 	previewResp := invokeJSON(t, handler, http.MethodPost, "/api/plans/preview", map[string]interface{}{
-		"sourceProvider": "baidu_netdisk",
-		"targetProvider": "123_open",
-		"thresholdMB":    1,
-		"riskMode":       "fast",
+		"sourceProvider":     "baidu_netdisk",
+		"targetProvider":     "123_open",
+		"thresholdMB":        1,
+		"riskMode":           "fast",
+		"sourceDeletePolicy": "record_only",
 		"riskOverride": map[string]interface{}{
 			"requestIntervalMs":   1111,
 			"directoryIntervalMs": 2222,
@@ -101,6 +102,9 @@ func TestAppWorkflowMainline(t *testing.T) {
 	if got := metadata["executionMode"].(string); got != "pre_scan_flat" {
 		t.Fatalf("expected preview executionMode pre_scan_flat, got %s", got)
 	}
+	if got := metadata["sourceDeletePolicy"].(string); got != "record_only" {
+		t.Fatalf("expected preview sourceDeletePolicy record_only, got %s", got)
+	}
 	if got := metadata["recommendedExecutionMode"].(string); got == "" {
 		t.Fatal("expected recommendedExecutionMode in preview metadata")
 	}
@@ -126,11 +130,12 @@ func TestAppWorkflowMainline(t *testing.T) {
 	}
 
 	taskResp := invokeJSON(t, handler, http.MethodPost, "/api/tasks", map[string]interface{}{
-		"sourceProvider":  "baidu_netdisk",
-		"targetProvider":  "123_open",
-		"targetProfileId": profileID,
-		"thresholdMB":     1,
-		"riskMode":        "fast",
+		"sourceProvider":     "baidu_netdisk",
+		"targetProvider":     "123_open",
+		"targetProfileId":    profileID,
+		"thresholdMB":        1,
+		"riskMode":           "fast",
+		"sourceDeletePolicy": "record_only",
 		"riskOverride": map[string]interface{}{
 			"requestIntervalMs":   1111,
 			"directoryIntervalMs": 2222,
@@ -161,6 +166,9 @@ func TestAppWorkflowMainline(t *testing.T) {
 	}
 	if got := createdMetadata["executionMode"].(string); got != "pre_scan_flat" {
 		t.Fatalf("expected task executionMode pre_scan_flat, got %s", got)
+	}
+	if got := createdMetadata["sourceDeletePolicy"].(string); got != "record_only" {
+		t.Fatalf("expected task sourceDeletePolicy record_only, got %s", got)
 	}
 	createdRiskProfile := createdMetadata["riskProfile"].(map[string]interface{})
 	if got := int(createdRiskProfile["directoryIntervalMs"].(float64)); got != 2222 {
@@ -261,6 +269,9 @@ func TestAppWorkflowMainline(t *testing.T) {
 	if got := recentProbePayload["executionMode"].(string); got != "pre_scan_flat" {
 		t.Fatalf("expected probe executionMode pre_scan_flat, got %s", got)
 	}
+	if got := recentProbePayload["sourceDeletePolicy"].(string); got != "record_only" {
+		t.Fatalf("expected probe sourceDeletePolicy record_only, got %s", got)
+	}
 	if got := int(recentProbePayload["riskProfile"].(map[string]interface{})["requestIntervalMs"].(float64)); got != 1111 {
 		t.Fatalf("expected probe risk requestIntervalMs 1111, got %d", got)
 	}
@@ -339,6 +350,9 @@ func TestAppWorkflowMainline(t *testing.T) {
 		}
 		if got := summary["executionMode"].(string); got != "pre_scan_flat" {
 			t.Fatalf("expected status summary executionMode pre_scan_flat, got %s", got)
+		}
+		if got := summary["sourceDeletePolicy"].(string); got != "record_only" {
+			t.Fatalf("expected status summary sourceDeletePolicy record_only, got %s", got)
 		}
 		if got := int(summary["riskProfile"].(map[string]interface{})["directoryIntervalMs"].(float64)); got != 2222 {
 			t.Fatalf("expected status summary risk directoryIntervalMs 2222, got %d", got)
@@ -554,6 +568,27 @@ func TestAppWorkflowMainline(t *testing.T) {
 	selectedPaths, ok := retryMetadata["retrySelectedPaths"].([]interface{})
 	if !ok || len(selectedPaths) != 1 || selectedPaths[0].(string) != "/demo/pending.bin" {
 		t.Fatalf("expected retrySelectedPaths [/demo/pending.bin], got %#v", retryMetadata["retrySelectedPaths"])
+	}
+}
+
+func TestAppPlanPreviewRejectsInvalidSourceDeletePolicy(t *testing.T) {
+	ctx := context.Background()
+	application := mustNewTestApp(t, ctx)
+	handler := application.routes()
+
+	envelope, statusCode := invokeJSONError(t, handler, http.MethodPost, "/api/plans/preview", map[string]interface{}{
+		"sourceProvider":     "guangya",
+		"targetProvider":     "123_open",
+		"sourceDeletePolicy": "delete_target",
+		"entries": []map[string]interface{}{
+			{"path": "/demo/a.bin", "size": 128, "md5": "md5-a"},
+		},
+	})
+	if statusCode != http.StatusBadRequest {
+		t.Fatalf("expected status 400, got %d", statusCode)
+	}
+	if got := envelope.Error.Code; got != "invalid_source_delete_policy" {
+		t.Fatalf("expected invalid_source_delete_policy, got %s", got)
 	}
 }
 
