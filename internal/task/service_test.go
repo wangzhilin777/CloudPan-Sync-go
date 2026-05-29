@@ -4231,6 +4231,405 @@ func TestServiceRecoverBlockedTasksWithOptionsRespectsLaneBudget(t *testing.T) {
 	}
 }
 
+func TestServiceRecoverBlockedTasksWithOptionsFiltersProtocolGroup(t *testing.T) {
+	ctx := context.Background()
+	store, err := sqlitestore.New(ctx, filepath.Join(t.TempDir(), "auto-recover-protocol-group-filter.db"))
+	if err != nil {
+		t.Fatalf("new store: %v", err)
+	}
+	defer func() { _ = store.Close() }()
+
+	uploadCallsByPath := map[string]int{}
+	newAdapter := func(key, protocolGroup string) *scriptedAdapter {
+		return &scriptedAdapter{
+			meta: provider.Provider{
+				Key:              key,
+				DisplayName:      key,
+				ProtocolGroup:    protocolGroup,
+				AuthModes:        []string{"manual_token"},
+				FastUploadInputs: []string{"md5", "size"},
+				FallbackModes:    []string{"download_upload"},
+				Status:           "planned",
+			},
+			capability: provider.CapabilitySet{
+				SupportsAuthValidation: true,
+				SupportsUpload:         true,
+			},
+			uploadFunc: func(req provider.UploadRequest) provider.UploadResult {
+				uploadCallsByPath[req.Path]++
+				if uploadCallsByPath[req.Path] == 1 {
+					return provider.UploadResult{
+						OperationResult: provider.OperationResult{
+							Status:  "rate_limited",
+							Message: "rate limited",
+							Mode:    "fake_rate_limit",
+						},
+					}
+				}
+				return provider.UploadResult{
+					OperationResult: provider.OperationResult{
+						OK:      true,
+						Status:  "ok",
+						Message: "protocol group recovered",
+						Mode:    "fake_protocol_group_ok",
+					},
+				}
+			},
+		}
+	}
+
+	adapterA := newAdapter("recover_protocol_group_target_a", "protocol_group_a")
+	adapterB := newAdapter("recover_protocol_group_target_b", "protocol_group_b")
+	registry := provider.NewRegistry(adapterA, adapterB)
+	authSvc := auth.NewService(store, registry)
+	svc := NewService(store, registry, authSvc)
+
+	createProfile := func(providerKey string) string {
+		profile, err := authSvc.CreateProfile(ctx, auth.CreateProfileInput{
+			ProviderKey: providerKey,
+			AuthMode:    "manual_token",
+			DisplayName: providerKey,
+			Token:       "token-" + providerKey,
+		})
+		if err != nil {
+			t.Fatalf("CreateProfile(%s) error = %v", providerKey, err)
+		}
+		return profile.ID
+	}
+
+	createBlockedTask := func(providerKey, profileID, path string, offsetMinutes int) string {
+		detail, err := svc.Create(ctx, CreateRequest{
+			SourceProvider:  "guangya",
+			TargetProvider:  providerKey,
+			TargetProfileID: profileID,
+			ThresholdMB:     1,
+			RiskOverride: &planner.RiskProfileOverride{
+				CooldownSeconds: intPtrTask(3600),
+				MaxConcurrent:   intPtrTask(3),
+			},
+			Entries: []planner.SourceEntry{{Path: path, Size: 128, MD5: strings.Trim(path, "/")}},
+		})
+		if err != nil {
+			t.Fatalf("Create(%s %s) error = %v", providerKey, path, err)
+		}
+		if _, ok, err := svc.Run(ctx, detail.Task.ID); err != nil || !ok {
+			t.Fatalf("Run(%s %s) error=%v ok=%v", providerKey, path, err, ok)
+		}
+		blocked, ok, err := svc.Get(ctx, detail.Task.ID)
+		if err != nil || !ok {
+			t.Fatalf("Get(%s %s) error=%v ok=%v", providerKey, path, err, ok)
+		}
+		timestamp := time.Now().Add(time.Duration(offsetMinutes) * time.Minute).UTC().Format(time.RFC3339)
+		blocked.Task.UpdatedAt = timestamp
+		for idx := range blocked.Results {
+			blocked.Results[idx].CreatedAt = timestamp
+		}
+		syncRuntimeRetryQueue(&blocked.Runtime, blocked.Plan.Metadata, blocked.Results)
+		applyRetryQueueSummary(&blocked.Runtime, blocked.Plan.Metadata)
+		if err := replaceTaskDetailAndResults(ctx, store, blocked); err != nil {
+			t.Fatalf("replaceTaskDetailAndResults(%s %s) error = %v", providerKey, path, err)
+		}
+		return detail.Task.ID
+	}
+
+	profileA := createProfile("recover_protocol_group_target_a")
+	profileB := createProfile("recover_protocol_group_target_b")
+	firstID := createBlockedTask("recover_protocol_group_target_a", profileA, "/group-a.bin", -120)
+	secondID := createBlockedTask("recover_protocol_group_target_b", profileB, "/group-b.bin", -119)
+
+	result, err := svc.RecoverBlockedTasksWithOptions(ctx, RecoverOptions{
+		ProtocolGroup: "protocol_group_b",
+		Limit:         5,
+	})
+	if err != nil {
+		t.Fatalf("RecoverBlockedTasksWithOptions(protocolGroup filter) error = %v", err)
+	}
+	if result.ProtocolGroup != "protocol_group_b" || result.MatchedCount != 1 || result.RecoveredCount != 1 {
+		t.Fatalf("unexpected protocolGroup filter result: %#v", result)
+	}
+
+	firstTask, ok, err := svc.Get(ctx, firstID)
+	if err != nil || !ok {
+		t.Fatalf("Get(first protocol group task) error=%v ok=%v", err, ok)
+	}
+	secondTask, ok, err := svc.Get(ctx, secondID)
+	if err != nil || !ok {
+		t.Fatalf("Get(second protocol group task) error=%v ok=%v", err, ok)
+	}
+	if firstTask.Task.State != StateBlocked {
+		t.Fatalf("expected first task to remain blocked, got %s", firstTask.Task.State)
+	}
+	if secondTask.Task.State != StateCompleted {
+		t.Fatalf("expected second task completed, got %s", secondTask.Task.State)
+	}
+	if uploadCallsByPath["/group-a.bin"] != 1 {
+		t.Fatalf("expected /group-a.bin upload calls 1, got %d", uploadCallsByPath["/group-a.bin"])
+	}
+	if uploadCallsByPath["/group-b.bin"] != 2 {
+		t.Fatalf("expected /group-b.bin upload calls 2, got %d", uploadCallsByPath["/group-b.bin"])
+	}
+}
+
+func TestServiceRecoverBlockedTasksWithOptionsRespectsProtocolGroupBudget(t *testing.T) {
+	ctx := context.Background()
+	store, err := sqlitestore.New(ctx, filepath.Join(t.TempDir(), "auto-recover-protocol-group-budget.db"))
+	if err != nil {
+		t.Fatalf("new store: %v", err)
+	}
+	defer func() { _ = store.Close() }()
+
+	uploadCallsByPath := map[string]int{}
+	newAdapter := func(key, protocolGroup string) *scriptedAdapter {
+		return &scriptedAdapter{
+			meta: provider.Provider{
+				Key:              key,
+				DisplayName:      key,
+				ProtocolGroup:    protocolGroup,
+				AuthModes:        []string{"manual_token"},
+				FastUploadInputs: []string{"md5", "size"},
+				FallbackModes:    []string{"download_upload"},
+				Status:           "planned",
+			},
+			capability: provider.CapabilitySet{
+				SupportsAuthValidation: true,
+				SupportsUpload:         true,
+			},
+			uploadFunc: func(req provider.UploadRequest) provider.UploadResult {
+				uploadCallsByPath[req.Path]++
+				if uploadCallsByPath[req.Path] == 1 {
+					return provider.UploadResult{
+						OperationResult: provider.OperationResult{
+							Status:  "rate_limited",
+							Message: "rate limited",
+							Mode:    "fake_rate_limit",
+						},
+					}
+				}
+				return provider.UploadResult{
+					OperationResult: provider.OperationResult{
+						OK:      true,
+						Status:  "ok",
+						Message: "protocol group budget recovered",
+						Mode:    "fake_protocol_group_budget_ok",
+					},
+				}
+			},
+		}
+	}
+
+	adapterA := newAdapter("recover_protocol_group_budget_target_a", "shared_protocol_group")
+	adapterB := newAdapter("recover_protocol_group_budget_target_b", "shared_protocol_group")
+	adapterC := newAdapter("recover_protocol_group_budget_target_c", "other_protocol_group")
+	registry := provider.NewRegistry(adapterA, adapterB, adapterC)
+	authSvc := auth.NewService(store, registry)
+	svc := NewService(store, registry, authSvc)
+
+	createProfile := func(providerKey string) string {
+		profile, err := authSvc.CreateProfile(ctx, auth.CreateProfileInput{
+			ProviderKey: providerKey,
+			AuthMode:    "manual_token",
+			DisplayName: providerKey,
+			Token:       "token-" + providerKey,
+		})
+		if err != nil {
+			t.Fatalf("CreateProfile(%s) error = %v", providerKey, err)
+		}
+		return profile.ID
+	}
+
+	createBlockedTask := func(providerKey, profileID, path string, offsetMinutes int) string {
+		detail, err := svc.Create(ctx, CreateRequest{
+			SourceProvider:  "guangya",
+			TargetProvider:  providerKey,
+			TargetProfileID: profileID,
+			ThresholdMB:     1,
+			RiskOverride: &planner.RiskProfileOverride{
+				CooldownSeconds: intPtrTask(3600),
+				MaxConcurrent:   intPtrTask(4),
+			},
+			Entries: []planner.SourceEntry{{Path: path, Size: 128, MD5: strings.Trim(path, "/")}},
+		})
+		if err != nil {
+			t.Fatalf("Create(%s %s) error = %v", providerKey, path, err)
+		}
+		if _, ok, err := svc.Run(ctx, detail.Task.ID); err != nil || !ok {
+			t.Fatalf("Run(%s %s) error=%v ok=%v", providerKey, path, err, ok)
+		}
+		blocked, ok, err := svc.Get(ctx, detail.Task.ID)
+		if err != nil || !ok {
+			t.Fatalf("Get(%s %s) error=%v ok=%v", providerKey, path, err, ok)
+		}
+		timestamp := time.Now().Add(time.Duration(offsetMinutes) * time.Minute).UTC().Format(time.RFC3339)
+		blocked.Task.UpdatedAt = timestamp
+		for idx := range blocked.Results {
+			blocked.Results[idx].CreatedAt = timestamp
+		}
+		syncRuntimeRetryQueue(&blocked.Runtime, blocked.Plan.Metadata, blocked.Results)
+		applyRetryQueueSummary(&blocked.Runtime, blocked.Plan.Metadata)
+		if err := replaceTaskDetailAndResults(ctx, store, blocked); err != nil {
+			t.Fatalf("replaceTaskDetailAndResults(%s %s) error = %v", providerKey, path, err)
+		}
+		return detail.Task.ID
+	}
+
+	profileA := createProfile("recover_protocol_group_budget_target_a")
+	profileB := createProfile("recover_protocol_group_budget_target_b")
+	profileC := createProfile("recover_protocol_group_budget_target_c")
+	firstID := createBlockedTask("recover_protocol_group_budget_target_a", profileA, "/shared-a.bin", -180)
+	secondID := createBlockedTask("recover_protocol_group_budget_target_b", profileB, "/shared-b.bin", -179)
+	thirdID := createBlockedTask("recover_protocol_group_budget_target_c", profileC, "/other-c.bin", -178)
+
+	result, err := svc.RecoverBlockedTasksWithOptions(ctx, RecoverOptions{
+		Limit:                 5,
+		LimitPerProtocolGroup: 1,
+	})
+	if err != nil {
+		t.Fatalf("RecoverBlockedTasksWithOptions(protocolGroup budget) error = %v", err)
+	}
+	if result.MatchedCount != 3 || result.RecoveredCount != 2 || result.SkippedByProtocolGroupBudget != 1 || result.LimitPerProtocolGroup != 1 {
+		t.Fatalf("unexpected protocolGroup budget result: %#v", result)
+	}
+
+	firstTask, ok, err := svc.Get(ctx, firstID)
+	if err != nil || !ok {
+		t.Fatalf("Get(first protocol group budget task) error=%v ok=%v", err, ok)
+	}
+	secondTask, ok, err := svc.Get(ctx, secondID)
+	if err != nil || !ok {
+		t.Fatalf("Get(second protocol group budget task) error=%v ok=%v", err, ok)
+	}
+	thirdTask, ok, err := svc.Get(ctx, thirdID)
+	if err != nil || !ok {
+		t.Fatalf("Get(third protocol group budget task) error=%v ok=%v", err, ok)
+	}
+	if firstTask.Task.State != StateCompleted {
+		t.Fatalf("expected first shared-group task completed, got %s", firstTask.Task.State)
+	}
+	if secondTask.Task.State != StateBlocked {
+		t.Fatalf("expected second shared-group task blocked, got %s", secondTask.Task.State)
+	}
+	if thirdTask.Task.State != StateCompleted {
+		t.Fatalf("expected other-group task completed, got %s", thirdTask.Task.State)
+	}
+	if uploadCallsByPath["/shared-a.bin"] != 2 {
+		t.Fatalf("expected /shared-a.bin upload calls 2, got %d", uploadCallsByPath["/shared-a.bin"])
+	}
+	if uploadCallsByPath["/shared-b.bin"] != 1 {
+		t.Fatalf("expected /shared-b.bin upload calls 1, got %d", uploadCallsByPath["/shared-b.bin"])
+	}
+	if uploadCallsByPath["/other-c.bin"] != 2 {
+		t.Fatalf("expected /other-c.bin upload calls 2, got %d", uploadCallsByPath["/other-c.bin"])
+	}
+}
+
+func TestServiceAutoRecoverPoolSummaryIncludesProtocolGroups(t *testing.T) {
+	ctx := context.Background()
+	store, err := sqlitestore.New(ctx, filepath.Join(t.TempDir(), "auto-recover-protocol-groups-summary.db"))
+	if err != nil {
+		t.Fatalf("new store: %v", err)
+	}
+	defer func() { _ = store.Close() }()
+
+	newAdapter := func(key, protocolGroup string) *scriptedAdapter {
+		return &scriptedAdapter{
+			meta: provider.Provider{
+				Key:              key,
+				DisplayName:      key,
+				ProtocolGroup:    protocolGroup,
+				AuthModes:        []string{"manual_token"},
+				FastUploadInputs: []string{"md5", "size"},
+				FallbackModes:    []string{"download_upload"},
+				Status:           "planned",
+			},
+			capability: provider.CapabilitySet{
+				SupportsAuthValidation: true,
+				SupportsUpload:         true,
+			},
+			uploadFunc: func(req provider.UploadRequest) provider.UploadResult {
+				return provider.UploadResult{
+					OperationResult: provider.OperationResult{
+						Status:  "rate_limited",
+						Message: "rate limited",
+						Mode:    "fake_rate_limit",
+					},
+				}
+			},
+		}
+	}
+
+	adapterA := newAdapter("auto_recover_protocol_summary_target_a", "summary_protocol_group_a")
+	adapterB := newAdapter("auto_recover_protocol_summary_target_b", "summary_protocol_group_b")
+	registry := provider.NewRegistry(adapterA, adapterB)
+	authSvc := auth.NewService(store, registry)
+	svc := NewService(store, registry, authSvc)
+
+	createProfile := func(providerKey string) string {
+		profile, err := authSvc.CreateProfile(ctx, auth.CreateProfileInput{
+			ProviderKey: providerKey,
+			AuthMode:    "manual_token",
+			DisplayName: providerKey,
+			Token:       "token-" + providerKey,
+		})
+		if err != nil {
+			t.Fatalf("CreateProfile(%s) error = %v", providerKey, err)
+		}
+		return profile.ID
+	}
+
+	createBlockedTask := func(providerKey, profileID, path string, offsetMinutes int) {
+		detail, err := svc.Create(ctx, CreateRequest{
+			SourceProvider:  "guangya",
+			TargetProvider:  providerKey,
+			TargetProfileID: profileID,
+			ThresholdMB:     1,
+			RiskOverride: &planner.RiskProfileOverride{
+				CooldownSeconds: intPtrTask(3600),
+				MaxConcurrent:   intPtrTask(3),
+			},
+			Entries: []planner.SourceEntry{{Path: path, Size: 128, MD5: strings.Trim(path, "/")}},
+		})
+		if err != nil {
+			t.Fatalf("Create(%s %s) error = %v", providerKey, path, err)
+		}
+		if _, ok, err := svc.Run(ctx, detail.Task.ID); err != nil || !ok {
+			t.Fatalf("Run(%s %s) error=%v ok=%v", providerKey, path, err, ok)
+		}
+		blocked, ok, err := svc.Get(ctx, detail.Task.ID)
+		if err != nil || !ok {
+			t.Fatalf("Get(%s %s) error=%v ok=%v", providerKey, path, err, ok)
+		}
+		timestamp := time.Now().Add(time.Duration(offsetMinutes) * time.Minute).UTC().Format(time.RFC3339)
+		blocked.Task.UpdatedAt = timestamp
+		for idx := range blocked.Results {
+			blocked.Results[idx].CreatedAt = timestamp
+		}
+		syncRuntimeRetryQueue(&blocked.Runtime, blocked.Plan.Metadata, blocked.Results)
+		applyRetryQueueSummary(&blocked.Runtime, blocked.Plan.Metadata)
+		if err := replaceTaskDetailAndResults(ctx, store, blocked); err != nil {
+			t.Fatalf("replaceTaskDetailAndResults(%s %s) error = %v", providerKey, path, err)
+		}
+	}
+
+	profileA := createProfile("auto_recover_protocol_summary_target_a")
+	profileB := createProfile("auto_recover_protocol_summary_target_b")
+	createBlockedTask("auto_recover_protocol_summary_target_a", profileA, "/summary-a.bin", -200)
+	createBlockedTask("auto_recover_protocol_summary_target_b", profileB, "/summary-b.bin", -199)
+
+	evidence, err := svc.RuntimeEvidence(ctx)
+	if err != nil {
+		t.Fatalf("RuntimeEvidence() error = %v", err)
+	}
+	lane := autoRecoverLaneByMode(evidence.AutoRecoverPool, "retry_queue_auto_retry")
+	if lane.Mode == "" {
+		t.Fatalf("expected retry_queue_auto_retry lane in %#v", evidence.AutoRecoverPool)
+	}
+	if lane.SampleProtocolGroup != "summary_protocol_group_a" {
+		t.Fatalf("expected sample protocol group summary_protocol_group_a, got %#v", lane.SampleProtocolGroup)
+	}
+	if len(lane.ProtocolGroups) != 2 || lane.ProtocolGroups[0] != "summary_protocol_group_a" || lane.ProtocolGroups[1] != "summary_protocol_group_b" {
+		t.Fatalf("unexpected protocol groups: %#v", lane.ProtocolGroups)
+	}
+}
 func TestServiceRecoverBlockedTasksWithOptionsRoundRobinsProvidersWithinSameBand(t *testing.T) {
 	ctx := context.Background()
 	store, err := sqlitestore.New(ctx, filepath.Join(t.TempDir(), "auto-recover-provider-round-robin.db"))

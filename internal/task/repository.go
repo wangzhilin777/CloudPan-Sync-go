@@ -342,6 +342,7 @@ type autoRecoverLaneAccumulator struct {
 	taskIDs                  map[string]struct{}
 	providers                map[string]struct{}
 	profiles                 map[string]struct{}
+	protocolGroups           map[string]struct{}
 	retryClasses             map[string]struct{}
 	blockedActions           map[string]struct{}
 	suggestedProviderBudget  int
@@ -353,6 +354,7 @@ type autoRecoverLaneAccumulator struct {
 	nextRetryAt              string
 	sampleTaskID             string
 	sampleProvider           string
+	sampleProtocolGroup      string
 	sampleProfileID          string
 }
 
@@ -449,7 +451,7 @@ func summarizeBlockedActions(details []Detail) []BlockedAction {
 	return items
 }
 
-func summarizeAutoRecoverPool(details []Detail) ([]AutoRecoverLane, int) {
+func summarizeAutoRecoverPool(details []Detail, providers []provider.Entry) ([]AutoRecoverLane, int) {
 	if len(details) == 0 {
 		return nil, 0
 	}
@@ -464,7 +466,7 @@ func summarizeAutoRecoverPool(details []Detail) ([]AutoRecoverLane, int) {
 		ensureRuntimeState(&detail)
 		syncRuntimeRetryQueue(&detail.Runtime, detail.Plan.Metadata, detail.Results)
 		applyRetryQueueSummary(&detail.Runtime, detail.Plan.Metadata)
-		candidate := buildRecoverCandidate(detail)
+		candidate := buildRecoverCandidate(detail, protocolGroupForProviderKey(providers, detail.Task.TargetProvider))
 		if !shouldIncludeAutoRecoverPool(detail, candidate.Summary) {
 			continue
 		}
@@ -487,6 +489,7 @@ func summarizeAutoRecoverPool(details []Detail) ([]AutoRecoverLane, int) {
 				taskIDs:        make(map[string]struct{}),
 				providers:      make(map[string]struct{}),
 				profiles:       make(map[string]struct{}),
+				protocolGroups: make(map[string]struct{}),
 				retryClasses:   make(map[string]struct{}),
 				blockedActions: make(map[string]struct{}),
 			}
@@ -495,6 +498,7 @@ func summarizeAutoRecoverPool(details []Detail) ([]AutoRecoverLane, int) {
 		}
 		acc.taskIDs[detail.Task.ID] = struct{}{}
 		acc.providers[detail.Task.TargetProvider] = struct{}{}
+		acc.protocolGroups[recoverProtocolGroupBudgetKey(candidate.ProtocolGroup)] = struct{}{}
 		if profileID := strings.TrimSpace(detail.TargetProfileID); profileID != "" {
 			acc.profiles[profileID] = struct{}{}
 		}
@@ -521,6 +525,7 @@ func summarizeAutoRecoverPool(details []Detail) ([]AutoRecoverLane, int) {
 		if acc.sampleTaskID == "" {
 			acc.sampleTaskID = detail.Task.ID
 			acc.sampleProvider = detail.Task.TargetProvider
+			acc.sampleProtocolGroup = recoverProtocolGroupBudgetKey(candidate.ProtocolGroup)
 			acc.sampleProfileID = detail.TargetProfileID
 		}
 		nextRetryAt := strings.TrimSpace(candidate.Summary.NextRetryAt)
@@ -531,9 +536,14 @@ func summarizeAutoRecoverPool(details []Detail) ([]AutoRecoverLane, int) {
 	items := make([]AutoRecoverLane, 0, len(order))
 	for _, mode := range order {
 		acc := accumulators[mode]
+		protocolGroups := sortedMapKeys(acc.protocolGroups)
 		retryClasses := sortedMapKeys(acc.retryClasses)
 		blockedActions := sortedMapKeys(acc.blockedActions)
 		profileIDs := sortedMapKeys(acc.profiles)
+		sampleProtocolGroup := strings.TrimSpace(acc.sampleProtocolGroup)
+		if sampleProtocolGroup == "" {
+			sampleProtocolGroup = firstStringValue(protocolGroups)
+		}
 		items = append(items, AutoRecoverLane{
 			Mode:                     acc.mode,
 			Advice:                   acc.advice,
@@ -546,6 +556,7 @@ func summarizeAutoRecoverPool(details []Detail) ([]AutoRecoverLane, int) {
 			RetryableNowCount:        acc.retryableNowCount,
 			CooldownCount:            acc.cooldownCount,
 			UploadCheckpointEligible: acc.uploadCheckpointEligible,
+			ProtocolGroups:           protocolGroups,
 			RetryClasses:             retryClasses,
 			BlockedActions:           blockedActions,
 			ProfileIDs:               profileIDs,
@@ -554,12 +565,14 @@ func summarizeAutoRecoverPool(details []Detail) ([]AutoRecoverLane, int) {
 			NextRetryAt:              acc.nextRetryAt,
 			SampleTaskID:             acc.sampleTaskID,
 			SampleProvider:           acc.sampleProvider,
+			SampleProtocolGroup:      sampleProtocolGroup,
 			SampleProfileID:          acc.sampleProfileID,
 		})
 	}
 	sort.SliceStable(items, func(i, j int) bool {
 		left := recoverCandidate{
 			Mode:              items[i].Mode,
+			ProtocolGroup:     items[i].SampleProtocolGroup,
 			EffectiveAction:   items[i].PrimaryBlockedAction,
 			PrimaryRetryClass: items[i].PrimaryRetryClass,
 			Detail: Detail{
@@ -571,6 +584,7 @@ func summarizeAutoRecoverPool(details []Detail) ([]AutoRecoverLane, int) {
 		}
 		right := recoverCandidate{
 			Mode:              items[j].Mode,
+			ProtocolGroup:     items[j].SampleProtocolGroup,
 			EffectiveAction:   items[j].PrimaryBlockedAction,
 			PrimaryRetryClass: items[j].PrimaryRetryClass,
 			Detail: Detail{
@@ -583,17 +597,6 @@ func summarizeAutoRecoverPool(details []Detail) ([]AutoRecoverLane, int) {
 		return recoverCandidateLess(left, right)
 	})
 	return items, totalTasks
-}
-
-func shouldIncludeAutoRecoverPool(detail Detail, summary retryQueueSummary) bool {
-	switch detail.Task.State {
-	case StateBlocked:
-		return summary.AutoRecoverEligible
-	case StateCompletedWithErrors:
-		return summary.AutoRecoverEligible
-	default:
-		return false
-	}
 }
 
 func taskEvidenceSummary(ctx context.Context, store *sqlitestore.Store, providers []provider.Entry) (EvidenceSummary, error) {
@@ -653,7 +656,7 @@ func taskEvidenceSummary(ctx context.Context, store *sqlitestore.Store, provider
 		blockedDetails = append(blockedDetails, detail)
 	}
 	summary.BlockedActions = summarizeBlockedActions(blockedDetails)
-	summary.AutoRecoverPool, summary.AutoRecoverTasks = summarizeAutoRecoverPool(details)
+	summary.AutoRecoverPool, summary.AutoRecoverTasks = summarizeAutoRecoverPool(details, providers)
 	results, err := recentTaskResults(ctx, store, 10)
 	if err != nil {
 		return summary, err
@@ -726,7 +729,7 @@ func providerStatusSummary(ctx context.Context, store *sqlitestore.Store, provid
 		}
 		item.SnapshotSummary["blockedCount"] = item.BlockedCount
 		item.SnapshotSummary["blockedActions"] = summarizeBlockedActions(blockedDetails)
-		item.SnapshotSummary["autoRecoverPool"], item.AutoRecoverCount = summarizeAutoRecoverPool(providerDetails)
+		item.SnapshotSummary["autoRecoverPool"], item.AutoRecoverCount = summarizeAutoRecoverPool(providerDetails, providers)
 		item.SnapshotSummary["autoRecoverCount"] = item.AutoRecoverCount
 		items = append(items, item)
 	}
@@ -818,10 +821,17 @@ func providerEntryByKey(entries []provider.Entry, key string) (provider.Entry, b
 	return provider.Entry{}, false
 }
 
+func protocolGroupForProviderKey(entries []provider.Entry, key string) string {
+	if entry, ok := providerEntryByKey(entries, key); ok {
+		return protocolGroupForProvider(entry)
+	}
+	return recoverProtocolGroupBudgetKey(key)
+}
+
 func protocolGroupForProvider(entry provider.Entry) string {
 	group := strings.TrimSpace(entry.Meta.ProtocolGroup)
 	if group == "" {
-		return entry.Meta.Key
+		return recoverProtocolGroupBudgetKey(entry.Meta.Key)
 	}
 	return group
 }

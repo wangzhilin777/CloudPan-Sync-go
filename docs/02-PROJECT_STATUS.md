@@ -36,11 +36,12 @@
   - 手动触发后台补传时，已经支持按 `mode / providerKey / retryClass / limit` 精准筛选放行
   - 当前也已支持按 `blockedAction` 做历史阻塞原因口径的精准筛选与手动放行
   - 当前混合失败队列的后台补传候选也已进入统一优先级排序：会综合 `mode / primaryRetryClass / primaryBlockedAction / nextRetryAt` 做稳定拆批
-  - 当前状态页候选池已可直接按 `primaryRetryClass / primaryBlockedAction / lane(mode + class + action)` 一键聚焦或放行
+  - 当前状态页候选池已可直接按 `protocolGroup / primaryRetryClass / primaryBlockedAction / lane(mode + class + action)` 一键聚焦或放行
   - 当前 `/api/tasks/recover` 也已支持按 `path/paths + scope` 只放行一棵或多棵子树，便于和叶子目录优先排障结合使用
   - 当前 `/api/tasks/recover` 还支持额外带 `taskId`，可把后台补传精准约束到单个任务样本，避免状态页排障时误打到同 provider 的其它任务
   - 当前 `/api/tasks/recover` 也支持额外带 `profileId`，可把后台补传进一步精准约束到某个授权档案
-  - 当前 `/api/tasks/recover` 还支持额外带 `limitPerProvider / limitPerProfile`，可把同一轮放行预算进一步压到 provider 级或账号级
+  - 当前 `/api/tasks/recover` 也支持额外带 `protocolGroup`，可把后台补传进一步压缩到某个协议族，便于协议族级排障或联调分批
+  - 当前 `/api/tasks/recover` 还支持额外带 `limitPerProtocolGroup / limitPerProvider / limitPerProfile`，可把同一轮放行预算进一步压到协议族级、provider 级或账号级
   - 当前同优先级档位下的后台补传候选会先按 provider 轮转，再在同 provider 内按授权档案轮转，避免同一个账号长时间独占当前批次
   - 当前如果任务本身已经满足自动补传条件，但不在 `autoRetryStartHour / autoRetryEndHour` 时间窗内，也会被显式标记为 `wait_for_retry_window`，并继续留在候选池里等待下一个允许时间点
 
@@ -517,7 +518,7 @@
   - 任务详情、运行检查点和状态快照都已同步展示 `后台补传候选 / 队列拆分 / 自动补传提示`，便于直接判断当前失败队列更适合冷却后自动重试、等待自动补传时间窗、upload checkpoint 续跑，还是人工处理
   - 运行证据摘要页还新增了“自动补传候选池”，可以按模式直接看 worker 当前会优先接管哪一类任务，或哪些任务虽然已满足自动补传条件但仍在等待允许时间窗
   - 自动补传候选池现在还能直接按主重试类型、主阻塞动作或 lane 级口径一键聚焦与执行，减少手动回填筛选条件
-  - 状态页手动放行还可直接填写 `limit / limitPerMode / limitPerLane / limitPerProvider / limitPerProfile`
+  - 状态页手动放行还可直接填写 `limit / limitPerMode / limitPerLane / limitPerProtocolGroup / limitPerProvider / limitPerProfile`
     - 便于把补传节奏同时控制在“小批次 + 模式分流 + lane 分流 + 多账号轮转”
   - 任务目录树和待补传树节点现在也能直接触发“后台补传当前路径 / 当前 root”，方便只放行当前子树
   - 当前任务详情页的“重试队列”和“待补传树”还新增了“后台补传当前筛选”入口

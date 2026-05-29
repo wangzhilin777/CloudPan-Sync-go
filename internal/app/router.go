@@ -85,20 +85,22 @@ type retryTaskRequest struct {
 }
 
 type recoverTasksRequest struct {
-	Mode             string   `json:"mode"`
-	TaskID           string   `json:"taskId"`
-	ProviderKey      string   `json:"providerKey"`
-	ProfileID        string   `json:"profileId"`
-	RetryClass       string   `json:"retryClass"`
-	BlockedAction    string   `json:"blockedAction"`
-	Paths            []string `json:"paths"`
-	Path             string   `json:"path"`
-	Scope            string   `json:"scope"`
-	Limit            int      `json:"limit"`
-	LimitPerMode     int      `json:"limitPerMode"`
-	LimitPerLane     int      `json:"limitPerLane"`
-	LimitPerProvider int      `json:"limitPerProvider"`
-	LimitPerProfile  int      `json:"limitPerProfile"`
+	Mode                  string   `json:"mode"`
+	TaskID                string   `json:"taskId"`
+	ProtocolGroup         string   `json:"protocolGroup"`
+	ProviderKey           string   `json:"providerKey"`
+	ProfileID             string   `json:"profileId"`
+	RetryClass            string   `json:"retryClass"`
+	BlockedAction         string   `json:"blockedAction"`
+	Paths                 []string `json:"paths"`
+	Path                  string   `json:"path"`
+	Scope                 string   `json:"scope"`
+	Limit                 int      `json:"limit"`
+	LimitPerMode          int      `json:"limitPerMode"`
+	LimitPerLane          int      `json:"limitPerLane"`
+	LimitPerProtocolGroup int      `json:"limitPerProtocolGroup"`
+	LimitPerProvider      int      `json:"limitPerProvider"`
+	LimitPerProfile       int      `json:"limitPerProfile"`
 }
 
 func (a *App) routes() http.Handler {
@@ -551,20 +553,22 @@ func (a *App) handleTaskRecovery(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	result, err := a.recoverBlockedTasks(r.Context(), task.RecoverOptions{
-		Mode:             req.Mode,
-		TaskID:           req.TaskID,
-		ProviderKey:      req.ProviderKey,
-		ProfileID:        req.ProfileID,
-		RetryClass:       req.RetryClass,
-		BlockedAction:    req.BlockedAction,
-		Paths:            req.Paths,
-		Path:             req.Path,
-		Scope:            req.Scope,
-		Limit:            req.Limit,
-		LimitPerMode:     req.LimitPerMode,
-		LimitPerLane:     req.LimitPerLane,
-		LimitPerProvider: req.LimitPerProvider,
-		LimitPerProfile:  req.LimitPerProfile,
+		Mode:                  req.Mode,
+		TaskID:                req.TaskID,
+		ProtocolGroup:         req.ProtocolGroup,
+		ProviderKey:           req.ProviderKey,
+		ProfileID:             req.ProfileID,
+		RetryClass:            req.RetryClass,
+		BlockedAction:         req.BlockedAction,
+		Paths:                 req.Paths,
+		Path:                  req.Path,
+		Scope:                 req.Scope,
+		Limit:                 req.Limit,
+		LimitPerMode:          req.LimitPerMode,
+		LimitPerLane:          req.LimitPerLane,
+		LimitPerProtocolGroup: req.LimitPerProtocolGroup,
+		LimitPerProvider:      req.LimitPerProvider,
+		LimitPerProfile:       req.LimitPerProfile,
 	})
 	if err != nil {
 		handleServiceError(w, err)

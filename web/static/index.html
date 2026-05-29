@@ -406,6 +406,9 @@
                   <option value="retry_window_waiting_auto_retry">retry_window_waiting_auto_retry</option>
                   <option value="cooldown_elapsed_auto_retry">cooldown_elapsed_auto_retry</option>
                 </select>
+                <select id="auto-recover-protocol-group">
+                  <option value="">全部协议族</option>
+                </select>
                 <select id="auto-recover-provider">
                   <option value="">全部 provider</option>
                 </select>
@@ -426,6 +429,7 @@
                 <input id="auto-recover-limit" type="number" min="1" placeholder="本轮上限，例如 3" />
                 <input id="auto-recover-limit-per-mode" type="number" min="1" placeholder="模式预算，例如 1" />
                 <input id="auto-recover-limit-per-lane" type="number" min="1" placeholder="lane 预算，例如 1" />
+                <input id="auto-recover-limit-per-protocol-group" type="number" min="1" placeholder="协议族预算，例如 1" />
                 <input id="auto-recover-limit-per-provider" type="number" min="1" placeholder="provider 预算，例如 1" />
                 <input id="auto-recover-limit-per-profile" type="number" min="1" placeholder="账号预算，例如 1" />
                 <button type="button" class="ghost" id="auto-recover-run">执行当前筛选</button>

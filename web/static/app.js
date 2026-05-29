@@ -24,6 +24,7 @@ const state = {
   selectedProviderSmokeMarkdown: "",
   autoRecoverFilters: {
     mode: "",
+    protocolGroup: "",
     providerKey: "",
     profileId: "",
     retryClass: "",
@@ -31,6 +32,7 @@ const state = {
     limit: "",
     limitPerMode: "",
     limitPerLane: "",
+    limitPerProtocolGroup: "",
     limitPerProvider: "",
     limitPerProfile: "",
   },
@@ -2163,6 +2165,7 @@ function renderProviders() {
   syncSourceProfiles();
   syncTargetProfiles();
   syncAutoRecoverProviders();
+  syncAutoRecoverProtocolGroups();
   syncAutoRecoverProfiles();
   syncAutoRecoverBlockedActions();
   syncExecutionModeHint();
@@ -2331,6 +2334,35 @@ function syncAutoRecoverProviders() {
     .map((key) => `<option value="${key}">${key}</option>`)
     .join("")}`;
   setSelectValueIfPresent("#auto-recover-provider", current);
+}
+
+function syncAutoRecoverProtocolGroups() {
+  const select = $("#auto-recover-protocol-group");
+  if (!select) {
+    return;
+  }
+  const current = state.autoRecoverFilters.protocolGroup || select.value || "";
+  const groups = new Set();
+  (state.evidence?.autoRecoverPool || []).forEach((item) => {
+    const protocolGroups = Array.isArray(item?.protocolGroups) ? item.protocolGroups : [];
+    protocolGroups.forEach((group) => {
+      const normalized = String(group || "").trim();
+      if (normalized) {
+        groups.add(normalized);
+      }
+    });
+    if (!protocolGroups.length) {
+      const sampleGroup = String(item?.sampleProtocolGroup || "").trim();
+      if (sampleGroup) {
+        groups.add(sampleGroup);
+      }
+    }
+  });
+  const values = Array.from(groups).sort((left, right) => left.localeCompare(right, "zh-CN"));
+  select.innerHTML = `<option value="">全部协议族</option>${values
+    .map((value) => `<option value="${escapeHTML(value)}">${escapeHTML(value)}</option>`)
+    .join("")}`;
+  setFilterControlValue("#auto-recover-protocol-group", values.includes(current) ? current : "");
 }
 
 function syncAutoRecoverProfiles() {
@@ -2648,6 +2680,7 @@ function renderStatus() {
   const acceptedSmokeGroups = providerSmokeMatrix.filter((item) => item?.accepted).length;
   const inProgressSmokeGroups = providerSmokeMatrix.filter((item) => item?.acceptanceStatus === "in_progress").length;
   const pendingSmokeGroups = providerSmokeMatrix.filter((item) => item?.acceptanceStatus === "pending").length;
+  syncAutoRecoverProtocolGroups();
   syncAutoRecoverProfiles();
   syncAutoRecoverBlockedActions();
   $("#evidence-summary").innerHTML = `
@@ -2794,6 +2827,7 @@ function renderBlockedActionsSummary(items) {
 
 function filterAutoRecoverItems(items, filters = state.autoRecoverFilters) {
   const mode = String(filters?.mode || "").trim();
+  const protocolGroup = String(filters?.protocolGroup || "").trim();
   const providerKey = String(filters?.providerKey || "").trim();
   const profileId = String(filters?.profileId || "").trim();
   const retryClass = String(filters?.retryClass || "").trim();
@@ -2802,6 +2836,17 @@ function filterAutoRecoverItems(items, filters = state.autoRecoverFilters) {
   return source.filter((item) => {
     if (mode && String(item?.mode || "").trim() !== mode) {
       return false;
+    }
+    if (protocolGroup) {
+      const protocolGroups = Array.isArray(item?.protocolGroups)
+        ? item.protocolGroups.map((value) => String(value || "").trim()).filter(Boolean)
+        : [];
+      const effectiveGroups = protocolGroups.length
+        ? protocolGroups
+        : [String(item?.sampleProtocolGroup || "").trim()].filter(Boolean);
+      if (!effectiveGroups.includes(protocolGroup)) {
+        return false;
+      }
     }
     if (providerKey && String(item?.sampleProvider || "").trim() !== providerKey) {
       return false;
@@ -2832,6 +2877,7 @@ function renderAutoRecoverFilterSummary(visibleItems, allItems) {
   const total = Array.isArray(allItems) ? allItems.length : 0;
   const current = Array.isArray(visibleItems) ? visibleItems.length : 0;
   const mode = String(state.autoRecoverFilters.mode || "").trim();
+  const protocolGroup = String(state.autoRecoverFilters.protocolGroup || "").trim();
   const providerKey = String(state.autoRecoverFilters.providerKey || "").trim();
   const profileId = String(state.autoRecoverFilters.profileId || "").trim();
   const retryClass = String(state.autoRecoverFilters.retryClass || "").trim();
@@ -2839,11 +2885,15 @@ function renderAutoRecoverFilterSummary(visibleItems, allItems) {
   const limit = String(state.autoRecoverFilters.limit || "").trim();
   const limitPerMode = String(state.autoRecoverFilters.limitPerMode || "").trim();
   const limitPerLane = String(state.autoRecoverFilters.limitPerLane || "").trim();
+  const limitPerProtocolGroup = String(state.autoRecoverFilters.limitPerProtocolGroup || "").trim();
   const limitPerProvider = String(state.autoRecoverFilters.limitPerProvider || "").trim();
   const limitPerProfile = String(state.autoRecoverFilters.limitPerProfile || "").trim();
   const parts = [];
   if (mode) {
     parts.push(`mode=${mode}`);
+  }
+  if (protocolGroup) {
+    parts.push(`protocolGroup=${protocolGroup}`);
   }
   if (providerKey) {
     parts.push(`provider=${providerKey}`);
@@ -2865,6 +2915,9 @@ function renderAutoRecoverFilterSummary(visibleItems, allItems) {
   }
   if (limitPerLane) {
     parts.push(`limitPerLane=${limitPerLane}`);
+  }
+  if (limitPerProtocolGroup) {
+    parts.push(`limitPerProtocolGroup=${limitPerProtocolGroup}`);
   }
   if (limitPerProvider) {
     parts.push(`limitPerProvider=${limitPerProvider}`);
@@ -2904,6 +2957,8 @@ function renderAutoRecoverSummary(items) {
             <span class="pill">ready ${stringifyValue(item.retryableNowCount, "0")}</span>
             <span class="pill">cooldown ${stringifyValue(item.cooldownCount, "0")}</span>
             <span class="pill">checkpoint ${stringifyValue(item.uploadCheckpointEligible, "0")}</span>
+            <span class="pill">sample group ${stringifyValue(item.sampleProtocolGroup, "-")}</span>
+            <span class="pill">groups ${(item.protocolGroups || []).join(", ") || "-"}</span>
             <span class="pill">primary class ${stringifyValue(item.primaryRetryClass, "-")}</span>
             <span class="pill">primary action ${stringifyValue(item.primaryBlockedAction, "-")}</span>
             <span class="pill">sample profile ${stringifyValue(item.sampleProfileId, "-")}</span>
@@ -2916,6 +2971,7 @@ function renderAutoRecoverSummary(items) {
               : ""
           }
           <div class="muted">同档位会先按 provider 轮转，再在同 provider 内按授权档案轮转；默认建议 provider 预算 <code>${escapeHTML(stringifyValue(item.suggestedProviderBudget, "-"))}</code> / profile 预算 <code>${escapeHTML(stringifyValue(item.suggestedProfileBudget, "-"))}</code>。</div>
+          <div class="muted">协议族：${escapeHTML((item.protocolGroups || []).join(", ") || stringifyValue(item.sampleProtocolGroup, "-"))}</div>
           <div class="muted">${escapeHTML(stringifyValue(item.advice, "-"))}</div>
           <div class="actions compact">
             <span class="pill">next ${escapeHTML(stringifyValue(item.nextRetryAt, "-"))}</span>
@@ -2924,6 +2980,15 @@ function renderAutoRecoverSummary(items) {
               class="ghost"
               data-auto-recover-focus-mode="${escapeHTML(stringifyValue(item.mode, ""))}"
             >只看该模式</button>
+            ${
+              item.sampleProtocolGroup
+                ? `<button
+              type="button"
+              class="ghost"
+              data-auto-recover-focus-protocol-group="${escapeHTML(stringifyValue(item.sampleProtocolGroup, ""))}"
+            >${Array.isArray(item.protocolGroups) && item.protocolGroups.length <= 1 ? "只看该协议族" : "只看样本协议族"}</button>`
+                : ""
+            }
             ${
               item.primaryRetryClass
                 ? `<button
@@ -2969,6 +3034,15 @@ function renderAutoRecoverSummary(items) {
               class="ghost"
               data-auto-recover-run-blocked-action="${escapeHTML(stringifyValue(item.blockedActions[0], ""))}"
             >执行该阻塞动作</button>`
+                : ""
+            }
+            ${
+              item.sampleProtocolGroup
+                ? `<button
+              type="button"
+              class="ghost"
+              data-auto-recover-run-protocol-group="${escapeHTML(stringifyValue(item.sampleProtocolGroup, ""))}"
+            >${Array.isArray(item.protocolGroups) && item.protocolGroups.length <= 1 ? "执行该协议族" : "执行样本协议族"}</button>`
                 : ""
             }
             ${
@@ -3023,6 +3097,10 @@ function applyAutoRecoverFilters(nextFilters, options = {}) {
     state.autoRecoverFilters.mode = String(filters.mode || "");
     setFilterControlValue("#auto-recover-mode", state.autoRecoverFilters.mode);
   }
+  if (Object.prototype.hasOwnProperty.call(filters, "protocolGroup")) {
+    state.autoRecoverFilters.protocolGroup = String(filters.protocolGroup || "");
+    setFilterControlValue("#auto-recover-protocol-group", state.autoRecoverFilters.protocolGroup);
+  }
   if (Object.prototype.hasOwnProperty.call(filters, "providerKey")) {
     state.autoRecoverFilters.providerKey = String(filters.providerKey || "");
     setFilterControlValue("#auto-recover-provider", state.autoRecoverFilters.providerKey);
@@ -3050,6 +3128,10 @@ function applyAutoRecoverFilters(nextFilters, options = {}) {
   if (Object.prototype.hasOwnProperty.call(filters, "limitPerLane")) {
     state.autoRecoverFilters.limitPerLane = String(filters.limitPerLane || "");
     setInputValueIfPresent("#auto-recover-limit-per-lane", state.autoRecoverFilters.limitPerLane);
+  }
+  if (Object.prototype.hasOwnProperty.call(filters, "limitPerProtocolGroup")) {
+    state.autoRecoverFilters.limitPerProtocolGroup = String(filters.limitPerProtocolGroup || "");
+    setInputValueIfPresent("#auto-recover-limit-per-protocol-group", state.autoRecoverFilters.limitPerProtocolGroup);
   }
   if (Object.prototype.hasOwnProperty.call(filters, "limitPerProvider")) {
     state.autoRecoverFilters.limitPerProvider = String(filters.limitPerProvider || "");
@@ -3331,6 +3413,13 @@ function wireAutoRecoverSummary() {
       showFlash(`已按 ${mode} 收敛后台补传候选`);
     });
   });
+  wrap.querySelectorAll("[data-auto-recover-focus-protocol-group]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const protocolGroup = button.dataset.autoRecoverFocusProtocolGroup || "";
+      applyAutoRecoverFilters({ protocolGroup });
+      showFlash(`已按协议族 ${protocolGroup} 收敛后台补传候选`);
+    });
+  });
   wrap.querySelectorAll("[data-auto-recover-focus-retry-class]").forEach((button) => {
     button.addEventListener("click", () => {
       const retryClass = button.dataset.autoRecoverFocusRetryClass || "";
@@ -3365,6 +3454,16 @@ function wireAutoRecoverSummary() {
     button.addEventListener("click", async () => {
       try {
         applyAutoRecoverFilters({ mode: button.dataset.autoRecoverRunMode || "" }, { render: false });
+        await triggerAutoRecover();
+      } catch (error) {
+        showFlash(error.message, true);
+      }
+    });
+  });
+  wrap.querySelectorAll("[data-auto-recover-run-protocol-group]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      try {
+        applyAutoRecoverFilters({ protocolGroup: button.dataset.autoRecoverRunProtocolGroup || "" }, { render: false });
         await triggerAutoRecover();
       } catch (error) {
         showFlash(error.message, true);
@@ -3433,15 +3532,18 @@ function currentAutoRecoverRequest() {
   const limitText = String($("#auto-recover-limit")?.value || "").trim();
   const limitPerModeText = String($("#auto-recover-limit-per-mode")?.value || "").trim();
   const limitPerLaneText = String($("#auto-recover-limit-per-lane")?.value || "").trim();
+  const limitPerProtocolGroupText = String($("#auto-recover-limit-per-protocol-group")?.value || "").trim();
   const limitPerProviderText = String($("#auto-recover-limit-per-provider")?.value || "").trim();
   const limitPerProfileText = String($("#auto-recover-limit-per-profile")?.value || "").trim();
   const limit = limitText ? Number(limitText) : 0;
   const limitPerMode = limitPerModeText ? Number(limitPerModeText) : 0;
   const limitPerLane = limitPerLaneText ? Number(limitPerLaneText) : 0;
+  const limitPerProtocolGroup = limitPerProtocolGroupText ? Number(limitPerProtocolGroupText) : 0;
   const limitPerProvider = limitPerProviderText ? Number(limitPerProviderText) : 0;
   const limitPerProfile = limitPerProfileText ? Number(limitPerProfileText) : 0;
   return {
     mode: String($("#auto-recover-mode")?.value || "").trim(),
+    protocolGroup: String($("#auto-recover-protocol-group")?.value || "").trim(),
     providerKey: String($("#auto-recover-provider")?.value || "").trim(),
     profileId: String($("#auto-recover-profile")?.value || "").trim(),
     retryClass: String($("#auto-recover-retry-class")?.value || "").trim(),
@@ -3449,6 +3551,7 @@ function currentAutoRecoverRequest() {
     limit: Number.isFinite(limit) && limit > 0 ? limit : 0,
     limitPerMode: Number.isFinite(limitPerMode) && limitPerMode > 0 ? limitPerMode : 0,
     limitPerLane: Number.isFinite(limitPerLane) && limitPerLane > 0 ? limitPerLane : 0,
+    limitPerProtocolGroup: Number.isFinite(limitPerProtocolGroup) && limitPerProtocolGroup > 0 ? limitPerProtocolGroup : 0,
     limitPerProvider: Number.isFinite(limitPerProvider) && limitPerProvider > 0 ? limitPerProvider : 0,
     limitPerProfile: Number.isFinite(limitPerProfile) && limitPerProfile > 0 ? limitPerProfile : 0,
   };
@@ -3457,6 +3560,7 @@ function currentAutoRecoverRequest() {
 async function triggerAutoRecover() {
   const payload = currentAutoRecoverRequest();
   state.autoRecoverFilters.mode = payload.mode;
+  state.autoRecoverFilters.protocolGroup = payload.protocolGroup;
   state.autoRecoverFilters.providerKey = payload.providerKey;
   state.autoRecoverFilters.profileId = payload.profileId;
   state.autoRecoverFilters.retryClass = payload.retryClass;
@@ -3464,6 +3568,7 @@ async function triggerAutoRecover() {
   state.autoRecoverFilters.limit = payload.limit ? String(payload.limit) : "";
   state.autoRecoverFilters.limitPerMode = payload.limitPerMode ? String(payload.limitPerMode) : "";
   state.autoRecoverFilters.limitPerLane = payload.limitPerLane ? String(payload.limitPerLane) : "";
+  state.autoRecoverFilters.limitPerProtocolGroup = payload.limitPerProtocolGroup ? String(payload.limitPerProtocolGroup) : "";
   state.autoRecoverFilters.limitPerProvider = payload.limitPerProvider ? String(payload.limitPerProvider) : "";
   state.autoRecoverFilters.limitPerProfile = payload.limitPerProfile ? String(payload.limitPerProfile) : "";
   const result = await api("/api/tasks/recover", {
@@ -3472,7 +3577,7 @@ async function triggerAutoRecover() {
   });
   await Promise.all([loadTasks(), loadStatus()]);
   showFlash(
-    `后台补传已执行：matched ${stringifyValue(result.matchedCount, "0")} / recovered ${stringifyValue(result.recoveredCount, "0")} / limit ${stringifyValue(result.skippedByLimit, "0")} / modeBudget ${stringifyValue(result.skippedByModeBudget, "0")} / laneBudget ${stringifyValue(result.skippedByLaneBudget, "0")} / providerBudget ${stringifyValue(result.skippedByProviderBudget, "0")} / profileBudget ${stringifyValue(result.skippedByProfileBudget, "0")}`,
+    `后台补传已执行：matched ${stringifyValue(result.matchedCount, "0")} / recovered ${stringifyValue(result.recoveredCount, "0")} / limit ${stringifyValue(result.skippedByLimit, "0")} / modeBudget ${stringifyValue(result.skippedByModeBudget, "0")} / laneBudget ${stringifyValue(result.skippedByLaneBudget, "0")} / protocolGroupBudget ${stringifyValue(result.skippedByProtocolGroupBudget, "0")} / providerBudget ${stringifyValue(result.skippedByProviderBudget, "0")} / profileBudget ${stringifyValue(result.skippedByProfileBudget, "0")}`,
   );
 }
 
@@ -3510,6 +3615,7 @@ async function autoRecoverTaskPath(scope, path) {
 
 function resetAutoRecoverFilters() {
   state.autoRecoverFilters.mode = "";
+  state.autoRecoverFilters.protocolGroup = "";
   state.autoRecoverFilters.providerKey = "";
   state.autoRecoverFilters.profileId = "";
   state.autoRecoverFilters.retryClass = "";
@@ -3517,9 +3623,11 @@ function resetAutoRecoverFilters() {
   state.autoRecoverFilters.limit = "";
   state.autoRecoverFilters.limitPerMode = "";
   state.autoRecoverFilters.limitPerLane = "";
+  state.autoRecoverFilters.limitPerProtocolGroup = "";
   state.autoRecoverFilters.limitPerProvider = "";
   state.autoRecoverFilters.limitPerProfile = "";
   setFilterControlValue("#auto-recover-mode", "");
+  setFilterControlValue("#auto-recover-protocol-group", "");
   setFilterControlValue("#auto-recover-provider", "");
   setFilterControlValue("#auto-recover-profile", "");
   setFilterControlValue("#auto-recover-retry-class", "");
@@ -3527,6 +3635,7 @@ function resetAutoRecoverFilters() {
   setInputValueIfPresent("#auto-recover-limit", "");
   setInputValueIfPresent("#auto-recover-limit-per-mode", "");
   setInputValueIfPresent("#auto-recover-limit-per-lane", "");
+  setInputValueIfPresent("#auto-recover-limit-per-protocol-group", "");
   setInputValueIfPresent("#auto-recover-limit-per-provider", "");
   setInputValueIfPresent("#auto-recover-limit-per-profile", "");
   renderStatus();
@@ -4229,6 +4338,10 @@ function wireStatus() {
     state.autoRecoverFilters.mode = $("#auto-recover-mode").value;
     renderStatus();
   });
+  $("#auto-recover-protocol-group").addEventListener("change", () => {
+    state.autoRecoverFilters.protocolGroup = $("#auto-recover-protocol-group").value;
+    renderStatus();
+  });
   $("#auto-recover-provider").addEventListener("change", () => {
     state.autoRecoverFilters.providerKey = $("#auto-recover-provider").value;
     renderStatus();
@@ -4261,6 +4374,13 @@ function wireStatus() {
   });
   $("#auto-recover-limit-per-lane").addEventListener("input", () => {
     state.autoRecoverFilters.limitPerLane = $("#auto-recover-limit-per-lane").value.trim();
+    $("#auto-recover-filter-summary").textContent = renderAutoRecoverFilterSummary(
+      filterAutoRecoverItems(state.evidence?.autoRecoverPool || []),
+      state.evidence?.autoRecoverPool || [],
+    );
+  });
+  $("#auto-recover-limit-per-protocol-group").addEventListener("input", () => {
+    state.autoRecoverFilters.limitPerProtocolGroup = $("#auto-recover-limit-per-protocol-group").value.trim();
     $("#auto-recover-filter-summary").textContent = renderAutoRecoverFilterSummary(
       filterAutoRecoverItems(state.evidence?.autoRecoverPool || []),
       state.evidence?.autoRecoverPool || [],

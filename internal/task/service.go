@@ -36,43 +36,48 @@ type RetryOptions struct {
 }
 
 type RecoverOptions struct {
-	Mode             string   `json:"mode,omitempty"`
-	TaskID           string   `json:"taskId,omitempty"`
-	ProviderKey      string   `json:"providerKey,omitempty"`
-	ProfileID        string   `json:"profileId,omitempty"`
-	RetryClass       string   `json:"retryClass,omitempty"`
-	BlockedAction    string   `json:"blockedAction,omitempty"`
-	Paths            []string `json:"paths,omitempty"`
-	Path             string   `json:"path,omitempty"`
-	Scope            string   `json:"scope,omitempty"`
-	Limit            int      `json:"limit,omitempty"`
-	LimitPerMode     int      `json:"limitPerMode,omitempty"`
-	LimitPerLane     int      `json:"limitPerLane,omitempty"`
-	LimitPerProvider int      `json:"limitPerProvider,omitempty"`
-	LimitPerProfile  int      `json:"limitPerProfile,omitempty"`
+	Mode                  string   `json:"mode,omitempty"`
+	TaskID                string   `json:"taskId,omitempty"`
+	ProtocolGroup         string   `json:"protocolGroup,omitempty"`
+	ProviderKey           string   `json:"providerKey,omitempty"`
+	ProfileID             string   `json:"profileId,omitempty"`
+	RetryClass            string   `json:"retryClass,omitempty"`
+	BlockedAction         string   `json:"blockedAction,omitempty"`
+	Paths                 []string `json:"paths,omitempty"`
+	Path                  string   `json:"path,omitempty"`
+	Scope                 string   `json:"scope,omitempty"`
+	Limit                 int      `json:"limit,omitempty"`
+	LimitPerMode          int      `json:"limitPerMode,omitempty"`
+	LimitPerLane          int      `json:"limitPerLane,omitempty"`
+	LimitPerProtocolGroup int      `json:"limitPerProtocolGroup,omitempty"`
+	LimitPerProvider      int      `json:"limitPerProvider,omitempty"`
+	LimitPerProfile       int      `json:"limitPerProfile,omitempty"`
 }
 
 type RecoverResult struct {
-	Mode                    string `json:"mode,omitempty"`
-	TaskID                  string `json:"taskId,omitempty"`
-	ProviderKey             string `json:"providerKey,omitempty"`
-	ProfileID               string `json:"profileId,omitempty"`
-	RetryClass              string `json:"retryClass,omitempty"`
-	BlockedAction           string `json:"blockedAction,omitempty"`
-	Path                    string `json:"path,omitempty"`
-	Scope                   string `json:"scope,omitempty"`
-	Limit                   int    `json:"limit,omitempty"`
-	LimitPerMode            int    `json:"limitPerMode,omitempty"`
-	LimitPerLane            int    `json:"limitPerLane,omitempty"`
-	LimitPerProvider        int    `json:"limitPerProvider,omitempty"`
-	LimitPerProfile         int    `json:"limitPerProfile,omitempty"`
-	MatchedCount            int    `json:"matchedCount"`
-	RecoveredCount          int    `json:"recoveredCount"`
-	SkippedByLimit          int    `json:"skippedByLimit"`
-	SkippedByModeBudget     int    `json:"skippedByModeBudget"`
-	SkippedByLaneBudget     int    `json:"skippedByLaneBudget"`
-	SkippedByProviderBudget int    `json:"skippedByProviderBudget"`
-	SkippedByProfileBudget  int    `json:"skippedByProfileBudget"`
+	Mode                         string `json:"mode,omitempty"`
+	TaskID                       string `json:"taskId,omitempty"`
+	ProtocolGroup                string `json:"protocolGroup,omitempty"`
+	ProviderKey                  string `json:"providerKey,omitempty"`
+	ProfileID                    string `json:"profileId,omitempty"`
+	RetryClass                   string `json:"retryClass,omitempty"`
+	BlockedAction                string `json:"blockedAction,omitempty"`
+	Path                         string `json:"path,omitempty"`
+	Scope                        string `json:"scope,omitempty"`
+	Limit                        int    `json:"limit,omitempty"`
+	LimitPerMode                 int    `json:"limitPerMode,omitempty"`
+	LimitPerLane                 int    `json:"limitPerLane,omitempty"`
+	LimitPerProtocolGroup        int    `json:"limitPerProtocolGroup,omitempty"`
+	LimitPerProvider             int    `json:"limitPerProvider,omitempty"`
+	LimitPerProfile              int    `json:"limitPerProfile,omitempty"`
+	MatchedCount                 int    `json:"matchedCount"`
+	RecoveredCount               int    `json:"recoveredCount"`
+	SkippedByLimit               int    `json:"skippedByLimit"`
+	SkippedByModeBudget          int    `json:"skippedByModeBudget"`
+	SkippedByLaneBudget          int    `json:"skippedByLaneBudget"`
+	SkippedByProtocolGroupBudget int    `json:"skippedByProtocolGroupBudget"`
+	SkippedByProviderBudget      int    `json:"skippedByProviderBudget"`
+	SkippedByProfileBudget       int    `json:"skippedByProfileBudget"`
 }
 
 type Detail struct {
@@ -116,6 +121,7 @@ type AutoRecoverLane struct {
 	RetryableNowCount        int      `json:"retryableNowCount"`
 	CooldownCount            int      `json:"cooldownCount"`
 	UploadCheckpointEligible int      `json:"uploadCheckpointEligible"`
+	ProtocolGroups           []string `json:"protocolGroups,omitempty"`
 	RetryClasses             []string `json:"retryClasses,omitempty"`
 	BlockedActions           []string `json:"blockedActions,omitempty"`
 	ProfileIDs               []string `json:"profileIds,omitempty"`
@@ -124,6 +130,7 @@ type AutoRecoverLane struct {
 	NextRetryAt              string   `json:"nextRetryAt,omitempty"`
 	SampleTaskID             string   `json:"sampleTaskId,omitempty"`
 	SampleProvider           string   `json:"sampleProvider,omitempty"`
+	SampleProtocolGroup      string   `json:"sampleProtocolGroup,omitempty"`
 	SampleProfileID          string   `json:"sampleProfileId,omitempty"`
 }
 
@@ -598,6 +605,7 @@ type pendingTreeBuilderNode struct {
 type recoverCandidate struct {
 	Detail            Detail
 	Mode              string
+	ProtocolGroup     string
 	EffectiveAction   string
 	PrimaryRetryClass string
 	Summary           retryQueueSummary
@@ -1048,6 +1056,7 @@ func (s *Service) RecoverBlockedTasks(ctx context.Context) (int, error) {
 func (s *Service) RecoverBlockedTasksWithOptions(ctx context.Context, opts RecoverOptions) (RecoverResult, error) {
 	opts.Mode = strings.TrimSpace(opts.Mode)
 	opts.TaskID = strings.TrimSpace(opts.TaskID)
+	opts.ProtocolGroup = strings.TrimSpace(opts.ProtocolGroup)
 	opts.ProviderKey = strings.TrimSpace(opts.ProviderKey)
 	opts.ProfileID = strings.TrimSpace(opts.ProfileID)
 	opts.RetryClass = strings.TrimSpace(opts.RetryClass)
@@ -1055,20 +1064,23 @@ func (s *Service) RecoverBlockedTasksWithOptions(ctx context.Context, opts Recov
 	opts.Paths = normalizeRecoverSelectionPaths(opts.Paths, opts.Path)
 	opts.Path = firstRecoverSelectionPath(opts.Paths)
 	opts.Scope = strings.TrimSpace(opts.Scope)
+	providers := s.registry.List()
 	result := RecoverResult{
-		Mode:             opts.Mode,
-		TaskID:           opts.TaskID,
-		ProviderKey:      opts.ProviderKey,
-		ProfileID:        opts.ProfileID,
-		RetryClass:       opts.RetryClass,
-		BlockedAction:    opts.BlockedAction,
-		Path:             opts.Path,
-		Scope:            opts.Scope,
-		Limit:            opts.Limit,
-		LimitPerMode:     opts.LimitPerMode,
-		LimitPerLane:     opts.LimitPerLane,
-		LimitPerProvider: opts.LimitPerProvider,
-		LimitPerProfile:  opts.LimitPerProfile,
+		Mode:                  opts.Mode,
+		TaskID:                opts.TaskID,
+		ProtocolGroup:         opts.ProtocolGroup,
+		ProviderKey:           opts.ProviderKey,
+		ProfileID:             opts.ProfileID,
+		RetryClass:            opts.RetryClass,
+		BlockedAction:         opts.BlockedAction,
+		Path:                  opts.Path,
+		Scope:                 opts.Scope,
+		Limit:                 opts.Limit,
+		LimitPerMode:          opts.LimitPerMode,
+		LimitPerLane:          opts.LimitPerLane,
+		LimitPerProtocolGroup: opts.LimitPerProtocolGroup,
+		LimitPerProvider:      opts.LimitPerProvider,
+		LimitPerProfile:       opts.LimitPerProfile,
 	}
 	items, err := s.List(ctx)
 	if err != nil {
@@ -1087,8 +1099,11 @@ func (s *Service) RecoverBlockedTasksWithOptions(ctx context.Context, opts Recov
 		if !taskCanAutoRecover(detail) {
 			continue
 		}
-		candidate := buildRecoverCandidate(detail)
+		candidate := buildRecoverCandidate(detail, protocolGroupForProviderKey(providers, detail.Task.TargetProvider))
 		if opts.Mode != "" && candidate.Mode != opts.Mode {
+			continue
+		}
+		if opts.ProtocolGroup != "" && candidate.ProtocolGroup != recoverProtocolGroupBudgetKey(opts.ProtocolGroup) {
 			continue
 		}
 		if opts.ProviderKey != "" && detail.Task.TargetProvider != opts.ProviderKey {
@@ -1126,6 +1141,7 @@ func (s *Service) RecoverBlockedTasksWithOptions(ctx context.Context, opts Recov
 	recovered := 0
 	recoveredByMode := make(map[string]int)
 	recoveredByLane := make(map[string]int)
+	recoveredByProtocolGroup := make(map[string]int)
 	recoveredByProvider := make(map[string]int)
 	recoveredByProfile := make(map[string]int)
 	for _, candidate := range candidates {
@@ -1138,6 +1154,11 @@ func (s *Service) RecoverBlockedTasksWithOptions(ctx context.Context, opts Recov
 		laneKey := recoverLaneBudgetKey(candidate)
 		if opts.LimitPerLane > 0 && recoveredByLane[laneKey] >= opts.LimitPerLane {
 			result.SkippedByLaneBudget++
+			continue
+		}
+		protocolGroupKey := recoverProtocolGroupBudgetKey(candidate.ProtocolGroup)
+		if opts.LimitPerProtocolGroup > 0 && recoveredByProtocolGroup[protocolGroupKey] >= opts.LimitPerProtocolGroup {
+			result.SkippedByProtocolGroupBudget++
 			continue
 		}
 		providerKey := strings.TrimSpace(detail.Task.TargetProvider)
@@ -1181,6 +1202,7 @@ func (s *Service) RecoverBlockedTasksWithOptions(ctx context.Context, opts Recov
 		recovered++
 		recoveredByMode[modeKey] = recoveredByMode[modeKey] + 1
 		recoveredByLane[laneKey] = recoveredByLane[laneKey] + 1
+		recoveredByProtocolGroup[protocolGroupKey] = recoveredByProtocolGroup[protocolGroupKey] + 1
 		recoveredByProvider[providerKey] = recoveredByProvider[providerKey] + 1
 		recoveredByProfile[recoverProfileBudgetKey(providerKey, profileID)] = recoveredByProfile[recoverProfileBudgetKey(providerKey, profileID)] + 1
 	}
@@ -1203,6 +1225,14 @@ func recoverLaneBudgetKey(candidate recoverCandidate) string {
 		strings.TrimSpace(candidate.EffectiveAction),
 	}
 	return strings.Join(parts, "::")
+}
+
+func recoverProtocolGroupBudgetKey(protocolGroup string) string {
+	protocolGroup = strings.TrimSpace(protocolGroup)
+	if protocolGroup == "" {
+		return "_unknown_protocol_group"
+	}
+	return protocolGroup
 }
 
 func recoverSelectionScope(scope string) string {
@@ -1392,7 +1422,7 @@ func detailMatchesBlockedAction(detail Detail, blockedAction string) bool {
 	return strings.EqualFold(strings.TrimSpace(effectiveBlockedAction(detail)), blockedAction)
 }
 
-func buildRecoverCandidate(detail Detail) recoverCandidate {
+func buildRecoverCandidate(detail Detail, protocolGroup string) recoverCandidate {
 	mode := autoRecoverReason(detail)
 	summary := summarizeRetryQueueWithRisk(detail.Runtime.RetryQueue, riskProfileFromMetadata(detail.Plan.Metadata), time.Now().UTC())
 	if mode == "" {
@@ -1401,6 +1431,7 @@ func buildRecoverCandidate(detail Detail) recoverCandidate {
 	return recoverCandidate{
 		Detail:            detail,
 		Mode:              mode,
+		ProtocolGroup:     recoverProtocolGroupBudgetKey(protocolGroup),
 		EffectiveAction:   strings.TrimSpace(effectiveBlockedAction(detail)),
 		PrimaryRetryClass: primaryRetryClass(detail.Runtime.RetryQueue),
 		Summary:           summary,
@@ -3878,6 +3909,22 @@ func taskCanAutoRecover(detail Detail) bool {
 	default:
 		return false
 	}
+}
+
+func shouldIncludeAutoRecoverPool(detail Detail, summary retryQueueSummary) bool {
+	if taskCanAutoRecover(detail) {
+		return true
+	}
+	if summary.UploadCheckpointEligible > 0 {
+		return true
+	}
+	if summary.AutoRecoverEligible {
+		return true
+	}
+	if summary.CooldownCount > 0 {
+		return true
+	}
+	return summary.WindowBlocked
 }
 
 func autoRetryAllowedNow(riskProfile planner.RiskProfile, now time.Time) bool {

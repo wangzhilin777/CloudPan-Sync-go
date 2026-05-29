@@ -1304,6 +1304,133 @@ func TestAppRecoverTasksEndpointFiltersTaskID(t *testing.T) {
 	}
 }
 
+func TestAppRecoverTasksEndpointFiltersProtocolGroup(t *testing.T) {
+	ctx := context.Background()
+	application := mustNewTestApp(t, ctx)
+
+	uploadCallsByPath := map[string]int{}
+	newAdapter := func(key, protocolGroup string) *appScriptedAdapter {
+		return &appScriptedAdapter{
+			meta: provider.Provider{
+				Key:              key,
+				DisplayName:      key,
+				ProtocolGroup:    protocolGroup,
+				AuthModes:        []string{"manual_token"},
+				FastUploadInputs: []string{"md5", "size"},
+				FallbackModes:    []string{"download_upload"},
+				Status:           "planned",
+			},
+			capability: provider.CapabilitySet{
+				SupportsAuthValidation: true,
+				SupportsUpload:         true,
+			},
+			uploadFunc: func(req provider.UploadRequest) provider.UploadResult {
+				uploadCallsByPath[req.Path]++
+				if uploadCallsByPath[req.Path] == 1 {
+					return provider.UploadResult{
+						OperationResult: provider.OperationResult{
+							Status:  "rate_limited",
+							Message: "rate limited",
+							Mode:    "fake_rate_limit",
+						},
+					}
+				}
+				return provider.UploadResult{
+					OperationResult: provider.OperationResult{
+						OK:      true,
+						Status:  "ok",
+						Message: "protocol group recovered",
+						Mode:    "fake_protocol_group_ok",
+					},
+				}
+			},
+		}
+	}
+
+	adapterA := newAdapter("recover_protocol_group_api_target_a", "recover_protocol_group_a")
+	adapterB := newAdapter("recover_protocol_group_api_target_b", "recover_protocol_group_b")
+	registry := provider.NewRegistry(adapterA, adapterB)
+	authSvc := auth.NewService(application.store, registry)
+	taskSvc := task.NewService(application.store, registry, authSvc)
+	application.providers = registry
+	application.auth = authSvc
+	application.tasks = taskSvc
+	handler := application.routes()
+
+	createProfile := func(providerKey string) string {
+		resp := invokeJSON(t, handler, http.MethodPost, "/api/auth/profiles", map[string]interface{}{
+			"providerKey": providerKey,
+			"authMode":    "manual_token",
+			"displayName": providerKey,
+			"token":       "token-" + providerKey,
+		})
+		return resp.Data.(map[string]interface{})["id"].(string)
+	}
+
+	createBlockedTask := func(providerKey, profileID, path string) string {
+		taskResp := invokeJSON(t, handler, http.MethodPost, "/api/tasks", map[string]interface{}{
+			"sourceProvider":  "recover_protocol_group_api_source",
+			"targetProvider":  providerKey,
+			"targetProfileId": profileID,
+			"thresholdMB":     1,
+			"entries": []map[string]interface{}{{
+				"path": path,
+				"size": 101,
+				"md5":  path,
+			}},
+		})
+		taskID := taskResp.Data.(map[string]interface{})["task"].(map[string]interface{})["id"].(string)
+		runResp := invokeJSON(t, handler, http.MethodPost, "/api/tasks/"+taskID+"/run", nil)
+		if got := runResp.Data.(map[string]interface{})["task"].(map[string]interface{})["state"].(string); got != "blocked" {
+			t.Fatalf("expected blocked task for %s, got %s", path, got)
+		}
+		if _, err := application.store.DB().ExecContext(ctx, `UPDATE task_results SET created_at = ? WHERE task_id = ?`,
+			time.Now().Add(-2*time.Hour).UTC().Format(time.RFC3339), taskID,
+		); err != nil {
+			t.Fatalf("update task_results created_at for %s error = %v", path, err)
+		}
+		return taskID
+	}
+
+	profileA := createProfile("recover_protocol_group_api_target_a")
+	profileB := createProfile("recover_protocol_group_api_target_b")
+	firstTaskID := createBlockedTask("recover_protocol_group_api_target_a", profileA, "/api-group-a.bin")
+	secondTaskID := createBlockedTask("recover_protocol_group_api_target_b", profileB, "/api-group-b.bin")
+
+	recoverResp := invokeJSON(t, handler, http.MethodPost, "/api/tasks/recover", map[string]interface{}{
+		"protocolGroup":         "recover_protocol_group_b",
+		"limit":                 2,
+		"limitPerProtocolGroup": 1,
+	})
+	recoverData := recoverResp.Data.(map[string]interface{})
+	if got := recoverData["protocolGroup"].(string); got != "recover_protocol_group_b" {
+		t.Fatalf("expected protocolGroup recover_protocol_group_b, got %s", got)
+	}
+	if got := int(recoverData["matchedCount"].(float64)); got != 1 {
+		t.Fatalf("expected matchedCount 1, got %d", got)
+	}
+	if got := int(recoverData["recoveredCount"].(float64)); got != 1 {
+		t.Fatalf("expected recoveredCount 1, got %d", got)
+	}
+	if got := int(recoverData["limitPerProtocolGroup"].(float64)); got != 1 {
+		t.Fatalf("expected limitPerProtocolGroup 1, got %d", got)
+	}
+
+	firstDetail := invokeJSON(t, handler, http.MethodGet, "/api/tasks/"+firstTaskID, nil)
+	if got := firstDetail.Data.(map[string]interface{})["task"].(map[string]interface{})["state"].(string); got != "blocked" {
+		t.Fatalf("expected first task blocked, got %s", got)
+	}
+	secondDetail := invokeJSON(t, handler, http.MethodGet, "/api/tasks/"+secondTaskID, nil)
+	if got := secondDetail.Data.(map[string]interface{})["task"].(map[string]interface{})["state"].(string); got != "completed" {
+		t.Fatalf("expected second task completed, got %s", got)
+	}
+	if uploadCallsByPath["/api-group-a.bin"] != 1 {
+		t.Fatalf("expected /api-group-a.bin upload calls 1, got %d", uploadCallsByPath["/api-group-a.bin"])
+	}
+	if uploadCallsByPath["/api-group-b.bin"] != 2 {
+		t.Fatalf("expected /api-group-b.bin upload calls 2, got %d", uploadCallsByPath["/api-group-b.bin"])
+	}
+}
 func mustNewTestApp(t *testing.T, ctx context.Context) *App {
 	t.Helper()
 
