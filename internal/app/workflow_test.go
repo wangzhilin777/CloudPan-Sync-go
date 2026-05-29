@@ -473,11 +473,11 @@ func TestAppWorkflowMainline(t *testing.T) {
 		"providerKey":   "123_open",
 		"protocolGroup": "aliyun_123_open",
 		"authMode":      "manual_token",
-		"category":      "browse_only",
+		"category":      "binary_upload_success",
 		"result":        "success",
-		"title":         "工作流真实 smoke",
-		"note":          "ValidateAuth/List/Metadata",
-		"operations":    []string{"ValidateAuth", "List", "Metadata"},
+		"title":         "工作流真实 upload smoke",
+		"note":          "ValidateAuth/List/Metadata/Upload",
+		"operations":    []string{"ValidateAuth", "List", "Metadata", "Upload"},
 		"environment": map[string]interface{}{
 			"os": "windows",
 		},
@@ -490,8 +490,8 @@ func TestAppWorkflowMainline(t *testing.T) {
 	if got := smokeData["providerKey"].(string); got != "123_open" {
 		t.Fatalf("expected smoke providerKey 123_open, got %s", got)
 	}
-	if got := smokeData["category"].(string); got != "browse_only" {
-		t.Fatalf("expected smoke category browse_only, got %s", got)
+	if got := smokeData["category"].(string); got != "binary_upload_success" {
+		t.Fatalf("expected smoke category binary_upload_success, got %s", got)
 	}
 
 	smokeListResp := invokeJSON(t, handler, http.MethodGet, "/api/provider-smokes", nil)
@@ -511,14 +511,14 @@ func TestAppWorkflowMainline(t *testing.T) {
 	if got := smokeSummary[0].(map[string]interface{})["protocolGroup"].(string); got != "aliyun_123_open" {
 		t.Fatalf("expected smoke summary protocolGroup aliyun_123_open, got %s", got)
 	}
-	if got := smokeSummary[0].(map[string]interface{})["sampleCategory"].(string); got != "browse_only" {
-		t.Fatalf("expected smoke summary sampleCategory browse_only, got %s", got)
+	if got := smokeSummary[0].(map[string]interface{})["sampleCategory"].(string); got != "binary_upload_success" {
+		t.Fatalf("expected smoke summary sampleCategory binary_upload_success, got %s", got)
 	}
 	if got := smokeSummary[0].(map[string]interface{})["hasRealSuccessSample"].(bool); !got {
 		t.Fatal("expected smoke summary hasRealSuccessSample true")
 	}
-	if got := smokeSummary[0].(map[string]interface{})["hasUploadSuccessSample"].(bool); got {
-		t.Fatal("expected browse-only smoke summary hasUploadSuccessSample false")
+	if got := smokeSummary[0].(map[string]interface{})["hasUploadSuccessSample"].(bool); !got {
+		t.Fatal("expected upload smoke summary hasUploadSuccessSample true")
 	}
 
 	smokeMatrixResp := invokeJSON(t, handler, http.MethodGet, "/api/provider-smokes/matrix", nil)
@@ -532,8 +532,8 @@ func TestAppWorkflowMainline(t *testing.T) {
 	if got := smokeMatrix[0].(map[string]interface{})["coverageRealSuccessTaskCount"].(float64); got == 0 {
 		t.Fatal("expected smoke matrix coverageRealSuccessTaskCount to be non-zero")
 	}
-	if got := smokeMatrix[0].(map[string]interface{})["hasUploadSuccessSample"].(bool); got {
-		t.Fatal("expected browse-only smoke matrix hasUploadSuccessSample false")
+	if got := smokeMatrix[0].(map[string]interface{})["hasUploadSuccessSample"].(bool); !got {
+		t.Fatal("expected upload smoke matrix hasUploadSuccessSample true")
 	}
 	if got := smokeMatrix[0].(map[string]interface{})["acceptanceStatus"].(string); got != "accepted" {
 		t.Fatalf("expected smoke matrix acceptanceStatus accepted, got %s", got)
@@ -557,7 +557,7 @@ func TestAppWorkflowMainline(t *testing.T) {
 	}
 
 	smokeMarkdown := invokeText(t, handler, http.MethodGet, "/api/provider-smokes/"+smokeID+"?format=markdown", nil)
-	if !strings.Contains(smokeMarkdown, "工作流真实 smoke") {
+	if !strings.Contains(smokeMarkdown, "工作流真实 upload smoke") {
 		t.Fatalf("expected smoke markdown title, got %s", smokeMarkdown)
 	}
 	if !strings.Contains(reportData["markdown"].(string), "## 真实样本矩阵") {

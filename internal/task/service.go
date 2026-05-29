@@ -3260,15 +3260,18 @@ func buildProviderSmokeMatrix(summary EvidenceSummary, smokeSummaries []Provider
 		if !state.row.HasRealSuccessSample {
 			missing = append(missing, "real_smoke_success_missing")
 		}
+		if !state.row.HasUploadSuccessSample {
+			missing = append(missing, "upload_smoke_success_missing")
+		}
 		if state.row.CoverageTaskCount == 0 {
 			missing = append(missing, "task_coverage_missing")
 		}
 		switch {
-		case state.row.HasRealSuccessSample && state.row.CoverageTaskCount > 0:
+		case state.row.HasUploadSuccessSample && state.row.CoverageTaskCount > 0:
 			state.row.Accepted = true
 			state.row.AcceptanceStatus = "accepted"
-			state.row.AcceptanceAdvice = "已具备真实 smoke 成功样本与任务覆盖，可继续补充更多边界样本。"
-		case state.row.HasRealSuccessSample || state.row.CoverageHasRealSuccessSample:
+			state.row.AcceptanceAdvice = "已具备真实上传成功样本与任务覆盖，可继续补充更多边界样本。"
+		case state.row.HasRealSuccessSample || state.row.CoverageHasRealSuccessSample || state.row.HasUploadSuccessSample:
 			state.row.AcceptanceStatus = "in_progress"
 			state.row.AcceptanceAdvice = buildAcceptanceAdvice(missing, true)
 		default:
@@ -3298,6 +3301,8 @@ func buildAcceptanceAdvice(missing []string, partial bool) string {
 		switch item {
 		case "real_smoke_success_missing":
 			hints = append(hints, "补 1 条真实 smoke 成功样本")
+		case "upload_smoke_success_missing":
+			hints = append(hints, "补 1 条真实上传成功样本")
 		case "task_coverage_missing":
 			hints = append(hints, "补 1 条真实任务覆盖样本")
 		default:

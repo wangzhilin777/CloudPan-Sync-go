@@ -6926,11 +6926,11 @@ func TestServiceProviderSmokeRecords(t *testing.T) {
 	if len(matrix[0].AcceptanceMissing) == 0 {
 		t.Fatal("expected smoke matrix missing reasons")
 	}
-	if matrix[0].AcceptanceMissing[0] != "task_coverage_missing" {
-		t.Fatalf("expected task_coverage_missing reason, got %#v", matrix[0].AcceptanceMissing)
+	if matrix[0].AcceptanceMissing[0] != "upload_smoke_success_missing" {
+		t.Fatalf("expected upload_smoke_success_missing reason, got %#v", matrix[0].AcceptanceMissing)
 	}
-	if !strings.Contains(matrix[0].AcceptanceAdvice, "真实任务覆盖样本") {
-		t.Fatalf("expected advice to mention task coverage, got %s", matrix[0].AcceptanceAdvice)
+	if !strings.Contains(matrix[0].AcceptanceAdvice, "真实上传成功样本") {
+		t.Fatalf("expected advice to mention upload sample, got %s", matrix[0].AcceptanceAdvice)
 	}
 }
 
