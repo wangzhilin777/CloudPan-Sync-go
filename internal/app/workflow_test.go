@@ -242,6 +242,18 @@ func TestAppWorkflowMainline(t *testing.T) {
 	if got := int(evidenceData["autoRecoverWaitingRetryWindowTasks"].(float64)); got != 0 {
 		t.Fatalf("expected autoRecoverWaitingRetryWindowTasks=0, got %d", got)
 	}
+	if got := int(evidenceData["autoRecoverWaitingAuthRefreshTasks"].(float64)); got != 0 {
+		t.Fatalf("expected autoRecoverWaitingAuthRefreshTasks=0, got %d", got)
+	}
+	if got := int(evidenceData["autoRecoverWaitingLocalRestoreTasks"].(float64)); got != 1 {
+		t.Fatalf("expected autoRecoverWaitingLocalRestoreTasks=1, got %d", got)
+	}
+	if got := int(evidenceData["autoRecoverWaitingManualTasks"].(float64)); got != 0 {
+		t.Fatalf("expected autoRecoverWaitingManualTasks=0, got %d", got)
+	}
+	if got := int(evidenceData["autoRecoverWaitingRetryLimitTasks"].(float64)); got != 0 {
+		t.Fatalf("expected autoRecoverWaitingRetryLimitTasks=0, got %d", got)
+	}
 	if got := int(evidenceData["autoRecoverWaitingOtherTasks"].(float64)); got != 0 {
 		t.Fatalf("expected autoRecoverWaitingOtherTasks=0, got %d", got)
 	}
@@ -301,6 +313,9 @@ func TestAppWorkflowMainline(t *testing.T) {
 	}
 	if got := recentProbePayload["retrySummary"].(map[string]interface{})["blockedAction"].(string); got != "restore_local_source_file" {
 		t.Fatalf("expected probe blockedAction restore_local_source_file, got %s", got)
+	}
+	if got := int(recentProbePayload["retrySummary"].(map[string]interface{})["autoRecoverWaitingLocalRestoreTasks"].(float64)); got != 1 {
+		t.Fatalf("expected probe autoRecoverWaitingLocalRestoreTasks 1, got %d", got)
 	}
 	if got := len(recentProbePayload["pendingTree"].([]interface{})); got == 0 {
 		t.Fatal("expected pendingTree in recent probe payload")
@@ -399,8 +414,23 @@ func TestAppWorkflowMainline(t *testing.T) {
 		if got := int(summary["autoRecoverWaitingRetryWindowTasks"].(float64)); got != 0 {
 			t.Fatalf("expected status summary autoRecoverWaitingRetryWindowTasks 0, got %d", got)
 		}
+		if got := int(summary["autoRecoverWaitingAuthRefreshTasks"].(float64)); got != 0 {
+			t.Fatalf("expected status summary autoRecoverWaitingAuthRefreshTasks 0, got %d", got)
+		}
+		if got := int(summary["autoRecoverWaitingLocalRestoreTasks"].(float64)); got != 1 {
+			t.Fatalf("expected status summary autoRecoverWaitingLocalRestoreTasks 1, got %d", got)
+		}
+		if got := int(summary["autoRecoverWaitingManualTasks"].(float64)); got != 0 {
+			t.Fatalf("expected status summary autoRecoverWaitingManualTasks 0, got %d", got)
+		}
+		if got := int(summary["autoRecoverWaitingRetryLimitTasks"].(float64)); got != 0 {
+			t.Fatalf("expected status summary autoRecoverWaitingRetryLimitTasks 0, got %d", got)
+		}
 		if got := int(summary["autoRecoverWaitingOtherTasks"].(float64)); got != 0 {
 			t.Fatalf("expected status summary autoRecoverWaitingOtherTasks 0, got %d", got)
+		}
+		if got := int(summary["retrySummary"].(map[string]interface{})["autoRecoverWaitingLocalRestoreTasks"].(float64)); got != 1 {
+			t.Fatalf("expected status retrySummary autoRecoverWaitingLocalRestoreTasks 1, got %d", got)
 		}
 		blockedActions, ok := summary["blockedActions"].([]interface{})
 		if !ok || len(blockedActions) == 0 {

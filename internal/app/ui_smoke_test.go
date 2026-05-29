@@ -159,6 +159,8 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 		waitForText(`#auto-recover-summary`, "retry_queue_auto_retry"),
 		waitForText(`#status-runtime-checkpoints`, "SELECTED ROOTS"),
 		waitForText(`#status-runtime-checkpoints`, "SCAN TRACE"),
+		waitForText(`#status-runtime-checkpoints`, "恢复等待 - 本地恢复"),
+		waitForText(`#status-runtime-checkpoints`, "恢复等待 - AUTH 刷新"),
 		chromedp.Click(`#status-directory-states [data-tree-sync-panel="directory"][data-tree-sync-path="/demo"]`, chromedp.ByQuery),
 		waitForValue(`#status-pending-filter-query`, "/demo"),
 		chromedp.Click(`#status-directory-copy-visible`, chromedp.ByID),

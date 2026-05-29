@@ -520,11 +520,29 @@ $evidence | ConvertTo-Json -Depth 12
 - `totalTasks`
 - `completedTasks`
 - `blockedTasks`
+- `autoRecoverTasks`
+- `autoRecoverRunnableTasks`
+- `autoRecoverWaitingCooldownTasks`
+- `autoRecoverWaitingRetryWindowTasks`
+- `autoRecoverWaitingAuthRefreshTasks`
+- `autoRecoverWaitingLocalRestoreTasks`
+- `autoRecoverWaitingManualTasks`
+- `autoRecoverWaitingRetryLimitTasks`
+- `autoRecoverWaitingOtherTasks`
 - `doneResultCount`
 - `failedResultCount`
 - `blockedActions`
 - `recentResults`
 - `recentProbes`
+
+如果任务已经进入后台补传候选池，通常还需要重点看：
+
+- `recentProbes[].payload.retrySummary.autoRecoverMode`
+- `recentProbes[].payload.retrySummary.autoRecoverAdvice`
+- `recentProbes[].payload.retrySummary.autoRecoverWaitingAuthRefreshTasks`
+- `recentProbes[].payload.retrySummary.autoRecoverWaitingLocalRestoreTasks`
+- `recentProbes[].payload.retrySummary.autoRecoverWaitingManualTasks`
+- `recentProbes[].payload.retrySummary.autoRecoverWaitingRetryLimitTasks`
 
 ## 11. 查看 Provider 状态矩阵
 
@@ -546,6 +564,18 @@ $status | ConvertTo-Json -Depth 12
 - `latestProbe`
 - `lastTaskState`
 - `snapshotSummary`
+
+其中 `snapshotSummary` 当前也会带出后台补传等待态拆分，建议重点关注：
+
+- `snapshotSummary.autoRecoverRunnableTasks`
+- `snapshotSummary.autoRecoverWaitingCooldownTasks`
+- `snapshotSummary.autoRecoverWaitingRetryWindowTasks`
+- `snapshotSummary.autoRecoverWaitingAuthRefreshTasks`
+- `snapshotSummary.autoRecoverWaitingLocalRestoreTasks`
+- `snapshotSummary.autoRecoverWaitingManualTasks`
+- `snapshotSummary.autoRecoverWaitingRetryLimitTasks`
+- `snapshotSummary.autoRecoverWaitingOtherTasks`
+- `snapshotSummary.retrySummary.autoRecoverWaitingLocalRestoreTasks`
 
 ## 12. 可选：直接调用 Provider 辅助接口
 

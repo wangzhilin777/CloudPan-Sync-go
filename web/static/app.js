@@ -803,6 +803,22 @@ function renderRuntimeCheckpoint(runtime, metadata = null, scope = "task") {
             <strong>自动补传提示</strong>
             <span>${escapeHTML(stringifyValue(metadata.retrySummary.autoRecoverAdvice, "-"))}</span>
           </div>
+          <div class="insight-card checkpoint-card">
+            <strong>恢复等待 - Auth 刷新</strong>
+            <span>${stringifyValue(metadata.retrySummary.autoRecoverWaitingAuthRefreshTasks, "0")}</span>
+          </div>
+          <div class="insight-card checkpoint-card">
+            <strong>恢复等待 - 本地恢复</strong>
+            <span>${stringifyValue(metadata.retrySummary.autoRecoverWaitingLocalRestoreTasks, "0")}</span>
+          </div>
+          <div class="insight-card checkpoint-card">
+            <strong>恢复等待 - 手动确认</strong>
+            <span>${stringifyValue(metadata.retrySummary.autoRecoverWaitingManualTasks, "0")}</span>
+          </div>
+          <div class="insight-card checkpoint-card">
+            <strong>恢复等待 - 限额超限</strong>
+            <span>${stringifyValue(metadata.retrySummary.autoRecoverWaitingRetryLimitTasks, "0")}</span>
+          </div>
         `
         : ""
     }
@@ -2888,7 +2904,7 @@ function renderStatus() {
   $("#recent-results").innerHTML = renderRecentResultsTable(evidence.recentResults || []);
   $("#recent-probes").innerHTML = renderRecentProbesTable(evidence.recentProbes || []);
   const runtimePayload = recentRuntimePayload();
-  $("#status-runtime-checkpoints").innerHTML = renderRuntimeCheckpoint(runtimePayload?.runtime || runtimePayload, runtimePayload?.runtime || runtimePayload, "status");
+  $("#status-runtime-checkpoints").innerHTML = renderRuntimeCheckpoint(runtimePayload?.runtime || runtimePayload, runtimePayload, "status");
   wireRuntimePathFocus("status");
   updateStatusRetryQueue(runtimePayload);
   updateStatusTreePanels(runtimePayload);

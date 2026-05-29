@@ -647,6 +647,10 @@ type retryQueueSummary struct {
 	AuthExpiredCount         int
 	LocalMissingCount        int
 	ExhaustedCount           int
+	AutoRecoverWaitingAuthRefreshTasks  int
+	AutoRecoverWaitingLocalRestoreTasks int
+	AutoRecoverWaitingManualTasks       int
+	AutoRecoverWaitingRetryLimitTasks   int
 	UploadCheckpointEligible int
 	AutoRecoverEligible      bool
 	AutoRecoverMode          string
@@ -3998,24 +4002,28 @@ func applyRetryQueueSummary(runtime *RuntimeState, metadata map[string]interface
 		return
 	}
 	metadata["retrySummary"] = map[string]interface{}{
-		"shouldBlock":              summary.ShouldBlock,
-		"blockedReason":            summary.BlockedReason,
-		"blockedAction":            summary.BlockedAction,
-		"blockedAdvice":            summary.BlockedAdvice,
-		"nextRetryAt":              summary.NextRetryAt,
-		"windowBlocked":            summary.WindowBlocked,
-		"canAutoRetry":             summary.CanAutoRetry,
-		"queueSize":                len(runtime.RetryQueue),
-		"retryableNowCount":        summary.RetryableNowCount,
-		"cooldownCount":            summary.CooldownCount,
-		"pendingManualCount":       summary.PendingManualCount,
-		"authExpiredCount":         summary.AuthExpiredCount,
-		"localMissingCount":        summary.LocalMissingCount,
-		"exhaustedCount":           summary.ExhaustedCount,
-		"uploadCheckpointEligible": summary.UploadCheckpointEligible,
-		"autoRecoverEligible":      summary.AutoRecoverEligible,
-		"autoRecoverMode":          summary.AutoRecoverMode,
-		"autoRecoverAdvice":        summary.AutoRecoverAdvice,
+		"shouldBlock":                         summary.ShouldBlock,
+		"blockedReason":                       summary.BlockedReason,
+		"blockedAction":                       summary.BlockedAction,
+		"blockedAdvice":                       summary.BlockedAdvice,
+		"nextRetryAt":                         summary.NextRetryAt,
+		"windowBlocked":                       summary.WindowBlocked,
+		"canAutoRetry":                        summary.CanAutoRetry,
+		"queueSize":                           len(runtime.RetryQueue),
+		"retryableNowCount":                   summary.RetryableNowCount,
+		"cooldownCount":                       summary.CooldownCount,
+		"pendingManualCount":                  summary.PendingManualCount,
+		"authExpiredCount":                    summary.AuthExpiredCount,
+		"localMissingCount":                   summary.LocalMissingCount,
+		"exhaustedCount":                      summary.ExhaustedCount,
+		"uploadCheckpointEligible":            summary.UploadCheckpointEligible,
+		"autoRecoverEligible":                 summary.AutoRecoverEligible,
+		"autoRecoverMode":                     summary.AutoRecoverMode,
+		"autoRecoverAdvice":                   summary.AutoRecoverAdvice,
+		"autoRecoverWaitingAuthRefreshTasks":  summary.AutoRecoverWaitingAuthRefreshTasks,
+		"autoRecoverWaitingLocalRestoreTasks": summary.AutoRecoverWaitingLocalRestoreTasks,
+		"autoRecoverWaitingManualTasks":       summary.AutoRecoverWaitingManualTasks,
+		"autoRecoverWaitingRetryLimitTasks":   summary.AutoRecoverWaitingRetryLimitTasks,
 	}
 }
 
@@ -4225,6 +4233,10 @@ func summarizeRetryQueue(queue []RetryQueueItem) retryQueueSummary {
 	summary.AuthExpiredCount = authExpiredCount
 	summary.LocalMissingCount = localMissingCount
 	summary.ExhaustedCount = exhaustedCount
+	summary.AutoRecoverWaitingAuthRefreshTasks = authExpiredCount
+	summary.AutoRecoverWaitingLocalRestoreTasks = localMissingCount
+	summary.AutoRecoverWaitingManualTasks = pendingManualCount
+	summary.AutoRecoverWaitingRetryLimitTasks = exhaustedCount
 	summary.UploadCheckpointEligible = uploadCheckpointEligible
 	if immediateRetry > 0 {
 		summary.CanAutoRetry = pendingManualCount == 0 && authExpiredCount == 0 && localMissingCount == 0
