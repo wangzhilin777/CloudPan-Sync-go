@@ -44,6 +44,7 @@ type RecoverOptions struct {
 	ProfileID             string   `json:"profileId,omitempty"`
 	RetryClass            string   `json:"retryClass,omitempty"`
 	BlockedAction         string   `json:"blockedAction,omitempty"`
+	RecoverState          string   `json:"recoverState,omitempty"`
 	Paths                 []string `json:"paths,omitempty"`
 	Path                  string   `json:"path,omitempty"`
 	Scope                 string   `json:"scope,omitempty"`
@@ -63,6 +64,7 @@ type RecoverResult struct {
 	ProfileID                    string `json:"profileId,omitempty"`
 	RetryClass                   string `json:"retryClass,omitempty"`
 	BlockedAction                string `json:"blockedAction,omitempty"`
+	RecoverState                 string `json:"recoverState,omitempty"`
 	Path                         string `json:"path,omitempty"`
 	Scope                        string `json:"scope,omitempty"`
 	Limit                        int    `json:"limit,omitempty"`
@@ -1069,6 +1071,7 @@ func (s *Service) RecoverBlockedTasksWithOptions(ctx context.Context, opts Recov
 	opts.ProfileID = strings.TrimSpace(opts.ProfileID)
 	opts.RetryClass = strings.TrimSpace(opts.RetryClass)
 	opts.BlockedAction = strings.TrimSpace(opts.BlockedAction)
+	opts.RecoverState = strings.TrimSpace(opts.RecoverState)
 	opts.Paths = normalizeRecoverSelectionPaths(opts.Paths, opts.Path)
 	opts.Path = firstRecoverSelectionPath(opts.Paths)
 	opts.Scope = strings.TrimSpace(opts.Scope)
@@ -1081,6 +1084,7 @@ func (s *Service) RecoverBlockedTasksWithOptions(ctx context.Context, opts Recov
 		ProfileID:             opts.ProfileID,
 		RetryClass:            opts.RetryClass,
 		BlockedAction:         opts.BlockedAction,
+		RecoverState:          opts.RecoverState,
 		Path:                  opts.Path,
 		Scope:                 opts.Scope,
 		Limit:                 opts.Limit,
@@ -1096,7 +1100,7 @@ func (s *Service) RecoverBlockedTasksWithOptions(ctx context.Context, opts Recov
 	}
 	candidates := make([]recoverCandidate, 0)
 	for _, detail := range items {
-		if detail.Task.State != StateBlocked && detail.Task.State != StateCompletedWithErrors {
+		if detail.Task.State != StateBlocked && detail.Task.State != StateCompletedWithErrors && detail.Runtime.ExecutionState != string(StateBlocked) {
 			continue
 		}
 		if opts.TaskID != "" && detail.Task.ID != opts.TaskID {
@@ -1106,7 +1110,7 @@ func (s *Service) RecoverBlockedTasksWithOptions(ctx context.Context, opts Recov
 		applyRetryQueueSummary(&detail.Runtime, detail.Plan.Metadata)
 		summary := summarizeRetryQueueWithRisk(detail.Runtime.RetryQueue, riskProfileFromMetadata(detail.Plan.Metadata), time.Now().UTC())
 		if opts.IncludeNonRunnable {
-			if !shouldIncludeAutoRecoverPool(detail, summary) {
+			if !shouldIncludeAutoRecoverPool(detail, summary) && !recoverStateFallbackMatch(detail, summary, opts.RecoverState) {
 				continue
 			}
 		} else if !taskCanAutoRecover(detail) {
@@ -1129,6 +1133,9 @@ func (s *Service) RecoverBlockedTasksWithOptions(ctx context.Context, opts Recov
 			continue
 		}
 		if opts.BlockedAction != "" && !strings.EqualFold(candidate.EffectiveAction, opts.BlockedAction) {
+			continue
+		}
+		if opts.RecoverState != "" && !recoverStateMatchesCandidate(detail, candidate.Summary, opts.RecoverState) && !recoverStateFallbackMatch(detail, candidate.Summary, opts.RecoverState) {
 			continue
 		}
 		if len(opts.Paths) > 0 {
@@ -1235,6 +1242,38 @@ func (s *Service) RecoverBlockedTasksWithOptions(ctx context.Context, opts Recov
 	}
 	result.RecoveredCount = recovered
 	return result, nil
+}
+
+func recoverStateFallbackMatch(detail Detail, summary retryQueueSummary, recoverState string) bool {
+	recoverState = strings.TrimSpace(recoverState)
+	switch recoverState {
+	case "waiting_cooldown":
+		return summary.BlockedReason == "retry_queue_waiting_for_cooldown" || summary.BlockedAction == "wait_for_cooldown" || detail.Runtime.BlockedAction == "wait_for_cooldown"
+	case "waiting_retry_window":
+		return summary.BlockedReason == "retry_queue_waiting_for_retry_window" || summary.BlockedAction == "wait_for_retry_window" || detail.Runtime.BlockedAction == "wait_for_retry_window"
+	default:
+		return false
+	}
+}
+
+func recoverStateMatchesCandidate(detail Detail, summary retryQueueSummary, recoverState string) bool {
+	state := classifyAutoRecoverLaneState(detail, summary)
+	mode := strings.TrimSpace(summary.AutoRecoverMode)
+	if mode == "" {
+		mode = autoRecoverReason(detail)
+	}
+	switch strings.TrimSpace(recoverState) {
+	case "runnable_now":
+		return state.runnableNow || mode == "retry_queue_auto_retry" || mode == "upload_checkpoint_auto_resume"
+	case "waiting_cooldown":
+		return state.waitingCooldown || mode == "cooldown_elapsed_auto_retry"
+	case "waiting_retry_window":
+		return state.waitingRetryWindow || mode == "retry_window_waiting_auto_retry"
+	case "waiting_other":
+		return state.waitingOther || (mode != "" && mode != "retry_queue_auto_retry" && mode != "upload_checkpoint_auto_resume" && mode != "cooldown_elapsed_auto_retry" && mode != "retry_window_waiting_auto_retry")
+	default:
+		return false
+	}
 }
 
 func recoverModeBudgetKey(mode string) string {
@@ -3948,10 +3987,14 @@ func shouldIncludeAutoRecoverPool(detail Detail, summary retryQueueSummary) bool
 	if summary.AutoRecoverEligible {
 		return true
 	}
-	if summary.CooldownCount > 0 {
+	if summary.CooldownCount > 0 || summary.BlockedReason == "retry_queue_waiting_for_cooldown" || detail.Runtime.BlockedAction == "wait_for_cooldown" {
 		return true
 	}
-	return summary.WindowBlocked
+	if summary.WindowBlocked || summary.BlockedReason == "retry_queue_waiting_for_retry_window" || detail.Runtime.BlockedAction == "wait_for_retry_window" {
+		return true
+	}
+	mode := autoRecoverReason(detail)
+	return mode == "cooldown_elapsed_auto_retry" || mode == "retry_window_waiting_auto_retry"
 }
 
 func autoRetryAllowedNow(riskProfile planner.RiskProfile, now time.Time) bool {

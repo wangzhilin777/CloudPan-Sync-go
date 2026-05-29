@@ -468,15 +468,15 @@ func classifyAutoRecoverLaneState(detail Detail, summary retryQueueSummary) auto
 		state.runnableNow = true
 		return state
 	}
-	if summary.WindowBlocked {
+	if summary.WindowBlocked || summary.BlockedReason == "retry_queue_waiting_for_retry_window" || detail.Runtime.BlockedAction == "wait_for_retry_window" {
 		state.waitingRetryWindow = true
 		return state
 	}
-	if summary.CooldownCount > 0 {
+	if summary.CooldownCount > 0 || summary.BlockedReason == "retry_queue_waiting_for_cooldown" || detail.Runtime.BlockedAction == "wait_for_cooldown" {
 		state.waitingCooldown = true
 		return state
 	}
-	if summary.UploadCheckpointEligible > 0 || summary.AutoRecoverEligible {
+	if summary.UploadCheckpointEligible > 0 || summary.AutoRecoverEligible || strings.TrimSpace(detail.Runtime.BlockedAction) != "" {
 		state.waitingOther = true
 	}
 	return state
@@ -491,7 +491,7 @@ func summarizeAutoRecoverPool(details []Detail, providers []provider.Entry) ([]A
 	totalTasks := 0
 	candidates := make([]recoverCandidate, 0)
 	for _, detail := range details {
-		if detail.Task.State != StateBlocked && detail.Task.State != StateCompletedWithErrors {
+		if detail.Task.State != StateBlocked && detail.Task.State != StateCompletedWithErrors && detail.Runtime.ExecutionState != string(StateBlocked) {
 			continue
 		}
 		ensureRuntimeState(&detail)

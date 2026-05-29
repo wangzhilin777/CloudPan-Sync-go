@@ -4247,6 +4247,105 @@ func TestServiceRecoverBlockedTasksWithOptionsRespectsLaneBudget(t *testing.T) {
 	}
 }
 
+func TestServiceRecoverBlockedTasksWithOptionsFiltersRecoverState(t *testing.T) {
+	ctx := context.Background()
+	store, err := sqlitestore.New(ctx, filepath.Join(t.TempDir(), "auto-recover-state-filter.db"))
+	if err != nil {
+		t.Fatalf("new store: %v", err)
+	}
+	defer func() { _ = store.Close() }()
+
+	uploadCallsByPath := map[string]int{}
+	newAdapter := func(key string) *scriptedAdapter {
+		return &scriptedAdapter{
+			meta: provider.Provider{
+				Key:              key,
+				DisplayName:      key,
+				ProtocolGroup:    "state-filter",
+				AuthModes:        []string{"manual_token"},
+				FastUploadInputs: []string{"md5", "size"},
+				FallbackModes:    []string{"download_upload"},
+				Status:           "planned",
+			},
+			capability: provider.CapabilitySet{SupportsAuthValidation: true, SupportsUpload: true},
+			uploadFunc: func(req provider.UploadRequest) provider.UploadResult {
+				uploadCallsByPath[req.Path]++
+				if uploadCallsByPath[req.Path] == 1 {
+					return provider.UploadResult{OperationResult: provider.OperationResult{Status: "rate_limited", Message: "rate limited", Mode: "fake_rate_limit"}}
+				}
+				return provider.UploadResult{OperationResult: provider.OperationResult{OK: true, Status: "ok", Message: "state recovered", Mode: "fake_state_ok"}}
+			},
+		}
+	}
+
+	registry := provider.NewRegistry(newAdapter("recover_state_runnable_target"), newAdapter("recover_state_window_target"), newAdapter("recover_state_cooldown_target"))
+	authSvc := auth.NewService(store, registry)
+	svc := NewService(store, registry, authSvc)
+
+	createProfile := func(providerKey string) string {
+		profile, err := authSvc.CreateProfile(ctx, auth.CreateProfileInput{ProviderKey: providerKey, AuthMode: "manual_token", DisplayName: providerKey, Token: "token-" + providerKey})
+		if err != nil {
+			t.Fatalf("CreateProfile(%s) error = %v", providerKey, err)
+		}
+		return profile.ID
+	}
+
+	createBlockedTask := func(providerKey, profileID, path string, override *planner.RiskProfileOverride, createdAt string) string {
+		detail, err := svc.Create(ctx, CreateRequest{
+			SourceProvider:  "guangya",
+			TargetProvider:  providerKey,
+			TargetProfileID: profileID,
+			ThresholdMB:     1,
+			RiskOverride:    override,
+			Entries:         []planner.SourceEntry{{Path: path, Size: 128, MD5: strings.Trim(path, "/")}},
+		})
+		if err != nil {
+			t.Fatalf("Create(%s %s) error = %v", providerKey, path, err)
+		}
+		if _, ok, err := svc.Run(ctx, detail.Task.ID); err != nil || !ok {
+			t.Fatalf("Run(%s %s) error=%v ok=%v", providerKey, path, err, ok)
+		}
+		blocked, ok, err := svc.Get(ctx, detail.Task.ID)
+		if err != nil || !ok {
+			t.Fatalf("Get(%s %s) error=%v ok=%v", providerKey, path, err, ok)
+		}
+		for idx := range blocked.Results {
+			blocked.Results[idx].CreatedAt = createdAt
+		}
+		blocked.Task.State = StateBlocked
+		blocked.Task.UpdatedAt = createdAt
+		syncRuntimeRetryQueue(&blocked.Runtime, blocked.Plan.Metadata, blocked.Results)
+		applyRetryQueueSummary(&blocked.Runtime, blocked.Plan.Metadata)
+		if err := replaceTaskDetailAndResults(ctx, store, blocked); err != nil {
+			t.Fatalf("replaceTaskDetailAndResults(%s %s) error = %v", providerKey, path, err)
+		}
+		return detail.Task.ID
+	}
+
+	nowHour := time.Now().UTC().Hour()
+	startHour := (nowHour + 1) % 24
+	endHour := (nowHour + 2) % 24
+	if startHour == endHour {
+		endHour = (endHour + 1) % 24
+	}
+	windowTimestamp := time.Now().Add(-2 * time.Hour).UTC().Format(time.RFC3339)
+	runnableProfile := createProfile("recover_state_runnable_target")
+	runnableID := createBlockedTask("recover_state_runnable_target", runnableProfile, "/runnable.bin", &planner.RiskProfileOverride{CooldownSeconds: intPtrTask(0)}, windowTimestamp)
+
+	runnableResult, err := svc.RecoverBlockedTasksWithOptions(ctx, RecoverOptions{RecoverState: "runnable_now", Limit: 5, IncludeNonRunnable: true})
+	if err != nil {
+		t.Fatalf("RecoverBlockedTasksWithOptions(runnable_now) error = %v", err)
+	}
+	if runnableResult.RecoverState != "runnable_now" || runnableResult.MatchedCount != 1 || runnableResult.RecoveredCount != 1 {
+		t.Fatalf("unexpected runnable recover result: %#v", runnableResult)
+	}
+
+	runnableTask, ok, err := svc.Get(ctx, runnableID)
+	if err != nil || !ok || runnableTask.Task.State != StateCompleted {
+		t.Fatalf("expected runnable task completed, got ok=%v err=%v detail=%#v", ok, err, runnableTask)
+	}
+}
+
 func TestServiceRecoverBlockedTasksWithOptionsFiltersProtocolGroup(t *testing.T) {
 	ctx := context.Background()
 	store, err := sqlitestore.New(ctx, filepath.Join(t.TempDir(), "auto-recover-protocol-group-filter.db"))

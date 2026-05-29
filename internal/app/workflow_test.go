@@ -1251,6 +1251,7 @@ func TestAppRecoverTasksEndpointFiltersTaskID(t *testing.T) {
 		"taskId":           secondTaskID,
 		"providerKey":      "recover_task_id_api_target",
 		"profileId":        profileID,
+		"recoverState":     "runnable_now",
 		"paths":            []string{"/group-b"},
 		"scope":            "selected_retry_subset",
 		"limit":            1,
@@ -1271,6 +1272,9 @@ func TestAppRecoverTasksEndpointFiltersTaskID(t *testing.T) {
 	}
 	if got := recoverData["profileId"].(string); got != profileID {
 		t.Fatalf("expected profileId %s, got %s", profileID, got)
+	}
+	if got := recoverData["recoverState"].(string); got != "runnable_now" {
+		t.Fatalf("expected recoverState runnable_now, got %s", got)
 	}
 	if got := int(recoverData["limitPerProvider"].(float64)); got != 1 {
 		t.Fatalf("expected limitPerProvider 1, got %d", got)

@@ -426,6 +426,13 @@
                 <select id="auto-recover-blocked-action">
                   <option value="">全部阻塞动作</option>
                 </select>
+                <select id="auto-recover-state">
+                  <option value="">全部执行状态</option>
+                  <option value="runnable_now">runnable_now</option>
+                  <option value="waiting_cooldown">waiting_cooldown</option>
+                  <option value="waiting_retry_window">waiting_retry_window</option>
+                  <option value="waiting_other">waiting_other</option>
+                </select>
                 <input id="auto-recover-limit" type="number" min="1" placeholder="本轮上限，例如 3" />
                 <input id="auto-recover-limit-per-mode" type="number" min="1" placeholder="模式预算，例如 1" />
                 <input id="auto-recover-limit-per-lane" type="number" min="1" placeholder="lane 预算，例如 1" />

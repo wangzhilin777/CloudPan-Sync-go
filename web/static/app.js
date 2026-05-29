@@ -29,6 +29,7 @@ const state = {
     profileId: "",
     retryClass: "",
     blockedAction: "",
+    recoverState: "",
     limit: "",
     limitPerMode: "",
     limitPerLane: "",
@@ -2832,6 +2833,7 @@ function filterAutoRecoverItems(items, filters = state.autoRecoverFilters) {
   const profileId = String(filters?.profileId || "").trim();
   const retryClass = String(filters?.retryClass || "").trim();
   const blockedAction = String(filters?.blockedAction || "").trim();
+  const recoverState = String(filters?.recoverState || "").trim();
   const source = Array.isArray(items) ? items : [];
   return source.filter((item) => {
     if (mode && String(item?.mode || "").trim() !== mode) {
@@ -2869,6 +2871,21 @@ function filterAutoRecoverItems(items, filters = state.autoRecoverFilters) {
         return false;
       }
     }
+    if (recoverState) {
+      const stateCount =
+        recoverState === "runnable_now"
+          ? Number(item?.runnableTaskCount || 0)
+          : recoverState === "waiting_cooldown"
+            ? Number(item?.waitingCooldownTaskCount || 0)
+            : recoverState === "waiting_retry_window"
+              ? Number(item?.waitingRetryWindowTaskCount || 0)
+              : recoverState === "waiting_other"
+                ? Number(item?.waitingOtherTaskCount || 0)
+                : 0;
+      if (stateCount <= 0) {
+        return false;
+      }
+    }
     return true;
   });
 }
@@ -2882,6 +2899,7 @@ function renderAutoRecoverFilterSummary(visibleItems, allItems) {
   const profileId = String(state.autoRecoverFilters.profileId || "").trim();
   const retryClass = String(state.autoRecoverFilters.retryClass || "").trim();
   const blockedAction = String(state.autoRecoverFilters.blockedAction || "").trim();
+  const recoverState = String(state.autoRecoverFilters.recoverState || "").trim();
   const limit = String(state.autoRecoverFilters.limit || "").trim();
   const limitPerMode = String(state.autoRecoverFilters.limitPerMode || "").trim();
   const limitPerLane = String(state.autoRecoverFilters.limitPerLane || "").trim();
@@ -2906,6 +2924,9 @@ function renderAutoRecoverFilterSummary(visibleItems, allItems) {
   }
   if (blockedAction) {
     parts.push(`blockedAction=${blockedAction}`);
+  }
+  if (recoverState) {
+    parts.push(`recoverState=${recoverState}`);
   }
   if (limit) {
     parts.push(`limit=${limit}`);
@@ -3034,6 +3055,42 @@ function renderAutoRecoverSummary(items) {
                 : ""
             }
             ${
+              Number(item?.runnableTaskCount || 0) > 0
+                ? `<button
+              type="button"
+              class="ghost"
+              data-auto-recover-focus-state="runnable_now"
+            >只看可执行态</button>`
+                : ""
+            }
+            ${
+              Number(item?.waitingCooldownTaskCount || 0) > 0
+                ? `<button
+              type="button"
+              class="ghost"
+              data-auto-recover-focus-state="waiting_cooldown"
+            >只看等冷却</button>`
+                : ""
+            }
+            ${
+              Number(item?.waitingRetryWindowTaskCount || 0) > 0
+                ? `<button
+              type="button"
+              class="ghost"
+              data-auto-recover-focus-state="waiting_retry_window"
+            >只看等时间窗</button>`
+                : ""
+            }
+            ${
+              Number(item?.waitingOtherTaskCount || 0) > 0
+                ? `<button
+              type="button"
+              class="ghost"
+              data-auto-recover-focus-state="waiting_other"
+            >只看其它等待</button>`
+                : ""
+            }
+            ${
               item.primaryRetryClass
                 ? `<button
               type="button"
@@ -3087,6 +3144,42 @@ function renderAutoRecoverSummary(items) {
               class="ghost"
               data-auto-recover-run-protocol-group="${escapeHTML(stringifyValue(item.sampleProtocolGroup, ""))}"
             >${Array.isArray(item.protocolGroups) && item.protocolGroups.length <= 1 ? "执行该协议族" : "执行样本协议族"}</button>`
+                : ""
+            }
+            ${
+              Number(item?.runnableTaskCount || 0) > 0
+                ? `<button
+              type="button"
+              class="ghost"
+              data-auto-recover-run-state="runnable_now"
+            >只执行可执行态</button>`
+                : ""
+            }
+            ${
+              Number(item?.waitingCooldownTaskCount || 0) > 0
+                ? `<button
+              type="button"
+              class="ghost"
+              data-auto-recover-run-state="waiting_cooldown"
+            >只执行等冷却</button>`
+                : ""
+            }
+            ${
+              Number(item?.waitingRetryWindowTaskCount || 0) > 0
+                ? `<button
+              type="button"
+              class="ghost"
+              data-auto-recover-run-state="waiting_retry_window"
+            >只执行等时间窗</button>`
+                : ""
+            }
+            ${
+              Number(item?.waitingOtherTaskCount || 0) > 0
+                ? `<button
+              type="button"
+              class="ghost"
+              data-auto-recover-run-state="waiting_other"
+            >只执行其它等待</button>`
                 : ""
             }
             ${
@@ -3160,6 +3253,10 @@ function applyAutoRecoverFilters(nextFilters, options = {}) {
   if (Object.prototype.hasOwnProperty.call(filters, "blockedAction")) {
     state.autoRecoverFilters.blockedAction = String(filters.blockedAction || "");
     setFilterControlValue("#auto-recover-blocked-action", state.autoRecoverFilters.blockedAction);
+  }
+  if (Object.prototype.hasOwnProperty.call(filters, "recoverState")) {
+    state.autoRecoverFilters.recoverState = String(filters.recoverState || "");
+    setFilterControlValue("#auto-recover-state", state.autoRecoverFilters.recoverState);
   }
   if (Object.prototype.hasOwnProperty.call(filters, "limit")) {
     state.autoRecoverFilters.limit = String(filters.limit || "");
@@ -3464,6 +3561,13 @@ function wireAutoRecoverSummary() {
       showFlash(`已按协议族 ${protocolGroup} 收敛后台补传候选`);
     });
   });
+  wrap.querySelectorAll("[data-auto-recover-focus-state]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const recoverState = button.dataset.autoRecoverFocusState || "";
+      applyAutoRecoverFilters({ recoverState });
+      showFlash(`已按执行状态 ${recoverState} 收敛后台补传候选`);
+    });
+  });
   wrap.querySelectorAll("[data-auto-recover-focus-retry-class]").forEach((button) => {
     button.addEventListener("click", () => {
       const retryClass = button.dataset.autoRecoverFocusRetryClass || "";
@@ -3508,6 +3612,16 @@ function wireAutoRecoverSummary() {
     button.addEventListener("click", async () => {
       try {
         applyAutoRecoverFilters({ protocolGroup: button.dataset.autoRecoverRunProtocolGroup || "" }, { render: false });
+        await triggerAutoRecover();
+      } catch (error) {
+        showFlash(error.message, true);
+      }
+    });
+  });
+  wrap.querySelectorAll("[data-auto-recover-run-state]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      try {
+        applyAutoRecoverFilters({ recoverState: button.dataset.autoRecoverRunState || "" }, { render: false });
         await triggerAutoRecover();
       } catch (error) {
         showFlash(error.message, true);
@@ -3572,7 +3686,19 @@ function wireAutoRecoverSummary() {
   });
 }
 
+function autoRecoverBlockedActionFromRecoverState(recoverState) {
+  switch (String(recoverState || "").trim()) {
+    case "waiting_cooldown":
+      return "wait_for_cooldown";
+    case "waiting_retry_window":
+      return "wait_for_retry_window";
+    default:
+      return "";
+  }
+}
+
 function currentAutoRecoverRequest() {
+  const selectedRecoverState = String($("#auto-recover-state")?.value || "").trim();
   const limitText = String($("#auto-recover-limit")?.value || "").trim();
   const limitPerModeText = String($("#auto-recover-limit-per-mode")?.value || "").trim();
   const limitPerLaneText = String($("#auto-recover-limit-per-lane")?.value || "").trim();
@@ -3585,13 +3711,15 @@ function currentAutoRecoverRequest() {
   const limitPerProtocolGroup = limitPerProtocolGroupText ? Number(limitPerProtocolGroupText) : 0;
   const limitPerProvider = limitPerProviderText ? Number(limitPerProviderText) : 0;
   const limitPerProfile = limitPerProfileText ? Number(limitPerProfileText) : 0;
+  const selectedBlockedAction = String($("#auto-recover-blocked-action")?.value || "").trim();
   return {
     mode: String($("#auto-recover-mode")?.value || "").trim(),
     protocolGroup: String($("#auto-recover-protocol-group")?.value || "").trim(),
     providerKey: String($("#auto-recover-provider")?.value || "").trim(),
     profileId: String($("#auto-recover-profile")?.value || "").trim(),
     retryClass: String($("#auto-recover-retry-class")?.value || "").trim(),
-    blockedAction: String($("#auto-recover-blocked-action")?.value || "").trim(),
+    blockedAction: selectedBlockedAction || autoRecoverBlockedActionFromRecoverState(selectedRecoverState),
+    recoverState: selectedRecoverState === "runnable_now" ? selectedRecoverState : "",
     limit: Number.isFinite(limit) && limit > 0 ? limit : 0,
     limitPerMode: Number.isFinite(limitPerMode) && limitPerMode > 0 ? limitPerMode : 0,
     limitPerLane: Number.isFinite(limitPerLane) && limitPerLane > 0 ? limitPerLane : 0,
@@ -3603,12 +3731,14 @@ function currentAutoRecoverRequest() {
 
 async function triggerAutoRecover() {
   const payload = currentAutoRecoverRequest();
+  const selectedRecoverState = String($("#auto-recover-state")?.value || "").trim();
   state.autoRecoverFilters.mode = payload.mode;
   state.autoRecoverFilters.protocolGroup = payload.protocolGroup;
   state.autoRecoverFilters.providerKey = payload.providerKey;
   state.autoRecoverFilters.profileId = payload.profileId;
   state.autoRecoverFilters.retryClass = payload.retryClass;
-  state.autoRecoverFilters.blockedAction = payload.blockedAction;
+  state.autoRecoverFilters.blockedAction = String($("#auto-recover-blocked-action")?.value || "").trim();
+  state.autoRecoverFilters.recoverState = selectedRecoverState;
   state.autoRecoverFilters.limit = payload.limit ? String(payload.limit) : "";
   state.autoRecoverFilters.limitPerMode = payload.limitPerMode ? String(payload.limitPerMode) : "";
   state.autoRecoverFilters.limitPerLane = payload.limitPerLane ? String(payload.limitPerLane) : "";
@@ -3664,6 +3794,7 @@ function resetAutoRecoverFilters() {
   state.autoRecoverFilters.profileId = "";
   state.autoRecoverFilters.retryClass = "";
   state.autoRecoverFilters.blockedAction = "";
+  state.autoRecoverFilters.recoverState = "";
   state.autoRecoverFilters.limit = "";
   state.autoRecoverFilters.limitPerMode = "";
   state.autoRecoverFilters.limitPerLane = "";
@@ -3676,6 +3807,7 @@ function resetAutoRecoverFilters() {
   setFilterControlValue("#auto-recover-profile", "");
   setFilterControlValue("#auto-recover-retry-class", "");
   setFilterControlValue("#auto-recover-blocked-action", "");
+  setFilterControlValue("#auto-recover-state", "");
   setInputValueIfPresent("#auto-recover-limit", "");
   setInputValueIfPresent("#auto-recover-limit-per-mode", "");
   setInputValueIfPresent("#auto-recover-limit-per-lane", "");
@@ -4400,6 +4532,10 @@ function wireStatus() {
   });
   $("#auto-recover-blocked-action").addEventListener("change", () => {
     state.autoRecoverFilters.blockedAction = $("#auto-recover-blocked-action").value;
+    renderStatus();
+  });
+  $("#auto-recover-state").addEventListener("change", () => {
+    state.autoRecoverFilters.recoverState = $("#auto-recover-state").value;
     renderStatus();
   });
   $("#auto-recover-limit").addEventListener("input", () => {

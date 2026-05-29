@@ -36,7 +36,7 @@
   - 手动触发后台补传时，已经支持按 `mode / providerKey / retryClass / limit` 精准筛选放行
   - 当前也已支持按 `blockedAction` 做历史阻塞原因口径的精准筛选与手动放行
   - 当前混合失败队列的后台补传候选也已进入统一优先级排序：会综合 `mode / primaryRetryClass / primaryBlockedAction / nextRetryAt` 做稳定拆批
-  - 当前状态页候选池已可直接按 `protocolGroup / primaryRetryClass / primaryBlockedAction / lane(mode + class + action)` 一键聚焦或放行
+  - 当前状态页候选池已可直接按 `protocolGroup / recoverState / primaryRetryClass / primaryBlockedAction / lane(mode + class + action)` 一键聚焦或放行
   - 当前 `/api/tasks/recover` 也已支持按 `path/paths + scope` 只放行一棵或多棵子树，便于和叶子目录优先排障结合使用
   - 当前 `/api/tasks/recover` 还支持额外带 `taskId`，可把后台补传精准约束到单个任务样本，避免状态页排障时误打到同 provider 的其它任务
   - 当前 `/api/tasks/recover` 也支持额外带 `profileId`，可把后台补传进一步精准约束到某个授权档案
@@ -519,7 +519,7 @@
   - 运行证据摘要页还新增了“自动补传候选池”，可以按模式直接看 worker 当前会优先接管哪一类任务，或哪些任务虽然已满足自动补传条件但仍在等待允许时间窗
   - 候选池现在还会额外拆出“可立即执行 / 等冷却 / 等时间窗 / 其它等待”四类任务数，避免看到候选后却不知道为什么此刻没有真正开始跑
   - 自动补传候选池现在还能直接按主重试类型、主阻塞动作或 lane 级口径一键聚焦与执行，减少手动回填筛选条件
-  - 状态页手动放行还可直接填写 limit / limitPerMode / limitPerLane / limitPerProtocolGroup / limitPerProvider / limitPerProfile`r
+  - 状态页手动放行还可直接按 `recoverState` 先收敛到“只放行当前能跑的 / 只看等冷却 / 只看等时间窗 / 只看其它等待”，也可继续填写 `limit / limitPerMode / limitPerLane / limitPerProtocolGroup / limitPerProvider / limitPerProfile`
   - 对当前命中但暂时不能执行的候选，状态页放行结果也会显式区分 cooldownWait / retryWindowWait / blocked，不再把这类跳过静默吞掉
     - 便于把补传节奏同时控制在“小批次 + 模式分流 + lane 分流 + 多账号轮转”
   - 任务目录树和待补传树节点现在也能直接触发“后台补传当前路径 / 当前 root”，方便只放行当前子树
