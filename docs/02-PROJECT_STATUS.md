@@ -41,6 +41,7 @@
   - 当前 `accepted` 已收口为“真实上传成功样本 + 该协议组已有任务覆盖”
   - 当前还会直接显示每个协议组已沉淀的真实上传成功样本数量，方便看联调进度不是停在 0/1 级别
   - 当前 evidence 总览还会额外聚合 `UploadSuccessGroups`，直接表示“已经至少沉淀出 1 条真实上传成功样本的协议组数量”
+  - 当前 evidence 总览也会直接返回 `AcceptedSmokeGroups / InProgressSmokeGroups / PendingSmokeGroups / UploadSuccessSamples`，前端与报告不再各自重复计算
 - 当前 `/api/tasks/recover` 也已支持按 `path/paths + scope` 只放行一棵或多棵子树，便于和叶子目录优先排障结合使用
 - 当前 `/api/tasks/recover` 还支持额外带 `taskId`，可把后台补传精准约束到单个任务样本，避免状态页排障时误打到同 provider 的其它任务
 - 当前 `/api/tasks/recover` 也支持额外带 `profileId`，可把后台补传进一步精准约束到某个授权档案
@@ -498,7 +499,7 @@
 - 当前状态：
   - 已具备联调、排错、演示所需的最小证据链
   - 现在还能直接看出每个协议族是否已经至少沉淀出一条真实成功样本
-  - evidence 总览与报告摘要现在会直接显示 `UploadSuccessGroups / 上传成功协议组`
+  - evidence 总览与报告摘要现在会直接显示 `AcceptedSmokeGroups / InProgressSmokeGroups / PendingSmokeGroups / UploadSuccessGroups / UploadSuccessSamples`
   - `accepted` 表示“真实上传成功样本 + 该协议组已有任务覆盖”，`pending` 表示还缺其中一项或两项
 
 ### 7. 前端控制台

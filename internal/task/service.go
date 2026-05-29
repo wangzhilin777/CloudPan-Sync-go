@@ -138,7 +138,11 @@ type EvidenceSummary struct {
 	BlockedActions                     []BlockedAction    `json:"blockedActions,omitempty"`
 	AutoRecoverPool                    []AutoRecoverLane  `json:"autoRecoverPool,omitempty"`
 	ProtocolCoverage                   []ProtocolCoverage `json:"protocolCoverage,omitempty"`
+	AcceptedSmokeGroups                int                `json:"acceptedSmokeGroups"`
+	InProgressSmokeGroups              int                `json:"inProgressSmokeGroups"`
+	PendingSmokeGroups                 int                `json:"pendingSmokeGroups"`
 	UploadSuccessGroups                int                `json:"uploadSuccessGroups"`
+	UploadSuccessSamples               int                `json:"uploadSuccessSamples"`
 	RecentResults                      []Result           `json:"recentResults"`
 	RecentProbes                       []ProviderProbe    `json:"recentProbes"`
 }
@@ -998,12 +1002,7 @@ func (s *Service) RuntimeEvidence(ctx context.Context) (EvidenceSummary, error) 
 	if err != nil {
 		return EvidenceSummary{}, err
 	}
-	for _, item := range summarizeProviderSmokeRecords(records) {
-		if item.HasUploadSuccessSample {
-			summary.UploadSuccessGroups++
-		}
-	}
-	return summary, nil
+	return enrichEvidenceSummaryWithSmoke(summary, summarizeProviderSmokeRecords(records)), nil
 }
 
 func (s *Service) ProviderStatuses(ctx context.Context) ([]StatusSummary, error) {
@@ -1043,14 +1042,8 @@ func (s *Service) EvidenceReport(ctx context.Context) (EvidenceReport, error) {
 	if err != nil {
 		return EvidenceReport{}, err
 	}
+	summary = enrichEvidenceSummaryWithSmoke(summary, smokeSummaries)
 	smokeMatrix := buildProviderSmokeMatrix(summary, smokeSummaries)
-	uploadSuccessGroups := 0
-	for _, row := range smokeMatrix {
-		if row.HasUploadSuccessSample {
-			uploadSuccessGroups++
-		}
-	}
-	summary.UploadSuccessGroups = uploadSuccessGroups
 	details, err := s.List(ctx)
 	if err != nil {
 		return EvidenceReport{}, err
@@ -2900,7 +2893,11 @@ func buildEvidenceReport(summary EvidenceSummary, statuses []StatusSummary, smok
 	fmt.Fprintf(&b, "- 源端删除记录: %d\n", summary.SourceDeletionCount)
 	fmt.Fprintf(&b, "- 失败结果: %d\n", summary.FailedResultCount)
 	fmt.Fprintf(&b, "- 风控命中: %d\n", summary.RiskHitCount)
+	fmt.Fprintf(&b, "- 已验收协议组: %d\n", summary.AcceptedSmokeGroups)
+	fmt.Fprintf(&b, "- 进行中协议组: %d\n", summary.InProgressSmokeGroups)
+	fmt.Fprintf(&b, "- 待补齐协议组: %d\n", summary.PendingSmokeGroups)
 	fmt.Fprintf(&b, "- 上传成功协议组: %d\n", summary.UploadSuccessGroups)
+	fmt.Fprintf(&b, "- 上传成功样本数: %d\n", summary.UploadSuccessSamples)
 	b.WriteString("\n## 阻塞动作\n\n")
 	if len(summary.BlockedActions) == 0 {
 		b.WriteString("- 当前没有需要人工处理的阻塞动作。\n")
@@ -3057,6 +3054,32 @@ func buildEvidenceSamples(details []Detail, limit int) []EvidenceSample {
 		}
 	}
 	return samples
+}
+
+func enrichEvidenceSummaryWithSmoke(summary EvidenceSummary, smokeSummaries []ProviderSmokeSummary) EvidenceSummary {
+	summary.AcceptedSmokeGroups = 0
+	summary.InProgressSmokeGroups = 0
+	summary.PendingSmokeGroups = 0
+	summary.UploadSuccessGroups = 0
+	summary.UploadSuccessSamples = 0
+	smokeMatrix := buildProviderSmokeMatrix(summary, smokeSummaries)
+	for _, row := range smokeMatrix {
+		if row.HasUploadSuccessSample {
+			summary.UploadSuccessGroups++
+		}
+		summary.UploadSuccessSamples += row.UploadSuccessCount
+		if row.Accepted {
+			summary.AcceptedSmokeGroups++
+			continue
+		}
+		switch row.AcceptanceStatus {
+		case "in_progress":
+			summary.InProgressSmokeGroups++
+		case "pending":
+			summary.PendingSmokeGroups++
+		}
+	}
+	return summary
 }
 
 func markdownCell(value string) string {

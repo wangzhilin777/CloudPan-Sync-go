@@ -2755,10 +2755,10 @@ function renderStatus() {
   const protocolCoverageWithSamples = protocolCoverage.filter((item) => item?.hasRealSuccessSample).length;
   const autoRetryPolicy = evidence.autoRetryPolicy && typeof evidence.autoRetryPolicy === "object" ? evidence.autoRetryPolicy : {};
   const providerSmokeMatrix = Array.isArray(state.providerSmokeMatrix) ? state.providerSmokeMatrix : [];
-  const acceptedSmokeGroups = providerSmokeMatrix.filter((item) => item?.accepted).length;
-  const inProgressSmokeGroups = providerSmokeMatrix.filter((item) => item?.acceptanceStatus === "in_progress").length;
-  const pendingSmokeGroups = providerSmokeMatrix.filter((item) => item?.acceptanceStatus === "pending").length;
-  const uploadSuccessSmokeGroups = providerSmokeMatrix.filter((item) => item?.hasUploadSuccessSample).length;
+  const acceptedSmokeGroups = Number.isFinite(evidence.acceptedSmokeGroups) ? evidence.acceptedSmokeGroups : providerSmokeMatrix.filter((item) => item?.accepted).length;
+  const inProgressSmokeGroups = Number.isFinite(evidence.inProgressSmokeGroups) ? evidence.inProgressSmokeGroups : providerSmokeMatrix.filter((item) => item?.acceptanceStatus === "in_progress").length;
+  const pendingSmokeGroups = Number.isFinite(evidence.pendingSmokeGroups) ? evidence.pendingSmokeGroups : providerSmokeMatrix.filter((item) => item?.acceptanceStatus === "pending").length;
+  const uploadSuccessSmokeGroups = Number.isFinite(evidence.uploadSuccessGroups) ? evidence.uploadSuccessGroups : providerSmokeMatrix.filter((item) => item?.hasUploadSuccessSample).length;
   syncAutoRecoverProtocolGroups();
   syncAutoRecoverProfiles();
   syncAutoRecoverBlockedActions();
@@ -2786,6 +2786,7 @@ function renderStatus() {
     <div class="metric"><span>In Progress</span><strong>${inProgressSmokeGroups}</strong></div>
     <div class="metric"><span>Pending Groups</span><strong>${pendingSmokeGroups}</strong></div>
     <div class="metric"><span>Upload Success Groups</span><strong>${stringifyValue(evidence.uploadSuccessGroups, String(uploadSuccessSmokeGroups))}</strong></div>
+    <div class="metric"><span>Upload Success Samples</span><strong>${stringifyValue(evidence.uploadSuccessSamples, "0")}</strong></div>
   `;
   $("#blocked-actions-summary").innerHTML = renderBlockedActionsSummary(evidence.blockedActions || []);
   wireBlockedActionsSummary();

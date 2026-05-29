@@ -2,6 +2,7 @@ package task
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
@@ -6932,6 +6933,26 @@ func TestServiceProviderSmokeRecords(t *testing.T) {
 	if !strings.Contains(matrix[0].AcceptanceAdvice, "真实上传成功样本") {
 		t.Fatalf("expected advice to mention upload sample, got %s", matrix[0].AcceptanceAdvice)
 	}
+
+	evidence, err := svc.RuntimeEvidence(ctx)
+	if err != nil {
+		t.Fatalf("RuntimeEvidence() error = %v", err)
+	}
+	if evidence.AcceptedSmokeGroups != 0 {
+		t.Fatalf("expected accepted smoke groups 0, got %d", evidence.AcceptedSmokeGroups)
+	}
+	if evidence.InProgressSmokeGroups != 1 {
+		t.Fatalf("expected in-progress smoke groups 1, got %d", evidence.InProgressSmokeGroups)
+	}
+	if evidence.PendingSmokeGroups != len(matrix)-1 {
+		t.Fatalf("expected pending smoke groups %d, got %d", len(matrix)-1, evidence.PendingSmokeGroups)
+	}
+	if evidence.UploadSuccessGroups != 0 {
+		t.Fatalf("expected upload success groups 0, got %d", evidence.UploadSuccessGroups)
+	}
+	if evidence.UploadSuccessSamples != 0 {
+		t.Fatalf("expected upload success samples 0, got %d", evidence.UploadSuccessSamples)
+	}
 }
 
 func TestServiceProviderSmokeMatrixTracksUploadSuccessSample(t *testing.T) {
@@ -6995,16 +7016,52 @@ func TestServiceProviderSmokeMatrixTracksUploadSuccessSample(t *testing.T) {
 	if evidence.UploadSuccessGroups != 1 {
 		t.Fatalf("expected runtime upload success groups 1, got %d", evidence.UploadSuccessGroups)
 	}
+	if evidence.AcceptedSmokeGroups != 0 {
+		t.Fatalf("expected accepted smoke groups 0 without task coverage, got %d", evidence.AcceptedSmokeGroups)
+	}
+	if evidence.InProgressSmokeGroups != 1 {
+		t.Fatalf("expected in-progress smoke groups 1, got %d", evidence.InProgressSmokeGroups)
+	}
+	if evidence.PendingSmokeGroups != len(matrix)-1 {
+		t.Fatalf("expected pending smoke groups %d, got %d", len(matrix)-1, evidence.PendingSmokeGroups)
+	}
+	if evidence.UploadSuccessSamples != 1 {
+		t.Fatalf("expected upload success samples 1, got %d", evidence.UploadSuccessSamples)
+	}
 
 	report, err := svc.EvidenceReport(ctx)
 	if err != nil {
 		t.Fatalf("EvidenceReport() error = %v", err)
 	}
+	if report.Summary.AcceptedSmokeGroups != 0 {
+		t.Fatalf("expected report accepted smoke groups 0, got %d", report.Summary.AcceptedSmokeGroups)
+	}
+	if report.Summary.InProgressSmokeGroups != 1 {
+		t.Fatalf("expected report in-progress smoke groups 1, got %d", report.Summary.InProgressSmokeGroups)
+	}
+	if report.Summary.PendingSmokeGroups != len(matrix)-1 {
+		t.Fatalf("expected report pending smoke groups %d, got %d", len(matrix)-1, report.Summary.PendingSmokeGroups)
+	}
 	if report.Summary.UploadSuccessGroups != 1 {
 		t.Fatalf("expected report upload success groups 1, got %d", report.Summary.UploadSuccessGroups)
 	}
+	if report.Summary.UploadSuccessSamples != 1 {
+		t.Fatalf("expected report upload success samples 1, got %d", report.Summary.UploadSuccessSamples)
+	}
+	if !strings.Contains(report.Markdown, "已验收协议组: 0") {
+		t.Fatalf("expected accepted smoke groups line in report markdown, got %s", report.Markdown)
+	}
+	if !strings.Contains(report.Markdown, "进行中协议组: 1") {
+		t.Fatalf("expected in-progress smoke groups line in report markdown, got %s", report.Markdown)
+	}
+	if !strings.Contains(report.Markdown, fmt.Sprintf("待补齐协议组: %d", len(matrix)-1)) {
+		t.Fatalf("expected pending smoke groups line in report markdown, got %s", report.Markdown)
+	}
 	if !strings.Contains(report.Markdown, "上传成功协议组: 1") {
 		t.Fatalf("expected upload success groups line in report markdown, got %s", report.Markdown)
+	}
+	if !strings.Contains(report.Markdown, "上传成功样本数: 1") {
+		t.Fatalf("expected upload success samples line in report markdown, got %s", report.Markdown)
 	}
 }
 
