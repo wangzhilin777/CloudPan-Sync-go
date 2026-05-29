@@ -17,6 +17,7 @@ import (
 
 	"cloudpan-sync-go/internal/auth"
 	"cloudpan-sync-go/internal/provider"
+	sqlitestore "cloudpan-sync-go/internal/store/sqlite"
 	"cloudpan-sync-go/internal/task"
 )
 
@@ -1062,6 +1063,150 @@ func TestAppRecoverTasksEndpointReportsProviderBudgetSkips(t *testing.T) {
 	}
 	if completed != 1 || pendingRecover != 1 {
 		t.Fatalf("expected one completed and one blocked task, got %#v", states)
+	}
+}
+
+func TestAppRecoverTasksEndpointDryRunDoesNotMutateTask(t *testing.T) {
+	ctx := context.Background()
+	store, err := sqlitestore.New(ctx, filepath.Join(t.TempDir(), "recover-dry-run-api.db"))
+	if err != nil {
+		t.Fatalf("new store: %v", err)
+	}
+	defer func() { _ = store.Close() }()
+
+	uploadCalls := 0
+	targetAdapter := &appScriptedAdapter{
+		meta: provider.Provider{
+			Key:              "recover_dry_run_api_target",
+			DisplayName:      "Recover Dry Run API Target",
+			ProtocolGroup:    "recover_dry_run_api_group",
+			AuthModes:        []string{"manual_token"},
+			FastUploadInputs: []string{"md5", "size"},
+			FallbackModes:    []string{"download_upload"},
+			Status:           "planned",
+		},
+		capability: provider.CapabilitySet{
+			SupportsAuthValidation: true,
+			SupportsFastUpload:     true,
+			SupportsUpload:         true,
+		},
+		uploadFunc: func(req provider.UploadRequest) provider.UploadResult {
+			uploadCalls++
+			if uploadCalls == 1 {
+				return provider.UploadResult{
+					OperationResult: provider.OperationResult{
+						Status:  "upload_checkpoint_pending",
+						Message: "checkpoint pending",
+						Mode:    "recover_dry_run_api_pending",
+						Payload: map[string]interface{}{
+							"fileId":         "recover-dry-run-api-file",
+							"uploadId":       "recover-dry-run-api-upload",
+							"nextPartNumber": 1,
+						},
+					},
+				}
+			}
+			return provider.UploadResult{
+				OperationResult: provider.OperationResult{
+					OK:      true,
+					Status:  "ok",
+					Message: "recovered",
+					Mode:    "recover_dry_run_api_ok",
+				},
+			}
+		},
+	}
+
+	registry := provider.NewRegistry(targetAdapter)
+	authSvc := auth.NewService(store, registry)
+	tasks := task.NewService(store, registry, authSvc)
+	application := &App{
+		logger:    slog.New(slog.NewTextHandler(io.Discard, nil)),
+		store:     store,
+		providers: registry,
+		auth:      authSvc,
+		tasks:     tasks,
+		webIndex:  []byte("<html><body>ok</body></html>"),
+		webStatic: http.NewServeMux(),
+	}
+	handler := application.routes()
+
+	profileResp := invokeJSON(t, handler, http.MethodPost, "/api/auth/profiles", map[string]interface{}{
+		"providerKey": "recover_dry_run_api_target",
+		"authMode":    "manual_token",
+		"displayName": "Recover Dry Run API Target",
+		"token":       "token-recover-dry-run-api",
+	})
+	profileID := profileResp.Data.(map[string]interface{})["id"].(string)
+
+	localFile := filepath.Join(t.TempDir(), "recover-dry-run-api.bin")
+	if err := os.WriteFile(localFile, []byte("recover-dry-run-api"), 0o644); err != nil {
+		t.Fatalf("WriteFile() error = %v", err)
+	}
+
+	taskResp := invokeJSON(t, handler, http.MethodPost, "/api/tasks", map[string]interface{}{
+		"sourceProvider":  "recover_dry_run_api_target",
+		"targetProvider":  "recover_dry_run_api_target",
+		"targetProfileId": profileID,
+		"thresholdMB":     1,
+		"entries": []map[string]interface{}{
+			{"path": "/recover-dry-run-api.bin", "size": 1024, "md5": "recover-dry-run-api-md5", "localPath": localFile},
+		},
+	})
+	taskID := taskResp.Data.(map[string]interface{})["task"].(map[string]interface{})["id"].(string)
+
+	runResp := invokeJSON(t, handler, http.MethodPost, "/api/tasks/"+taskID+"/run", nil)
+	if got := runResp.Data.(map[string]interface{})["task"].(map[string]interface{})["state"].(string); got != "completed_with_errors" {
+		t.Fatalf("expected completed_with_errors, got %s", got)
+	}
+	if uploadCalls != 1 {
+		t.Fatalf("expected initial upload calls 1, got %d", uploadCalls)
+	}
+
+	previewResp := invokeJSON(t, handler, http.MethodPost, "/api/tasks/recover", map[string]interface{}{
+		"mode":        "upload_checkpoint_auto_resume",
+		"providerKey": "recover_dry_run_api_target",
+		"limit":       1,
+		"dryRun":      true,
+	})
+	previewData := previewResp.Data.(map[string]interface{})
+	if got, _ := previewData["dryRun"].(bool); !got {
+		t.Fatalf("expected dryRun true, got %#v", previewData["dryRun"])
+	}
+	if got := int(previewData["matchedCount"].(float64)); got != 1 {
+		t.Fatalf("expected matchedCount 1, got %d", got)
+	}
+	if got := int(previewData["recoveredCount"].(float64)); got != 1 {
+		t.Fatalf("expected recoveredCount 1 for preview, got %d", got)
+	}
+	if uploadCalls != 1 {
+		t.Fatalf("expected preview not to trigger extra upload, got %d", uploadCalls)
+	}
+
+	detailAfterPreview := invokeJSON(t, handler, http.MethodGet, "/api/tasks/"+taskID, nil)
+	if got := detailAfterPreview.Data.(map[string]interface{})["task"].(map[string]interface{})["state"].(string); got != "completed_with_errors" {
+		t.Fatalf("expected state unchanged after preview, got %s", got)
+	}
+
+	recoverResp := invokeJSON(t, handler, http.MethodPost, "/api/tasks/recover", map[string]interface{}{
+		"mode":        "upload_checkpoint_auto_resume",
+		"providerKey": "recover_dry_run_api_target",
+		"limit":       1,
+	})
+	recoverData := recoverResp.Data.(map[string]interface{})
+	if got, _ := recoverData["dryRun"].(bool); got {
+		t.Fatalf("expected dryRun false for execute, got %#v", recoverData["dryRun"])
+	}
+	if got := int(recoverData["recoveredCount"].(float64)); got != 1 {
+		t.Fatalf("expected recoveredCount 1, got %d", got)
+	}
+	if uploadCalls != 2 {
+		t.Fatalf("expected execute to trigger second upload, got %d", uploadCalls)
+	}
+
+	detailResp := invokeJSON(t, handler, http.MethodGet, "/api/tasks/"+taskID, nil)
+	if got := detailResp.Data.(map[string]interface{})["task"].(map[string]interface{})["state"].(string); got != "completed" {
+		t.Fatalf("expected completed after execute, got %s", got)
 	}
 }
 

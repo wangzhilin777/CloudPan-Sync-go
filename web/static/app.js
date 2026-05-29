@@ -37,6 +37,7 @@ const state = {
     limitPerProvider: "",
     limitPerProfile: "",
   },
+  autoRecoverLastResult: null,
   treeGroupsCollapsed: {},
   treeFilters: {
     taskDirectory: { query: "", status: "", leafOnly: false, problemOnly: false },
@@ -2721,6 +2722,7 @@ function renderStatus() {
     evidence.autoRecoverPool || [],
   );
   $("#auto-recover-budget-summary").textContent = renderAutoRecoverBudgetSummary(autoRetryPolicy);
+  $("#auto-recover-last-result-summary").textContent = renderAutoRecoverLastResultSummary();
   $("#auto-recover-summary").innerHTML = renderAutoRecoverSummary(evidence.autoRecoverPool || []);
   wireAutoRecoverSummary();
   $("#protocol-coverage-summary").innerHTML = renderProtocolCoverageSummary(protocolCoverage);
@@ -2925,6 +2927,16 @@ function renderAutoRecoverBudgetSummary(autoRetryPolicy) {
     ? "当前手动放行预算"
     : "当前生效预算（默认）";
   return `${source}：${applied.join(" / ")}`;
+}
+
+function renderAutoRecoverLastResultSummary() {
+  const result = state.autoRecoverLastResult;
+  if (!result || typeof result !== "object") {
+    return "尚未执行后台补传预演或实际放行。";
+  }
+  const label = result.dryRun ? "最近预演" : "最近执行";
+  const recoveredLabel = result.dryRun ? "可放行" : "recovered";
+  return `${label}：matched ${stringifyValue(result.matchedCount, "0")} / ${recoveredLabel} ${stringifyValue(result.recoveredCount, "0")} / limit ${stringifyValue(result.skippedByLimit, "0")} / modeBudget ${stringifyValue(result.skippedByModeBudget, "0")} / laneBudget ${stringifyValue(result.skippedByLaneBudget, "0")} / protocolGroupBudget ${stringifyValue(result.skippedByProtocolGroupBudget, "0")} / providerBudget ${stringifyValue(result.skippedByProviderBudget, "0")} / profileBudget ${stringifyValue(result.skippedByProfileBudget, "0")} / cooldownWait ${stringifyValue(result.skippedByCooldownWait, "0")} / retryWindowWait ${stringifyValue(result.skippedByRetryWindowWait, "0")} / blocked ${stringifyValue(result.skippedByBlockedReason, "0")}`;
 }
 
 function renderAutoRecoverFilterSummary(visibleItems, allItems) {
@@ -3174,6 +3186,16 @@ function renderAutoRecoverSummary(items) {
               data-auto-recover-apply-provider-budget="${escapeHTML(stringifyValue(item.suggestedProviderBudget, ""))}"
               data-auto-recover-apply-profile-budget="${escapeHTML(stringifyValue(item.suggestedProfileBudget, ""))}"
             >采用建议预算</button>
+            <button
+              type="button"
+              class="ghost"
+              data-auto-recover-preview-lane-mode="${escapeHTML(stringifyValue(item.mode, ""))}"
+              data-auto-recover-preview-lane-retry-class="${escapeHTML(stringifyValue(item.primaryRetryClass, ""))}"
+              data-auto-recover-preview-lane-blocked-action="${escapeHTML(stringifyValue(item.primaryBlockedAction, ""))}"
+              data-auto-recover-preview-group-budget="${escapeHTML(stringifyValue(item.suggestedProtocolGroupBudget, ""))}"
+              data-auto-recover-preview-provider-budget="${escapeHTML(stringifyValue(item.suggestedProviderBudget, ""))}"
+              data-auto-recover-preview-profile-budget="${escapeHTML(stringifyValue(item.suggestedProfileBudget, ""))}"
+            >预演该 lane</button>
             ${
               Array.isArray(item.blockedActions) && item.blockedActions.length
                 ? `<button
@@ -3657,6 +3679,23 @@ function wireAutoRecoverSummary() {
       showFlash(`已采用建议预算：group ${limitPerProtocolGroup || "-"} / provider ${limitPerProvider || "-"} / profile ${limitPerProfile || "-"}`);
     });
   });
+  wrap.querySelectorAll("[data-auto-recover-preview-lane-mode]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      try {
+        applyAutoRecoverFilters({
+          mode: button.dataset.autoRecoverPreviewLaneMode || "",
+          retryClass: button.dataset.autoRecoverPreviewLaneRetryClass || "",
+          blockedAction: button.dataset.autoRecoverPreviewLaneBlockedAction || "",
+          limitPerProtocolGroup: button.dataset.autoRecoverPreviewGroupBudget || "",
+          limitPerProvider: button.dataset.autoRecoverPreviewProviderBudget || "",
+          limitPerProfile: button.dataset.autoRecoverPreviewProfileBudget || "",
+        });
+        await triggerAutoRecover({ dryRun: true });
+      } catch (error) {
+        showFlash(error.message, true);
+      }
+    });
+  });
   wrap.querySelectorAll("[data-auto-recover-run-mode]").forEach((button) => {
     button.addEventListener("click", async () => {
       try {
@@ -3756,7 +3795,7 @@ function autoRecoverBlockedActionFromRecoverState(recoverState) {
   }
 }
 
-function currentAutoRecoverRequest() {
+function currentAutoRecoverRequest(dryRun = false) {
   const selectedRecoverState = String($("#auto-recover-state")?.value || "").trim();
   const limitText = String($("#auto-recover-limit")?.value || "").trim();
   const limitPerModeText = String($("#auto-recover-limit-per-mode")?.value || "").trim();
@@ -3772,6 +3811,7 @@ function currentAutoRecoverRequest() {
   const limitPerProfile = limitPerProfileText ? Number(limitPerProfileText) : 0;
   const selectedBlockedAction = String($("#auto-recover-blocked-action")?.value || "").trim();
   return {
+    dryRun: Boolean(dryRun),
     mode: String($("#auto-recover-mode")?.value || "").trim(),
     protocolGroup: String($("#auto-recover-protocol-group")?.value || "").trim(),
     providerKey: String($("#auto-recover-provider")?.value || "").trim(),
@@ -3788,8 +3828,9 @@ function currentAutoRecoverRequest() {
   };
 }
 
-async function triggerAutoRecover() {
-  const payload = currentAutoRecoverRequest();
+async function triggerAutoRecover(options = {}) {
+  const dryRun = Boolean(options?.dryRun);
+  const payload = currentAutoRecoverRequest(dryRun);
   const selectedRecoverState = String($("#auto-recover-state")?.value || "").trim();
   state.autoRecoverFilters.mode = payload.mode;
   state.autoRecoverFilters.protocolGroup = payload.protocolGroup;
@@ -3808,10 +3849,19 @@ async function triggerAutoRecover() {
     method: "POST",
     body: payload,
   });
+  state.autoRecoverLastResult = result;
+  if (dryRun) {
+    $("#auto-recover-last-result-summary").textContent = renderAutoRecoverLastResultSummary();
+    showFlash(
+      `后台补传预演完成：matched ${stringifyValue(result.matchedCount, "0")} / 可放行 ${stringifyValue(result.recoveredCount, "0")} / providerBudget ${stringifyValue(result.skippedByProviderBudget, "0")} / profileBudget ${stringifyValue(result.skippedByProfileBudget, "0")}`,
+    );
+    return result;
+  }
   await Promise.all([loadTasks(), loadStatus()]);
   showFlash(
     `后台补传已执行：matched ${stringifyValue(result.matchedCount, "0")} / recovered ${stringifyValue(result.recoveredCount, "0")} / limit ${stringifyValue(result.skippedByLimit, "0")} / modeBudget ${stringifyValue(result.skippedByModeBudget, "0")} / laneBudget ${stringifyValue(result.skippedByLaneBudget, "0")} / protocolGroupBudget ${stringifyValue(result.skippedByProtocolGroupBudget, "0")} / providerBudget ${stringifyValue(result.skippedByProviderBudget, "0")} / profileBudget ${stringifyValue(result.skippedByProfileBudget, "0")} / cooldownWait ${stringifyValue(result.skippedByCooldownWait, "0")} / retryWindowWait ${stringifyValue(result.skippedByRetryWindowWait, "0")} / blocked ${stringifyValue(result.skippedByBlockedReason, "0")}`,
   );
+  return result;
 }
 
 async function autoRecoverTaskPath(scope, path) {
@@ -4644,6 +4694,13 @@ function wireStatus() {
       state.evidence?.autoRecoverPool || [],
     );
     $("#auto-recover-budget-summary").textContent = renderAutoRecoverBudgetSummary(state.evidence?.autoRetryPolicy || {});
+  });
+  $("#auto-recover-preview").addEventListener("click", async () => {
+    try {
+      await triggerAutoRecover({ dryRun: true });
+    } catch (error) {
+      showFlash(error.message, true);
+    }
   });
   $("#auto-recover-run").addEventListener("click", async () => {
     try {

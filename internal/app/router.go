@@ -91,6 +91,7 @@ type runtimeEvidenceResponse struct {
 
 type recoverTasksRequest struct {
 	Mode                  string   `json:"mode"`
+	DryRun                bool     `json:"dryRun"`
 	TaskID                string   `json:"taskId"`
 	ProtocolGroup         string   `json:"protocolGroup"`
 	ProviderKey           string   `json:"providerKey"`
@@ -560,6 +561,7 @@ func (a *App) handleTaskRecovery(w http.ResponseWriter, r *http.Request) {
 	}
 	result, err := a.recoverBlockedTasks(r.Context(), task.RecoverOptions{
 		Mode:                  req.Mode,
+		DryRun:                req.DryRun,
 		IncludeNonRunnable:    true,
 		TaskID:                req.TaskID,
 		ProtocolGroup:         req.ProtocolGroup,

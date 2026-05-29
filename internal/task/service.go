@@ -37,6 +37,7 @@ type RetryOptions struct {
 
 type RecoverOptions struct {
 	Mode                  string   `json:"mode,omitempty"`
+	DryRun                bool     `json:"dryRun,omitempty"`
 	IncludeNonRunnable    bool     `json:"includeNonRunnable,omitempty"`
 	TaskID                string   `json:"taskId,omitempty"`
 	ProtocolGroup         string   `json:"protocolGroup,omitempty"`
@@ -58,6 +59,7 @@ type RecoverOptions struct {
 
 type RecoverResult struct {
 	Mode                         string `json:"mode,omitempty"`
+	DryRun                       bool   `json:"dryRun,omitempty"`
 	TaskID                       string `json:"taskId,omitempty"`
 	ProtocolGroup                string `json:"protocolGroup,omitempty"`
 	ProviderKey                  string `json:"providerKey,omitempty"`
@@ -1079,6 +1081,7 @@ func (s *Service) RecoverBlockedTasksWithOptions(ctx context.Context, opts Recov
 	providers := s.registry.List()
 	result := RecoverResult{
 		Mode:                  opts.Mode,
+		DryRun:                opts.DryRun,
 		TaskID:                opts.TaskID,
 		ProtocolGroup:         opts.ProtocolGroup,
 		ProviderKey:           opts.ProviderKey,
@@ -1220,6 +1223,15 @@ func (s *Service) RecoverBlockedTasksWithOptions(ctx context.Context, opts Recov
 			}
 			result.RecoveredCount = recovered
 			return result, err
+		}
+		if opts.DryRun {
+			recovered++
+			recoveredByMode[modeKey] = recoveredByMode[modeKey] + 1
+			recoveredByLane[laneKey] = recoveredByLane[laneKey] + 1
+			recoveredByProtocolGroup[protocolGroupKey] = recoveredByProtocolGroup[protocolGroupKey] + 1
+			recoveredByProvider[providerKey] = recoveredByProvider[providerKey] + 1
+			recoveredByProfile[recoverProfileBudgetKey(providerKey, profileID)] = recoveredByProfile[recoverProfileBudgetKey(providerKey, profileID)] + 1
+			continue
 		}
 		if err := rebuildTaskForRetry(ctx, s.store, retried); err != nil {
 			result.RecoveredCount = recovered

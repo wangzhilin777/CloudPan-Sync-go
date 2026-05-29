@@ -3359,6 +3359,160 @@ func TestServiceAutoRecoverPoolShowsRetryWindowWaitingAndSkipsExecutionUntilWind
 	}
 }
 
+func TestServiceRecoverBlockedTasksWithOptionsDryRunDoesNotMutateTasks(t *testing.T) {
+	ctx := context.Background()
+	store, err := sqlitestore.New(ctx, filepath.Join(t.TempDir(), "recover-dry-run.db"))
+	if err != nil {
+		t.Fatalf("new store: %v", err)
+	}
+	defer func() { _ = store.Close() }()
+
+	uploadCalls := 0
+	targetAdapter := &scriptedAdapter{
+		meta: provider.Provider{
+			Key:              "recover_dry_run_target",
+			DisplayName:      "Recover Dry Run Target",
+			ProtocolGroup:    "recover_dry_run_group",
+			AuthModes:        []string{"manual_token"},
+			FastUploadInputs: []string{"md5", "size"},
+			FallbackModes:    []string{"download_upload"},
+			Status:           "planned",
+		},
+		capability: provider.CapabilitySet{
+			SupportsAuthValidation: true,
+			SupportsFastUpload:     true,
+			SupportsUpload:         true,
+		},
+		fastCheckFunc: func(req provider.FastUploadCheckRequest) provider.FastUploadCheckResult {
+			return provider.FastUploadCheckResult{
+				OperationResult: provider.OperationResult{
+					OK:      true,
+					Status:  "hash_miss",
+					Message: "need upload",
+					Mode:    "dry_run_fast_upload",
+				},
+			}
+		},
+		uploadFunc: func(req provider.UploadRequest) provider.UploadResult {
+			uploadCalls++
+			if uploadCalls == 1 {
+				return provider.UploadResult{
+					OperationResult: provider.OperationResult{
+						Status:  "upload_checkpoint_pending",
+						Message: "checkpoint pending",
+						Mode:    "checkpoint_pending",
+						Payload: map[string]interface{}{
+							"fileId":         "dry-run-file",
+							"uploadId":       "dry-run-upload",
+							"nextPartNumber": 1,
+						},
+					},
+				}
+			}
+			return provider.UploadResult{
+				OperationResult: provider.OperationResult{
+					OK:      true,
+					Status:  "ok",
+					Message: "dry run recovered",
+					Mode:    "dry_run_recovered",
+				},
+			}
+		},
+	}
+
+	registry := provider.NewRegistry(targetAdapter)
+	authSvc := auth.NewService(store, registry)
+	svc := NewService(store, registry, authSvc)
+	profile, err := authSvc.CreateProfile(ctx, auth.CreateProfileInput{
+		ProviderKey: "recover_dry_run_target",
+		AuthMode:    "manual_token",
+		DisplayName: "recover dry run target",
+		Token:       "token-dry-run",
+	})
+	if err != nil {
+		t.Fatalf("CreateProfile() error = %v", err)
+	}
+
+	localFile := filepath.Join(t.TempDir(), "recover-dry-run.bin")
+	if err := os.WriteFile(localFile, []byte("recover-dry-run"), 0o644); err != nil {
+		t.Fatalf("WriteFile() error = %v", err)
+	}
+
+	created, err := svc.Create(ctx, CreateRequest{
+		SourceProvider:  "recover_dry_run_target",
+		TargetProvider:  "recover_dry_run_target",
+		TargetProfileID: profile.ID,
+		ThresholdMB:     1,
+		Entries: []planner.SourceEntry{
+			{Path: "/recover-dry-run.bin", Size: 1024, MD5: "recover-dry-run-md5", LocalPath: localFile},
+		},
+	})
+	if err != nil {
+		t.Fatalf("Create() error = %v", err)
+	}
+	if _, ok, err := svc.Run(ctx, created.Task.ID); err != nil || !ok {
+		t.Fatalf("Run() error=%v ok=%v", err, ok)
+	}
+	blocked, ok, err := svc.Get(ctx, created.Task.ID)
+	if err != nil || !ok {
+		t.Fatalf("Get(blocked) error=%v ok=%v", err, ok)
+	}
+	if blocked.Task.State != StateCompletedWithErrors {
+		t.Fatalf("expected completed_with_errors before dry run, got %s", blocked.Task.State)
+	}
+	if uploadCalls != 1 {
+		t.Fatalf("expected initial upload calls 1, got %d", uploadCalls)
+	}
+
+	preview, err := svc.RecoverBlockedTasksWithOptions(ctx, RecoverOptions{
+		Mode:        "upload_checkpoint_auto_resume",
+		ProviderKey: "recover_dry_run_target",
+		Limit:       1,
+		DryRun:      true,
+	})
+	if err != nil {
+		t.Fatalf("RecoverBlockedTasksWithOptions(dryRun) error = %v", err)
+	}
+	if !preview.DryRun || preview.MatchedCount != 1 || preview.RecoveredCount != 1 {
+		t.Fatalf("unexpected dry run preview result: %#v", preview)
+	}
+	if uploadCalls != 1 {
+		t.Fatalf("expected dry run not to trigger extra upload, got %d", uploadCalls)
+	}
+	afterPreview, ok, err := svc.Get(ctx, created.Task.ID)
+	if err != nil || !ok {
+		t.Fatalf("Get(after preview) error=%v ok=%v", err, ok)
+	}
+	if afterPreview.Task.State != StateCompletedWithErrors {
+		t.Fatalf("expected task state unchanged after dry run, got %s", afterPreview.Task.State)
+	}
+	if len(afterPreview.Results) != 1 {
+		t.Fatalf("expected results unchanged after dry run, got %d", len(afterPreview.Results))
+	}
+
+	executed, err := svc.RecoverBlockedTasksWithOptions(ctx, RecoverOptions{
+		Mode:        "upload_checkpoint_auto_resume",
+		ProviderKey: "recover_dry_run_target",
+		Limit:       1,
+	})
+	if err != nil {
+		t.Fatalf("RecoverBlockedTasksWithOptions(execute) error = %v", err)
+	}
+	if executed.DryRun || executed.RecoveredCount != 1 {
+		t.Fatalf("unexpected execute recover result: %#v", executed)
+	}
+	if uploadCalls != 2 {
+		t.Fatalf("expected execute to trigger second upload, got %d", uploadCalls)
+	}
+	completed, ok, err := svc.Get(ctx, created.Task.ID)
+	if err != nil || !ok {
+		t.Fatalf("Get(completed) error=%v ok=%v", err, ok)
+	}
+	if completed.Task.State != StateCompleted {
+		t.Fatalf("expected task completed after execute, got %s", completed.Task.State)
+	}
+}
+
 func TestServiceRecoverBlockedTasksWithOptionsFiltersPathSubset(t *testing.T) {
 	ctx := context.Background()
 	store, err := sqlitestore.New(ctx, filepath.Join(t.TempDir(), "auto-recover-path.db"))
