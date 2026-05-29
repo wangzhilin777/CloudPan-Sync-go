@@ -3335,6 +3335,13 @@ func TestServiceAutoRecoverPoolShowsRetryWindowWaitingAndSkipsExecutionUntilWind
 	if recovered != 0 {
 		t.Fatalf("expected no recovery before retry window, got %d", recovered)
 	}
+	manual, err := svc.RecoverBlockedTasksWithOptions(ctx, RecoverOptions{Mode: "retry_window_waiting_auto_retry", Limit: 1, IncludeNonRunnable: true})
+	if err != nil {
+		t.Fatalf("RecoverBlockedTasksWithOptions(waiting window) error = %v", err)
+	}
+	if manual.MatchedCount != 1 || manual.RecoveredCount != 0 || manual.SkippedByRetryWindowWait != 1 {
+		t.Fatalf("expected waiting window recover summary matched=1 recovered=0 retryWindowWait=1, got %#v", manual)
+	}
 	if uploadCalls != 1 {
 		t.Fatalf("expected no extra upload calls before retry window, got %d", uploadCalls)
 	}

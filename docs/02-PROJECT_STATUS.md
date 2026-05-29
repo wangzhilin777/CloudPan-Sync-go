@@ -518,7 +518,8 @@
   - 任务详情、运行检查点和状态快照都已同步展示 `后台补传候选 / 队列拆分 / 自动补传提示`，便于直接判断当前失败队列更适合冷却后自动重试、等待自动补传时间窗、upload checkpoint 续跑，还是人工处理
   - 运行证据摘要页还新增了“自动补传候选池”，可以按模式直接看 worker 当前会优先接管哪一类任务，或哪些任务虽然已满足自动补传条件但仍在等待允许时间窗
   - 自动补传候选池现在还能直接按主重试类型、主阻塞动作或 lane 级口径一键聚焦与执行，减少手动回填筛选条件
-  - 状态页手动放行还可直接填写 `limit / limitPerMode / limitPerLane / limitPerProtocolGroup / limitPerProvider / limitPerProfile`
+  - 状态页手动放行还可直接填写 limit / limitPerMode / limitPerLane / limitPerProtocolGroup / limitPerProvider / limitPerProfile`r
+  - 对当前命中但暂时不能执行的候选，状态页放行结果也会显式区分 cooldownWait / retryWindowWait / blocked，不再把这类跳过静默吞掉
     - 便于把补传节奏同时控制在“小批次 + 模式分流 + lane 分流 + 多账号轮转”
   - 任务目录树和待补传树节点现在也能直接触发“后台补传当前路径 / 当前 root”，方便只放行当前子树
   - 当前任务详情页的“重试队列”和“待补传树”还新增了“后台补传当前筛选”入口

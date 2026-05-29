@@ -554,6 +554,7 @@ func (a *App) handleTaskRecovery(w http.ResponseWriter, r *http.Request) {
 	}
 	result, err := a.recoverBlockedTasks(r.Context(), task.RecoverOptions{
 		Mode:                  req.Mode,
+		IncludeNonRunnable:    true,
 		TaskID:                req.TaskID,
 		ProtocolGroup:         req.ProtocolGroup,
 		ProviderKey:           req.ProviderKey,

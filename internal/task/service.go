@@ -37,6 +37,7 @@ type RetryOptions struct {
 
 type RecoverOptions struct {
 	Mode                  string   `json:"mode,omitempty"`
+	IncludeNonRunnable    bool     `json:"includeNonRunnable,omitempty"`
 	TaskID                string   `json:"taskId,omitempty"`
 	ProtocolGroup         string   `json:"protocolGroup,omitempty"`
 	ProviderKey           string   `json:"providerKey,omitempty"`
@@ -78,6 +79,9 @@ type RecoverResult struct {
 	SkippedByProtocolGroupBudget int    `json:"skippedByProtocolGroupBudget"`
 	SkippedByProviderBudget      int    `json:"skippedByProviderBudget"`
 	SkippedByProfileBudget       int    `json:"skippedByProfileBudget"`
+	SkippedByCooldownWait        int    `json:"skippedByCooldownWait"`
+	SkippedByRetryWindowWait     int    `json:"skippedByRetryWindowWait"`
+	SkippedByBlockedReason       int    `json:"skippedByBlockedReason"`
 }
 
 type Detail struct {
@@ -1096,7 +1100,12 @@ func (s *Service) RecoverBlockedTasksWithOptions(ctx context.Context, opts Recov
 		}
 		syncRuntimeRetryQueue(&detail.Runtime, detail.Plan.Metadata, detail.Results)
 		applyRetryQueueSummary(&detail.Runtime, detail.Plan.Metadata)
-		if !taskCanAutoRecover(detail) {
+		summary := summarizeRetryQueueWithRisk(detail.Runtime.RetryQueue, riskProfileFromMetadata(detail.Plan.Metadata), time.Now().UTC())
+		if opts.IncludeNonRunnable {
+			if !shouldIncludeAutoRecoverPool(detail, summary) {
+				continue
+			}
+		} else if !taskCanAutoRecover(detail) {
 			continue
 		}
 		candidate := buildRecoverCandidate(detail, protocolGroupForProviderKey(providers, detail.Task.TargetProvider))
@@ -1173,6 +1182,10 @@ func (s *Service) RecoverBlockedTasksWithOptions(ctx context.Context, opts Recov
 			result.SkippedByProfileBudget++
 			continue
 		}
+		if candidate.Summary.WindowBlocked {
+			result.SkippedByRetryWindowWait++
+			continue
+		}
 		retryOpts := RetryOptions{}
 		if len(opts.Paths) > 0 {
 			retryOpts.Paths = opts.Paths
@@ -1181,6 +1194,16 @@ func (s *Service) RecoverBlockedTasksWithOptions(ctx context.Context, opts Recov
 		retried, err := s.buildRetryDetail(detail, retryOpts)
 		if err != nil {
 			if strings.HasPrefix(err.Error(), "retry_cooldown_active:") {
+				result.SkippedByCooldownWait++
+				continue
+			}
+			if strings.HasPrefix(err.Error(), "retry_blocked:") {
+				reason := strings.TrimPrefix(err.Error(), "retry_blocked:")
+				if reason == "retry_queue_waiting_for_retry_window" {
+					result.SkippedByRetryWindowWait++
+				} else {
+					result.SkippedByBlockedReason++
+				}
 				continue
 			}
 			result.RecoveredCount = recovered
