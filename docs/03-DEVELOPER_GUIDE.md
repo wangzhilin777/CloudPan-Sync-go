@@ -184,7 +184,7 @@
   - 启动时会先扫描一次候选任务
   - 后续按 tick 持续检查后台补传候选池
   - 默认会受 `CLOUDPAN_AUTO_RETRY_BATCH_LIMIT` 控制，避免单次 tick 把全部候选一次性打满
-  - 自动 tick 现在还会默认附带 `CLOUDPAN_AUTO_RETRY_LIMIT_PER_MODE / _PER_PROTOCOL_GROUP / _PER_PROVIDER / _PER_PROFILE` 四级公平预算，避免单一模式、单一协议族、单一 provider 或单一账号长期霸占整轮
+  - 自动 tick 现在还会默认附带 `CLOUDPAN_AUTO_RETRY_LIMIT_PER_MODE / _PER_LANE / _PER_PROTOCOL_GROUP / _PER_PROVIDER / _PER_PROFILE` 五级公平预算，避免单一模式、单一协议族、单一 provider 或单一账号长期霸占整轮
   - 当前调度优先级固定为：
     - `upload_checkpoint_auto_resume`
     - `retry_queue_auto_retry`

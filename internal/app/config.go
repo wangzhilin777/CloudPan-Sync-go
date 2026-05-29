@@ -19,6 +19,7 @@ type Config struct {
 	AutoRetryTick                  time.Duration
 	AutoRetryBatchLimit            int
 	AutoRetryLimitPerMode          int
+	AutoRetryLimitPerLane          int
 	AutoRetryLimitPerProtocolGroup int
 	AutoRetryLimitPerProvider      int
 	AutoRetryLimitPerProfile       int
@@ -37,6 +38,7 @@ func MustLoadConfig() Config {
 		AutoRetryTick:                  parseDurationOrDefault("CLOUDPAN_AUTO_RETRY_TICK", 3*time.Second),
 		AutoRetryBatchLimit:            parseIntOrDefault("CLOUDPAN_AUTO_RETRY_BATCH_LIMIT", 3),
 		AutoRetryLimitPerMode:          parseIntOrDefault("CLOUDPAN_AUTO_RETRY_LIMIT_PER_MODE", 1),
+		AutoRetryLimitPerLane:          parseIntOrDefault("CLOUDPAN_AUTO_RETRY_LIMIT_PER_LANE", 1),
 		AutoRetryLimitPerProtocolGroup: parseIntOrDefault("CLOUDPAN_AUTO_RETRY_LIMIT_PER_PROTOCOL_GROUP", 1),
 		AutoRetryLimitPerProvider:      parseIntOrDefault("CLOUDPAN_AUTO_RETRY_LIMIT_PER_PROVIDER", 1),
 		AutoRetryLimitPerProfile:       parseIntOrDefault("CLOUDPAN_AUTO_RETRY_LIMIT_PER_PROFILE", 1),

@@ -390,7 +390,7 @@
   - 当前已接入单机 worker 版后台自动补传调度，启动时会先恢复一次，随后按 `CLOUDPAN_AUTO_RETRY_TICK` 自动检查候选任务
   - 当前自动补传还新增了批次上限控制：
     - 默认按 `CLOUDPAN_AUTO_RETRY_BATCH_LIMIT` 控制单次 tick 最多接管多少条候选任务
-    - 自动 tick 默认还会附带 `CLOUDPAN_AUTO_RETRY_LIMIT_PER_MODE / _PER_PROTOCOL_GROUP / _PER_PROVIDER / _PER_PROFILE` 四级公平预算
+    - 自动 tick 默认还会附带 `CLOUDPAN_AUTO_RETRY_LIMIT_PER_MODE / _PER_LANE / _PER_PROTOCOL_GROUP / _PER_PROVIDER / _PER_PROFILE` 五级公平预算
     - 避免高失败期一次性把整池候选全部打满，也避免单一模式、协议族、provider 或账号连续吃满整轮
   - 当前 `metadata.retrySummary` 已细化为：
     - `retryableNowCount / cooldownCount / pendingManualCount / authExpiredCount / localMissingCount / exhaustedCount`

@@ -20,6 +20,7 @@ func TestAutoRetrySchedulerRunsRecoveryOnStartup(t *testing.T) {
 			AutoRetryTick:                  time.Hour,
 			AutoRetryBatchLimit:            2,
 			AutoRetryLimitPerMode:          1,
+			AutoRetryLimitPerLane:          1,
 			AutoRetryLimitPerProtocolGroup: 1,
 			AutoRetryLimitPerProvider:      1,
 			AutoRetryLimitPerProfile:       1,
@@ -29,11 +30,11 @@ func TestAutoRetrySchedulerRunsRecoveryOnStartup(t *testing.T) {
 			if opts.Limit != 2 {
 				t.Fatalf("expected auto retry batch limit 2, got %d", opts.Limit)
 			}
-			if opts.LimitPerMode != 1 || opts.LimitPerProtocolGroup != 1 || opts.LimitPerProvider != 1 || opts.LimitPerProfile != 1 {
-				t.Fatalf("expected auto retry fairness budgets 1/1/1/1, got %+v", opts)
+			if opts.LimitPerMode != 1 || opts.LimitPerLane != 1 || opts.LimitPerProtocolGroup != 1 || opts.LimitPerProvider != 1 || opts.LimitPerProfile != 1 {
+				t.Fatalf("expected auto retry fairness budgets 1/1/1/1/1, got %+v", opts)
 			}
 			called <- struct{}{}
-			return task.RecoverResult{RecoveredCount: 1, Limit: opts.Limit, LimitPerMode: opts.LimitPerMode, LimitPerProtocolGroup: opts.LimitPerProtocolGroup, LimitPerProvider: opts.LimitPerProvider, LimitPerProfile: opts.LimitPerProfile}, nil
+			return task.RecoverResult{RecoveredCount: 1, Limit: opts.Limit, LimitPerMode: opts.LimitPerMode, LimitPerLane: opts.LimitPerLane, LimitPerProtocolGroup: opts.LimitPerProtocolGroup, LimitPerProvider: opts.LimitPerProvider, LimitPerProfile: opts.LimitPerProfile}, nil
 		},
 	}
 
