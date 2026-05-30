@@ -3157,6 +3157,32 @@ function autoRecoverOutcomeLabel(outcome) {
   }
 }
 
+function renderAutoRecoverOutcomeCounts(result) {
+  const counts = result && typeof result === "object" && result.outcomeCounts && typeof result.outcomeCounts === "object"
+    ? result.outcomeCounts
+    : null;
+  if (!counts) {
+    return "";
+  }
+  const order = [
+    "dry_run_recoverable",
+    "recovered",
+    "skipped_limit",
+    "skipped_mode_budget",
+    "skipped_lane_budget",
+    "skipped_protocol_group_budget",
+    "skipped_provider_budget",
+    "skipped_profile_budget",
+    "waiting_cooldown",
+    "waiting_retry_window",
+    "blocked",
+  ];
+  const parts = order
+    .filter((key) => Number(counts[key] || 0) > 0)
+    .map((key) => `${autoRecoverOutcomeLabel(key)} ${stringifyValue(counts[key], "0")}`);
+  return parts.length ? ` / outcomes ${parts.join(" / ")}` : "";
+}
+
 function renderAutoRecoverLastResultSummary() {
   const result = state.autoRecoverLastResult;
   if (!result || typeof result !== "object") {
@@ -3164,7 +3190,7 @@ function renderAutoRecoverLastResultSummary() {
   }
   const label = result.dryRun ? "最近预演" : "最近执行";
   const recoveredLabel = result.dryRun ? "可放行" : "recovered";
-  return `${label}：matched ${stringifyValue(result.matchedCount, "0")} / ${recoveredLabel} ${stringifyValue(result.recoveredCount, "0")} / limit ${stringifyValue(result.skippedByLimit, "0")} / modeBudget ${stringifyValue(result.skippedByModeBudget, "0")} / laneBudget ${stringifyValue(result.skippedByLaneBudget, "0")} / protocolGroupBudget ${stringifyValue(result.skippedByProtocolGroupBudget, "0")} / providerBudget ${stringifyValue(result.skippedByProviderBudget, "0")} / profileBudget ${stringifyValue(result.skippedByProfileBudget, "0")} / cooldownWait ${stringifyValue(result.skippedByCooldownWait, "0")} / retryWindowWait ${stringifyValue(result.skippedByRetryWindowWait, "0")} / blocked ${stringifyValue(result.skippedByBlockedReason, "0")}`;
+  return `${label}：matched ${stringifyValue(result.matchedCount, "0")} / ${recoveredLabel} ${stringifyValue(result.recoveredCount, "0")} / limit ${stringifyValue(result.skippedByLimit, "0")} / modeBudget ${stringifyValue(result.skippedByModeBudget, "0")} / laneBudget ${stringifyValue(result.skippedByLaneBudget, "0")} / protocolGroupBudget ${stringifyValue(result.skippedByProtocolGroupBudget, "0")} / providerBudget ${stringifyValue(result.skippedByProviderBudget, "0")} / profileBudget ${stringifyValue(result.skippedByProfileBudget, "0")} / cooldownWait ${stringifyValue(result.skippedByCooldownWait, "0")} / retryWindowWait ${stringifyValue(result.skippedByRetryWindowWait, "0")} / blocked ${stringifyValue(result.skippedByBlockedReason, "0")}${renderAutoRecoverOutcomeCounts(result)}`;
 }
 
 function renderAutoRecoverLastResultDetail() {

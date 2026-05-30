@@ -87,6 +87,7 @@ type RecoverResult struct {
 	SkippedByCooldownWait        int               `json:"skippedByCooldownWait"`
 	SkippedByRetryWindowWait     int               `json:"skippedByRetryWindowWait"`
 	SkippedByBlockedReason       int               `json:"skippedByBlockedReason"`
+	OutcomeCounts                map[string]int    `json:"outcomeCounts,omitempty"`
 	Decisions                    []RecoverDecision `json:"decisions,omitempty"`
 }
 
@@ -1495,7 +1496,16 @@ func buildRecoverDecision(candidate recoverCandidate, outcome, message string) R
 }
 
 func appendRecoverDecision(result *RecoverResult, decision RecoverDecision) {
-	if result == nil || len(result.Decisions) >= recoverDecisionPreviewLimit {
+	if result == nil {
+		return
+	}
+	if strings.TrimSpace(decision.Outcome) != "" {
+		if result.OutcomeCounts == nil {
+			result.OutcomeCounts = make(map[string]int)
+		}
+		result.OutcomeCounts[decision.Outcome] = result.OutcomeCounts[decision.Outcome] + 1
+	}
+	if len(result.Decisions) >= recoverDecisionPreviewLimit {
 		return
 	}
 	result.Decisions = append(result.Decisions, decision)
