@@ -30,6 +30,7 @@ const state = {
     retryClass: "",
     blockedAction: "",
     recoverState: "",
+    strategy: "",
     limit: "",
     limitPerMode: "",
     limitPerLane: "",
@@ -196,16 +197,34 @@ function renderRiskProfileCompact(profile) {
   ].join(" / ");
 }
 
+function renderRecoverBudgetCompact(policy) {
+  if (!policy || typeof policy !== "object") {
+    return "-";
+  }
+  return [
+    `group ${stringifyValue(policy.protocolGroupBudget, "0")}`,
+    `provider ${stringifyValue(policy.providerBudget, "0")}`,
+    `profile ${stringifyValue(policy.profileBudget, "0")}`,
+  ].join(" / ");
+}
+
 function renderRiskResolutionDetail(resolution) {
   if (!resolution || typeof resolution !== "object") {
     return "";
   }
   const reasons = Array.isArray(resolution.calibrationReasons) ? resolution.calibrationReasons.filter(Boolean) : [];
   const overrideFields = Array.isArray(resolution.overrideFields) ? resolution.overrideFields.filter(Boolean) : [];
+  const recoverBudget = resolution.recoverBudget && typeof resolution.recoverBudget === "object" ? resolution.recoverBudget : null;
+  const sensitiveProviders = Array.isArray(recoverBudget?.sensitiveProviders)
+    ? recoverBudget.sensitiveProviders.filter(Boolean)
+    : [];
   return `
     <div class="muted">BASE ${escapeHTML(renderRiskProfileCompact(resolution.base))}</div>
     <div class="muted">CALIBRATED ${escapeHTML(renderRiskProfileCompact(resolution.calibrated))}</div>
     <div class="muted">APPLIED ${escapeHTML(renderRiskProfileCompact(resolution.applied))}</div>
+    <div class="muted">RECOVER BUDGET ${escapeHTML(renderRecoverBudgetCompact(recoverBudget))}</div>
+    <div class="muted">RECOVER REASON ${escapeHTML(stringifyValue(recoverBudget?.reason, "-"))}</div>
+    <div class="muted">SENSITIVE PROVIDERS ${escapeHTML(sensitiveProviders.join(", ") || "-")}</div>
     <div class="muted">CALIBRATION REASONS ${escapeHTML(reasons.join(" / ") || "-")}</div>
     <div class="muted">OVERRIDE FIELDS ${escapeHTML(overrideFields.join(", ") || "-")}</div>
   `;
@@ -3001,6 +3020,7 @@ function filterAutoRecoverItems(items, filters = state.autoRecoverFilters) {
   const retryClass = String(filters?.retryClass || "").trim();
   const blockedAction = String(filters?.blockedAction || "").trim();
   const recoverState = String(filters?.recoverState || "").trim();
+  const strategy = String(filters?.strategy || "").trim();
   const source = Array.isArray(items) ? items : [];
   return source.filter((item) => {
     if (mode && String(item?.mode || "").trim() !== mode) {
@@ -3035,6 +3055,17 @@ function filterAutoRecoverItems(items, filters = state.autoRecoverFilters) {
     if (blockedAction) {
       const sampleActions = Array.isArray(item?.blockedActions) ? item.blockedActions.map((value) => String(value || "").trim()) : [];
       if (!sampleActions.includes(blockedAction)) {
+        return false;
+      }
+    }
+    if (strategy) {
+      const sampleStrategies = Array.isArray(item?.strategies)
+        ? item.strategies.map((value) => String(value || "").trim()).filter(Boolean)
+        : [];
+      const effectiveStrategies = sampleStrategies.length
+        ? sampleStrategies
+        : [String(item?.sampleStrategy || "").trim()].filter(Boolean);
+      if (!effectiveStrategies.includes(strategy)) {
         return false;
       }
     }
@@ -3593,6 +3624,7 @@ function renderAutoRecoverFilterSummary(visibleItems, allItems) {
   const profileId = String(state.autoRecoverFilters.profileId || "").trim();
   const retryClass = String(state.autoRecoverFilters.retryClass || "").trim();
   const blockedAction = String(state.autoRecoverFilters.blockedAction || "").trim();
+  const strategy = String(state.autoRecoverFilters.strategy || "").trim();
   const recoverState = String(state.autoRecoverFilters.recoverState || "").trim();
   const limit = String(state.autoRecoverFilters.limit || "").trim();
   const limitPerMode = String(state.autoRecoverFilters.limitPerMode || "").trim();
@@ -3618,6 +3650,9 @@ function renderAutoRecoverFilterSummary(visibleItems, allItems) {
   }
   if (blockedAction) {
     parts.push(`blockedAction=${blockedAction}`);
+  }
+  if (strategy) {
+    parts.push(`strategy=${strategy}`);
   }
   if (recoverState) {
     parts.push(`recoverState=${recoverState}`);
@@ -4083,6 +4118,10 @@ function applyAutoRecoverFilters(nextFilters, options = {}) {
   if (Object.prototype.hasOwnProperty.call(filters, "recoverState")) {
     state.autoRecoverFilters.recoverState = String(filters.recoverState || "");
     setFilterControlValue("#auto-recover-state", state.autoRecoverFilters.recoverState);
+  }
+  if (Object.prototype.hasOwnProperty.call(filters, "strategy")) {
+    state.autoRecoverFilters.strategy = String(filters.strategy || "");
+    setFilterControlValue("#auto-recover-strategy", state.autoRecoverFilters.strategy);
   }
   if (Object.prototype.hasOwnProperty.call(filters, "limit")) {
     state.autoRecoverFilters.limit = String(filters.limit || "");
@@ -4627,6 +4666,7 @@ function currentAutoRecoverRequest(dryRun = false) {
   return {
     dryRun: Boolean(dryRun),
     mode: String($("#auto-recover-mode")?.value || "").trim(),
+    strategy: String($("#auto-recover-strategy")?.value || "").trim(),
     protocolGroup: String($("#auto-recover-protocol-group")?.value || "").trim(),
     providerKey: String($("#auto-recover-provider")?.value || "").trim(),
     profileId: String($("#auto-recover-profile")?.value || "").trim(),
@@ -4671,6 +4711,7 @@ async function triggerAutoRecover(options = {}) {
   const payload = currentAutoRecoverRequest(dryRun);
   const selectedRecoverState = String($("#auto-recover-state")?.value || "").trim();
   state.autoRecoverFilters.mode = payload.mode;
+  state.autoRecoverFilters.strategy = payload.strategy;
   state.autoRecoverFilters.protocolGroup = payload.protocolGroup;
   state.autoRecoverFilters.providerKey = payload.providerKey;
   state.autoRecoverFilters.profileId = payload.profileId;
@@ -4738,6 +4779,7 @@ async function autoRecoverTaskPath(scope, path, panel = "directory") {
 
 function resetAutoRecoverFilters() {
   state.autoRecoverFilters.mode = "";
+  state.autoRecoverFilters.strategy = "";
   state.autoRecoverFilters.protocolGroup = "";
   state.autoRecoverFilters.providerKey = "";
   state.autoRecoverFilters.profileId = "";
@@ -4751,6 +4793,7 @@ function resetAutoRecoverFilters() {
   state.autoRecoverFilters.limitPerProvider = "";
   state.autoRecoverFilters.limitPerProfile = "";
   setFilterControlValue("#auto-recover-mode", "");
+  setFilterControlValue("#auto-recover-strategy", "");
   setFilterControlValue("#auto-recover-protocol-group", "");
   setFilterControlValue("#auto-recover-provider", "");
   setFilterControlValue("#auto-recover-profile", "");
@@ -5465,6 +5508,10 @@ function wireStatus() {
   });
   $("#auto-recover-mode").addEventListener("change", () => {
     state.autoRecoverFilters.mode = $("#auto-recover-mode").value;
+    renderStatus();
+  });
+  $("#auto-recover-strategy").addEventListener("change", () => {
+    state.autoRecoverFilters.strategy = $("#auto-recover-strategy").value;
     renderStatus();
   });
   $("#auto-recover-protocol-group").addEventListener("change", () => {

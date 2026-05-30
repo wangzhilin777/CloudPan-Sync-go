@@ -39,6 +39,7 @@ type RetryOptions struct {
 
 type RecoverOptions struct {
 	Mode                  string   `json:"mode,omitempty"`
+	Strategy              string   `json:"strategy,omitempty"`
 	DryRun                bool     `json:"dryRun,omitempty"`
 	IncludeNonRunnable    bool     `json:"includeNonRunnable,omitempty"`
 	TaskID                string   `json:"taskId,omitempty"`
@@ -61,6 +62,7 @@ type RecoverOptions struct {
 
 type RecoverResult struct {
 	Mode                           string            `json:"mode,omitempty"`
+	Strategy                       string            `json:"strategy,omitempty"`
 	DryRun                         bool              `json:"dryRun,omitempty"`
 	TaskID                         string            `json:"taskId,omitempty"`
 	ProtocolGroup                  string            `json:"protocolGroup,omitempty"`
@@ -205,6 +207,7 @@ type AutoRecoverLane struct {
 	ProtocolGroups               []string `json:"protocolGroups,omitempty"`
 	RetryClasses                 []string `json:"retryClasses,omitempty"`
 	BlockedActions               []string `json:"blockedActions,omitempty"`
+	Strategies                   []string `json:"strategies,omitempty"`
 	ProfileIDs                   []string `json:"profileIds,omitempty"`
 	PrimaryRetryClass            string   `json:"primaryRetryClass,omitempty"`
 	PrimaryBlockedAction         string   `json:"primaryBlockedAction,omitempty"`
@@ -213,6 +216,7 @@ type AutoRecoverLane struct {
 	SampleProvider               string   `json:"sampleProvider,omitempty"`
 	SampleProtocolGroup          string   `json:"sampleProtocolGroup,omitempty"`
 	SampleProfileID              string   `json:"sampleProfileId,omitempty"`
+	SampleStrategy               string   `json:"sampleStrategy,omitempty"`
 }
 
 type EvidenceReport struct {
@@ -1171,6 +1175,7 @@ func (s *Service) RecoverBlockedTasks(ctx context.Context) (int, error) {
 
 func (s *Service) RecoverBlockedTasksWithOptions(ctx context.Context, opts RecoverOptions) (RecoverResult, error) {
 	opts.Mode = strings.TrimSpace(opts.Mode)
+	opts.Strategy = strings.TrimSpace(opts.Strategy)
 	opts.TaskID = strings.TrimSpace(opts.TaskID)
 	opts.ProtocolGroup = strings.TrimSpace(opts.ProtocolGroup)
 	opts.ProviderKey = strings.TrimSpace(opts.ProviderKey)
@@ -1184,6 +1189,7 @@ func (s *Service) RecoverBlockedTasksWithOptions(ctx context.Context, opts Recov
 	providers := s.registry.List()
 	result := RecoverResult{
 		Mode:                  opts.Mode,
+		Strategy:              opts.Strategy,
 		DryRun:                opts.DryRun,
 		TaskID:                opts.TaskID,
 		ProtocolGroup:         opts.ProtocolGroup,
@@ -1225,6 +1231,9 @@ func (s *Service) RecoverBlockedTasksWithOptions(ctx context.Context, opts Recov
 		}
 		candidate := buildRecoverCandidate(detail, protocolGroupForProviderKey(providers, detail.Task.TargetProvider))
 		if opts.Mode != "" && candidate.Mode != opts.Mode {
+			continue
+		}
+		if opts.Strategy != "" && !strings.EqualFold(recoverTaskStrategy(detail), opts.Strategy) {
 			continue
 		}
 		if opts.ProtocolGroup != "" && candidate.ProtocolGroup != recoverProtocolGroupBudgetKey(opts.ProtocolGroup) {
@@ -1944,6 +1953,20 @@ func buildRecoverCandidate(detail Detail, protocolGroup string) recoverCandidate
 		PrimaryRetryClass: primaryRetryClass(detail.Runtime.RetryQueue),
 		Summary:           summary,
 	}
+}
+
+func recoverTaskStrategy(detail Detail) string {
+	for _, result := range detail.Results {
+		if strategy := strings.TrimSpace(stringValue(result.Payload["strategy"])); strategy != "" {
+			return strategy
+		}
+	}
+	for _, item := range detail.Plan.Items {
+		if item.Strategy != "" {
+			return string(item.Strategy)
+		}
+	}
+	return ""
 }
 
 func primaryRetryClass(queue []RetryQueueItem) string {

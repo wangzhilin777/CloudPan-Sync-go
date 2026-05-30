@@ -3285,6 +3285,128 @@ func TestServiceRecoverBlockedTasksWithOptionsFiltersModeProviderAndLimit(t *tes
 	}
 }
 
+func TestServiceRecoverBlockedTasksWithOptionsFiltersStrategy(t *testing.T) {
+	ctx := context.Background()
+	store, err := sqlitestore.New(ctx, filepath.Join(t.TempDir(), "strategy-filter.db"))
+	if err != nil {
+		t.Fatalf("new store: %v", err)
+	}
+	defer func() { _ = store.Close() }()
+
+	uploadCalls := 0
+	adapter := &scriptedAdapter{
+		meta: provider.Provider{
+			Key:              "strategy_filter_target",
+			DisplayName:      "Strategy Filter Target",
+			ProtocolGroup:    "fake",
+			AuthModes:        []string{"manual_token"},
+			FastUploadInputs: []string{"md5", "size"},
+			FallbackModes:    []string{"download_upload"},
+			Status:           "planned",
+		},
+		capability: provider.CapabilitySet{
+			SupportsAuthValidation: true,
+			SupportsUpload:         true,
+		},
+		uploadFunc: func(req provider.UploadRequest) provider.UploadResult {
+			uploadCalls++
+			return provider.UploadResult{
+				OperationResult: provider.OperationResult{
+					Status:  "rate_limited",
+					Message: "strategy filtered blocked",
+					Mode:    "fake_rate_limit",
+				},
+			}
+		},
+	}
+
+	registry := provider.NewRegistry(adapter)
+	authSvc := auth.NewService(store, registry)
+	svc := NewService(store, registry, authSvc)
+	profile, err := authSvc.CreateProfile(ctx, auth.CreateProfileInput{
+		ProviderKey: "strategy_filter_target",
+		AuthMode:    "manual_token",
+		DisplayName: "strategy filter target",
+		Token:       "token-1",
+	})
+	if err != nil {
+		t.Fatalf("CreateProfile() error = %v", err)
+	}
+
+	createBlocked := func(path string) string {
+		detail, err := svc.Create(ctx, CreateRequest{
+			SourceProvider:  "guangya",
+			TargetProvider:  "strategy_filter_target",
+			TargetProfileID: profile.ID,
+			ThresholdMB:     1,
+			Entries:         []planner.SourceEntry{{Path: path, Size: 1024, MD5: strings.Trim(path, "/")}},
+		})
+		if err != nil {
+			t.Fatalf("Create(%s) error = %v", path, err)
+		}
+		if _, ok, err := svc.Run(ctx, detail.Task.ID); err != nil || !ok {
+			t.Fatalf("Run(%s) error=%v ok=%v", path, err, ok)
+		}
+		blocked, ok, err := svc.Get(ctx, detail.Task.ID)
+		if err != nil || !ok {
+			t.Fatalf("Get(%s) error=%v ok=%v", path, err, ok)
+		}
+		if blocked.Task.State != StateBlocked {
+			t.Fatalf("expected blocked task for %s, got %s", path, blocked.Task.State)
+		}
+		return detail.Task.ID
+	}
+
+	fastID := createBlocked("/fast.bin")
+	downloadID := createBlocked("/download.bin")
+
+	fastDetail, ok, err := svc.Get(ctx, fastID)
+	if err != nil || !ok {
+		t.Fatalf("Get(fast) error=%v ok=%v", err, ok)
+	}
+	fastDetail.Results[0].Payload["strategy"] = "fast_upload"
+	if err := replaceTaskDetailAndResults(ctx, store, fastDetail); err != nil {
+		t.Fatalf("replaceTaskDetailAndResults(fast) error = %v", err)
+	}
+
+	downloadDetail, ok, err := svc.Get(ctx, downloadID)
+	if err != nil || !ok {
+		t.Fatalf("Get(download) error=%v ok=%v", err, ok)
+	}
+	downloadDetail.Results[0].Payload["strategy"] = "download_upload"
+	if err := replaceTaskDetailAndResults(ctx, store, downloadDetail); err != nil {
+		t.Fatalf("replaceTaskDetailAndResults(download) error = %v", err)
+	}
+
+	result, err := svc.RecoverBlockedTasksWithOptions(ctx, RecoverOptions{
+		Strategy:           "download_upload",
+		DryRun:             true,
+		IncludeNonRunnable: true,
+		Limit:              5,
+	})
+	if err != nil {
+		t.Fatalf("RecoverBlockedTasksWithOptions(strategy) error = %v", err)
+	}
+	if result.MatchedCount != 1 || result.RecoveredCount != 0 || result.SkippedByCooldownWait != 1 || result.Strategy != "download_upload" {
+		t.Fatalf("unexpected strategy filter result: %#v", result)
+	}
+
+	fastAfter, ok, err := svc.Get(ctx, fastID)
+	if err != nil || !ok {
+		t.Fatalf("Get(fast after) error=%v ok=%v", err, ok)
+	}
+	downloadAfter, ok, err := svc.Get(ctx, downloadID)
+	if err != nil || !ok {
+		t.Fatalf("Get(download after) error=%v ok=%v", err, ok)
+	}
+	if fastAfter.Task.State != StateBlocked || downloadAfter.Task.State != StateBlocked {
+		t.Fatalf("expected dry-run to keep tasks blocked, got fast=%s download=%s", fastAfter.Task.State, downloadAfter.Task.State)
+	}
+	if uploadCalls != 2 {
+		t.Fatalf("expected two initial uploads, got %d", uploadCalls)
+	}
+}
+
 func TestServiceAutoRecoverPoolShowsRetryWindowWaitingAndSkipsExecutionUntilWindow(t *testing.T) {
 	ctx := context.Background()
 	store, err := sqlitestore.New(ctx, filepath.Join(t.TempDir(), "auto-recover-window.db"))
