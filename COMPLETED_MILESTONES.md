@@ -20,3 +20,11 @@
 - 服务层回归测试已补强：`TestServiceRecoverBlockedTasksWithOptionsFiltersStrategy` 现在同时断言 `strategy` 请求回显、`strategyCounts` 聚合值、以及 `decisions[0].strategy` 决策回显。
 - 回归验证已通过：`go test ./internal/task ./internal/app`、`node --check web/static/app.js`。
 - 清理情况：本轮未启动额外后台进程；未新增持久临时目录，测试仍使用 `t.TempDir()` 自动清理。
+
+## 2026-05-31 - 后台补传决策级策略透传
+
+- 把最近一次后台补传结果里的 `strategy` 继续透传到“预演该决策 / 执行该决策”按钮请求，避免用户从决策明细再次触发时丢失策略上下文。
+- 前端 decision action dataset 已补上 `data-auto-recover-decision-strategy`，`currentAutoRecoverDecisionRequest()` 也会把 `strategy` 一起带回 `/api/tasks/recover`。
+- 这样状态矩阵里的单条决策从查看、预演到执行，使用的是同一份策略上下文，和当前筛选链路保持一致。
+- 回归验证已通过：`go test ./internal/app ./internal/task`、`node --check web/static/app.js`。
+- 清理情况：本轮未启动额外后台进程；未新增临时目录或构建残留。
