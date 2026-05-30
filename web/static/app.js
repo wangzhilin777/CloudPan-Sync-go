@@ -181,6 +181,36 @@ function renderRiskResolutionSummary(resolution) {
   return parts.join(" | ");
 }
 
+function renderRiskProfileCompact(profile) {
+  if (!profile || typeof profile !== "object") {
+    return "-";
+  }
+  return [
+    `mode ${stringifyValue(profile.mode, "-")}`,
+    `req ${stringifyValue(profile.requestIntervalMs, "0")}ms`,
+    `page ${stringifyValue(profile.pageSize, "0")}`,
+    `dir ${stringifyValue(profile.directoryIntervalMs, "0")}ms`,
+    `cooldown ${stringifyValue(profile.cooldownSeconds, "0")}s`,
+    `retry ${stringifyValue(profile.retryLimit, "0")}`,
+    `conc ${stringifyValue(profile.maxConcurrent, "0")}`,
+  ].join(" / ");
+}
+
+function renderRiskResolutionDetail(resolution) {
+  if (!resolution || typeof resolution !== "object") {
+    return "";
+  }
+  const reasons = Array.isArray(resolution.calibrationReasons) ? resolution.calibrationReasons.filter(Boolean) : [];
+  const overrideFields = Array.isArray(resolution.overrideFields) ? resolution.overrideFields.filter(Boolean) : [];
+  return `
+    <div class="muted">BASE ${escapeHTML(renderRiskProfileCompact(resolution.base))}</div>
+    <div class="muted">CALIBRATED ${escapeHTML(renderRiskProfileCompact(resolution.calibrated))}</div>
+    <div class="muted">APPLIED ${escapeHTML(renderRiskProfileCompact(resolution.applied))}</div>
+    <div class="muted">CALIBRATION REASONS ${escapeHTML(reasons.join(" / ") || "-")}</div>
+    <div class="muted">OVERRIDE FIELDS ${escapeHTML(overrideFields.join(", ") || "-")}</div>
+  `;
+}
+
 function renderRiskWindow(profile) {
   if (!profile || typeof profile !== "object") {
     return "-";
@@ -2629,6 +2659,7 @@ function renderSelectedTask() {
     <div class="insight-card">
       <strong>风险模板解释</strong>
       <span>${escapeHTML(renderRiskResolutionSummary(metadata.riskProfileResolution))}</span>
+      ${renderRiskResolutionDetail(metadata.riskProfileResolution)}
     </div>
     <div class="insight-card">
       <strong>自动补传时间窗</strong>
@@ -2727,6 +2758,7 @@ function renderPreview() {
     <div class="insight-card">
       <strong>风险模板解释</strong>
       <span>${escapeHTML(renderRiskResolutionSummary(metadata.riskProfileResolution))}</span>
+      ${renderRiskResolutionDetail(metadata.riskProfileResolution)}
     </div>
     <div class="insight-card">
       <strong>自动补传时间窗</strong>
@@ -3624,6 +3656,8 @@ function renderSnapshotSummary(summary) {
       <div><strong>retryMode</strong> <code>${escapeHTML(stringifyValue(summary.retryMode, "-"))}</code></div>
       <div><strong>retryScope</strong> <code>${escapeHTML(stringifyValue(summary.retryScope, "-"))}</code></div>
       <div><strong>retrySelectedPaths</strong> <code>${escapeHTML(retryPaths)}</code></div>
+      <div><strong>riskProfileResolution</strong> <code>${escapeHTML(renderRiskResolutionSummary(summary.riskProfileResolution))}</code></div>
+      <div>${renderRiskResolutionDetail(summary.riskProfileResolution)}</div>
       <div><strong>blockedCount</strong> <code>${escapeHTML(stringifyValue(summary.blockedCount, "0"))}</code></div>
       <div><strong>autoRecoverCount</strong> <code>${escapeHTML(stringifyValue(summary.autoRecoverCount, "0"))}</code></div>
       <div><strong>retryBlocked</strong> <code>${escapeHTML(stringifyValue(retrySummary.blockedReason, "-"))}</code></div>

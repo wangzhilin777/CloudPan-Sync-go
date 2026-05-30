@@ -119,6 +119,18 @@ func TestAppWorkflowMainline(t *testing.T) {
 	if got := riskResolution["providerKey"].(string); got != "123_open" {
 		t.Fatalf("expected preview risk providerKey 123_open, got %s", got)
 	}
+	if _, ok := riskResolution["base"].(map[string]interface{}); !ok {
+		t.Fatalf("expected preview risk resolution base, got %#v", riskResolution["base"])
+	}
+	if _, ok := riskResolution["calibrated"].(map[string]interface{}); !ok {
+		t.Fatalf("expected preview risk resolution calibrated, got %#v", riskResolution["calibrated"])
+	}
+	if _, ok := riskResolution["applied"].(map[string]interface{}); !ok {
+		t.Fatalf("expected preview risk resolution applied, got %#v", riskResolution["applied"])
+	}
+	if reasons, ok := riskResolution["calibrationReasons"].([]interface{}); !ok || len(reasons) == 0 {
+		t.Fatalf("expected preview calibrationReasons, got %#v", riskResolution["calibrationReasons"])
+	}
 	overrideFields := riskResolution["overrideFields"].([]interface{})
 	if len(overrideFields) < 5 {
 		t.Fatalf("expected preview override fields, got %#v", overrideFields)
@@ -180,6 +192,15 @@ func TestAppWorkflowMainline(t *testing.T) {
 	createdResolution := createdMetadata["riskProfileResolution"].(map[string]interface{})
 	if got := createdResolution["providerKey"].(string); got != "123_open" {
 		t.Fatalf("expected task risk providerKey 123_open, got %s", got)
+	}
+	if _, ok := createdResolution["base"].(map[string]interface{}); !ok {
+		t.Fatalf("expected task risk resolution base, got %#v", createdResolution["base"])
+	}
+	if _, ok := createdResolution["calibrated"].(map[string]interface{}); !ok {
+		t.Fatalf("expected task risk resolution calibrated, got %#v", createdResolution["calibrated"])
+	}
+	if _, ok := createdResolution["applied"].(map[string]interface{}); !ok {
+		t.Fatalf("expected task risk resolution applied, got %#v", createdResolution["applied"])
 	}
 
 	pauseResp := invokeJSON(t, handler, http.MethodPost, "/api/tasks/"+taskID+"/pause", nil)
@@ -411,6 +432,13 @@ func TestAppWorkflowMainline(t *testing.T) {
 		}
 		if got := int(summary["retryableCount"].(float64)); got != 1 {
 			t.Fatalf("expected status summary retryableCount 1, got %d", got)
+		}
+		riskResolution, ok := summary["riskProfileResolution"].(map[string]interface{})
+		if !ok || riskResolution == nil {
+			t.Fatalf("expected status summary riskProfileResolution, got %#v", summary["riskProfileResolution"])
+		}
+		if _, ok := riskResolution["applied"].(map[string]interface{}); !ok {
+			t.Fatalf("expected status summary risk resolution applied, got %#v", riskResolution["applied"])
 		}
 		if got := summary["runtime"].(map[string]interface{})["blockedReason"].(string); got != "retry_queue_requires_local_file_restore" {
 			t.Fatalf("expected status summary blockedReason retry_queue_requires_local_file_restore, got %s", got)

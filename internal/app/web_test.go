@@ -132,6 +132,12 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "retrySelectedPaths") {
 		t.Fatalf("expected retrySelectedPaths evidence in app.js, got %q", body)
 	}
+	if !strings.Contains(body, "CALIBRATED") {
+		t.Fatalf("expected CALIBRATED risk resolution detail in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "OVERRIDE FIELDS") {
+		t.Fatalf("expected OVERRIDE FIELDS risk resolution detail in app.js, got %q", body)
+	}
 	if !strings.Contains(body, "<th>Retry Scope</th>") {
 		t.Fatalf("expected Retry Scope column in app.js, got %q", body)
 	}
