@@ -59,44 +59,49 @@ type RecoverOptions struct {
 }
 
 type RecoverResult struct {
-	Mode                         string            `json:"mode,omitempty"`
-	DryRun                       bool              `json:"dryRun,omitempty"`
-	TaskID                       string            `json:"taskId,omitempty"`
-	ProtocolGroup                string            `json:"protocolGroup,omitempty"`
-	ProviderKey                  string            `json:"providerKey,omitempty"`
-	ProfileID                    string            `json:"profileId,omitempty"`
-	RetryClass                   string            `json:"retryClass,omitempty"`
-	BlockedAction                string            `json:"blockedAction,omitempty"`
-	RecoverState                 string            `json:"recoverState,omitempty"`
-	Path                         string            `json:"path,omitempty"`
-	Scope                        string            `json:"scope,omitempty"`
-	Limit                        int               `json:"limit,omitempty"`
-	LimitPerMode                 int               `json:"limitPerMode,omitempty"`
-	LimitPerLane                 int               `json:"limitPerLane,omitempty"`
-	LimitPerProtocolGroup        int               `json:"limitPerProtocolGroup,omitempty"`
-	LimitPerProvider             int               `json:"limitPerProvider,omitempty"`
-	LimitPerProfile              int               `json:"limitPerProfile,omitempty"`
-	MatchedCount                 int               `json:"matchedCount"`
-	RecoveredCount               int               `json:"recoveredCount"`
-	SkippedByLimit               int               `json:"skippedByLimit"`
-	SkippedByModeBudget          int               `json:"skippedByModeBudget"`
-	SkippedByLaneBudget          int               `json:"skippedByLaneBudget"`
-	SkippedByProtocolGroupBudget int               `json:"skippedByProtocolGroupBudget"`
-	SkippedByProviderBudget      int               `json:"skippedByProviderBudget"`
-	SkippedByProfileBudget       int               `json:"skippedByProfileBudget"`
-	SkippedByCooldownWait        int               `json:"skippedByCooldownWait"`
-	SkippedByRetryWindowWait     int               `json:"skippedByRetryWindowWait"`
-	SkippedByBlockedReason       int               `json:"skippedByBlockedReason"`
-	OutcomeCounts                map[string]int    `json:"outcomeCounts,omitempty"`
-	RetryClassCounts             map[string]int    `json:"retryClassCounts,omitempty"`
-	RecoverStateCounts           map[string]int    `json:"recoverStateCounts,omitempty"`
-	BlockedActionCounts          map[string]int    `json:"blockedActionCounts,omitempty"`
-	ProtocolGroupCounts          map[string]int    `json:"protocolGroupCounts,omitempty"`
-	ProviderCounts               map[string]int    `json:"providerCounts,omitempty"`
-	ProfileCounts                map[string]int    `json:"profileCounts,omitempty"`
-	LaneCounts                   map[string]int    `json:"laneCounts,omitempty"`
-	EarliestNextRetryAt          string            `json:"earliestNextRetryAt,omitempty"`
-	Decisions                    []RecoverDecision `json:"decisions,omitempty"`
+	Mode                           string            `json:"mode,omitempty"`
+	DryRun                         bool              `json:"dryRun,omitempty"`
+	TaskID                         string            `json:"taskId,omitempty"`
+	ProtocolGroup                  string            `json:"protocolGroup,omitempty"`
+	ProviderKey                    string            `json:"providerKey,omitempty"`
+	ProfileID                      string            `json:"profileId,omitempty"`
+	RetryClass                     string            `json:"retryClass,omitempty"`
+	BlockedAction                  string            `json:"blockedAction,omitempty"`
+	RecoverState                   string            `json:"recoverState,omitempty"`
+	Path                           string            `json:"path,omitempty"`
+	Scope                          string            `json:"scope,omitempty"`
+	Limit                          int               `json:"limit,omitempty"`
+	LimitPerMode                   int               `json:"limitPerMode,omitempty"`
+	LimitPerLane                   int               `json:"limitPerLane,omitempty"`
+	LimitPerProtocolGroup          int               `json:"limitPerProtocolGroup,omitempty"`
+	LimitPerProvider               int               `json:"limitPerProvider,omitempty"`
+	LimitPerProfile                int               `json:"limitPerProfile,omitempty"`
+	MatchedCount                   int               `json:"matchedCount"`
+	RecoveredCount                 int               `json:"recoveredCount"`
+	SkippedByLimit                 int               `json:"skippedByLimit"`
+	SkippedByModeBudget            int               `json:"skippedByModeBudget"`
+	SkippedByLaneBudget            int               `json:"skippedByLaneBudget"`
+	SkippedByProtocolGroupBudget   int               `json:"skippedByProtocolGroupBudget"`
+	SkippedByProviderBudget        int               `json:"skippedByProviderBudget"`
+	SkippedByProfileBudget         int               `json:"skippedByProfileBudget"`
+	SkippedByCooldownWait          int               `json:"skippedByCooldownWait"`
+	SkippedByRetryWindowWait       int               `json:"skippedByRetryWindowWait"`
+	SkippedByBlockedReason         int               `json:"skippedByBlockedReason"`
+	SuggestedLimitPerMode          int               `json:"suggestedLimitPerMode,omitempty"`
+	SuggestedLimitPerLane          int               `json:"suggestedLimitPerLane,omitempty"`
+	SuggestedLimitPerProtocolGroup int               `json:"suggestedLimitPerProtocolGroup,omitempty"`
+	SuggestedLimitPerProvider      int               `json:"suggestedLimitPerProvider,omitempty"`
+	SuggestedLimitPerProfile       int               `json:"suggestedLimitPerProfile,omitempty"`
+	OutcomeCounts                  map[string]int    `json:"outcomeCounts,omitempty"`
+	RetryClassCounts               map[string]int    `json:"retryClassCounts,omitempty"`
+	RecoverStateCounts             map[string]int    `json:"recoverStateCounts,omitempty"`
+	BlockedActionCounts            map[string]int    `json:"blockedActionCounts,omitempty"`
+	ProtocolGroupCounts            map[string]int    `json:"protocolGroupCounts,omitempty"`
+	ProviderCounts                 map[string]int    `json:"providerCounts,omitempty"`
+	ProfileCounts                  map[string]int    `json:"profileCounts,omitempty"`
+	LaneCounts                     map[string]int    `json:"laneCounts,omitempty"`
+	EarliestNextRetryAt            string            `json:"earliestNextRetryAt,omitempty"`
+	Decisions                      []RecoverDecision `json:"decisions,omitempty"`
 }
 
 type RecoverDecision struct {
@@ -112,9 +117,19 @@ type RecoverDecision struct {
 	NextRetryAt                  string `json:"nextRetryAt,omitempty"`
 	Outcome                      string `json:"outcome,omitempty"`
 	Message                      string `json:"message,omitempty"`
+	SuggestedModeBudget          int    `json:"suggestedModeBudget,omitempty"`
+	SuggestedLaneBudget          int    `json:"suggestedLaneBudget,omitempty"`
 	SuggestedProtocolGroupBudget int    `json:"suggestedProtocolGroupBudget,omitempty"`
 	SuggestedProviderBudget      int    `json:"suggestedProviderBudget,omitempty"`
 	SuggestedProfileBudget       int    `json:"suggestedProfileBudget,omitempty"`
+}
+
+type recoverDecisionSuggestion struct {
+	ModeBudget          int
+	LaneBudget          int
+	ProtocolGroupBudget int
+	ProviderBudget      int
+	ProfileBudget       int
 }
 
 type Detail struct {
@@ -1246,7 +1261,7 @@ func (s *Service) RecoverBlockedTasksWithOptions(ctx context.Context, opts Recov
 	if opts.Limit > 0 && len(candidates) > opts.Limit {
 		result.SkippedByLimit = len(candidates) - opts.Limit
 		for _, candidate := range candidates[opts.Limit:] {
-			appendRecoverDecision(&result, buildRecoverDecision(candidate, "skipped_limit", "超出本轮 limit"))
+			appendRecoverDecision(&result, buildRecoverDecision(candidate, "skipped_limit", "超出本轮 limit", recoverDecisionSuggestion{}))
 		}
 		candidates = candidates[:opts.Limit]
 	}
@@ -1261,19 +1276,19 @@ func (s *Service) RecoverBlockedTasksWithOptions(ctx context.Context, opts Recov
 		modeKey := recoverModeBudgetKey(candidate.Mode)
 		if opts.LimitPerMode > 0 && recoveredByMode[modeKey] >= opts.LimitPerMode {
 			result.SkippedByModeBudget++
-			appendRecoverDecision(&result, buildRecoverDecision(candidate, "skipped_mode_budget", "超过模式预算"))
+			appendRecoverDecision(&result, buildRecoverDecision(candidate, "skipped_mode_budget", "超过模式预算", recoverDecisionSuggestion{ModeBudget: recoveredByMode[modeKey] + 1}))
 			continue
 		}
 		laneKey := recoverLaneBudgetKey(candidate)
 		if opts.LimitPerLane > 0 && recoveredByLane[laneKey] >= opts.LimitPerLane {
 			result.SkippedByLaneBudget++
-			appendRecoverDecision(&result, buildRecoverDecision(candidate, "skipped_lane_budget", "超过 lane 预算"))
+			appendRecoverDecision(&result, buildRecoverDecision(candidate, "skipped_lane_budget", "超过 lane 预算", recoverDecisionSuggestion{LaneBudget: recoveredByLane[laneKey] + 1}))
 			continue
 		}
 		protocolGroupKey := recoverProtocolGroupBudgetKey(candidate.ProtocolGroup)
 		if opts.LimitPerProtocolGroup > 0 && recoveredByProtocolGroup[protocolGroupKey] >= opts.LimitPerProtocolGroup {
 			result.SkippedByProtocolGroupBudget++
-			appendRecoverDecision(&result, buildRecoverDecision(candidate, "skipped_protocol_group_budget", "超过协议族预算"))
+			appendRecoverDecision(&result, buildRecoverDecision(candidate, "skipped_protocol_group_budget", "超过协议族预算", recoverDecisionSuggestion{ProtocolGroupBudget: recoveredByProtocolGroup[protocolGroupKey] + 1}))
 			continue
 		}
 		providerKey := strings.TrimSpace(detail.Task.TargetProvider)
@@ -1281,18 +1296,18 @@ func (s *Service) RecoverBlockedTasksWithOptions(ctx context.Context, opts Recov
 		providerBudget := recoverProviderBudgetWithOverride(detail, opts.LimitPerProvider)
 		if providerBudget > 0 && recoveredByProvider[providerKey] >= providerBudget {
 			result.SkippedByProviderBudget++
-			appendRecoverDecision(&result, buildRecoverDecision(candidate, "skipped_provider_budget", "超过 provider 预算"))
+			appendRecoverDecision(&result, buildRecoverDecision(candidate, "skipped_provider_budget", "超过 provider 预算", recoverDecisionSuggestion{ProviderBudget: recoveredByProvider[providerKey] + 1}))
 			continue
 		}
 		profileBudget := recoverProfileBudgetWithOverride(detail, opts.LimitPerProfile)
 		if profileBudget > 0 && recoveredByProfile[recoverProfileBudgetKey(providerKey, profileID)] >= profileBudget {
 			result.SkippedByProfileBudget++
-			appendRecoverDecision(&result, buildRecoverDecision(candidate, "skipped_profile_budget", "超过账号预算"))
+			appendRecoverDecision(&result, buildRecoverDecision(candidate, "skipped_profile_budget", "超过账号预算", recoverDecisionSuggestion{ProfileBudget: recoveredByProfile[recoverProfileBudgetKey(providerKey, profileID)] + 1}))
 			continue
 		}
 		if candidate.Summary.WindowBlocked {
 			result.SkippedByRetryWindowWait++
-			appendRecoverDecision(&result, buildRecoverDecision(candidate, "waiting_retry_window", "仍在自动补传时间窗外"))
+			appendRecoverDecision(&result, buildRecoverDecision(candidate, "waiting_retry_window", "仍在自动补传时间窗外", recoverDecisionSuggestion{}))
 			continue
 		}
 		retryOpts := RetryOptions{}
@@ -1304,17 +1319,17 @@ func (s *Service) RecoverBlockedTasksWithOptions(ctx context.Context, opts Recov
 		if err != nil {
 			if strings.HasPrefix(err.Error(), "retry_cooldown_active:") {
 				result.SkippedByCooldownWait++
-				appendRecoverDecision(&result, buildRecoverDecision(candidate, "waiting_cooldown", "仍在冷却中"))
+				appendRecoverDecision(&result, buildRecoverDecision(candidate, "waiting_cooldown", "仍在冷却中", recoverDecisionSuggestion{}))
 				continue
 			}
 			if strings.HasPrefix(err.Error(), "retry_blocked:") {
 				reason := strings.TrimPrefix(err.Error(), "retry_blocked:")
 				if reason == "retry_queue_waiting_for_retry_window" {
 					result.SkippedByRetryWindowWait++
-					appendRecoverDecision(&result, buildRecoverDecision(candidate, "waiting_retry_window", "重试窗口未到"))
+					appendRecoverDecision(&result, buildRecoverDecision(candidate, "waiting_retry_window", "重试窗口未到", recoverDecisionSuggestion{}))
 				} else {
 					result.SkippedByBlockedReason++
-					appendRecoverDecision(&result, buildRecoverDecision(candidate, "blocked", reason))
+					appendRecoverDecision(&result, buildRecoverDecision(candidate, "blocked", reason, recoverDecisionSuggestion{}))
 				}
 				continue
 			}
@@ -1328,7 +1343,7 @@ func (s *Service) RecoverBlockedTasksWithOptions(ctx context.Context, opts Recov
 			recoveredByProtocolGroup[protocolGroupKey] = recoveredByProtocolGroup[protocolGroupKey] + 1
 			recoveredByProvider[providerKey] = recoveredByProvider[providerKey] + 1
 			recoveredByProfile[recoverProfileBudgetKey(providerKey, profileID)] = recoveredByProfile[recoverProfileBudgetKey(providerKey, profileID)] + 1
-			appendRecoverDecision(&result, buildRecoverDecision(candidate, "dry_run_recoverable", "当前筛选与预算下可放行"))
+			appendRecoverDecision(&result, buildRecoverDecision(candidate, "dry_run_recoverable", "当前筛选与预算下可放行", recoverDecisionSuggestion{}))
 			continue
 		}
 		if err := rebuildTaskForRetry(ctx, s.store, retried); err != nil {
@@ -1350,7 +1365,7 @@ func (s *Service) RecoverBlockedTasksWithOptions(ctx context.Context, opts Recov
 		recoveredByProtocolGroup[protocolGroupKey] = recoveredByProtocolGroup[protocolGroupKey] + 1
 		recoveredByProvider[providerKey] = recoveredByProvider[providerKey] + 1
 		recoveredByProfile[recoverProfileBudgetKey(providerKey, profileID)] = recoveredByProfile[recoverProfileBudgetKey(providerKey, profileID)] + 1
-		appendRecoverDecision(&result, buildRecoverDecision(candidate, "recovered", "已触发后台补传"))
+		appendRecoverDecision(&result, buildRecoverDecision(candidate, "recovered", "已触发后台补传", recoverDecisionSuggestion{}))
 	}
 	result.RecoveredCount = recovered
 	return result, nil
@@ -1480,10 +1495,30 @@ func recoverDecisionPath(detail Detail) string {
 	return ""
 }
 
-func buildRecoverDecision(candidate recoverCandidate, outcome, message string) RecoverDecision {
+func buildRecoverDecision(candidate recoverCandidate, outcome, message string, suggestion recoverDecisionSuggestion) RecoverDecision {
 	detail := candidate.Detail
 	providerKey := strings.TrimSpace(detail.Task.TargetProvider)
 	profileID := strings.TrimSpace(detail.TargetProfileID)
+	modeBudget := suggestion.ModeBudget
+	if modeBudget <= 0 {
+		modeBudget = 1
+	}
+	laneBudget := suggestion.LaneBudget
+	if laneBudget <= 0 {
+		laneBudget = 1
+	}
+	protocolGroupBudget := suggestion.ProtocolGroupBudget
+	if protocolGroupBudget <= 0 {
+		protocolGroupBudget = recoverProtocolGroupBudget(detail)
+	}
+	providerBudget := suggestion.ProviderBudget
+	if providerBudget <= 0 {
+		providerBudget = recoverProviderBudget(detail)
+	}
+	profileBudget := suggestion.ProfileBudget
+	if profileBudget <= 0 {
+		profileBudget = recoverProfileBudget(detail)
+	}
 	return RecoverDecision{
 		TaskID:                       detail.Task.ID,
 		ProviderKey:                  providerKey,
@@ -1497,9 +1532,11 @@ func buildRecoverDecision(candidate recoverCandidate, outcome, message string) R
 		NextRetryAt:                  strings.TrimSpace(candidate.Summary.NextRetryAt),
 		Outcome:                      outcome,
 		Message:                      message,
-		SuggestedProtocolGroupBudget: recoverProtocolGroupBudget(detail),
-		SuggestedProviderBudget:      recoverProviderBudget(detail),
-		SuggestedProfileBudget:       recoverProfileBudget(detail),
+		SuggestedModeBudget:          modeBudget,
+		SuggestedLaneBudget:          laneBudget,
+		SuggestedProtocolGroupBudget: protocolGroupBudget,
+		SuggestedProviderBudget:      providerBudget,
+		SuggestedProfileBudget:       profileBudget,
 	}
 }
 
@@ -1542,6 +1579,21 @@ func appendRecoverDecision(result *RecoverResult, decision RecoverDecision) {
 			result.ProviderCounts = make(map[string]int)
 		}
 		result.ProviderCounts[decision.ProviderKey] = result.ProviderCounts[decision.ProviderKey] + 1
+	}
+	if decision.SuggestedModeBudget > result.SuggestedLimitPerMode {
+		result.SuggestedLimitPerMode = decision.SuggestedModeBudget
+	}
+	if decision.SuggestedLaneBudget > result.SuggestedLimitPerLane {
+		result.SuggestedLimitPerLane = decision.SuggestedLaneBudget
+	}
+	if decision.SuggestedProtocolGroupBudget > result.SuggestedLimitPerProtocolGroup {
+		result.SuggestedLimitPerProtocolGroup = decision.SuggestedProtocolGroupBudget
+	}
+	if decision.SuggestedProviderBudget > result.SuggestedLimitPerProvider {
+		result.SuggestedLimitPerProvider = decision.SuggestedProviderBudget
+	}
+	if decision.SuggestedProfileBudget > result.SuggestedLimitPerProfile {
+		result.SuggestedLimitPerProfile = decision.SuggestedProfileBudget
 	}
 	if strings.TrimSpace(decision.ProfileID) != "" {
 		if result.ProfileCounts == nil {

@@ -3347,6 +3347,29 @@ function renderAutoRecoverLaneCounts(result) {
   return parts.length ? ` / lanes ${parts.join(" / ")}` : "";
 }
 
+function renderAutoRecoverSuggestedBudgets(result) {
+  if (!result || typeof result !== "object") {
+    return "";
+  }
+  const parts = [];
+  if (Number(result.suggestedLimitPerMode || 0) > 0) {
+    parts.push(`mode ${stringifyValue(result.suggestedLimitPerMode, "0")}`);
+  }
+  if (Number(result.suggestedLimitPerLane || 0) > 0) {
+    parts.push(`lane ${stringifyValue(result.suggestedLimitPerLane, "0")}`);
+  }
+  if (Number(result.suggestedLimitPerProtocolGroup || 0) > 0) {
+    parts.push(`group ${stringifyValue(result.suggestedLimitPerProtocolGroup, "0")}`);
+  }
+  if (Number(result.suggestedLimitPerProvider || 0) > 0) {
+    parts.push(`provider ${stringifyValue(result.suggestedLimitPerProvider, "0")}`);
+  }
+  if (Number(result.suggestedLimitPerProfile || 0) > 0) {
+    parts.push(`profile ${stringifyValue(result.suggestedLimitPerProfile, "0")}`);
+  }
+  return parts.length ? ` / suggest ${parts.join(" / ")}` : "";
+}
+
 function renderAutoRecoverLastResultSummary() {
   const result = state.autoRecoverLastResult;
   if (!result || typeof result !== "object") {
@@ -3354,7 +3377,7 @@ function renderAutoRecoverLastResultSummary() {
   }
   const label = result.dryRun ? "最近预演" : "最近执行";
   const recoveredLabel = result.dryRun ? "可放行" : "recovered";
-  return `${label}：matched ${stringifyValue(result.matchedCount, "0")} / ${recoveredLabel} ${stringifyValue(result.recoveredCount, "0")} / limit ${stringifyValue(result.skippedByLimit, "0")} / modeBudget ${stringifyValue(result.skippedByModeBudget, "0")} / laneBudget ${stringifyValue(result.skippedByLaneBudget, "0")} / protocolGroupBudget ${stringifyValue(result.skippedByProtocolGroupBudget, "0")} / providerBudget ${stringifyValue(result.skippedByProviderBudget, "0")} / profileBudget ${stringifyValue(result.skippedByProfileBudget, "0")} / cooldownWait ${stringifyValue(result.skippedByCooldownWait, "0")} / retryWindowWait ${stringifyValue(result.skippedByRetryWindowWait, "0")} / blocked ${stringifyValue(result.skippedByBlockedReason, "0")}${renderAutoRecoverOutcomeCounts(result)}${renderAutoRecoverRetryClassCounts(result)}${renderAutoRecoverRecoverStateCounts(result)}${renderAutoRecoverBlockedActionCounts(result)}${renderAutoRecoverProtocolGroupCounts(result)}${renderAutoRecoverProviderCounts(result)}${renderAutoRecoverProfileCounts(result)}${renderAutoRecoverLaneCounts(result)}${result.earliestNextRetryAt ? ` / earliest ${result.earliestNextRetryAt}` : ""}`;
+  return `${label}：matched ${stringifyValue(result.matchedCount, "0")} / ${recoveredLabel} ${stringifyValue(result.recoveredCount, "0")} / limit ${stringifyValue(result.skippedByLimit, "0")} / modeBudget ${stringifyValue(result.skippedByModeBudget, "0")} / laneBudget ${stringifyValue(result.skippedByLaneBudget, "0")} / protocolGroupBudget ${stringifyValue(result.skippedByProtocolGroupBudget, "0")} / providerBudget ${stringifyValue(result.skippedByProviderBudget, "0")} / profileBudget ${stringifyValue(result.skippedByProfileBudget, "0")} / cooldownWait ${stringifyValue(result.skippedByCooldownWait, "0")} / retryWindowWait ${stringifyValue(result.skippedByRetryWindowWait, "0")} / blocked ${stringifyValue(result.skippedByBlockedReason, "0")}${renderAutoRecoverOutcomeCounts(result)}${renderAutoRecoverRetryClassCounts(result)}${renderAutoRecoverRecoverStateCounts(result)}${renderAutoRecoverBlockedActionCounts(result)}${renderAutoRecoverProtocolGroupCounts(result)}${renderAutoRecoverProviderCounts(result)}${renderAutoRecoverProfileCounts(result)}${renderAutoRecoverLaneCounts(result)}${renderAutoRecoverSuggestedBudgets(result)}${result.earliestNextRetryAt ? ` / earliest ${result.earliestNextRetryAt}` : ""}`;
 }
 
 function renderAutoRecoverLastResultDetail() {
@@ -3376,6 +3399,8 @@ function renderAutoRecoverLastResultDetail() {
             <span class="pill">profile ${escapeHTML(stringifyValue(item.profileId, "-"))}</span>
             <span class="pill">mode ${escapeHTML(stringifyValue(item.mode, "-"))}</span>
             <span class="pill">state ${escapeHTML(autoRecoverStateLabel(item.recoverState))}</span>
+            <span class="pill">mode budget ${escapeHTML(stringifyValue(item.suggestedModeBudget, "-"))}</span>
+            <span class="pill">lane budget ${escapeHTML(stringifyValue(item.suggestedLaneBudget, "-"))}</span>
             <span class="pill">group budget ${escapeHTML(stringifyValue(item.suggestedProtocolGroupBudget, "-"))}</span>
             <span class="pill">provider budget ${escapeHTML(stringifyValue(item.suggestedProviderBudget, "-"))}</span>
             <span class="pill">profile budget ${escapeHTML(stringifyValue(item.suggestedProfileBudget, "-"))}</span>

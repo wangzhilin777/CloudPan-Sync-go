@@ -189,6 +189,9 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "renderAutoRecoverLaneCounts") {
 		t.Fatalf("expected renderAutoRecoverLaneCounts helper in app.js, got %q", body)
 	}
+	if !strings.Contains(body, "renderAutoRecoverSuggestedBudgets") {
+		t.Fatalf("expected renderAutoRecoverSuggestedBudgets helper in app.js, got %q", body)
+	}
 	if !strings.Contains(body, "等待授权刷新") {
 		t.Fatalf("expected waiting_auth_refresh label in app.js, got %q", body)
 	}
@@ -221,6 +224,9 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	}
 	if !strings.Contains(body, "lanes ") {
 		t.Fatalf("expected lane summary text in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "suggest ") {
+		t.Fatalf("expected suggested budget summary text in app.js, got %q", body)
 	}
 	if !strings.Contains(body, "groups ") {
 		t.Fatalf("expected protocol group summary text in app.js, got %q", body)

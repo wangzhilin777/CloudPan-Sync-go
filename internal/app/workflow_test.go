@@ -1320,6 +1320,45 @@ func TestAppRecoverTasksEndpointReportsProviderBudgetSkips(t *testing.T) {
 	if got := int(recoverData["skippedByProviderBudget"].(float64)); got != 1 {
 		t.Fatalf("expected skippedByProviderBudget 1, got %d", got)
 	}
+	if got := int(recoverData["suggestedLimitPerMode"].(float64)); got != 1 {
+		t.Fatalf("expected suggestedLimitPerMode 1, got %d", got)
+	}
+	if got := int(recoverData["suggestedLimitPerLane"].(float64)); got != 1 {
+		t.Fatalf("expected suggestedLimitPerLane 1, got %d", got)
+	}
+	if got := int(recoverData["suggestedLimitPerProtocolGroup"].(float64)); got != 1 {
+		t.Fatalf("expected suggestedLimitPerProtocolGroup 1, got %d", got)
+	}
+	if got := int(recoverData["suggestedLimitPerProvider"].(float64)); got != 2 {
+		t.Fatalf("expected suggestedLimitPerProvider 2, got %d", got)
+	}
+	if got := int(recoverData["suggestedLimitPerProfile"].(float64)); got != 1 {
+		t.Fatalf("expected suggestedLimitPerProfile 1, got %d", got)
+	}
+	if decisions, ok := recoverData["decisions"].([]interface{}); !ok || len(decisions) < 2 {
+		t.Fatalf("expected recover decisions with budget skip, got %#v", recoverData["decisions"])
+	} else {
+		var skipped map[string]interface{}
+		for _, raw := range decisions {
+			decision := raw.(map[string]interface{})
+			if decision["outcome"].(string) == "skipped_provider_budget" {
+				skipped = decision
+				break
+			}
+		}
+		if skipped == nil {
+			t.Fatalf("expected skipped_provider_budget decision, got %#v", decisions)
+		}
+		if got := int(skipped["suggestedProviderBudget"].(float64)); got != 2 {
+			t.Fatalf("expected skipped decision suggestedProviderBudget 2, got %d", got)
+		}
+		if got := int(skipped["suggestedModeBudget"].(float64)); got != 1 {
+			t.Fatalf("expected skipped decision suggestedModeBudget 1, got %d", got)
+		}
+		if got := int(skipped["suggestedLaneBudget"].(float64)); got != 1 {
+			t.Fatalf("expected skipped decision suggestedLaneBudget 1, got %d", got)
+		}
+	}
 
 	firstDetail := invokeJSON(t, handler, http.MethodGet, "/api/tasks/"+firstID, nil)
 	secondDetail := invokeJSON(t, handler, http.MethodGet, "/api/tasks/"+secondID, nil)
