@@ -159,6 +159,8 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 		waitForText(`#auto-recover-last-result-summary`, "states 其它等待 1"),
 		waitForText(`#auto-recover-last-result-summary`, "groups aliyun_123_open 1"),
 		waitForText(`#auto-recover-last-result-summary`, "providers 123_open 1"),
+		waitForText(`#auto-recover-last-result-summary`, "profiles "),
+		waitForText(`#auto-recover-last-result-summary`, "lanes retry_queue_auto_retry + 普通重试失败 + - 1"),
 		waitForText(`#auto-recover-last-result-detail`, "预演可放行"),
 	)
 
@@ -172,6 +174,8 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 		waitForText(`#auto-recover-last-result-summary`, "states 其它等待 1"),
 		waitForText(`#auto-recover-last-result-summary`, "groups aliyun_123_open 1"),
 		waitForText(`#auto-recover-last-result-summary`, "providers 123_open 1"),
+		waitForText(`#auto-recover-last-result-summary`, "profiles "),
+		waitForText(`#auto-recover-last-result-summary`, "lanes retry_queue_auto_retry + 普通重试失败 + - 1"),
 		waitForText(`#auto-recover-last-result-detail`, "等待态说明"),
 		waitForText(`#auto-recover-summary`, "wait other"),
 		waitForText(`body`, "等待态建议"),

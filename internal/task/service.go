@@ -93,6 +93,8 @@ type RecoverResult struct {
 	BlockedActionCounts          map[string]int    `json:"blockedActionCounts,omitempty"`
 	ProtocolGroupCounts          map[string]int    `json:"protocolGroupCounts,omitempty"`
 	ProviderCounts               map[string]int    `json:"providerCounts,omitempty"`
+	ProfileCounts                map[string]int    `json:"profileCounts,omitempty"`
+	LaneCounts                   map[string]int    `json:"laneCounts,omitempty"`
 	EarliestNextRetryAt          string            `json:"earliestNextRetryAt,omitempty"`
 	Decisions                    []RecoverDecision `json:"decisions,omitempty"`
 }
@@ -1541,6 +1543,18 @@ func appendRecoverDecision(result *RecoverResult, decision RecoverDecision) {
 		}
 		result.ProviderCounts[decision.ProviderKey] = result.ProviderCounts[decision.ProviderKey] + 1
 	}
+	if strings.TrimSpace(decision.ProfileID) != "" {
+		if result.ProfileCounts == nil {
+			result.ProfileCounts = make(map[string]int)
+		}
+		result.ProfileCounts[decision.ProfileID] = result.ProfileCounts[decision.ProfileID] + 1
+	}
+	if lane := strings.TrimSpace(recoverDecisionLane(decision)); lane != "" {
+		if result.LaneCounts == nil {
+			result.LaneCounts = make(map[string]int)
+		}
+		result.LaneCounts[lane] = result.LaneCounts[lane] + 1
+	}
 	if next := strings.TrimSpace(decision.NextRetryAt); next != "" {
 		if result.EarliestNextRetryAt == "" {
 			result.EarliestNextRetryAt = next
@@ -1554,6 +1568,15 @@ func appendRecoverDecision(result *RecoverResult, decision RecoverDecision) {
 		return
 	}
 	result.Decisions = append(result.Decisions, decision)
+}
+
+func recoverDecisionLane(decision RecoverDecision) string {
+	parts := []string{
+		recoverModeBudgetKey(decision.Mode),
+		strings.TrimSpace(decision.RetryClass),
+		strings.TrimSpace(decision.BlockedAction),
+	}
+	return strings.Join(parts, "::")
 }
 
 func recoverProtocolGroupBudget(detail Detail) int {

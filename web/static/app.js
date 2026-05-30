@@ -3311,6 +3311,42 @@ function renderAutoRecoverProviderCounts(result) {
   return parts.length ? ` / providers ${parts.join(" / ")}` : "";
 }
 
+function renderAutoRecoverProfileCounts(result) {
+  const counts = result && typeof result === "object" && result.profileCounts && typeof result.profileCounts === "object"
+    ? result.profileCounts
+    : null;
+  if (!counts) {
+    return "";
+  }
+  const parts = Object.keys(counts)
+    .sort()
+    .filter((key) => Number(counts[key] || 0) > 0)
+    .map((key) => `${key} ${stringifyValue(counts[key], "0")}`);
+  return parts.length ? ` / profiles ${parts.join(" / ")}` : "";
+}
+
+function autoRecoverLaneSummaryLabel(lane) {
+  const parts = String(lane || "").split("::");
+  const mode = stringifyValue(parts[0], "-");
+  const retryClass = retryClassSummaryLabel(parts[1]);
+  const blockedAction = blockedActionSummaryLabel(parts[2]);
+  return `${mode} + ${retryClass} + ${blockedAction}`;
+}
+
+function renderAutoRecoverLaneCounts(result) {
+  const counts = result && typeof result === "object" && result.laneCounts && typeof result.laneCounts === "object"
+    ? result.laneCounts
+    : null;
+  if (!counts) {
+    return "";
+  }
+  const parts = Object.keys(counts)
+    .sort()
+    .filter((key) => Number(counts[key] || 0) > 0)
+    .map((key) => `${autoRecoverLaneSummaryLabel(key)} ${stringifyValue(counts[key], "0")}`);
+  return parts.length ? ` / lanes ${parts.join(" / ")}` : "";
+}
+
 function renderAutoRecoverLastResultSummary() {
   const result = state.autoRecoverLastResult;
   if (!result || typeof result !== "object") {
@@ -3318,7 +3354,7 @@ function renderAutoRecoverLastResultSummary() {
   }
   const label = result.dryRun ? "最近预演" : "最近执行";
   const recoveredLabel = result.dryRun ? "可放行" : "recovered";
-  return `${label}：matched ${stringifyValue(result.matchedCount, "0")} / ${recoveredLabel} ${stringifyValue(result.recoveredCount, "0")} / limit ${stringifyValue(result.skippedByLimit, "0")} / modeBudget ${stringifyValue(result.skippedByModeBudget, "0")} / laneBudget ${stringifyValue(result.skippedByLaneBudget, "0")} / protocolGroupBudget ${stringifyValue(result.skippedByProtocolGroupBudget, "0")} / providerBudget ${stringifyValue(result.skippedByProviderBudget, "0")} / profileBudget ${stringifyValue(result.skippedByProfileBudget, "0")} / cooldownWait ${stringifyValue(result.skippedByCooldownWait, "0")} / retryWindowWait ${stringifyValue(result.skippedByRetryWindowWait, "0")} / blocked ${stringifyValue(result.skippedByBlockedReason, "0")}${renderAutoRecoverOutcomeCounts(result)}${renderAutoRecoverRetryClassCounts(result)}${renderAutoRecoverRecoverStateCounts(result)}${renderAutoRecoverBlockedActionCounts(result)}${renderAutoRecoverProtocolGroupCounts(result)}${renderAutoRecoverProviderCounts(result)}${result.earliestNextRetryAt ? ` / earliest ${result.earliestNextRetryAt}` : ""}`;
+  return `${label}：matched ${stringifyValue(result.matchedCount, "0")} / ${recoveredLabel} ${stringifyValue(result.recoveredCount, "0")} / limit ${stringifyValue(result.skippedByLimit, "0")} / modeBudget ${stringifyValue(result.skippedByModeBudget, "0")} / laneBudget ${stringifyValue(result.skippedByLaneBudget, "0")} / protocolGroupBudget ${stringifyValue(result.skippedByProtocolGroupBudget, "0")} / providerBudget ${stringifyValue(result.skippedByProviderBudget, "0")} / profileBudget ${stringifyValue(result.skippedByProfileBudget, "0")} / cooldownWait ${stringifyValue(result.skippedByCooldownWait, "0")} / retryWindowWait ${stringifyValue(result.skippedByRetryWindowWait, "0")} / blocked ${stringifyValue(result.skippedByBlockedReason, "0")}${renderAutoRecoverOutcomeCounts(result)}${renderAutoRecoverRetryClassCounts(result)}${renderAutoRecoverRecoverStateCounts(result)}${renderAutoRecoverBlockedActionCounts(result)}${renderAutoRecoverProtocolGroupCounts(result)}${renderAutoRecoverProviderCounts(result)}${renderAutoRecoverProfileCounts(result)}${renderAutoRecoverLaneCounts(result)}${result.earliestNextRetryAt ? ` / earliest ${result.earliestNextRetryAt}` : ""}`;
 }
 
 function renderAutoRecoverLastResultDetail() {

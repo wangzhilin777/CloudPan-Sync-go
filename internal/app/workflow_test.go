@@ -1479,6 +1479,16 @@ func TestAppRecoverTasksEndpointDryRunDoesNotMutateTask(t *testing.T) {
 	} else if got := int(counts["recover_dry_run_api_target"].(float64)); got != 1 {
 		t.Fatalf("expected preview recover_dry_run_api_target count 1, got %d", got)
 	}
+	if counts, ok := previewData["profileCounts"].(map[string]interface{}); !ok {
+		t.Fatalf("expected preview profileCounts map, got %#v", previewData["profileCounts"])
+	} else if got := int(counts[profileID].(float64)); got != 1 {
+		t.Fatalf("expected preview profile count 1, got %d", got)
+	}
+	if counts, ok := previewData["laneCounts"].(map[string]interface{}); !ok {
+		t.Fatalf("expected preview laneCounts map, got %#v", previewData["laneCounts"])
+	} else if got := int(counts["upload_checkpoint_auto_resume::retry_failed::"].(float64)); got != 1 {
+		t.Fatalf("expected preview lane count 1, got %d", got)
+	}
 	if got := int(previewData["matchedCount"].(float64)); got != 1 {
 		t.Fatalf("expected matchedCount 1, got %d", got)
 	}
@@ -1532,6 +1542,16 @@ func TestAppRecoverTasksEndpointDryRunDoesNotMutateTask(t *testing.T) {
 		t.Fatalf("expected execute providerCounts map, got %#v", recoverData["providerCounts"])
 	} else if got := int(counts["recover_dry_run_api_target"].(float64)); got != 1 {
 		t.Fatalf("expected execute recover_dry_run_api_target count 1, got %d", got)
+	}
+	if counts, ok := recoverData["profileCounts"].(map[string]interface{}); !ok {
+		t.Fatalf("expected execute profileCounts map, got %#v", recoverData["profileCounts"])
+	} else if got := int(counts[profileID].(float64)); got != 1 {
+		t.Fatalf("expected execute profile count 1, got %d", got)
+	}
+	if counts, ok := recoverData["laneCounts"].(map[string]interface{}); !ok {
+		t.Fatalf("expected execute laneCounts map, got %#v", recoverData["laneCounts"])
+	} else if got := int(counts["upload_checkpoint_auto_resume::retry_failed::"].(float64)); got != 1 {
+		t.Fatalf("expected execute lane count 1, got %d", got)
 	}
 	if got := int(recoverData["recoveredCount"].(float64)); got != 1 {
 		t.Fatalf("expected recoveredCount 1, got %d", got)
@@ -2062,6 +2082,16 @@ func TestAppRecoverTasksEndpointFiltersWaitingRetryWindowState(t *testing.T) {
 		t.Fatalf("expected waiting window providerCounts map, got %#v", previewData["providerCounts"])
 	} else if got := int(counts["recover_waiting_window_api_target"].(float64)); got != 1 {
 		t.Fatalf("expected recover_waiting_window_api_target count 1, got %d", got)
+	}
+	if counts, ok := previewData["profileCounts"].(map[string]interface{}); !ok {
+		t.Fatalf("expected waiting window profileCounts map, got %#v", previewData["profileCounts"])
+	} else if got := int(counts[profileID].(float64)); got != 1 {
+		t.Fatalf("expected waiting window profile count 1, got %d", got)
+	}
+	if counts, ok := previewData["laneCounts"].(map[string]interface{}); !ok {
+		t.Fatalf("expected waiting window laneCounts map, got %#v", previewData["laneCounts"])
+	} else if got := int(counts["retry_window_waiting_auto_retry::rate_limited::wait_for_retry_window"].(float64)); got != 1 {
+		t.Fatalf("expected waiting window lane count 1, got %d", got)
 	}
 	if got, ok := previewData["earliestNextRetryAt"].(string); !ok || got == "" {
 		t.Fatalf("expected earliestNextRetryAt string, got %#v", previewData["earliestNextRetryAt"])
