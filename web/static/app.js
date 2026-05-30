@@ -3366,6 +3366,15 @@ function renderAutoRecoverLaneCounts(result) {
   return parts.length ? ` / lanes ${parts.join(" / ")}` : "";
 }
 
+function autoRecoverSuggestedBudgetValue(value, fallback) {
+  const numeric = Number(value || 0);
+  if (Number.isFinite(numeric) && numeric > 0) {
+    return numeric;
+  }
+  const fallbackNumeric = Number(fallback || 0);
+  return Number.isFinite(fallbackNumeric) && fallbackNumeric > 0 ? fallbackNumeric : 0;
+}
+
 function renderAutoRecoverSuggestedBudgets(result) {
   if (!result || typeof result !== "object") {
     return "";
@@ -3754,7 +3763,7 @@ function renderAutoRecoverSummary(items) {
                         ? autoRecoverStateAdvice("waiting_cooldown")
                         : autoRecoverStateAdvice("runnable_now"),
           )}</div>
-          <div class="muted">同档位会先按协议族、provider 再到授权档案轮转；默认建议 group 预算 <code>${escapeHTML(stringifyValue(item.suggestedProtocolGroupBudget, "-"))}</code> / provider 预算 <code>${escapeHTML(stringifyValue(item.suggestedProviderBudget, "-"))}</code> / profile 预算 <code>${escapeHTML(stringifyValue(item.suggestedProfileBudget, "-"))}</code>。</div>
+          <div class="muted">同档位会先按模式、lane，再按协议族、provider 到授权档案轮转；默认建议 mode 预算 <code>${escapeHTML(stringifyValue(autoRecoverSuggestedBudgetValue(item.suggestedModeBudget, autoRetryPolicy.limitPerMode), "-"))}</code> / lane 预算 <code>${escapeHTML(stringifyValue(autoRecoverSuggestedBudgetValue(item.suggestedLaneBudget, autoRetryPolicy.limitPerLane), "-"))}</code> / group 预算 <code>${escapeHTML(stringifyValue(autoRecoverSuggestedBudgetValue(item.suggestedProtocolGroupBudget, autoRetryPolicy.limitPerProtocolGroup), "-"))}</code> / provider 预算 <code>${escapeHTML(stringifyValue(autoRecoverSuggestedBudgetValue(item.suggestedProviderBudget, autoRetryPolicy.limitPerProvider), "-"))}</code> / profile 预算 <code>${escapeHTML(stringifyValue(autoRecoverSuggestedBudgetValue(item.suggestedProfileBudget, autoRetryPolicy.limitPerProfile), "-"))}</code>。</div>
           <div class="muted">协议族：${escapeHTML((item.protocolGroups || []).join(", ") || stringifyValue(item.sampleProtocolGroup, "-"))}</div>
           <div class="muted">${escapeHTML(stringifyValue(item.advice, "-"))}</div>
           <div class="actions compact">
@@ -3887,9 +3896,11 @@ function renderAutoRecoverSummary(items) {
               type="button"
               class="ghost"
               data-auto-recover-apply-budgets="1"
-              data-auto-recover-apply-group-budget="${escapeHTML(stringifyValue(item.suggestedProtocolGroupBudget, ""))}"
-              data-auto-recover-apply-provider-budget="${escapeHTML(stringifyValue(item.suggestedProviderBudget, ""))}"
-              data-auto-recover-apply-profile-budget="${escapeHTML(stringifyValue(item.suggestedProfileBudget, ""))}"
+              data-auto-recover-apply-mode-budget="${escapeHTML(stringifyValue(autoRecoverSuggestedBudgetValue(item.suggestedModeBudget, autoRetryPolicy.limitPerMode), ""))}"
+              data-auto-recover-apply-lane-budget="${escapeHTML(stringifyValue(autoRecoverSuggestedBudgetValue(item.suggestedLaneBudget, autoRetryPolicy.limitPerLane), ""))}"
+              data-auto-recover-apply-group-budget="${escapeHTML(stringifyValue(autoRecoverSuggestedBudgetValue(item.suggestedProtocolGroupBudget, autoRetryPolicy.limitPerProtocolGroup), ""))}"
+              data-auto-recover-apply-provider-budget="${escapeHTML(stringifyValue(autoRecoverSuggestedBudgetValue(item.suggestedProviderBudget, autoRetryPolicy.limitPerProvider), ""))}"
+              data-auto-recover-apply-profile-budget="${escapeHTML(stringifyValue(autoRecoverSuggestedBudgetValue(item.suggestedProfileBudget, autoRetryPolicy.limitPerProfile), ""))}"
             >采用建议预算</button>
             <button
               type="button"
@@ -3897,9 +3908,11 @@ function renderAutoRecoverSummary(items) {
               data-auto-recover-preview-lane-mode="${escapeHTML(stringifyValue(item.mode, ""))}"
               data-auto-recover-preview-lane-retry-class="${escapeHTML(stringifyValue(item.primaryRetryClass, ""))}"
               data-auto-recover-preview-lane-blocked-action="${escapeHTML(stringifyValue(item.primaryBlockedAction, ""))}"
-              data-auto-recover-preview-group-budget="${escapeHTML(stringifyValue(item.suggestedProtocolGroupBudget, ""))}"
-              data-auto-recover-preview-provider-budget="${escapeHTML(stringifyValue(item.suggestedProviderBudget, ""))}"
-              data-auto-recover-preview-profile-budget="${escapeHTML(stringifyValue(item.suggestedProfileBudget, ""))}"
+              data-auto-recover-preview-mode-budget="${escapeHTML(stringifyValue(autoRecoverSuggestedBudgetValue(item.suggestedModeBudget, autoRetryPolicy.limitPerMode), ""))}"
+              data-auto-recover-preview-lane-budget="${escapeHTML(stringifyValue(autoRecoverSuggestedBudgetValue(item.suggestedLaneBudget, autoRetryPolicy.limitPerLane), ""))}"
+              data-auto-recover-preview-group-budget="${escapeHTML(stringifyValue(autoRecoverSuggestedBudgetValue(item.suggestedProtocolGroupBudget, autoRetryPolicy.limitPerProtocolGroup), ""))}"
+              data-auto-recover-preview-provider-budget="${escapeHTML(stringifyValue(autoRecoverSuggestedBudgetValue(item.suggestedProviderBudget, autoRetryPolicy.limitPerProvider), ""))}"
+              data-auto-recover-preview-profile-budget="${escapeHTML(stringifyValue(autoRecoverSuggestedBudgetValue(item.suggestedProfileBudget, autoRetryPolicy.limitPerProfile), ""))}"
             >预演该 lane</button>
             ${
               Array.isArray(item.blockedActions) && item.blockedActions.length
@@ -4072,12 +4085,18 @@ function applyAutoRecoverFilters(nextFilters, options = {}) {
     setInputValueIfPresent("#auto-recover-limit", state.autoRecoverFilters.limit);
   }
   if (Object.prototype.hasOwnProperty.call(filters, "limitPerMode")) {
-    state.autoRecoverFilters.limitPerMode = String(filters.limitPerMode || "");
-    setInputValueIfPresent("#auto-recover-limit-per-mode", state.autoRecoverFilters.limitPerMode);
+    const val = String(filters.limitPerMode || "");
+    if (val !== "") {
+      state.autoRecoverFilters.limitPerMode = val;
+      setInputValueIfPresent("#auto-recover-limit-per-mode", val);
+    }
   }
   if (Object.prototype.hasOwnProperty.call(filters, "limitPerLane")) {
-    state.autoRecoverFilters.limitPerLane = String(filters.limitPerLane || "");
-    setInputValueIfPresent("#auto-recover-limit-per-lane", state.autoRecoverFilters.limitPerLane);
+    const val = String(filters.limitPerLane || "");
+    if (val !== "") {
+      state.autoRecoverFilters.limitPerLane = val;
+      setInputValueIfPresent("#auto-recover-limit-per-lane", val);
+    }
   }
   if (Object.prototype.hasOwnProperty.call(filters, "limitPerProtocolGroup")) {
     state.autoRecoverFilters.limitPerProtocolGroup = String(filters.limitPerProtocolGroup || "");
@@ -4442,20 +4461,25 @@ function wireAutoRecoverSummary() {
   });
   wrap.querySelectorAll("[data-auto-recover-apply-budgets]").forEach((button) => {
     button.addEventListener("click", () => {
+      const limitPerMode = button.dataset.autoRecoverApplyModeBudget || "";
+      const limitPerLane = button.dataset.autoRecoverApplyLaneBudget || "";
       const limitPerProtocolGroup = button.dataset.autoRecoverApplyGroupBudget || "";
       const limitPerProvider = button.dataset.autoRecoverApplyProviderBudget || "";
       const limitPerProfile = button.dataset.autoRecoverApplyProfileBudget || "";
       applyAutoRecoverFilters({
+        limitPerMode,
+        limitPerLane,
         limitPerProtocolGroup,
         limitPerProvider,
         limitPerProfile,
       });
-      showFlash(`已采用建议预算：group ${limitPerProtocolGroup || "-"} / provider ${limitPerProvider || "-"} / profile ${limitPerProfile || "-"}`);
+      showFlash(`已采用建议预算：mode ${limitPerMode || "-"} / lane ${limitPerLane || "-"} / group ${limitPerProtocolGroup || "-"} / provider ${limitPerProvider || "-"} / profile ${limitPerProfile || "-"}`);
     });
   });
   wrap.querySelectorAll("[data-auto-recover-preview-lane-mode]").forEach((button) => {
     button.addEventListener("click", async () => {
       try {
+        // Preview lane 时只过滤 mode/retryClass/blockedAction，不把 mode/lane 预算写入过滤器，避免因预算限制导致无决策返回。
         applyAutoRecoverFilters({
           mode: button.dataset.autoRecoverPreviewLaneMode || "",
           retryClass: button.dataset.autoRecoverPreviewLaneRetryClass || "",
