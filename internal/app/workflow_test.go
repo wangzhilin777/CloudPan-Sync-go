@@ -1720,6 +1720,244 @@ func TestAppRecoverTasksEndpointSupportsMultiplePaths(t *testing.T) {
 	}
 }
 
+func TestAppRecoverTasksEndpointSupportsSelectedDirectorySubsetScope(t *testing.T) {
+	ctx := context.Background()
+	application := mustNewTestApp(t, ctx)
+
+	uploadCallsByPath := map[string]int{}
+	targetAdapter := &appScriptedAdapter{
+		meta: provider.Provider{
+			Key:              "recover_directory_scope_target",
+			DisplayName:      "Recover Directory Scope Target",
+			ProtocolGroup:    "fake_target",
+			AuthModes:        []string{"manual_token"},
+			FastUploadInputs: []string{"md5", "size"},
+			FallbackModes:    []string{"download_upload"},
+			Status:           "planned",
+		},
+		capability: provider.CapabilitySet{
+			SupportsAuthValidation: true,
+			SupportsUpload:         true,
+		},
+		uploadFunc: func(req provider.UploadRequest) provider.UploadResult {
+			uploadCallsByPath[req.Path]++
+			if uploadCallsByPath[req.Path] == 1 {
+				return provider.UploadResult{
+					OperationResult: provider.OperationResult{
+						Status:  "rate_limited",
+						Message: "rate limited",
+						Mode:    "scripted_rate_limit",
+					},
+				}
+			}
+			return provider.UploadResult{
+				OperationResult: provider.OperationResult{
+					OK:      true,
+					Status:  "ok",
+					Message: "directory scope recovered",
+					Mode:    "scripted_directory_scope_ok",
+				},
+			}
+		},
+	}
+
+	registry := provider.NewRegistry(targetAdapter)
+	authSvc := auth.NewService(application.store, registry)
+	taskSvc := task.NewService(application.store, registry, authSvc)
+	application.providers = registry
+	application.auth = authSvc
+	application.tasks = taskSvc
+	handler := application.routes()
+
+	profileResp := invokeJSON(t, handler, http.MethodPost, "/api/auth/profiles", map[string]interface{}{
+		"providerKey": "recover_directory_scope_target",
+		"authMode":    "manual_token",
+		"displayName": "Recover Directory Scope Target",
+		"token":       "token-recover-directory-scope",
+	})
+	profileID := profileResp.Data.(map[string]interface{})["id"].(string)
+
+	taskResp := invokeJSON(t, handler, http.MethodPost, "/api/tasks", map[string]interface{}{
+		"sourceProvider":  "recover_directory_scope_source",
+		"targetProvider":  "recover_directory_scope_target",
+		"targetProfileId": profileID,
+		"thresholdMB":     1,
+		"entries": []map[string]interface{}{
+			{"path": "/scope-a/one.bin", "size": 101, "md5": "scope-a"},
+			{"path": "/scope-b/two.bin", "size": 202, "md5": "scope-b"},
+			{"path": "/scope-c/three.bin", "size": 303, "md5": "scope-c"},
+		},
+	})
+	taskID := taskResp.Data.(map[string]interface{})["task"].(map[string]interface{})["id"].(string)
+
+	runResp := invokeJSON(t, handler, http.MethodPost, "/api/tasks/"+taskID+"/run", nil)
+	if got := runResp.Data.(map[string]interface{})["task"].(map[string]interface{})["state"].(string); got != "blocked" {
+		t.Fatalf("expected blocked, got %s", got)
+	}
+	if _, err := application.store.DB().ExecContext(ctx, `UPDATE task_results SET created_at = ? WHERE task_id = ?`,
+		time.Now().Add(-2*time.Hour).UTC().Format(time.RFC3339), taskID,
+	); err != nil {
+		t.Fatalf("update task_results created_at error = %v", err)
+	}
+
+	recoverResp := invokeJSON(t, handler, http.MethodPost, "/api/tasks/recover", map[string]interface{}{
+		"providerKey":      "recover_directory_scope_target",
+		"paths":            []string{"/scope-a", "/scope-c"},
+		"scope":            "selected_directory_subset",
+		"limitPerMode":     2,
+		"limitPerLane":     2,
+		"limitPerProvider": 2,
+		"limitPerProfile":  2,
+	})
+	recoverData := recoverResp.Data.(map[string]interface{})
+	if got := recoverData["scope"].(string); got != "selected_directory_subset" {
+		t.Fatalf("expected scope selected_directory_subset, got %s", got)
+	}
+	if got := int(recoverData["matchedCount"].(float64)); got != 1 {
+		t.Fatalf("expected matchedCount 1 task, got %d", got)
+	}
+	if got := int(recoverData["recoveredCount"].(float64)); got != 1 {
+		t.Fatalf("expected recoveredCount 1 task, got %d", got)
+	}
+
+	detailResp := invokeJSON(t, handler, http.MethodGet, "/api/tasks/"+taskID, nil)
+	results := detailResp.Data.(map[string]interface{})["results"].([]interface{})
+	if len(results) != 2 {
+		t.Fatalf("expected 2 recovered results, got %#v", results)
+	}
+	paths := []string{
+		results[0].(map[string]interface{})["payload"].(map[string]interface{})["path"].(string),
+		results[1].(map[string]interface{})["payload"].(map[string]interface{})["path"].(string),
+	}
+	sort.Strings(paths)
+	if paths[0] != "/scope-a/one.bin" || paths[1] != "/scope-c/three.bin" {
+		t.Fatalf("expected recovered paths [/scope-a/one.bin /scope-c/three.bin], got %#v", paths)
+	}
+	if got := uploadCallsByPath["/scope-b/two.bin"]; got != 1 {
+		t.Fatalf("expected /scope-b/two.bin upload calls to remain 1, got %d", got)
+	}
+	if got := int(recoverData["limitPerMode"].(float64)); got != 2 {
+		t.Fatalf("expected limitPerMode 2, got %d", got)
+	}
+	if got := int(recoverData["limitPerLane"].(float64)); got != 2 {
+		t.Fatalf("expected limitPerLane 2, got %d", got)
+	}
+}
+
+func TestAppRecoverTasksEndpointSupportsSelectedPendingSubsetScope(t *testing.T) {
+	ctx := context.Background()
+	application := mustNewTestApp(t, ctx)
+	uploadCalls := []string{}
+
+	targetAdapter := &appScriptedAdapter{
+		meta: provider.Provider{
+			Key:              "recover_pending_scope_target",
+			DisplayName:      "Recover Pending Scope Target",
+			ProtocolGroup:    "fake_target",
+			AuthModes:        []string{"manual_token"},
+			FastUploadInputs: []string{"md5", "size"},
+			FallbackModes:    []string{"download_upload"},
+			Status:           "planned",
+		},
+		capability: provider.CapabilitySet{
+			SupportsAuthValidation: true,
+			SupportsUpload:         true,
+		},
+		uploadFunc: func(req provider.UploadRequest) provider.UploadResult {
+			uploadCalls = append(uploadCalls, req.Path)
+			if len(uploadCalls) <= 2 {
+				return provider.UploadResult{
+					OperationResult: provider.OperationResult{
+						Status:  "pending_manual_requires_confirmation",
+						Message: "pending manual",
+						Mode:    "scripted_pending_manual",
+						Payload: map[string]interface{}{
+							"providerStatus": "pending_manual_requires_confirmation",
+						},
+					},
+				}
+			}
+			return provider.UploadResult{
+				OperationResult: provider.OperationResult{
+					OK:      true,
+					Status:  "ok",
+					Message: "pending scope recovered",
+					Mode:    "scripted_pending_scope_ok",
+				},
+			}
+		},
+	}
+
+	registry := provider.NewRegistry(targetAdapter)
+	authSvc := auth.NewService(application.store, registry)
+	taskSvc := task.NewService(application.store, registry, authSvc)
+	application.providers = registry
+	application.auth = authSvc
+	application.tasks = taskSvc
+	handler := application.routes()
+
+	profileResp := invokeJSON(t, handler, http.MethodPost, "/api/auth/profiles", map[string]interface{}{
+		"providerKey": "recover_pending_scope_target",
+		"authMode":    "manual_token",
+		"displayName": "Recover Pending Scope Target",
+		"token":       "token-recover-pending-scope",
+	})
+	profileID := profileResp.Data.(map[string]interface{})["id"].(string)
+
+	taskResp := invokeJSON(t, handler, http.MethodPost, "/api/tasks", map[string]interface{}{
+		"sourceProvider":  "recover_pending_scope_source",
+		"targetProvider":  "recover_pending_scope_target",
+		"targetProfileId": profileID,
+		"thresholdMB":     1,
+		"entries": []map[string]interface{}{
+			{"path": "/pending-a/one.bin", "size": 111, "md5": "pending-a"},
+			{"path": "/pending-b/two.bin", "size": 222, "md5": "pending-b"},
+		},
+	})
+	taskID := taskResp.Data.(map[string]interface{})["task"].(map[string]interface{})["id"].(string)
+
+	runResp := invokeJSON(t, handler, http.MethodPost, "/api/tasks/"+taskID+"/run", nil)
+	if got := runResp.Data.(map[string]interface{})["task"].(map[string]interface{})["state"].(string); got != "blocked" {
+		t.Fatalf("expected blocked, got %s", got)
+	}
+
+	recoverResp := invokeJSON(t, handler, http.MethodPost, "/api/tasks/recover", map[string]interface{}{
+		"taskId":           taskID,
+		"providerKey":      "recover_pending_scope_target",
+		"paths":            []string{"/pending-a/one.bin"},
+		"scope":            "selected_pending_subset",
+		"limitPerMode":     1,
+		"limitPerLane":     1,
+		"limitPerProvider": 1,
+		"limitPerProfile":  1,
+	})
+	recoverData := recoverResp.Data.(map[string]interface{})
+	if got := recoverData["scope"].(string); got != "selected_pending_subset" {
+		t.Fatalf("expected scope selected_pending_subset, got %s", got)
+	}
+	if got := int(recoverData["matchedCount"].(float64)); got != 1 {
+		t.Fatalf("expected matchedCount 1, got %d", got)
+	}
+	if got := int(recoverData["recoveredCount"].(float64)); got != 1 {
+		t.Fatalf("expected recoveredCount 1, got %d", got)
+	}
+
+	detailResp := invokeJSON(t, handler, http.MethodGet, "/api/tasks/"+taskID, nil)
+	results := detailResp.Data.(map[string]interface{})["results"].([]interface{})
+	if len(results) != 1 {
+		t.Fatalf("expected 1 recovered result, got %#v", results)
+	}
+	if got := results[0].(map[string]interface{})["payload"].(map[string]interface{})["path"].(string); got != "/pending-a/one.bin" {
+		t.Fatalf("expected recovered pending path /pending-a/one.bin, got %s", got)
+	}
+	if got := len(uploadCalls); got != 3 {
+		t.Fatalf("expected 3 upload calls, got %d", got)
+	}
+	if got := int(recoverData["limitPerProfile"].(float64)); got != 1 {
+		t.Fatalf("expected limitPerProfile 1, got %d", got)
+	}
+}
+
 func TestAppRecoverTasksEndpointFiltersTaskID(t *testing.T) {
 	ctx := context.Background()
 	application := mustNewTestApp(t, ctx)
