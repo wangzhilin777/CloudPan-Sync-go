@@ -138,6 +138,18 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "OVERRIDE FIELDS") {
 		t.Fatalf("expected OVERRIDE FIELDS risk resolution detail in app.js, got %q", body)
 	}
+	if !strings.Contains(body, "waiting_auth_refresh") {
+		t.Fatalf("expected waiting_auth_refresh recoverState affordance in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "waiting_local_restore") {
+		t.Fatalf("expected waiting_local_restore recoverState affordance in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "waiting_manual_confirmation") {
+		t.Fatalf("expected waiting_manual_confirmation recoverState affordance in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "waiting_retry_limit") {
+		t.Fatalf("expected waiting_retry_limit recoverState affordance in app.js, got %q", body)
+	}
 	if !strings.Contains(body, "<th>Retry Scope</th>") {
 		t.Fatalf("expected Retry Scope column in app.js, got %q", body)
 	}
