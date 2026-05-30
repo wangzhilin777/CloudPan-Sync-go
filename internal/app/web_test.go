@@ -168,6 +168,12 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "renderAutoRecoverOutcomeCounts") {
 		t.Fatalf("expected renderAutoRecoverOutcomeCounts helper in app.js, got %q", body)
 	}
+	if !strings.Contains(body, "renderAutoRecoverRecoverStateCounts") {
+		t.Fatalf("expected renderAutoRecoverRecoverStateCounts helper in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "renderAutoRecoverBlockedActionCounts") {
+		t.Fatalf("expected renderAutoRecoverBlockedActionCounts helper in app.js, got %q", body)
+	}
 	if !strings.Contains(body, "等待授权刷新") {
 		t.Fatalf("expected waiting_auth_refresh label in app.js, got %q", body)
 	}
@@ -185,6 +191,12 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	}
 	if !strings.Contains(body, "outcomes ") {
 		t.Fatalf("expected outcome summary text in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "states ") {
+		t.Fatalf("expected recover state summary text in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "actions ") {
+		t.Fatalf("expected blocked action summary text in app.js, got %q", body)
 	}
 	if !strings.Contains(body, "waiting_local_restore") {
 		t.Fatalf("expected waiting_local_restore recoverState affordance in app.js, got %q", body)

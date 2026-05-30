@@ -3183,6 +3183,74 @@ function renderAutoRecoverOutcomeCounts(result) {
   return parts.length ? ` / outcomes ${parts.join(" / ")}` : "";
 }
 
+function autoRecoverStateSummaryLabel(recoverState) {
+  return autoRecoverStateLabel(recoverState);
+}
+
+function renderAutoRecoverRecoverStateCounts(result) {
+  const counts = result && typeof result === "object" && result.recoverStateCounts && typeof result.recoverStateCounts === "object"
+    ? result.recoverStateCounts
+    : null;
+  if (!counts) {
+    return "";
+  }
+  const order = [
+    "runnable_now",
+    "waiting_cooldown",
+    "waiting_retry_window",
+    "waiting_auth_refresh",
+    "waiting_local_restore",
+    "waiting_manual_confirmation",
+    "waiting_retry_limit",
+    "waiting_other",
+  ];
+  const parts = order
+    .filter((key) => Number(counts[key] || 0) > 0)
+    .map((key) => `${autoRecoverStateSummaryLabel(key)} ${stringifyValue(counts[key], "0")}`);
+  return parts.length ? ` / states ${parts.join(" / ")}` : "";
+}
+
+function blockedActionSummaryLabel(action) {
+  const key = String(action || "").trim();
+  switch (key) {
+    case "wait_for_cooldown":
+      return "等待冷却";
+    case "wait_for_retry_window":
+      return "等待时间窗";
+    case "refresh_auth_profile":
+      return "刷新授权";
+    case "restore_local_source_file":
+      return "补回本地文件";
+    case "manual_confirmation_required":
+      return "人工确认";
+    case "review_and_reset_retry_strategy":
+      return "重置重试策略";
+    default:
+      return key || "-";
+  }
+}
+
+function renderAutoRecoverBlockedActionCounts(result) {
+  const counts = result && typeof result === "object" && result.blockedActionCounts && typeof result.blockedActionCounts === "object"
+    ? result.blockedActionCounts
+    : null;
+  if (!counts) {
+    return "";
+  }
+  const order = [
+    "wait_for_cooldown",
+    "wait_for_retry_window",
+    "refresh_auth_profile",
+    "restore_local_source_file",
+    "manual_confirmation_required",
+    "review_and_reset_retry_strategy",
+  ];
+  const parts = order
+    .filter((key) => Number(counts[key] || 0) > 0)
+    .map((key) => `${blockedActionSummaryLabel(key)} ${stringifyValue(counts[key], "0")}`);
+  return parts.length ? ` / actions ${parts.join(" / ")}` : "";
+}
+
 function renderAutoRecoverLastResultSummary() {
   const result = state.autoRecoverLastResult;
   if (!result || typeof result !== "object") {
@@ -3190,7 +3258,7 @@ function renderAutoRecoverLastResultSummary() {
   }
   const label = result.dryRun ? "最近预演" : "最近执行";
   const recoveredLabel = result.dryRun ? "可放行" : "recovered";
-  return `${label}：matched ${stringifyValue(result.matchedCount, "0")} / ${recoveredLabel} ${stringifyValue(result.recoveredCount, "0")} / limit ${stringifyValue(result.skippedByLimit, "0")} / modeBudget ${stringifyValue(result.skippedByModeBudget, "0")} / laneBudget ${stringifyValue(result.skippedByLaneBudget, "0")} / protocolGroupBudget ${stringifyValue(result.skippedByProtocolGroupBudget, "0")} / providerBudget ${stringifyValue(result.skippedByProviderBudget, "0")} / profileBudget ${stringifyValue(result.skippedByProfileBudget, "0")} / cooldownWait ${stringifyValue(result.skippedByCooldownWait, "0")} / retryWindowWait ${stringifyValue(result.skippedByRetryWindowWait, "0")} / blocked ${stringifyValue(result.skippedByBlockedReason, "0")}${renderAutoRecoverOutcomeCounts(result)}`;
+  return `${label}：matched ${stringifyValue(result.matchedCount, "0")} / ${recoveredLabel} ${stringifyValue(result.recoveredCount, "0")} / limit ${stringifyValue(result.skippedByLimit, "0")} / modeBudget ${stringifyValue(result.skippedByModeBudget, "0")} / laneBudget ${stringifyValue(result.skippedByLaneBudget, "0")} / protocolGroupBudget ${stringifyValue(result.skippedByProtocolGroupBudget, "0")} / providerBudget ${stringifyValue(result.skippedByProviderBudget, "0")} / profileBudget ${stringifyValue(result.skippedByProfileBudget, "0")} / cooldownWait ${stringifyValue(result.skippedByCooldownWait, "0")} / retryWindowWait ${stringifyValue(result.skippedByRetryWindowWait, "0")} / blocked ${stringifyValue(result.skippedByBlockedReason, "0")}${renderAutoRecoverOutcomeCounts(result)}${renderAutoRecoverRecoverStateCounts(result)}${renderAutoRecoverBlockedActionCounts(result)}`;
 }
 
 function renderAutoRecoverLastResultDetail() {

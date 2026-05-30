@@ -88,6 +88,8 @@ type RecoverResult struct {
 	SkippedByRetryWindowWait     int               `json:"skippedByRetryWindowWait"`
 	SkippedByBlockedReason       int               `json:"skippedByBlockedReason"`
 	OutcomeCounts                map[string]int    `json:"outcomeCounts,omitempty"`
+	RecoverStateCounts           map[string]int    `json:"recoverStateCounts,omitempty"`
+	BlockedActionCounts          map[string]int    `json:"blockedActionCounts,omitempty"`
 	Decisions                    []RecoverDecision `json:"decisions,omitempty"`
 }
 
@@ -1504,6 +1506,18 @@ func appendRecoverDecision(result *RecoverResult, decision RecoverDecision) {
 			result.OutcomeCounts = make(map[string]int)
 		}
 		result.OutcomeCounts[decision.Outcome] = result.OutcomeCounts[decision.Outcome] + 1
+	}
+	if strings.TrimSpace(decision.RecoverState) != "" {
+		if result.RecoverStateCounts == nil {
+			result.RecoverStateCounts = make(map[string]int)
+		}
+		result.RecoverStateCounts[decision.RecoverState] = result.RecoverStateCounts[decision.RecoverState] + 1
+	}
+	if strings.TrimSpace(decision.BlockedAction) != "" {
+		if result.BlockedActionCounts == nil {
+			result.BlockedActionCounts = make(map[string]int)
+		}
+		result.BlockedActionCounts[decision.BlockedAction] = result.BlockedActionCounts[decision.BlockedAction] + 1
 	}
 	if len(result.Decisions) >= recoverDecisionPreviewLimit {
 		return
