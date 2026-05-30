@@ -190,6 +190,23 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 		waitForText(`#status-runtime-checkpoints`, "恢复等待 - 本地恢复"),
 	)
 
+	runStep(t, runCtx, "status decision actions",
+		chromedp.Click(`#auto-recover-last-result-detail [data-auto-recover-decision-focus-state]`, chromedp.ByQuery),
+		waitForValue(`#auto-recover-state`, "waiting_other"),
+		waitForText(`#flash`, "已按决策状态 waiting_other 收敛后台补传候选"),
+		chromedp.Click(`#auto-recover-last-result-detail [data-auto-recover-decision-apply-budgets]`, chromedp.ByQuery),
+		waitForText(`#auto-recover-budget-summary`, "group 2"),
+		waitForText(`#flash`, "已按决策采用建议预算：group 2 / provider 3 / profile 2"),
+		chromedp.Click(`#auto-recover-last-result-detail [data-auto-recover-decision-preview]`, chromedp.ByQuery),
+		waitForText(`#flash`, "已按决策预演后台补传"),
+		waitForText(`#auto-recover-last-result-summary`, "最近预演"),
+		chromedp.Click(`#auto-recover-last-result-detail [data-auto-recover-decision-open-task]`, chromedp.ByQuery),
+		waitForText(`#flash`, "已打开 blocked 摘要对应的样本任务"),
+		waitForText(`#task-detail`, `"state": "completed_with_errors"`),
+		chromedp.Evaluate(`(() => document.querySelector('button[data-view="status"]')?.click())()`, nil),
+		waitForText(`#evidence-summary`, "Auto Recover"),
+	)
+
 	runStep(t, runCtx, "status snapshot panels",
 		waitForText("body", "Provider 状态矩阵"),
 		waitForText("body", "SOURCE DELETE"),

@@ -195,6 +195,9 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "renderAutoRecoverSuggestedBudgets") {
 		t.Fatalf("expected renderAutoRecoverSuggestedBudgets helper in app.js, got %q", body)
 	}
+	if !strings.Contains(body, "wireAutoRecoverLastResultDetail") {
+		t.Fatalf("expected wireAutoRecoverLastResultDetail helper in app.js, got %q", body)
+	}
 	if !strings.Contains(body, "等待授权刷新") {
 		t.Fatalf("expected waiting_auth_refresh label in app.js, got %q", body)
 	}
@@ -212,6 +215,15 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	}
 	if !strings.Contains(body, "blockedReason") {
 		t.Fatalf("expected blockedReason detail text in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "data-auto-recover-decision-preview") {
+		t.Fatalf("expected auto recover decision preview action in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "data-auto-recover-decision-run") {
+		t.Fatalf("expected auto recover decision run action in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "data-auto-recover-decision-open-task") {
+		t.Fatalf("expected auto recover decision open task action in app.js, got %q", body)
 	}
 	if !strings.Contains(body, "outcomes ") {
 		t.Fatalf("expected outcome summary text in app.js, got %q", body)

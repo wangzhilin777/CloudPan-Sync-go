@@ -2866,6 +2866,7 @@ function renderStatus() {
   $("#auto-recover-budget-summary").textContent = renderAutoRecoverBudgetSummary(autoRetryPolicy);
   $("#auto-recover-last-result-summary").textContent = renderAutoRecoverLastResultSummary();
   $("#auto-recover-last-result-detail").innerHTML = renderAutoRecoverLastResultDetail();
+  wireAutoRecoverLastResultDetail();
   $("#auto-recover-summary").innerHTML = renderAutoRecoverSummary(evidence.autoRecoverPool || []);
   wireAutoRecoverSummary();
   $("#protocol-coverage-summary").innerHTML = renderProtocolCoverageSummary(protocolCoverage);
@@ -3427,10 +3428,139 @@ function renderAutoRecoverLastResultDetail() {
           <div class="muted">retryClass: <code>${escapeHTML(stringifyValue(item.retryClass, "-"))}</code> / blockedAction: <code>${escapeHTML(stringifyValue(item.blockedAction, "-"))}</code> / blockedReason: <code>${escapeHTML(stringifyValue(item.blockedReason, "-"))}</code> / nextRetryAt: <code>${escapeHTML(stringifyValue(item.nextRetryAt, "-"))}</code></div>
           <div class="muted">等待态说明：${escapeHTML(autoRecoverDecisionAdvice(item))}</div>
           <div class="muted">${escapeHTML(stringifyValue(item.message, "-"))}</div>
+          <div class="tree-actions">
+            <button type="button" class="link-button" data-auto-recover-decision-focus-state="${escapeHTML(stringifyValue(item.recoverState, ""))}">只看该状态</button>
+            <button type="button" class="link-button" data-auto-recover-decision-focus-lane-mode="${escapeHTML(stringifyValue(item.mode, ""))}" data-auto-recover-decision-focus-lane-retry-class="${escapeHTML(stringifyValue(item.retryClass, ""))}" data-auto-recover-decision-focus-lane-blocked-action="${escapeHTML(stringifyValue(item.blockedAction, ""))}">只看该 lane</button>
+            <button type="button" class="link-button" data-auto-recover-decision-apply-budgets="1" data-auto-recover-decision-apply-group-budget="${escapeHTML(stringifyValue(item.suggestedProtocolGroupBudget, ""))}" data-auto-recover-decision-apply-provider-budget="${escapeHTML(stringifyValue(item.suggestedProviderBudget, ""))}" data-auto-recover-decision-apply-profile-budget="${escapeHTML(stringifyValue(item.suggestedProfileBudget, ""))}">采用建议预算</button>
+            <button type="button" class="link-button" data-auto-recover-decision-preview="1" data-auto-recover-decision-task-id="${escapeHTML(stringifyValue(item.taskId, ""))}" data-auto-recover-decision-mode="${escapeHTML(stringifyValue(item.mode, ""))}" data-auto-recover-decision-protocol-group="${escapeHTML(stringifyValue(item.protocolGroup, ""))}" data-auto-recover-decision-provider="${escapeHTML(stringifyValue(item.providerKey, ""))}" data-auto-recover-decision-profile="${escapeHTML(stringifyValue(item.profileId, ""))}" data-auto-recover-decision-retry-class="${escapeHTML(stringifyValue(item.retryClass, ""))}" data-auto-recover-decision-blocked-action="${escapeHTML(stringifyValue(item.blockedAction, ""))}" data-auto-recover-decision-recover-state="${escapeHTML(stringifyValue(item.recoverState, ""))}" data-auto-recover-decision-group-budget="${escapeHTML(stringifyValue(item.suggestedProtocolGroupBudget, ""))}" data-auto-recover-decision-provider-budget="${escapeHTML(stringifyValue(item.suggestedProviderBudget, ""))}" data-auto-recover-decision-profile-budget="${escapeHTML(stringifyValue(item.suggestedProfileBudget, ""))}">预演该决策</button>
+            <button type="button" class="link-button" data-auto-recover-decision-run="1" data-auto-recover-decision-task-id="${escapeHTML(stringifyValue(item.taskId, ""))}" data-auto-recover-decision-mode="${escapeHTML(stringifyValue(item.mode, ""))}" data-auto-recover-decision-protocol-group="${escapeHTML(stringifyValue(item.protocolGroup, ""))}" data-auto-recover-decision-provider="${escapeHTML(stringifyValue(item.providerKey, ""))}" data-auto-recover-decision-profile="${escapeHTML(stringifyValue(item.profileId, ""))}" data-auto-recover-decision-retry-class="${escapeHTML(stringifyValue(item.retryClass, ""))}" data-auto-recover-decision-blocked-action="${escapeHTML(stringifyValue(item.blockedAction, ""))}" data-auto-recover-decision-recover-state="${escapeHTML(stringifyValue(item.recoverState, ""))}" data-auto-recover-decision-group-budget="${escapeHTML(stringifyValue(item.suggestedProtocolGroupBudget, ""))}" data-auto-recover-decision-provider-budget="${escapeHTML(stringifyValue(item.suggestedProviderBudget, ""))}" data-auto-recover-decision-profile-budget="${escapeHTML(stringifyValue(item.suggestedProfileBudget, ""))}">执行该决策</button>
+            <button type="button" class="link-button" data-auto-recover-decision-open-task="${escapeHTML(stringifyValue(item.taskId, ""))}">打开样本任务</button>
+          </div>
         </div>
       `,
     )
     .join("");
+}
+
+function currentAutoRecoverDecisionRequest(button, dryRun = false) {
+  if (!button) {
+    return null;
+  }
+  const toPositiveNumber = (value) => {
+    const parsed = Number(String(value || "").trim());
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+  };
+  return {
+    dryRun: Boolean(dryRun),
+    taskId: String(button.dataset.autoRecoverDecisionTaskId || "").trim(),
+    mode: String(button.dataset.autoRecoverDecisionMode || "").trim(),
+    protocolGroup: String(button.dataset.autoRecoverDecisionProtocolGroup || "").trim(),
+    providerKey: String(button.dataset.autoRecoverDecisionProvider || "").trim(),
+    profileId: String(button.dataset.autoRecoverDecisionProfile || "").trim(),
+    retryClass: String(button.dataset.autoRecoverDecisionRetryClass || "").trim(),
+    blockedAction: String(button.dataset.autoRecoverDecisionBlockedAction || "").trim(),
+    recoverState: String(button.dataset.autoRecoverDecisionRecoverState || "").trim(),
+    limitPerProtocolGroup: toPositiveNumber(button.dataset.autoRecoverDecisionGroupBudget),
+    limitPerProvider: toPositiveNumber(button.dataset.autoRecoverDecisionProviderBudget),
+    limitPerProfile: toPositiveNumber(button.dataset.autoRecoverDecisionProfileBudget),
+  };
+}
+
+async function triggerAutoRecoverDecision(button, options = {}) {
+  const payload = currentAutoRecoverDecisionRequest(button, Boolean(options?.dryRun));
+  if (!payload) {
+    throw new Error("当前决策无效，无法继续后台补传操作");
+  }
+  applyAutoRecoverFilters({
+    mode: payload.mode,
+    protocolGroup: payload.protocolGroup,
+    providerKey: payload.providerKey,
+    profileId: payload.profileId,
+    retryClass: payload.retryClass,
+    blockedAction: payload.blockedAction,
+    recoverState: payload.recoverState,
+    limitPerProtocolGroup: payload.limitPerProtocolGroup ? String(payload.limitPerProtocolGroup) : "",
+    limitPerProvider: payload.limitPerProvider ? String(payload.limitPerProvider) : "",
+    limitPerProfile: payload.limitPerProfile ? String(payload.limitPerProfile) : "",
+  });
+  const result = await api("/api/tasks/recover", {
+    method: "POST",
+    body: payload,
+  });
+  state.autoRecoverLastResult = result;
+  if (payload.dryRun) {
+    $("#auto-recover-last-result-summary").textContent = renderAutoRecoverLastResultSummary();
+    $("#auto-recover-last-result-detail").innerHTML = renderAutoRecoverLastResultDetail();
+    wireAutoRecoverLastResultDetail();
+    showFlash(`已按决策预演后台补传：${stringifyValue(payload.taskId, "-")}`);
+    return result;
+  }
+  await Promise.all([loadTasks(), loadStatus()]);
+  showFlash(`已按决策执行后台补传：${stringifyValue(payload.taskId, "-")}`);
+  return result;
+}
+
+function wireAutoRecoverLastResultDetail() {
+  const wrap = $("#auto-recover-last-result-detail");
+  if (!wrap) {
+    return;
+  }
+  wrap.querySelectorAll("[data-auto-recover-decision-focus-state]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const recoverState = button.dataset.autoRecoverDecisionFocusState || "";
+      applyAutoRecoverFilters({ recoverState });
+      showFlash(`已按决策状态 ${recoverState} 收敛后台补传候选`);
+    });
+  });
+  wrap.querySelectorAll("[data-auto-recover-decision-focus-lane-mode]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const mode = button.dataset.autoRecoverDecisionFocusLaneMode || "";
+      const retryClass = button.dataset.autoRecoverDecisionFocusLaneRetryClass || "";
+      const blockedAction = button.dataset.autoRecoverDecisionFocusLaneBlockedAction || "";
+      applyAutoRecoverFilters({ mode, retryClass, blockedAction });
+      showFlash(`已按决策 lane 收敛后台补传候选：${[mode, retryClass, blockedAction].filter(Boolean).join(" / ")}`);
+    });
+  });
+  wrap.querySelectorAll("[data-auto-recover-decision-apply-budgets]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const limitPerProtocolGroup = button.dataset.autoRecoverDecisionApplyGroupBudget || "";
+      const limitPerProvider = button.dataset.autoRecoverDecisionApplyProviderBudget || "";
+      const limitPerProfile = button.dataset.autoRecoverDecisionApplyProfileBudget || "";
+      applyAutoRecoverFilters({
+        limitPerProtocolGroup,
+        limitPerProvider,
+        limitPerProfile,
+      });
+      showFlash(`已按决策采用建议预算：group ${limitPerProtocolGroup || "-"} / provider ${limitPerProvider || "-"} / profile ${limitPerProfile || "-"}`);
+    });
+  });
+  wrap.querySelectorAll("[data-auto-recover-decision-preview]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      try {
+        await triggerAutoRecoverDecision(button, { dryRun: true });
+      } catch (error) {
+        showFlash(error.message, true);
+      }
+    });
+  });
+  wrap.querySelectorAll("[data-auto-recover-decision-run]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      try {
+        await triggerAutoRecoverDecision(button, { dryRun: false });
+      } catch (error) {
+        showFlash(error.message, true);
+      }
+    });
+  });
+  wrap.querySelectorAll("[data-auto-recover-decision-open-task]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      try {
+        await openTaskByID(button.dataset.autoRecoverDecisionOpenTask || "");
+      } catch (error) {
+        showFlash(error.message, true);
+      }
+    });
+  });
 }
 
 function renderAutoRecoverFilterSummary(visibleItems, allItems) {
@@ -4497,6 +4627,7 @@ async function triggerAutoRecover(options = {}) {
   if (dryRun) {
     $("#auto-recover-last-result-summary").textContent = renderAutoRecoverLastResultSummary();
     $("#auto-recover-last-result-detail").innerHTML = renderAutoRecoverLastResultDetail();
+    wireAutoRecoverLastResultDetail();
     showFlash(
       `后台补传预演完成：matched ${stringifyValue(result.matchedCount, "0")} / 可放行 ${stringifyValue(result.recoveredCount, "0")} / providerBudget ${stringifyValue(result.skippedByProviderBudget, "0")} / profileBudget ${stringifyValue(result.skippedByProfileBudget, "0")}`,
     );
