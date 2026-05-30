@@ -108,3 +108,34 @@ func TestRoutesServeStaticAssets(t *testing.T) {
 		t.Fatalf("expected stylesheet content, got %q", rec.Body.String())
 	}
 }
+
+func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
+	staticFS, err := webui.StaticFS()
+	if err != nil {
+		t.Fatalf("StaticFS() error = %v", err)
+	}
+
+	app := &App{
+		logger:    slog.New(slog.NewTextHandler(io.Discard, nil)),
+		webIndex:  []byte("<html><body>ok</body></html>"),
+		webStatic: http.StripPrefix("/assets/", http.FileServer(http.FS(staticFS))),
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/assets/app.js", nil)
+	rec := httptest.NewRecorder()
+	app.routes().ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rec.Code)
+	}
+	body := rec.Body.String()
+	if !strings.Contains(body, "retrySelectedPaths") {
+		t.Fatalf("expected retrySelectedPaths evidence in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "<th>Retry Scope</th>") {
+		t.Fatalf("expected Retry Scope column in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "<th>Retry Paths</th>") {
+		t.Fatalf("expected Retry Paths column in app.js, got %q", body)
+	}
+}

@@ -3612,6 +3612,10 @@ function renderSnapshotSummary(summary) {
   }
   const retrySummary = summary.retrySummary;
   const blockedActions = Array.isArray(summary.blockedActions) ? summary.blockedActions : [];
+  const retryPaths =
+    Array.isArray(summary.retrySelectedPaths) && summary.retrySelectedPaths.length
+      ? summarizePathList(summary.retrySelectedPaths, 4)
+      : "-";
   if (retrySummary && typeof retrySummary === "object") {
     return `
       <div><strong>lastTaskState</strong> <code>${escapeHTML(stringifyValue(summary.lastTaskState))}</code></div>
@@ -3619,6 +3623,7 @@ function renderSnapshotSummary(summary) {
       <div><strong>scanMode</strong> <code>${escapeHTML(stringifyValue(summary.scanMode, "-"))}</code></div>
       <div><strong>retryMode</strong> <code>${escapeHTML(stringifyValue(summary.retryMode, "-"))}</code></div>
       <div><strong>retryScope</strong> <code>${escapeHTML(stringifyValue(summary.retryScope, "-"))}</code></div>
+      <div><strong>retrySelectedPaths</strong> <code>${escapeHTML(retryPaths)}</code></div>
       <div><strong>blockedCount</strong> <code>${escapeHTML(stringifyValue(summary.blockedCount, "0"))}</code></div>
       <div><strong>autoRecoverCount</strong> <code>${escapeHTML(stringifyValue(summary.autoRecoverCount, "0"))}</code></div>
       <div><strong>retryBlocked</strong> <code>${escapeHTML(stringifyValue(retrySummary.blockedReason, "-"))}</code></div>
@@ -3655,6 +3660,8 @@ function renderRecentResultsTable(items) {
           <th>Mode</th>
           <th>Execution Mode</th>
           <th>Retry Mode</th>
+          <th>Retry Scope</th>
+          <th>Retry Paths</th>
           <th>Source Delete</th>
           <th>Recommended</th>
           <th>Message</th>
@@ -3672,6 +3679,8 @@ function renderRecentResultsTable(items) {
                 <td>${item.mode || "-"}</td>
                 <td>${stringifyValue(item.payload?.executionMode)}</td>
                 <td>${stringifyValue(item.payload?.retryMode)}</td>
+                <td>${stringifyValue(item.payload?.retryScope, item.payload?.retrySelectedPaths?.length ? "selected_subset" : "-")}</td>
+                <td><code>${escapeHTML(summarizePathList(item.payload?.retrySelectedPaths || [], 3))}</code></td>
                 <td>${renderSourceDeletePolicy(item.payload?.sourceDeletePolicy)}</td>
                 <td>${stringifyValue(item.payload?.recommendedExecutionMode)}</td>
                 <td>${item.message || "-"}</td>
@@ -3701,6 +3710,8 @@ function renderRecentProbesTable(items) {
           <th>Execution Mode</th>
           <th>Scan Mode</th>
           <th>Retry Mode</th>
+          <th>Retry Scope</th>
+          <th>Retry Paths</th>
           <th>Source Delete</th>
           <th>Risk Hit</th>
           <th>Payload</th>
@@ -3718,6 +3729,8 @@ function renderRecentProbesTable(items) {
                 <td>${stringifyValue(item.payload?.executionMode)}</td>
                 <td>${stringifyValue(item.payload?.scanMode)}</td>
                 <td>${stringifyValue(item.payload?.retryMode)}</td>
+                <td>${stringifyValue(item.payload?.retryScope, item.payload?.retrySelectedPaths?.length ? "selected_subset" : "-")}</td>
+                <td><code>${escapeHTML(summarizePathList(item.payload?.retrySelectedPaths || [], 3))}</code></td>
                 <td>${renderSourceDeletePolicy(item.payload?.sourceDeletePolicy)}</td>
                 <td>${stringifyValue(item.payload?.lastRiskStatus || item.payload?.riskHitCount)}</td>
                 <td><code>${JSON.stringify(item.payload || {})}</code></td>
