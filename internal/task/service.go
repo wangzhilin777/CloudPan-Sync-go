@@ -546,6 +546,9 @@ func (s *Service) Run(ctx context.Context, id string) (Detail, bool, error) {
 		if recommendedReason, ok := detail.Plan.Metadata["recommendedExecutionModeReason"]; ok {
 			result.Payload["recommendedExecutionModeReason"] = recommendedReason
 		}
+		if sourceDeletePolicy, ok := detail.Plan.Metadata["sourceDeletePolicy"]; ok {
+			result.Payload["sourceDeletePolicy"] = sourceDeletePolicy
+		}
 		if item.Sequence > 0 {
 			result.Payload["sequence"] = item.Sequence
 		}

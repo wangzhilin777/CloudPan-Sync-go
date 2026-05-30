@@ -205,6 +205,9 @@ func TestAppWorkflowMainline(t *testing.T) {
 	if got := firstResultPayload["executionMode"].(string); got != "pre_scan_flat" {
 		t.Fatalf("expected result executionMode pre_scan_flat, got %s", got)
 	}
+	if got := firstResultPayload["sourceDeletePolicy"].(string); got != "record_only" {
+		t.Fatalf("expected result sourceDeletePolicy record_only, got %s", got)
+	}
 	runtimeData := runData["runtime"].(map[string]interface{})
 	if got := int(runtimeData["sourceDeletionCount"].(float64)); got != 1 {
 		t.Fatalf("expected runtime sourceDeletionCount 1, got %d", got)
@@ -291,6 +294,10 @@ func TestAppWorkflowMainline(t *testing.T) {
 	}
 	if got := len(evidenceData["recentResults"].([]interface{})); got == 0 {
 		t.Fatal("expected recentResults to be populated")
+	}
+	recentResultPayload := evidenceData["recentResults"].([]interface{})[0].(map[string]interface{})["payload"].(map[string]interface{})
+	if got := recentResultPayload["sourceDeletePolicy"].(string); got != "record_only" {
+		t.Fatalf("expected recent result sourceDeletePolicy record_only, got %s", got)
 	}
 	if got := len(evidenceData["recentProbes"].([]interface{})); got == 0 {
 		t.Fatal("expected recentProbes to be populated")

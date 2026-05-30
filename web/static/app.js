@@ -3652,6 +3652,7 @@ function renderRecentResultsTable(items) {
           <th>Status</th>
           <th>Mode</th>
           <th>Execution Mode</th>
+          <th>Source Delete</th>
           <th>Recommended</th>
           <th>Message</th>
           <th>Risk Hit</th>
@@ -3667,6 +3668,7 @@ function renderRecentResultsTable(items) {
                 <td>${item.status}</td>
                 <td>${item.mode || "-"}</td>
                 <td>${stringifyValue(item.payload?.executionMode)}</td>
+                <td>${renderSourceDeletePolicy(item.payload?.sourceDeletePolicy)}</td>
                 <td>${stringifyValue(item.payload?.recommendedExecutionMode)}</td>
                 <td>${item.message || "-"}</td>
                 <td>${stringifyValue(item.payload?.riskHit?.keyword || item.payload?.riskHit?.status)}</td>
