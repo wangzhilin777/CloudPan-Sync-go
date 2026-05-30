@@ -654,6 +654,17 @@ func TestAppWorkflowMainline(t *testing.T) {
 	if !ok || len(selectedPaths) != 1 || selectedPaths[0].(string) != "/demo/pending.bin" {
 		t.Fatalf("expected retrySelectedPaths [/demo/pending.bin], got %#v", retryMetadata["retrySelectedPaths"])
 	}
+	reportAfterRetryResp := invokeJSON(t, handler, http.MethodGet, "/api/evidence/report", nil)
+	reportAfterRetryMarkdown := reportAfterRetryResp.Data.(map[string]interface{})["markdown"].(string)
+	if !strings.Contains(reportAfterRetryMarkdown, "RetryMode") || !strings.Contains(reportAfterRetryMarkdown, "RetryScope") || !strings.Contains(reportAfterRetryMarkdown, "RetryPaths") {
+		t.Fatalf("expected retry evidence headers in report markdown after retry, got %s", reportAfterRetryMarkdown)
+	}
+	if !strings.Contains(reportAfterRetryMarkdown, "selected_pending_subset") {
+		t.Fatalf("expected report markdown to include selected_pending_subset after retry, got %s", reportAfterRetryMarkdown)
+	}
+	if !strings.Contains(reportAfterRetryMarkdown, "/demo/pending.bin") {
+		t.Fatalf("expected report markdown to include retried path /demo/pending.bin, got %s", reportAfterRetryMarkdown)
+	}
 }
 
 func TestAppPlanPreviewRejectsInvalidSourceDeletePolicy(t *testing.T) {

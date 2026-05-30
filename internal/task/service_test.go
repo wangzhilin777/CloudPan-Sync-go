@@ -444,6 +444,9 @@ func TestServiceProtocolCoverageSummary(t *testing.T) {
 	if !strings.Contains(report.Markdown, "## 代表任务样本") {
 		t.Fatalf("expected sample section in report markdown, got %s", report.Markdown)
 	}
+	if !strings.Contains(report.Markdown, "RetryMode") || !strings.Contains(report.Markdown, "RetryScope") || !strings.Contains(report.Markdown, "RetryPaths") {
+		t.Fatalf("expected retry evidence headers in report markdown, got %s", report.Markdown)
+	}
 	if len(report.Samples) == 0 {
 		t.Fatal("expected report samples")
 	}
