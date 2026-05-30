@@ -1168,6 +1168,11 @@ func TestAppRecoverTasksEndpointReturnsSummary(t *testing.T) {
 	} else if got := int(counts["recovered"].(float64)); got != 1 {
 		t.Fatalf("expected recovered outcome count 1, got %d", got)
 	}
+	if counts, ok := recoverData["retryClassCounts"].(map[string]interface{}); !ok {
+		t.Fatalf("expected retryClassCounts map, got %#v", recoverData["retryClassCounts"])
+	} else if got := int(counts["retry_failed"].(float64)); got != 1 {
+		t.Fatalf("expected retry_failed class count 1, got %d", got)
+	}
 	if counts, ok := recoverData["recoverStateCounts"].(map[string]interface{}); !ok {
 		t.Fatalf("expected recoverStateCounts map, got %#v", recoverData["recoverStateCounts"])
 	} else if got := int(counts["runnable_now"].(float64)); got != 1 {
@@ -1454,6 +1459,11 @@ func TestAppRecoverTasksEndpointDryRunDoesNotMutateTask(t *testing.T) {
 	} else if got := int(counts["dry_run_recoverable"].(float64)); got != 1 {
 		t.Fatalf("expected preview dry_run_recoverable count 1, got %d", got)
 	}
+	if counts, ok := previewData["retryClassCounts"].(map[string]interface{}); !ok {
+		t.Fatalf("expected preview retryClassCounts map, got %#v", previewData["retryClassCounts"])
+	} else if got := int(counts["retry_failed"].(float64)); got != 1 {
+		t.Fatalf("expected preview retry_failed count 1, got %d", got)
+	}
 	if counts, ok := previewData["recoverStateCounts"].(map[string]interface{}); !ok {
 		t.Fatalf("expected preview recoverStateCounts map, got %#v", previewData["recoverStateCounts"])
 	} else if got := int(counts["runnable_now"].(float64)); got != 1 {
@@ -1502,6 +1512,11 @@ func TestAppRecoverTasksEndpointDryRunDoesNotMutateTask(t *testing.T) {
 		t.Fatalf("expected execute outcomeCounts map, got %#v", recoverData["outcomeCounts"])
 	} else if got := int(counts["recovered"].(float64)); got != 1 {
 		t.Fatalf("expected execute recovered count 1, got %d", got)
+	}
+	if counts, ok := recoverData["retryClassCounts"].(map[string]interface{}); !ok {
+		t.Fatalf("expected execute retryClassCounts map, got %#v", recoverData["retryClassCounts"])
+	} else if got := int(counts["retry_failed"].(float64)); got != 1 {
+		t.Fatalf("expected execute retry_failed count 1, got %d", got)
 	}
 	if counts, ok := recoverData["recoverStateCounts"].(map[string]interface{}); !ok {
 		t.Fatalf("expected execute recoverStateCounts map, got %#v", recoverData["recoverStateCounts"])
@@ -2023,6 +2038,11 @@ func TestAppRecoverTasksEndpointFiltersWaitingRetryWindowState(t *testing.T) {
 	} else if got := int(counts["waiting_retry_window"].(float64)); got != 1 {
 		t.Fatalf("expected waiting_retry_window count 1, got %d", got)
 	}
+	if counts, ok := previewData["retryClassCounts"].(map[string]interface{}); !ok {
+		t.Fatalf("expected waiting window retryClassCounts map, got %#v", previewData["retryClassCounts"])
+	} else if got := int(counts["rate_limited"].(float64)); got != 1 {
+		t.Fatalf("expected rate_limited class count 1, got %d", got)
+	}
 	if counts, ok := previewData["recoverStateCounts"].(map[string]interface{}); !ok {
 		t.Fatalf("expected waiting window recoverStateCounts map, got %#v", previewData["recoverStateCounts"])
 	} else if got := int(counts["waiting_retry_window"].(float64)); got != 1 {
@@ -2042,6 +2062,9 @@ func TestAppRecoverTasksEndpointFiltersWaitingRetryWindowState(t *testing.T) {
 		t.Fatalf("expected waiting window providerCounts map, got %#v", previewData["providerCounts"])
 	} else if got := int(counts["recover_waiting_window_api_target"].(float64)); got != 1 {
 		t.Fatalf("expected recover_waiting_window_api_target count 1, got %d", got)
+	}
+	if got, ok := previewData["earliestNextRetryAt"].(string); !ok || got == "" {
+		t.Fatalf("expected earliestNextRetryAt string, got %#v", previewData["earliestNextRetryAt"])
 	}
 	if uploadCalls != 1 {
 		t.Fatalf("expected preview not to trigger extra upload, got %d", uploadCalls)

@@ -88,10 +88,12 @@ type RecoverResult struct {
 	SkippedByRetryWindowWait     int               `json:"skippedByRetryWindowWait"`
 	SkippedByBlockedReason       int               `json:"skippedByBlockedReason"`
 	OutcomeCounts                map[string]int    `json:"outcomeCounts,omitempty"`
+	RetryClassCounts             map[string]int    `json:"retryClassCounts,omitempty"`
 	RecoverStateCounts           map[string]int    `json:"recoverStateCounts,omitempty"`
 	BlockedActionCounts          map[string]int    `json:"blockedActionCounts,omitempty"`
 	ProtocolGroupCounts          map[string]int    `json:"protocolGroupCounts,omitempty"`
 	ProviderCounts               map[string]int    `json:"providerCounts,omitempty"`
+	EarliestNextRetryAt          string            `json:"earliestNextRetryAt,omitempty"`
 	Decisions                    []RecoverDecision `json:"decisions,omitempty"`
 }
 
@@ -1509,6 +1511,12 @@ func appendRecoverDecision(result *RecoverResult, decision RecoverDecision) {
 		}
 		result.OutcomeCounts[decision.Outcome] = result.OutcomeCounts[decision.Outcome] + 1
 	}
+	if strings.TrimSpace(decision.RetryClass) != "" {
+		if result.RetryClassCounts == nil {
+			result.RetryClassCounts = make(map[string]int)
+		}
+		result.RetryClassCounts[decision.RetryClass] = result.RetryClassCounts[decision.RetryClass] + 1
+	}
 	if strings.TrimSpace(decision.RecoverState) != "" {
 		if result.RecoverStateCounts == nil {
 			result.RecoverStateCounts = make(map[string]int)
@@ -1532,6 +1540,15 @@ func appendRecoverDecision(result *RecoverResult, decision RecoverDecision) {
 			result.ProviderCounts = make(map[string]int)
 		}
 		result.ProviderCounts[decision.ProviderKey] = result.ProviderCounts[decision.ProviderKey] + 1
+	}
+	if next := strings.TrimSpace(decision.NextRetryAt); next != "" {
+		if result.EarliestNextRetryAt == "" {
+			result.EarliestNextRetryAt = next
+		} else if candidateAt, err := time.Parse(time.RFC3339, next); err == nil {
+			if earliestAt, earliestErr := time.Parse(time.RFC3339, result.EarliestNextRetryAt); earliestErr != nil || candidateAt.Before(earliestAt) {
+				result.EarliestNextRetryAt = next
+			}
+		}
 	}
 	if len(result.Decisions) >= recoverDecisionPreviewLimit {
 		return

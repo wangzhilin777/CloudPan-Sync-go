@@ -168,6 +168,9 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "renderAutoRecoverOutcomeCounts") {
 		t.Fatalf("expected renderAutoRecoverOutcomeCounts helper in app.js, got %q", body)
 	}
+	if !strings.Contains(body, "renderAutoRecoverRetryClassCounts") {
+		t.Fatalf("expected renderAutoRecoverRetryClassCounts helper in app.js, got %q", body)
+	}
 	if !strings.Contains(body, "renderAutoRecoverRecoverStateCounts") {
 		t.Fatalf("expected renderAutoRecoverRecoverStateCounts helper in app.js, got %q", body)
 	}
@@ -198,6 +201,9 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "outcomes ") {
 		t.Fatalf("expected outcome summary text in app.js, got %q", body)
 	}
+	if !strings.Contains(body, "classes ") {
+		t.Fatalf("expected retry class summary text in app.js, got %q", body)
+	}
 	if !strings.Contains(body, "states ") {
 		t.Fatalf("expected recover state summary text in app.js, got %q", body)
 	}
@@ -209,6 +215,9 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	}
 	if !strings.Contains(body, "providers ") {
 		t.Fatalf("expected provider summary text in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "earliest ") {
+		t.Fatalf("expected earliest next retry summary text in app.js, got %q", body)
 	}
 	if !strings.Contains(body, "waiting_local_restore") {
 		t.Fatalf("expected waiting_local_restore recoverState affordance in app.js, got %q", body)

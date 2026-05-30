@@ -3183,6 +3183,38 @@ function renderAutoRecoverOutcomeCounts(result) {
   return parts.length ? ` / outcomes ${parts.join(" / ")}` : "";
 }
 
+function retryClassSummaryLabel(retryClass) {
+  const key = String(retryClass || "").trim();
+  switch (key) {
+    case "retry_failed":
+      return "普通重试失败";
+    case "rate_limited":
+      return "限流冷却";
+    case "pending_manual":
+      return "人工确认";
+    case "auth_expired":
+      return "授权过期";
+    case "local_file_missing":
+      return "本地文件缺失";
+    default:
+      return key || "-";
+  }
+}
+
+function renderAutoRecoverRetryClassCounts(result) {
+  const counts = result && typeof result === "object" && result.retryClassCounts && typeof result.retryClassCounts === "object"
+    ? result.retryClassCounts
+    : null;
+  if (!counts) {
+    return "";
+  }
+  const order = ["retry_failed", "rate_limited", "pending_manual", "auth_expired", "local_file_missing"];
+  const parts = order
+    .filter((key) => Number(counts[key] || 0) > 0)
+    .map((key) => `${retryClassSummaryLabel(key)} ${stringifyValue(counts[key], "0")}`);
+  return parts.length ? ` / classes ${parts.join(" / ")}` : "";
+}
+
 function autoRecoverStateSummaryLabel(recoverState) {
   return autoRecoverStateLabel(recoverState);
 }
@@ -3286,7 +3318,7 @@ function renderAutoRecoverLastResultSummary() {
   }
   const label = result.dryRun ? "最近预演" : "最近执行";
   const recoveredLabel = result.dryRun ? "可放行" : "recovered";
-  return `${label}：matched ${stringifyValue(result.matchedCount, "0")} / ${recoveredLabel} ${stringifyValue(result.recoveredCount, "0")} / limit ${stringifyValue(result.skippedByLimit, "0")} / modeBudget ${stringifyValue(result.skippedByModeBudget, "0")} / laneBudget ${stringifyValue(result.skippedByLaneBudget, "0")} / protocolGroupBudget ${stringifyValue(result.skippedByProtocolGroupBudget, "0")} / providerBudget ${stringifyValue(result.skippedByProviderBudget, "0")} / profileBudget ${stringifyValue(result.skippedByProfileBudget, "0")} / cooldownWait ${stringifyValue(result.skippedByCooldownWait, "0")} / retryWindowWait ${stringifyValue(result.skippedByRetryWindowWait, "0")} / blocked ${stringifyValue(result.skippedByBlockedReason, "0")}${renderAutoRecoverOutcomeCounts(result)}${renderAutoRecoverRecoverStateCounts(result)}${renderAutoRecoverBlockedActionCounts(result)}${renderAutoRecoverProtocolGroupCounts(result)}${renderAutoRecoverProviderCounts(result)}`;
+  return `${label}：matched ${stringifyValue(result.matchedCount, "0")} / ${recoveredLabel} ${stringifyValue(result.recoveredCount, "0")} / limit ${stringifyValue(result.skippedByLimit, "0")} / modeBudget ${stringifyValue(result.skippedByModeBudget, "0")} / laneBudget ${stringifyValue(result.skippedByLaneBudget, "0")} / protocolGroupBudget ${stringifyValue(result.skippedByProtocolGroupBudget, "0")} / providerBudget ${stringifyValue(result.skippedByProviderBudget, "0")} / profileBudget ${stringifyValue(result.skippedByProfileBudget, "0")} / cooldownWait ${stringifyValue(result.skippedByCooldownWait, "0")} / retryWindowWait ${stringifyValue(result.skippedByRetryWindowWait, "0")} / blocked ${stringifyValue(result.skippedByBlockedReason, "0")}${renderAutoRecoverOutcomeCounts(result)}${renderAutoRecoverRetryClassCounts(result)}${renderAutoRecoverRecoverStateCounts(result)}${renderAutoRecoverBlockedActionCounts(result)}${renderAutoRecoverProtocolGroupCounts(result)}${renderAutoRecoverProviderCounts(result)}${result.earliestNextRetryAt ? ` / earliest ${result.earliestNextRetryAt}` : ""}`;
 }
 
 function renderAutoRecoverLastResultDetail() {
