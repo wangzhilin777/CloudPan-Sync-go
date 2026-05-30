@@ -1358,6 +1358,9 @@ func TestAppRecoverTasksEndpointReportsProviderBudgetSkips(t *testing.T) {
 		if got := int(skipped["suggestedLaneBudget"].(float64)); got != 1 {
 			t.Fatalf("expected skipped decision suggestedLaneBudget 1, got %d", got)
 		}
+		if got := skipped["advice"].(string); !strings.Contains(got, "provider 预算提高到 2") {
+			t.Fatalf("expected skipped decision advice to mention provider budget 2, got %s", got)
+		}
 	}
 
 	firstDetail := invokeJSON(t, handler, http.MethodGet, "/api/tasks/"+firstID, nil)
@@ -2091,6 +2094,14 @@ func TestAppRecoverTasksEndpointFiltersWaitingRetryWindowState(t *testing.T) {
 		t.Fatalf("expected preview decisions, got %#v", previewData["decisions"])
 	} else if got := decisions[0].(map[string]interface{})["outcome"].(string); got != "waiting_retry_window" {
 		t.Fatalf("expected preview outcome waiting_retry_window, got %s", got)
+	} else {
+		decision := decisions[0].(map[string]interface{})
+		if got := decision["blockedReason"].(string); got != "retry_queue_waiting_for_retry_window" {
+			t.Fatalf("expected waiting window blockedReason retry_queue_waiting_for_retry_window, got %s", got)
+		}
+		if got := decision["advice"].(string); !strings.Contains(got, "自动补传时间窗") {
+			t.Fatalf("expected waiting window advice to mention auto retry window, got %s", got)
+		}
 	}
 	if counts, ok := previewData["outcomeCounts"].(map[string]interface{}); !ok {
 		t.Fatalf("expected waiting window outcomeCounts map, got %#v", previewData["outcomeCounts"])

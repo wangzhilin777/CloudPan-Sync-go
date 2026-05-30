@@ -163,6 +163,8 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 		waitForText(`#auto-recover-last-result-summary`, "lanes retry_queue_auto_retry + 普通重试失败 + - 1"),
 		waitForText(`#auto-recover-last-result-summary`, "suggest mode 1 / lane 1 / group 2 / provider 3 / profile 2"),
 		waitForText(`#auto-recover-last-result-detail`, "预演可放行"),
+		waitForText(`#auto-recover-last-result-detail`, "blockedReason: -"),
+		waitForText(`#auto-recover-last-result-detail`, "当前队列不存在人工确认/授权/本地文件硬阻塞"),
 	)
 
 	runStep(t, runCtx, "status retry lane",
@@ -179,6 +181,8 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 		waitForText(`#auto-recover-last-result-summary`, "lanes retry_queue_auto_retry + 普通重试失败 + - 1"),
 		waitForText(`#auto-recover-last-result-summary`, "suggest mode 1 / lane 1 / group 2 / provider 3 / profile 2"),
 		waitForText(`#auto-recover-last-result-detail`, "等待态说明"),
+		waitForText(`#auto-recover-last-result-detail`, "blockedReason: -"),
+		waitForText(`#auto-recover-last-result-detail`, "当前队列不存在人工确认/授权/本地文件硬阻塞"),
 		waitForText(`#auto-recover-last-result-detail`, "mode budget 1"),
 		waitForText(`#auto-recover-last-result-detail`, "lane budget 1"),
 		waitForText(`#auto-recover-summary`, "wait other"),

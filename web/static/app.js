@@ -3128,6 +3128,24 @@ function autoRecoverStateAdvice(recoverState) {
   }
 }
 
+function autoRecoverDecisionAdvice(decision) {
+  if (!decision || typeof decision !== "object") {
+    return "当前决策没有额外等待态说明。";
+  }
+  const directAdvice = String(decision.advice || "").trim();
+  if (directAdvice) {
+    return directAdvice;
+  }
+  const blockedReason = String(decision.blockedReason || "").trim();
+  if (blockedReason === "retry_queue_waiting_for_retry_window") {
+    return "当前已满足自动补传条件，但不在允许的自动补传时间窗内，等待 nextRetryAt 后系统会自动接管。";
+  }
+  if (blockedReason === "retry_queue_waiting_for_cooldown") {
+    return "当前处于风控冷却窗口，等待 nextRetryAt 后系统会尝试自动补传。";
+  }
+  return autoRecoverStateAdvice(decision.recoverState) || "当前决策没有额外等待态说明。";
+}
+
 function autoRecoverOutcomeLabel(outcome) {
   switch (String(outcome || "").trim()) {
     case "recovered":
@@ -3406,8 +3424,8 @@ function renderAutoRecoverLastResultDetail() {
             <span class="pill">profile budget ${escapeHTML(stringifyValue(item.suggestedProfileBudget, "-"))}</span>
           </div>
           <div class="muted">path: <code>${escapeHTML(stringifyValue(item.path, "-"))}</code> / protocolGroup: <code>${escapeHTML(stringifyValue(item.protocolGroup, "-"))}</code></div>
-          <div class="muted">retryClass: <code>${escapeHTML(stringifyValue(item.retryClass, "-"))}</code> / blockedAction: <code>${escapeHTML(stringifyValue(item.blockedAction, "-"))}</code> / nextRetryAt: <code>${escapeHTML(stringifyValue(item.nextRetryAt, "-"))}</code></div>
-          <div class="muted">等待态说明：${escapeHTML(autoRecoverStateAdvice(item.recoverState) || "当前决策没有额外等待态说明。")}</div>
+          <div class="muted">retryClass: <code>${escapeHTML(stringifyValue(item.retryClass, "-"))}</code> / blockedAction: <code>${escapeHTML(stringifyValue(item.blockedAction, "-"))}</code> / blockedReason: <code>${escapeHTML(stringifyValue(item.blockedReason, "-"))}</code> / nextRetryAt: <code>${escapeHTML(stringifyValue(item.nextRetryAt, "-"))}</code></div>
+          <div class="muted">等待态说明：${escapeHTML(autoRecoverDecisionAdvice(item))}</div>
           <div class="muted">${escapeHTML(stringifyValue(item.message, "-"))}</div>
         </div>
       `,

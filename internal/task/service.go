@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -112,11 +113,13 @@ type RecoverDecision struct {
 	ProtocolGroup                string `json:"protocolGroup,omitempty"`
 	RetryClass                   string `json:"retryClass,omitempty"`
 	BlockedAction                string `json:"blockedAction,omitempty"`
+	BlockedReason                string `json:"blockedReason,omitempty"`
 	RecoverState                 string `json:"recoverState,omitempty"`
 	Path                         string `json:"path,omitempty"`
 	NextRetryAt                  string `json:"nextRetryAt,omitempty"`
 	Outcome                      string `json:"outcome,omitempty"`
 	Message                      string `json:"message,omitempty"`
+	Advice                       string `json:"advice,omitempty"`
 	SuggestedModeBudget          int    `json:"suggestedModeBudget,omitempty"`
 	SuggestedLaneBudget          int    `json:"suggestedLaneBudget,omitempty"`
 	SuggestedProtocolGroupBudget int    `json:"suggestedProtocolGroupBudget,omitempty"`
@@ -1519,6 +1522,8 @@ func buildRecoverDecision(candidate recoverCandidate, outcome, message string, s
 	if profileBudget <= 0 {
 		profileBudget = recoverProfileBudget(detail)
 	}
+	blockedReason := strings.TrimSpace(firstNonEmpty(summaryBlockedReason(candidate.Summary), detail.Runtime.BlockedReason))
+	blockedAction := strings.TrimSpace(firstNonEmpty(candidate.Summary.BlockedAction, candidate.EffectiveAction, detail.Runtime.BlockedAction))
 	return RecoverDecision{
 		TaskID:                       detail.Task.ID,
 		ProviderKey:                  providerKey,
@@ -1526,17 +1531,92 @@ func buildRecoverDecision(candidate recoverCandidate, outcome, message string, s
 		Mode:                         candidate.Mode,
 		ProtocolGroup:                recoverProtocolGroupBudgetKey(candidate.ProtocolGroup),
 		RetryClass:                   candidate.PrimaryRetryClass,
-		BlockedAction:                candidate.EffectiveAction,
+		BlockedAction:                blockedAction,
+		BlockedReason:                blockedReason,
 		RecoverState:                 recoverDecisionState(detail, candidate.Summary),
 		Path:                         recoverDecisionPath(detail),
 		NextRetryAt:                  strings.TrimSpace(candidate.Summary.NextRetryAt),
 		Outcome:                      outcome,
 		Message:                      message,
+		Advice:                       recoverDecisionAdvice(candidate, outcome, blockedReason, suggestion),
 		SuggestedModeBudget:          modeBudget,
 		SuggestedLaneBudget:          laneBudget,
 		SuggestedProtocolGroupBudget: protocolGroupBudget,
 		SuggestedProviderBudget:      providerBudget,
 		SuggestedProfileBudget:       profileBudget,
+	}
+}
+
+func summaryBlockedReason(summary retryQueueSummary) string {
+	return strings.TrimSpace(summary.BlockedReason)
+}
+
+func recoverDecisionAdvice(candidate recoverCandidate, outcome, blockedReason string, suggestion recoverDecisionSuggestion) string {
+	summary := candidate.Summary
+	blockedAdvice := strings.TrimSpace(firstNonEmpty(summary.BlockedAdvice, candidate.Detail.Runtime.BlockedAdvice))
+	if blockedAdvice != "" {
+		switch strings.TrimSpace(outcome) {
+		case "waiting_cooldown", "waiting_retry_window", "blocked":
+			return blockedAdvice
+		}
+	}
+	switch strings.TrimSpace(outcome) {
+	case "skipped_mode_budget":
+		return "当前命中过滤范围内还有候选被模式预算挡住；如需本轮继续放行，至少把 mode 预算提高到 " + strconv.Itoa(maxInt(suggestion.ModeBudget, 1)) + "。"
+	case "skipped_lane_budget":
+		return "当前命中过滤范围内还有候选被 lane 预算挡住；如需本轮继续放行，至少把 lane 预算提高到 " + strconv.Itoa(maxInt(suggestion.LaneBudget, 1)) + "。"
+	case "skipped_protocol_group_budget":
+		return "当前命中过滤范围内还有候选被协议族预算挡住；如需本轮继续放行，至少把协议族预算提高到 " + strconv.Itoa(maxInt(suggestion.ProtocolGroupBudget, recoverProtocolGroupBudget(candidate.Detail))) + "。"
+	case "skipped_provider_budget":
+		return "当前命中过滤范围内还有候选被 provider 预算挡住；如需本轮继续放行，至少把 provider 预算提高到 " + strconv.Itoa(maxInt(suggestion.ProviderBudget, recoverProviderBudget(candidate.Detail))) + "。"
+	case "skipped_profile_budget":
+		return "当前命中过滤范围内还有候选被账号预算挡住；如需本轮继续放行，至少把账号预算提高到 " + strconv.Itoa(maxInt(suggestion.ProfileBudget, recoverProfileBudget(candidate.Detail))) + "。"
+	case "skipped_limit":
+		return "当前命中的候选数超过本轮 limit，可提高 limit 或继续缩小筛选条件后再放行。"
+	case "dry_run_recoverable", "recovered":
+		if advice := strings.TrimSpace(summary.AutoRecoverAdvice); advice != "" {
+			return advice
+		}
+		return "当前筛选与预算下已满足放行条件，可以直接执行或继续按 lane 分批推进。"
+	case "waiting_cooldown", "waiting_retry_window", "blocked":
+		if blockedAdvice != "" {
+			return blockedAdvice
+		}
+	}
+	if blockedReason != "" {
+		if _, advice := blockedGuidance(blockedReason); advice != "" {
+			return advice
+		}
+	}
+	if advice := strings.TrimSpace(summary.AutoRecoverAdvice); advice != "" {
+		return advice
+	}
+	if summary.UploadCheckpointEligible > 0 {
+		return "当前队列存在 upload checkpoint，可优先按 upload session 恢复口径继续排查或放行。"
+	}
+	return autoRecoverStateAdviceFallback(recoverDecisionState(candidate.Detail, candidate.Summary))
+}
+
+func autoRecoverStateAdviceFallback(recoverState string) string {
+	switch strings.TrimSpace(recoverState) {
+	case "runnable_now":
+		return "当前 lane 已满足预算与时间条件，可以直接预演或执行。"
+	case "waiting_cooldown":
+		return "先等待冷却到期，再观察 nextRetryAt 或下次自动补传 tick。"
+	case "waiting_retry_window":
+		return "当前不在允许的自动补传时间窗内，需等待窗口开放或手动调整风险配置。"
+	case "waiting_auth_refresh":
+		return "优先刷新或重新验证授权档案，再回到状态矩阵放行。"
+	case "waiting_local_restore":
+		return "源文件缺失或本地路径不可读，需先补回源文件后再继续补传。"
+	case "waiting_manual_confirmation":
+		return "该类失败仍需要人工确认或后续 fallback 能力，建议先缩小影响范围再处理。"
+	case "waiting_retry_limit":
+		return "当前任务已达到重试上限，先检查失败原因与重试策略，再决定是否重置额度。"
+	case "waiting_other":
+		return "当前 lane 仍有未细分等待条件，建议结合 decisions 明细和 blocked action 继续排查。"
+	default:
+		return ""
 	}
 }
 
