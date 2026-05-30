@@ -4634,6 +4634,30 @@ function currentAutoRecoverRequest(dryRun = false) {
   };
 }
 
+function currentAutoRecoverScopedRequest(overrides = {}, options = {}) {
+  const payload = currentAutoRecoverRequest(Boolean(options?.dryRun));
+  const merged = {
+    ...payload,
+    ...(overrides && typeof overrides === "object" ? overrides : {}),
+  };
+  if (!Array.isArray(merged.paths)) {
+    delete merged.paths;
+  }
+  if (!String(merged.path || "").trim()) {
+    delete merged.path;
+  }
+  if (!String(merged.scope || "").trim()) {
+    delete merged.scope;
+  }
+  if (!String(merged.taskId || "").trim()) {
+    delete merged.taskId;
+  }
+  if (!String(merged.providerKey || "").trim()) {
+    delete merged.providerKey;
+  }
+  return merged;
+}
+
 async function triggerAutoRecover(options = {}) {
   const dryRun = Boolean(options?.dryRun);
   const payload = currentAutoRecoverRequest(dryRun);
@@ -4687,19 +4711,19 @@ async function autoRecoverTaskPath(scope, path) {
   if (!normalizedPath) {
     throw new Error("缺少可恢复路径");
   }
+  applyAutoRecoverFilters({}, { render: false });
   const result = await api("/api/tasks/recover", {
     method: "POST",
-    body: {
+    body: currentAutoRecoverScopedRequest({
       taskId: context.taskId,
       providerKey: context.providerKey || "",
       path: normalizedPath,
       scope: "selected_retry_subset",
-      limit: 1,
-    },
+    }),
   });
   await Promise.all([loadTasks(), loadStatus()]);
   showFlash(
-    `后台补传子树已执行：${normalizedPath} / matched ${stringifyValue(result.matchedCount, "0")} / recovered ${stringifyValue(result.recoveredCount, "0")}`,
+    `后台补传子树已执行：${normalizedPath} / matched ${stringifyValue(result.matchedCount, "0")} / recovered ${stringifyValue(result.recoveredCount, "0")} / modeBudget ${stringifyValue(result.skippedByModeBudget, "0")} / laneBudget ${stringifyValue(result.skippedByLaneBudget, "0")} / providerBudget ${stringifyValue(result.skippedByProviderBudget, "0")}`,
     result.recoveredCount <= 0,
   );
 }
@@ -5362,19 +5386,19 @@ async function autoRecoverVisibleSelection(scope, source) {
     showFlash("当前筛选结果里没有可后台补传的路径", true);
     return;
   }
+  applyAutoRecoverFilters({}, { render: false });
   const result = await api("/api/tasks/recover", {
     method: "POST",
-    body: {
+    body: currentAutoRecoverScopedRequest({
       taskId: context.taskId,
       providerKey: context.providerKey || "",
       paths,
       scope: recoverScopeFromSource(source),
-      limit: 1,
-    },
+    }),
   });
   await Promise.all([loadTasks(), loadStatus()]);
   showFlash(
-    `后台补传筛选已执行：paths ${paths.length} / matched ${stringifyValue(result.matchedCount, "0")} / recovered ${stringifyValue(result.recoveredCount, "0")}`,
+    `后台补传筛选已执行：paths ${paths.length} / matched ${stringifyValue(result.matchedCount, "0")} / recovered ${stringifyValue(result.recoveredCount, "0")} / modeBudget ${stringifyValue(result.skippedByModeBudget, "0")} / laneBudget ${stringifyValue(result.skippedByLaneBudget, "0")} / providerBudget ${stringifyValue(result.skippedByProviderBudget, "0")}`,
     result.recoveredCount <= 0,
   );
 }

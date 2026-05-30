@@ -237,6 +237,15 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "data-auto-recover-preview-mode-budget") {
 		t.Fatalf("expected auto recover summary preview mode budget wiring in app.js, got %q", body)
 	}
+	if !strings.Contains(body, "currentAutoRecoverScopedRequest") {
+		t.Fatalf("expected scoped auto recover request helper in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "后台补传筛选已执行：paths") {
+		t.Fatalf("expected scoped auto recover selection flash text in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "后台补传子树已执行：") {
+		t.Fatalf("expected scoped auto recover subtree flash text in app.js, got %q", body)
+	}
 	if !strings.Contains(body, "outcomes ") {
 		t.Fatalf("expected outcome summary text in app.js, got %q", body)
 	}
