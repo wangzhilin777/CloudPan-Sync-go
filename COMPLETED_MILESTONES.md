@@ -36,3 +36,12 @@
 - Web smoke 断言已补强：静态资源测试现在同时校验 `data-auto-recover-decision-strategy` 数据透传，以及 `strategy: payload.strategy` 这段前端状态同步代码仍然存在。
 - 回归验证已通过：`go test ./internal/app ./internal/task`、`node --check web/static/app.js`。
 - 清理情况：本轮未启动额外后台进程；未生成需保留的临时目录、smoke 目录或构建残留。
+
+## 2026-05-31 - 后台补传 lane 级策略状态同步
+
+- 继续对齐 [docs/01-GO_REBUILD_PLAN.md](E:/Workspace/VSCode/CloudPan-Sync-go/docs/01-GO_REBUILD_PLAN.md) 中“更复杂的后台补传编排、批量筛选与多策略调度”方向，把状态页候选池 lane 级动作也补齐 `strategy` 上下文。
+- 候选池里的“只看该 lane / 预演该 lane / 执行该 lane”按钮现在都会透传 `sampleStrategy`，避免从 lane 聚焦或 lane 级预演/执行进入时丢失策略筛选条件。
+- `currentAutoRecoverRequest()` 现已优先读取 `state.autoRecoverFilters`，即使按钮动作使用 `render: false` 先更新筛选状态、后立即触发请求，也不会因为 DOM 尚未刷新而漏掉当前 `strategy` / 预算条件。
+- Web smoke 断言已补强：静态资源测试现在同时校验 lane 级 `data-auto-recover-focus-lane-strategy / data-auto-recover-preview-lane-strategy / data-auto-recover-run-lane-strategy` 透传，以及请求构造优先读取当前筛选 state 的实现仍然存在。
+- 回归验证已通过：`go test ./internal/app ./internal/task`、`node --check web/static/app.js`。
+- 清理情况：本轮未启动额外后台进程；未新增需保留的临时目录、smoke 目录或构建残留。

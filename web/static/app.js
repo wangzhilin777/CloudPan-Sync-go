@@ -3943,6 +3943,7 @@ function renderAutoRecoverSummary(items) {
               type="button"
               class="ghost"
               data-auto-recover-focus-lane-mode="${escapeHTML(stringifyValue(item.mode, ""))}"
+              data-auto-recover-focus-lane-strategy="${escapeHTML(stringifyValue(item.sampleStrategy, ""))}"
               data-auto-recover-focus-lane-retry-class="${escapeHTML(stringifyValue(item.primaryRetryClass, ""))}"
               data-auto-recover-focus-lane-blocked-action="${escapeHTML(stringifyValue(item.primaryBlockedAction, ""))}"
             >只看该 lane</button>`
@@ -3962,6 +3963,7 @@ function renderAutoRecoverSummary(items) {
               type="button"
               class="ghost"
               data-auto-recover-preview-lane-mode="${escapeHTML(stringifyValue(item.mode, ""))}"
+              data-auto-recover-preview-lane-strategy="${escapeHTML(stringifyValue(item.sampleStrategy, ""))}"
               data-auto-recover-preview-lane-retry-class="${escapeHTML(stringifyValue(item.primaryRetryClass, ""))}"
               data-auto-recover-preview-lane-blocked-action="${escapeHTML(stringifyValue(item.primaryBlockedAction, ""))}"
               data-auto-recover-preview-mode-budget="${escapeHTML(stringifyValue(autoRecoverSuggestedBudgetValue(item.suggestedModeBudget, autoRetryPolicy.limitPerMode), ""))}"
@@ -4084,6 +4086,7 @@ function renderAutoRecoverSummary(items) {
               type="button"
               class="ghost"
               data-auto-recover-run-lane-mode="${escapeHTML(stringifyValue(item.mode, ""))}"
+              data-auto-recover-run-lane-strategy="${escapeHTML(stringifyValue(item.sampleStrategy, ""))}"
               data-auto-recover-run-lane-retry-class="${escapeHTML(stringifyValue(item.primaryRetryClass, ""))}"
               data-auto-recover-run-lane-blocked-action="${escapeHTML(stringifyValue(item.primaryBlockedAction, ""))}"
             >执行该 lane</button>`
@@ -4513,10 +4516,11 @@ function wireAutoRecoverSummary() {
   wrap.querySelectorAll("[data-auto-recover-focus-lane-mode]").forEach((button) => {
     button.addEventListener("click", () => {
       const mode = button.dataset.autoRecoverFocusLaneMode || "";
+      const strategy = button.dataset.autoRecoverFocusLaneStrategy || "";
       const retryClass = button.dataset.autoRecoverFocusLaneRetryClass || "";
       const blockedAction = button.dataset.autoRecoverFocusLaneBlockedAction || "";
-      applyAutoRecoverFilters({ mode, retryClass, blockedAction });
-      showFlash(`已按 lane 收敛后台补传候选：${[mode, retryClass, blockedAction].filter(Boolean).join(" / ")}`);
+      applyAutoRecoverFilters({ mode, strategy, retryClass, blockedAction });
+      showFlash(`已按 lane 收敛后台补传候选：${[mode, strategy, retryClass, blockedAction].filter(Boolean).join(" / ")}`);
     });
   });
   wrap.querySelectorAll("[data-auto-recover-apply-budgets]").forEach((button) => {
@@ -4542,6 +4546,7 @@ function wireAutoRecoverSummary() {
         // Preview lane 时只过滤 mode/retryClass/blockedAction，不把 mode/lane 预算写入过滤器，避免因预算限制导致无决策返回。
         applyAutoRecoverFilters({
           mode: button.dataset.autoRecoverPreviewLaneMode || "",
+          strategy: button.dataset.autoRecoverPreviewLaneStrategy || "",
           retryClass: button.dataset.autoRecoverPreviewLaneRetryClass || "",
           blockedAction: button.dataset.autoRecoverPreviewLaneBlockedAction || "",
           limitPerProtocolGroup: button.dataset.autoRecoverPreviewGroupBudget || "",
@@ -4620,6 +4625,7 @@ function wireAutoRecoverSummary() {
         applyAutoRecoverFilters(
           {
             mode: button.dataset.autoRecoverRunLaneMode || "",
+            strategy: button.dataset.autoRecoverRunLaneStrategy || "",
             retryClass: button.dataset.autoRecoverRunLaneRetryClass || "",
             blockedAction: button.dataset.autoRecoverRunLaneBlockedAction || "",
           },
@@ -4666,28 +4672,36 @@ function autoRecoverScopeFromPanel(panel) {
 }
 
 function currentAutoRecoverRequest(dryRun = false) {
-  const selectedRecoverState = String($("#auto-recover-state")?.value || "").trim();
-  const limitText = String($("#auto-recover-limit")?.value || "").trim();
-  const limitPerModeText = String($("#auto-recover-limit-per-mode")?.value || "").trim();
-  const limitPerLaneText = String($("#auto-recover-limit-per-lane")?.value || "").trim();
-  const limitPerProtocolGroupText = String($("#auto-recover-limit-per-protocol-group")?.value || "").trim();
-  const limitPerProviderText = String($("#auto-recover-limit-per-provider")?.value || "").trim();
-  const limitPerProfileText = String($("#auto-recover-limit-per-profile")?.value || "").trim();
+  const filters = state.autoRecoverFilters || {};
+  const readFilterValue = (selector, key) => {
+    const stateValue = String(filters[key] || "").trim();
+    if (stateValue) {
+      return stateValue;
+    }
+    return String($(selector)?.value || "").trim();
+  };
+  const selectedRecoverState = readFilterValue("#auto-recover-state", "recoverState");
+  const limitText = readFilterValue("#auto-recover-limit", "limit");
+  const limitPerModeText = readFilterValue("#auto-recover-limit-per-mode", "limitPerMode");
+  const limitPerLaneText = readFilterValue("#auto-recover-limit-per-lane", "limitPerLane");
+  const limitPerProtocolGroupText = readFilterValue("#auto-recover-limit-per-protocol-group", "limitPerProtocolGroup");
+  const limitPerProviderText = readFilterValue("#auto-recover-limit-per-provider", "limitPerProvider");
+  const limitPerProfileText = readFilterValue("#auto-recover-limit-per-profile", "limitPerProfile");
   const limit = limitText ? Number(limitText) : 0;
   const limitPerMode = limitPerModeText ? Number(limitPerModeText) : 0;
   const limitPerLane = limitPerLaneText ? Number(limitPerLaneText) : 0;
   const limitPerProtocolGroup = limitPerProtocolGroupText ? Number(limitPerProtocolGroupText) : 0;
   const limitPerProvider = limitPerProviderText ? Number(limitPerProviderText) : 0;
   const limitPerProfile = limitPerProfileText ? Number(limitPerProfileText) : 0;
-  const selectedBlockedAction = String($("#auto-recover-blocked-action")?.value || "").trim();
+  const selectedBlockedAction = readFilterValue("#auto-recover-blocked-action", "blockedAction");
   return {
     dryRun: Boolean(dryRun),
-    mode: String($("#auto-recover-mode")?.value || "").trim(),
-    strategy: String($("#auto-recover-strategy")?.value || "").trim(),
-    protocolGroup: String($("#auto-recover-protocol-group")?.value || "").trim(),
-    providerKey: String($("#auto-recover-provider")?.value || "").trim(),
-    profileId: String($("#auto-recover-profile")?.value || "").trim(),
-    retryClass: String($("#auto-recover-retry-class")?.value || "").trim(),
+    mode: readFilterValue("#auto-recover-mode", "mode"),
+    strategy: readFilterValue("#auto-recover-strategy", "strategy"),
+    protocolGroup: readFilterValue("#auto-recover-protocol-group", "protocolGroup"),
+    providerKey: readFilterValue("#auto-recover-provider", "providerKey"),
+    profileId: readFilterValue("#auto-recover-profile", "profileId"),
+    retryClass: readFilterValue("#auto-recover-retry-class", "retryClass"),
     blockedAction: selectedBlockedAction || autoRecoverBlockedActionFromRecoverState(selectedRecoverState),
     recoverState: selectedRecoverState,
     limit: Number.isFinite(limit) && limit > 0 ? limit : 0,
@@ -4698,7 +4712,6 @@ function currentAutoRecoverRequest(dryRun = false) {
     limitPerProfile: Number.isFinite(limitPerProfile) && limitPerProfile > 0 ? limitPerProfile : 0,
   };
 }
-
 function currentAutoRecoverScopedRequest(overrides = {}, options = {}) {
   const payload = currentAutoRecoverRequest(Boolean(options?.dryRun));
   const merged = {

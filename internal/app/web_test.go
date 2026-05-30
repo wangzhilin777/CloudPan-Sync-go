@@ -237,6 +237,27 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "data-auto-recover-decision-lane-budget") {
 		t.Fatalf("expected auto recover decision lane budget wiring in app.js, got %q", body)
 	}
+	if !strings.Contains(body, "data-auto-recover-focus-lane-strategy") {
+		t.Fatalf("expected auto recover summary lane strategy focus wiring in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "data-auto-recover-preview-lane-strategy") {
+		t.Fatalf("expected auto recover summary lane strategy preview wiring in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "data-auto-recover-run-lane-strategy") {
+		t.Fatalf("expected auto recover summary lane strategy run wiring in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "const filters = state.autoRecoverFilters || {}") {
+		t.Fatalf("expected auto recover request to read filter state first in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "strategy: button.dataset.autoRecoverPreviewLaneStrategy || \"\"") {
+		t.Fatalf("expected auto recover preview lane strategy filter sync in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "strategy: button.dataset.autoRecoverRunLaneStrategy || \"\"") {
+		t.Fatalf("expected auto recover run lane strategy filter sync in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "const strategy = button.dataset.autoRecoverFocusLaneStrategy || \"\"") {
+		t.Fatalf("expected auto recover focus lane strategy filter sync in app.js, got %q", body)
+	}
 	if !strings.Contains(body, "data-auto-recover-apply-mode-budget") {
 		t.Fatalf("expected auto recover summary mode budget wiring in app.js, got %q", body)
 	}
