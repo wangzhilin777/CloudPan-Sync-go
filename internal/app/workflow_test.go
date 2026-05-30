@@ -384,6 +384,9 @@ func TestAppWorkflowMainline(t *testing.T) {
 		if got := summary["executionMode"].(string); got != "pre_scan_flat" {
 			t.Fatalf("expected status summary executionMode pre_scan_flat, got %s", got)
 		}
+		if got, ok := summary["scanMode"].(string); !ok || got != "pre_scan_flat" {
+			t.Fatalf("expected status summary scanMode pre_scan_flat, got %s", got)
+		}
 		if got := summary["sourceDeletePolicy"].(string); got != "record_only" {
 			t.Fatalf("expected status summary sourceDeletePolicy record_only, got %s", got)
 		}

@@ -1304,7 +1304,7 @@ func buildProviderStatusSnapshot(ctx context.Context, store *sqlitestore.Store, 
 			"recommendedExecutionMode":       detail.Plan.Metadata["recommendedExecutionMode"],
 			"recommendedExecutionModeReason": detail.Plan.Metadata["recommendedExecutionModeReason"],
 			"sourceDeletePolicy":             detail.Plan.Metadata["sourceDeletePolicy"],
-			"scanMode":                       detail.Plan.Metadata["scanMode"],
+			"scanMode":                       scanModeValue(detail.Plan.Metadata),
 			"riskProfile":                    detail.Plan.Metadata["riskProfile"],
 			"riskOverride":                   detail.Plan.Metadata["riskOverride"],
 			"runtime":                        detail.Runtime,
@@ -1334,6 +1334,17 @@ func buildProviderStatusSnapshot(ctx context.Context, store *sqlitestore.Store, 
 		},
 		CreatedAt: createdAt,
 	}, nil
+}
+
+func scanModeValue(values map[string]interface{}) string {
+	if mode := stringValue(values["scanMode"]); mode != "" {
+		return mode
+	}
+	executionMode, err := executionModeFromMetadata(values)
+	if err != nil {
+		return ""
+	}
+	return scanModeForExecutionMode(executionMode)
 }
 
 func latestProviderStatusSnapshot(ctx context.Context, store *sqlitestore.Store, providerKey string) (ProviderStatus, bool, error) {

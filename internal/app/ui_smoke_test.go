@@ -165,6 +165,7 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 		waitForValue(`#status-pending-filter-query`, "/demo"),
 		waitForText(`#status-table`, "executionMode"),
 		waitForText(`#status-table`, "scanMode"),
+		waitForText(`#status-table`, "record_only"),
 		chromedp.Click(`#status-directory-copy-visible`, chromedp.ByID),
 		waitForText(`#flash`, "已复制"),
 		waitForSelectorCount(`button[data-tree-bulk-scope="status"][data-tree-bulk-panel="directory"][data-tree-bulk-action="collapse"]`, 1),
