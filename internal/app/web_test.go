@@ -80,6 +80,21 @@ func TestHandleIndexServesHTML(t *testing.T) {
 	if !strings.Contains(body, `id="auto-recover-last-result-detail"`) {
 		t.Fatalf("expected auto recover result detail in html body, got %q", body)
 	}
+	if !strings.Contains(body, `id="auto-recover-state"`) {
+		t.Fatalf("expected auto recover state selector in html body, got %q", body)
+	}
+	if !strings.Contains(body, `value="waiting_auth_refresh"`) {
+		t.Fatalf("expected waiting_auth_refresh option in html body, got %q", body)
+	}
+	if !strings.Contains(body, `value="waiting_local_restore"`) {
+		t.Fatalf("expected waiting_local_restore option in html body, got %q", body)
+	}
+	if !strings.Contains(body, `value="waiting_manual_confirmation"`) {
+		t.Fatalf("expected waiting_manual_confirmation option in html body, got %q", body)
+	}
+	if !strings.Contains(body, `value="waiting_retry_limit"`) {
+		t.Fatalf("expected waiting_retry_limit option in html body, got %q", body)
+	}
 	if !strings.Contains(body, `id="risk-max-concurrent"`) {
 		t.Fatalf("expected risk concurrency input in html body, got %q", body)
 	}
