@@ -246,6 +246,12 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "后台补传子树已执行：") {
 		t.Fatalf("expected scoped auto recover subtree flash text in app.js, got %q", body)
 	}
+	if !strings.Contains(body, "autoRecoverScopeFromPanel") {
+		t.Fatalf("expected tree panel auto recover scope helper in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "data-tree-auto-recover-panel") {
+		t.Fatalf("expected tree auto recover panel wiring in app.js, got %q", body)
+	}
 	if !strings.Contains(body, "outcomes ") {
 		t.Fatalf("expected outcome summary text in app.js, got %q", body)
 	}

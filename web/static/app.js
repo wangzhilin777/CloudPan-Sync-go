@@ -1701,7 +1701,11 @@ function wireTreeGroupToggles(scope, panel) {
   wrap.querySelectorAll("[data-tree-auto-recover-path]").forEach((button) => {
     button.addEventListener("click", async () => {
       try {
-        await autoRecoverTaskPath(scope, button.dataset.treeAutoRecoverPath || "");
+        await autoRecoverTaskPath(
+          scope,
+          button.dataset.treeAutoRecoverPath || "",
+          button.dataset.treeAutoRecoverPanel || "directory",
+        );
       } catch (error) {
         showFlash(error.message, true);
       }
@@ -4601,6 +4605,10 @@ function autoRecoverBlockedActionFromRecoverState(recoverState) {
   }
 }
 
+function autoRecoverScopeFromPanel(panel) {
+  return panel === "pending" ? "selected_pending_subset" : "selected_directory_subset";
+}
+
 function currentAutoRecoverRequest(dryRun = false) {
   const selectedRecoverState = String($("#auto-recover-state")?.value || "").trim();
   const limitText = String($("#auto-recover-limit")?.value || "").trim();
@@ -4696,7 +4704,7 @@ async function triggerAutoRecover(options = {}) {
   return result;
 }
 
-async function autoRecoverTaskPath(scope, path) {
+async function autoRecoverTaskPath(scope, path, panel = "directory") {
   const context =
     scope === "task"
       ? {
@@ -4718,7 +4726,7 @@ async function autoRecoverTaskPath(scope, path) {
       taskId: context.taskId,
       providerKey: context.providerKey || "",
       path: normalizedPath,
-      scope: "selected_retry_subset",
+      scope: autoRecoverScopeFromPanel(panel),
     }),
   });
   await Promise.all([loadTasks(), loadStatus()]);
