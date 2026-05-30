@@ -767,6 +767,63 @@ func TestAppRetrySelectedDirectorySubsetKeepsChosenSubtree(t *testing.T) {
 	if !ok || len(selectedPaths) != 1 || selectedPaths[0].(string) != "/1/11" {
 		t.Fatalf("expected retrySelectedPaths [/1/11], got %#v", retryMetadata["retrySelectedPaths"])
 	}
+
+	runRetryResp := invokeJSON(t, handler, http.MethodPost, "/api/tasks/"+taskID+"/run", nil)
+	runRetryData := runRetryResp.Data.(map[string]interface{})
+	retriedResults := runRetryData["results"].([]interface{})
+	if len(retriedResults) != 1 {
+		t.Fatalf("expected retried run to keep only 1 result, got %d", len(retriedResults))
+	}
+	retriedResultPayload := retriedResults[0].(map[string]interface{})["payload"].(map[string]interface{})
+	if got := retriedResultPayload["retryMode"].(string); got != "selected_directory_subset" {
+		t.Fatalf("expected retried result retryMode selected_directory_subset, got %s", got)
+	}
+	if got := retriedResultPayload["retryScope"].(string); got != "selected_directory_subset" {
+		t.Fatalf("expected retried result retryScope selected_directory_subset, got %s", got)
+	}
+	retriedSelectedPaths, ok := retriedResultPayload["retrySelectedPaths"].([]interface{})
+	if !ok || len(retriedSelectedPaths) != 1 || retriedSelectedPaths[0].(string) != "/1/11" {
+		t.Fatalf("expected retried result retrySelectedPaths [/1/11], got %#v", retriedResultPayload["retrySelectedPaths"])
+	}
+
+	evidenceResp := invokeJSON(t, handler, http.MethodGet, "/api/evidence/runtime", nil)
+	evidenceData := evidenceResp.Data.(map[string]interface{})
+	evidenceRecentResultPayload := evidenceData["recentResults"].([]interface{})[0].(map[string]interface{})["payload"].(map[string]interface{})
+	if got := evidenceRecentResultPayload["retryMode"].(string); got != "selected_directory_subset" {
+		t.Fatalf("expected evidence recent result retryMode selected_directory_subset, got %s", got)
+	}
+	evidenceRecentProbePayload := evidenceData["recentProbes"].([]interface{})[0].(map[string]interface{})["payload"].(map[string]interface{})
+	if got := evidenceRecentProbePayload["retryMode"].(string); got != "selected_directory_subset" {
+		t.Fatalf("expected evidence recent probe retryMode selected_directory_subset, got %s", got)
+	}
+	if got := evidenceRecentProbePayload["retryScope"].(string); got != "selected_directory_subset" {
+		t.Fatalf("expected evidence recent probe retryScope selected_directory_subset, got %s", got)
+	}
+
+	statusResp := invokeJSON(t, handler, http.MethodGet, "/api/status/providers", nil)
+	statusItems := statusResp.Data.(map[string]interface{})["items"].([]interface{})
+	foundTargetStatus := false
+	for _, raw := range statusItems {
+		item := raw.(map[string]interface{})
+		if item["providerKey"].(string) != "guangya" {
+			continue
+		}
+		foundTargetStatus = true
+		summary := item["snapshotSummary"].(map[string]interface{})
+		if got := summary["retryMode"].(string); got != "selected_directory_subset" {
+			t.Fatalf("expected status summary retryMode selected_directory_subset, got %s", got)
+		}
+		if got := summary["retryScope"].(string); got != "selected_directory_subset" {
+			t.Fatalf("expected status summary retryScope selected_directory_subset, got %s", got)
+		}
+		statusSelectedPaths, ok := summary["retrySelectedPaths"].([]interface{})
+		if !ok || len(statusSelectedPaths) != 1 || statusSelectedPaths[0].(string) != "/1/11" {
+			t.Fatalf("expected status summary retrySelectedPaths [/1/11], got %#v", summary["retrySelectedPaths"])
+		}
+	}
+	if !foundTargetStatus {
+		t.Fatal("expected guangya provider status after selected directory retry")
+	}
 }
 
 func TestAppProviderUploadEndpoint(t *testing.T) {

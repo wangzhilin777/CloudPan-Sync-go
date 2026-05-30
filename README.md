@@ -113,6 +113,7 @@ CloudPan Sync 的 Go 重构版工作区。
 - 当前控制台也已经支持：
   - 查看运行检查点
   - 查看源端删除记录数量与样本
+  - 查看 retry subset 的 `retryMode / retryScope / retrySelectedPaths`，并在最近结果、最近 probe、状态矩阵里回看这条证据链
   - 查看重试队列分类、attempt / retryLimit / remainingCount / eligibleAt
   - 查看目录状态清单
   - 查看当前根目录 / 当前目录 / 上次完成路径

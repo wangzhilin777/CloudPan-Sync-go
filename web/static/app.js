@@ -3617,6 +3617,8 @@ function renderSnapshotSummary(summary) {
       <div><strong>lastTaskState</strong> <code>${escapeHTML(stringifyValue(summary.lastTaskState))}</code></div>
       <div><strong>executionMode</strong> <code>${escapeHTML(stringifyValue(summary.executionMode, "-"))}</code></div>
       <div><strong>scanMode</strong> <code>${escapeHTML(stringifyValue(summary.scanMode, "-"))}</code></div>
+      <div><strong>retryMode</strong> <code>${escapeHTML(stringifyValue(summary.retryMode, "-"))}</code></div>
+      <div><strong>retryScope</strong> <code>${escapeHTML(stringifyValue(summary.retryScope, "-"))}</code></div>
       <div><strong>blockedCount</strong> <code>${escapeHTML(stringifyValue(summary.blockedCount, "0"))}</code></div>
       <div><strong>autoRecoverCount</strong> <code>${escapeHTML(stringifyValue(summary.autoRecoverCount, "0"))}</code></div>
       <div><strong>retryBlocked</strong> <code>${escapeHTML(stringifyValue(retrySummary.blockedReason, "-"))}</code></div>
@@ -3652,6 +3654,7 @@ function renderRecentResultsTable(items) {
           <th>Status</th>
           <th>Mode</th>
           <th>Execution Mode</th>
+          <th>Retry Mode</th>
           <th>Source Delete</th>
           <th>Recommended</th>
           <th>Message</th>
@@ -3668,6 +3671,7 @@ function renderRecentResultsTable(items) {
                 <td>${item.status}</td>
                 <td>${item.mode || "-"}</td>
                 <td>${stringifyValue(item.payload?.executionMode)}</td>
+                <td>${stringifyValue(item.payload?.retryMode)}</td>
                 <td>${renderSourceDeletePolicy(item.payload?.sourceDeletePolicy)}</td>
                 <td>${stringifyValue(item.payload?.recommendedExecutionMode)}</td>
                 <td>${item.message || "-"}</td>
@@ -3696,6 +3700,7 @@ function renderRecentProbesTable(items) {
           <th>Profile</th>
           <th>Execution Mode</th>
           <th>Scan Mode</th>
+          <th>Retry Mode</th>
           <th>Source Delete</th>
           <th>Risk Hit</th>
           <th>Payload</th>
@@ -3712,6 +3717,7 @@ function renderRecentProbesTable(items) {
                 <td>${item.profileId || "-"}</td>
                 <td>${stringifyValue(item.payload?.executionMode)}</td>
                 <td>${stringifyValue(item.payload?.scanMode)}</td>
+                <td>${stringifyValue(item.payload?.retryMode)}</td>
                 <td>${renderSourceDeletePolicy(item.payload?.sourceDeletePolicy)}</td>
                 <td>${stringifyValue(item.payload?.lastRiskStatus || item.payload?.riskHitCount)}</td>
                 <td><code>${JSON.stringify(item.payload || {})}</code></td>

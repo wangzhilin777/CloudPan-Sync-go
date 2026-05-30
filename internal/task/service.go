@@ -549,6 +549,15 @@ func (s *Service) Run(ctx context.Context, id string) (Detail, bool, error) {
 		if sourceDeletePolicy, ok := detail.Plan.Metadata["sourceDeletePolicy"]; ok {
 			result.Payload["sourceDeletePolicy"] = sourceDeletePolicy
 		}
+		if retryMode, ok := detail.Plan.Metadata["retryMode"]; ok {
+			result.Payload["retryMode"] = retryMode
+		}
+		if retryScope, ok := detail.Plan.Metadata["retryScope"]; ok {
+			result.Payload["retryScope"] = retryScope
+		}
+		if retrySelectedPaths, ok := detail.Plan.Metadata["retrySelectedPaths"]; ok {
+			result.Payload["retrySelectedPaths"] = retrySelectedPaths
+		}
 		if item.Sequence > 0 {
 			result.Payload["sequence"] = item.Sequence
 		}
@@ -4799,6 +4808,9 @@ func buildProviderProbe(detail Detail, profile provider.AuthProfile, results []R
 			"scanMode":                       scanModeValue(detail.Plan.Metadata),
 			"selectedRoots":                  detail.Plan.Metadata["selectedRoots"],
 			"scanTrace":                      detail.Plan.Metadata["scanTrace"],
+			"retryMode":                      detail.Plan.Metadata["retryMode"],
+			"retryScope":                     detail.Plan.Metadata["retryScope"],
+			"retrySelectedPaths":             detail.Plan.Metadata["retrySelectedPaths"],
 			"riskProfile":                    detail.Plan.Metadata["riskProfile"],
 			"riskOverride":                   detail.Plan.Metadata["riskOverride"],
 			"sourceDeletePolicy":             detail.Plan.Metadata["sourceDeletePolicy"],
