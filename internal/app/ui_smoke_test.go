@@ -154,7 +154,7 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 		chromedp.Click(`#auto-recover-preview`, chromedp.ByID),
 		waitForText(`#auto-recover-last-result-summary`, "最近预演"),
 		waitForText(`#auto-recover-last-result-summary`, "可放行"),
-		waitForText(`#auto-recover-last-result-detail`, "dry_run_recoverable"),
+		waitForText(`#auto-recover-last-result-detail`, "预演可放行"),
 	)
 
 	runStep(t, runCtx, "status retry lane",
@@ -162,16 +162,10 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 		waitForText(`#auto-recover-budget-summary`, "group 2"),
 		chromedp.Click(`#auto-recover-summary [data-auto-recover-preview-lane-mode]`, chromedp.ByQuery),
 		waitForText(`#auto-recover-last-result-summary`, "laneBudget"),
-		waitForText(`#auto-recover-last-result-detail`, "provider budget"),
-		waitForText(`#auto-recover-summary`, "retry_queue_auto_retry"),
-		waitForText(`body`, "waiting_auth_refresh"),
-		waitForText(`body`, "waiting_local_restore"),
-		waitForText(`body`, "waiting_manual_confirmation"),
-		waitForText(`body`, "waiting_retry_limit"),
-		waitForText(`#status-runtime-checkpoints`, "SELECTED ROOTS"),
-		waitForText(`#status-runtime-checkpoints`, "SCAN TRACE"),
+		waitForText(`#auto-recover-last-result-detail`, "等待态说明"),
+		waitForText(`#auto-recover-summary`, "wait other"),
+		waitForText(`body`, "等待态建议"),
 		waitForText(`#status-runtime-checkpoints`, "恢复等待 - 本地恢复"),
-		waitForText(`#status-runtime-checkpoints`, "恢复等待 - AUTH 刷新"),
 	)
 
 	runStep(t, runCtx, "status snapshot panels",

@@ -3082,6 +3082,81 @@ function renderAutoRecoverBudgetSummary(autoRetryPolicy) {
   return `${source}：${applied.join(" / ")}`;
 }
 
+function autoRecoverStateLabel(recoverState) {
+  switch (String(recoverState || "").trim()) {
+    case "runnable_now":
+      return "可立即执行";
+    case "waiting_cooldown":
+      return "等待冷却";
+    case "waiting_retry_window":
+      return "等待自动补传时间窗";
+    case "waiting_auth_refresh":
+      return "等待授权刷新";
+    case "waiting_local_restore":
+      return "等待补回本地文件";
+    case "waiting_manual_confirmation":
+      return "等待人工确认";
+    case "waiting_retry_limit":
+      return "等待重置重试策略";
+    case "waiting_other":
+      return "其它等待";
+    default:
+      return stringifyValue(recoverState, "-");
+  }
+}
+
+function autoRecoverStateAdvice(recoverState) {
+  switch (String(recoverState || "").trim()) {
+    case "runnable_now":
+      return "当前 lane 已满足预算与时间条件，可以直接预演或执行。";
+    case "waiting_cooldown":
+      return "先等待冷却到期，再观察 nextRetryAt 或下次自动补传 tick。";
+    case "waiting_retry_window":
+      return "当前不在允许的自动补传时间窗内，需等待窗口开放或手动调整风险配置。";
+    case "waiting_auth_refresh":
+      return "优先刷新或重新验证授权档案，再回到状态矩阵放行。";
+    case "waiting_local_restore":
+      return "源文件缺失或本地路径不可读，需先补回源文件后再继续补传。";
+    case "waiting_manual_confirmation":
+      return "该类失败仍需要人工确认或后续 fallback 能力，建议先缩小影响范围再处理。";
+    case "waiting_retry_limit":
+      return "当前任务已达到重试上限，先检查失败原因与重试策略，再决定是否重置额度。";
+    case "waiting_other":
+      return "当前 lane 仍有未细分等待条件，建议结合 decisions 明细和 blocked action 继续排查。";
+    default:
+      return "";
+  }
+}
+
+function autoRecoverOutcomeLabel(outcome) {
+  switch (String(outcome || "").trim()) {
+    case "recovered":
+      return "已放行执行";
+    case "dry_run_recoverable":
+      return "预演可放行";
+    case "skipped_by_limit":
+      return "被批次上限挡住";
+    case "skipped_by_mode_budget":
+      return "被模式预算挡住";
+    case "skipped_by_lane_budget":
+      return "被 lane 预算挡住";
+    case "skipped_by_protocol_group_budget":
+      return "被协议族预算挡住";
+    case "skipped_by_provider_budget":
+      return "被 provider 预算挡住";
+    case "skipped_by_profile_budget":
+      return "被账号预算挡住";
+    case "waiting_cooldown":
+      return "等待冷却";
+    case "waiting_retry_window":
+      return "等待时间窗";
+    case "blocked":
+      return "仍被阻塞";
+    default:
+      return stringifyValue(outcome, "-");
+  }
+}
+
 function renderAutoRecoverLastResultSummary() {
   const result = state.autoRecoverLastResult;
   if (!result || typeof result !== "object") {
@@ -3103,20 +3178,21 @@ function renderAutoRecoverLastResultDetail() {
       (item) => `
         <div class="directory-row tree-node">
           <div class="directory-row-header">
-            <strong>${escapeHTML(stringifyValue(item.outcome, "-"))}</strong>
+            <strong>${escapeHTML(autoRecoverOutcomeLabel(item.outcome))}</strong>
             <code>${escapeHTML(stringifyValue(item.taskId, "-"))}</code>
           </div>
           <div class="directory-metrics">
             <span class="pill">provider ${escapeHTML(stringifyValue(item.providerKey, "-"))}</span>
             <span class="pill">profile ${escapeHTML(stringifyValue(item.profileId, "-"))}</span>
             <span class="pill">mode ${escapeHTML(stringifyValue(item.mode, "-"))}</span>
-            <span class="pill">state ${escapeHTML(stringifyValue(item.recoverState, "-"))}</span>
+            <span class="pill">state ${escapeHTML(autoRecoverStateLabel(item.recoverState))}</span>
             <span class="pill">group budget ${escapeHTML(stringifyValue(item.suggestedProtocolGroupBudget, "-"))}</span>
             <span class="pill">provider budget ${escapeHTML(stringifyValue(item.suggestedProviderBudget, "-"))}</span>
             <span class="pill">profile budget ${escapeHTML(stringifyValue(item.suggestedProfileBudget, "-"))}</span>
           </div>
           <div class="muted">path: <code>${escapeHTML(stringifyValue(item.path, "-"))}</code> / protocolGroup: <code>${escapeHTML(stringifyValue(item.protocolGroup, "-"))}</code></div>
           <div class="muted">retryClass: <code>${escapeHTML(stringifyValue(item.retryClass, "-"))}</code> / blockedAction: <code>${escapeHTML(stringifyValue(item.blockedAction, "-"))}</code> / nextRetryAt: <code>${escapeHTML(stringifyValue(item.nextRetryAt, "-"))}</code></div>
+          <div class="muted">等待态说明：${escapeHTML(autoRecoverStateAdvice(item.recoverState) || "当前决策没有额外等待态说明。")}</div>
           <div class="muted">${escapeHTML(stringifyValue(item.message, "-"))}</div>
         </div>
       `,
@@ -3185,6 +3261,10 @@ function renderAutoRecoverFilterSummary(visibleItems, allItems) {
     `可立即执行 ${visibleSummary.runnable}`,
     `等冷却 ${visibleSummary.waitingCooldown}`,
     `等时间窗 ${visibleSummary.waitingRetryWindow}`,
+    `等授权 ${visibleSummary.waitingAuthRefresh}`,
+    `等本地恢复 ${visibleSummary.waitingLocalRestore}`,
+    `等人工确认 ${visibleSummary.waitingManual}`,
+    `重试耗尽 ${visibleSummary.waitingRetryLimit}`,
     `其它等待 ${visibleSummary.waitingOther}`,
   ].join(" / ");
   if (!parts.length) {
@@ -3203,10 +3283,24 @@ function summarizeAutoRecoverVisibleItems(items) {
       summary.runnable += Number(item?.runnableTaskCount || 0);
       summary.waitingCooldown += Number(item?.waitingCooldownTaskCount || 0);
       summary.waitingRetryWindow += Number(item?.waitingRetryWindowTaskCount || 0);
+      summary.waitingAuthRefresh += Number(item?.waitingAuthRefreshTaskCount || 0);
+      summary.waitingLocalRestore += Number(item?.waitingLocalRestoreTaskCount || 0);
+      summary.waitingManual += Number(item?.waitingManualTaskCount || 0);
+      summary.waitingRetryLimit += Number(item?.waitingRetryLimitTaskCount || 0);
       summary.waitingOther += Number(item?.waitingOtherTaskCount || 0);
       return summary;
     },
-    { tasks: 0, runnable: 0, waitingCooldown: 0, waitingRetryWindow: 0, waitingOther: 0 },
+    {
+      tasks: 0,
+      runnable: 0,
+      waitingCooldown: 0,
+      waitingRetryWindow: 0,
+      waitingAuthRefresh: 0,
+      waitingLocalRestore: 0,
+      waitingManual: 0,
+      waitingRetryLimit: 0,
+      waitingOther: 0,
+    },
   );
 }
 
@@ -3229,9 +3323,13 @@ function renderAutoRecoverSummary(items) {
         <span class="pill">runnable ${stringifyValue(aggregate.runnable, "0")}</span>
         <span class="pill">wait cooldown ${stringifyValue(aggregate.waitingCooldown, "0")}</span>
         <span class="pill">wait window ${stringifyValue(aggregate.waitingRetryWindow, "0")}</span>
+        <span class="pill">wait auth ${stringifyValue(aggregate.waitingAuthRefresh, "0")}</span>
+        <span class="pill">wait local ${stringifyValue(aggregate.waitingLocalRestore, "0")}</span>
+        <span class="pill">wait manual ${stringifyValue(aggregate.waitingManual, "0")}</span>
+        <span class="pill">wait limit ${stringifyValue(aggregate.waitingRetryLimit, "0")}</span>
         <span class="pill">wait other ${stringifyValue(aggregate.waitingOther, "0")}</span>
       </div>
-      <div class="muted">这里的等待态表示候选已经进入后台补传池，但当前还不能立即执行，常见原因是冷却窗口、自动补传时间窗或其它仍待放行的条件。</div>
+      <div class="muted">这里的等待态表示候选已经进入后台补传池，但当前还不能立即执行；现在会把授权刷新、本地恢复、人工确认和重试耗尽单独拆出来，方便直接判断下一步动作。</div>
     </div>
   ` + visibleItems
     .map(
@@ -3270,6 +3368,21 @@ function renderAutoRecoverSummary(items) {
               : ""
           }
           <div class="muted">可执行态 ${escapeHTML(stringifyValue(item.runnableTaskCount, "0"))} / 等冷却 ${escapeHTML(stringifyValue(item.waitingCooldownTaskCount, "0"))} / 等时间窗 ${escapeHTML(stringifyValue(item.waitingRetryWindowTaskCount, "0"))} / 等刷新授权 ${escapeHTML(stringifyValue(item.waitingAuthRefreshTaskCount, "0"))} / 等补源文件 ${escapeHTML(stringifyValue(item.waitingLocalRestoreTaskCount, "0"))} / 等人工确认 ${escapeHTML(stringifyValue(item.waitingManualTaskCount, "0"))} / 重试耗尽 ${escapeHTML(stringifyValue(item.waitingRetryLimitTaskCount, "0"))} / 其它等待 ${escapeHTML(stringifyValue(item.waitingOtherTaskCount, "0"))}。</div>
+          <div class="muted">等待态建议：${escapeHTML(
+            Number(item?.waitingAuthRefreshTaskCount || 0) > 0
+              ? autoRecoverStateAdvice("waiting_auth_refresh")
+              : Number(item?.waitingLocalRestoreTaskCount || 0) > 0
+                ? autoRecoverStateAdvice("waiting_local_restore")
+                : Number(item?.waitingManualTaskCount || 0) > 0
+                  ? autoRecoverStateAdvice("waiting_manual_confirmation")
+                  : Number(item?.waitingRetryLimitTaskCount || 0) > 0
+                    ? autoRecoverStateAdvice("waiting_retry_limit")
+                    : Number(item?.waitingRetryWindowTaskCount || 0) > 0
+                      ? autoRecoverStateAdvice("waiting_retry_window")
+                      : Number(item?.waitingCooldownTaskCount || 0) > 0
+                        ? autoRecoverStateAdvice("waiting_cooldown")
+                        : autoRecoverStateAdvice("runnable_now"),
+          )}</div>
           <div class="muted">同档位会先按协议族、provider 再到授权档案轮转；默认建议 group 预算 <code>${escapeHTML(stringifyValue(item.suggestedProtocolGroupBudget, "-"))}</code> / provider 预算 <code>${escapeHTML(stringifyValue(item.suggestedProviderBudget, "-"))}</code> / profile 预算 <code>${escapeHTML(stringifyValue(item.suggestedProfileBudget, "-"))}</code>。</div>
           <div class="muted">协议族：${escapeHTML((item.protocolGroups || []).join(", ") || stringifyValue(item.sampleProtocolGroup, "-"))}</div>
           <div class="muted">${escapeHTML(stringifyValue(item.advice, "-"))}</div>

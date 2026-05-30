@@ -156,6 +156,30 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "waiting_auth_refresh") {
 		t.Fatalf("expected waiting_auth_refresh recoverState affordance in app.js, got %q", body)
 	}
+	if !strings.Contains(body, "autoRecoverStateLabel") {
+		t.Fatalf("expected autoRecoverStateLabel helper in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "autoRecoverStateAdvice") {
+		t.Fatalf("expected autoRecoverStateAdvice helper in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "autoRecoverOutcomeLabel") {
+		t.Fatalf("expected autoRecoverOutcomeLabel helper in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "等待授权刷新") {
+		t.Fatalf("expected waiting_auth_refresh label in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "等待补回本地文件") {
+		t.Fatalf("expected waiting_local_restore label in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "等待人工确认") {
+		t.Fatalf("expected waiting_manual_confirmation label in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "等待重置重试策略") {
+		t.Fatalf("expected waiting_retry_limit label in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "等待态建议") {
+		t.Fatalf("expected waiting state advice text in app.js, got %q", body)
+	}
 	if !strings.Contains(body, "waiting_local_restore") {
 		t.Fatalf("expected waiting_local_restore recoverState affordance in app.js, got %q", body)
 	}
