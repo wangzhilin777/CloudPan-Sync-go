@@ -276,6 +276,12 @@ func TestAppWorkflowMainline(t *testing.T) {
 	if got := int(evidenceData["sourceDeletionCount"].(float64)); got != 1 {
 		t.Fatalf("expected sourceDeletionCount=1, got %d", got)
 	}
+	if got, ok := evidenceData["executionMode"].(string); !ok || got != "pre_scan_flat" {
+		t.Fatalf("expected evidence executionMode pre_scan_flat, got %s", got)
+	}
+	if got, ok := evidenceData["sourceDeletePolicy"].(string); !ok || got != "record_only" {
+		t.Fatalf("expected evidence sourceDeletePolicy record_only, got %s", got)
+	}
 	blockedActions := evidenceData["blockedActions"].([]interface{})
 	if len(blockedActions) == 0 {
 		t.Fatal("expected blockedActions in evidence summary")

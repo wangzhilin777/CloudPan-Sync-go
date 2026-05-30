@@ -777,6 +777,38 @@ func taskEvidenceSummary(ctx context.Context, store *sqlitestore.Store, provider
 	}
 	summary.RecentResults = results
 	summary.RecentProbes = probes
+	if len(details) > 0 {
+		latest := details[0]
+		summary.ExecutionMode = executionModeString(latest.Plan.Metadata)
+		summary.ScanMode = stringValue(latest.Plan.Metadata["scanMode"])
+		summary.SourceDeletePolicy = sourceDeletePolicyString(latest.Plan.Metadata["sourceDeletePolicy"])
+		if snapshot, ok, err := latestProviderStatusSnapshot(ctx, store, latest.Task.TargetProvider); err != nil {
+			return summary, err
+		} else if ok {
+			if summary.ExecutionMode == "" {
+				summary.ExecutionMode = executionModeString(snapshot.Summary)
+			}
+			if summary.ScanMode == "" {
+				summary.ScanMode = stringValue(snapshot.Summary["scanMode"])
+			}
+			if summary.SourceDeletePolicy == "" {
+				summary.SourceDeletePolicy = sourceDeletePolicyString(snapshot.Summary["sourceDeletePolicy"])
+			}
+		}
+	}
+	if snapshot, ok, err := mostRecentProviderStatusSnapshot(ctx, store); err != nil {
+		return summary, err
+	} else if ok {
+		if summary.ExecutionMode == "" {
+			summary.ExecutionMode = executionModeString(snapshot.Summary)
+		}
+		if summary.ScanMode == "" {
+			summary.ScanMode = stringValue(snapshot.Summary["scanMode"])
+		}
+		if summary.SourceDeletePolicy == "" {
+			summary.SourceDeletePolicy = sourceDeletePolicyString(snapshot.Summary["sourceDeletePolicy"])
+		}
+	}
 	coverage, _, err := protocolCoverageSummary(providers, details)
 	if err != nil {
 		return summary, err
@@ -1305,29 +1337,90 @@ func buildProviderStatusSnapshot(ctx context.Context, store *sqlitestore.Store, 
 }
 
 func latestProviderStatusSnapshot(ctx context.Context, store *sqlitestore.Store, providerKey string) (ProviderStatus, bool, error) {
-	row := store.DB().QueryRowContext(ctx, `
+	rows, err := store.DB().QueryContext(ctx, `
 SELECT id, provider_key, summary_json, created_at
 FROM provider_status_snapshots
 WHERE provider_key = ?
 ORDER BY created_at DESC, rowid DESC
-LIMIT 1`, providerKey)
-	var (
-		item        ProviderStatus
-		summaryJSON string
-	)
-	if err := row.Scan(&item.ID, &item.ProviderKey, &summaryJSON, &item.CreatedAt); err != nil {
-		if err == sql.ErrNoRows {
-			return ProviderStatus{}, false, nil
-		}
+`, providerKey)
+	if err != nil {
 		return ProviderStatus{}, false, err
 	}
-	item.Summary = map[string]interface{}{}
-	if summaryJSON != "" {
-		if err := json.Unmarshal([]byte(summaryJSON), &item.Summary); err != nil {
+	defer rows.Close()
+
+	var fallback *ProviderStatus
+	for rows.Next() {
+		var (
+			item        ProviderStatus
+			summaryJSON string
+		)
+		if err := rows.Scan(&item.ID, &item.ProviderKey, &summaryJSON, &item.CreatedAt); err != nil {
 			return ProviderStatus{}, false, err
 		}
+		item.Summary = map[string]interface{}{}
+		if summaryJSON != "" {
+			if err := json.Unmarshal([]byte(summaryJSON), &item.Summary); err != nil {
+				return ProviderStatus{}, false, err
+			}
+		}
+		if fallback == nil {
+			copyItem := item
+			fallback = &copyItem
+		}
+		if providerStatusHasRuntimeEvidence(item.Summary) {
+			return item, true, nil
+		}
 	}
-	return item, true, nil
+	if err := rows.Err(); err != nil {
+		return ProviderStatus{}, false, err
+	}
+	if fallback == nil {
+		return ProviderStatus{}, false, nil
+	}
+	return *fallback, true, nil
+}
+
+func mostRecentProviderStatusSnapshot(ctx context.Context, store *sqlitestore.Store) (ProviderStatus, bool, error) {
+	rows, err := store.DB().QueryContext(ctx, `
+SELECT id, provider_key, summary_json, created_at
+FROM provider_status_snapshots
+ORDER BY created_at DESC, rowid DESC
+`)
+	if err != nil {
+		return ProviderStatus{}, false, err
+	}
+	defer rows.Close()
+
+	var fallback *ProviderStatus
+	for rows.Next() {
+		var (
+			item        ProviderStatus
+			summaryJSON string
+		)
+		if err := rows.Scan(&item.ID, &item.ProviderKey, &summaryJSON, &item.CreatedAt); err != nil {
+			return ProviderStatus{}, false, err
+		}
+		item.Summary = map[string]interface{}{}
+		if summaryJSON != "" {
+			if err := json.Unmarshal([]byte(summaryJSON), &item.Summary); err != nil {
+				return ProviderStatus{}, false, err
+			}
+		}
+		if fallback == nil {
+			copyItem := item
+			fallback = &copyItem
+		}
+		if providerStatusHasRuntimeEvidence(item.Summary) {
+			return item, true, nil
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return ProviderStatus{}, false, err
+	}
+	if fallback == nil {
+		return ProviderStatus{}, false, nil
+	}
+	return *fallback, true, nil
 }
 
 func recentProviderProbes(ctx context.Context, store *sqlitestore.Store, limit int) ([]ProviderProbe, error) {
@@ -1396,4 +1489,31 @@ LIMIT %d`, limit))
 func stringValue(raw interface{}) string {
 	value, _ := raw.(string)
 	return value
+}
+
+func sourceDeletePolicyString(raw interface{}) string {
+	switch value := raw.(type) {
+	case string:
+		return value
+	case planner.SourceDeletePolicy:
+		return string(value)
+	default:
+		return ""
+	}
+}
+
+func providerStatusHasRuntimeEvidence(summary map[string]interface{}) bool {
+	if summary == nil {
+		return false
+	}
+	if stringValue(summary["scanMode"]) != "" {
+		return true
+	}
+	if stringValue(summary["executionMode"]) != "" {
+		return true
+	}
+	if _, ok := summary["runtime"].(map[string]interface{}); ok {
+		return true
+	}
+	return false
 }

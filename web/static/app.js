@@ -2786,6 +2786,9 @@ function renderStatus() {
     <div class="metric"><span>Total Tasks</span><strong>${evidence.totalTasks}</strong></div>
     <div class="metric"><span>Completed</span><strong>${evidence.completedTasks}</strong></div>
     <div class="metric"><span>Blocked Tasks</span><strong>${evidence.blockedTasks}</strong></div>
+    <div class="metric"><span>Execution Mode</span><strong>${stringifyValue(evidence.executionMode, "-")}</strong></div>
+    <div class="metric"><span>Scan Mode</span><strong>${stringifyValue(evidence.scanMode, "-")}</strong></div>
+    <div class="metric"><span>Source Delete</span><strong>${renderSourceDeletePolicy(evidence.sourceDeletePolicy)}</strong></div>
     <div class="metric"><span>Auto Recover</span><strong>${stringifyValue(evidence.autoRecoverTasks, "0")}</strong></div>
     <div class="metric"><span>Recover Runnable</span><strong>${stringifyValue(evidence.autoRecoverRunnableTasks, "0")}</strong></div>
     <div class="metric"><span>Recover Cooldown</span><strong>${stringifyValue(evidence.autoRecoverWaitingCooldownTasks, "0")}</strong></div>

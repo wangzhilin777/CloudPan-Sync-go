@@ -124,6 +124,9 @@ type EvidenceSummary struct {
 	TotalTasks                          int                `json:"totalTasks"`
 	CompletedTasks                      int                `json:"completedTasks"`
 	BlockedTasks                        int                `json:"blockedTasks"`
+	ExecutionMode                       string             `json:"executionMode,omitempty"`
+	ScanMode                            string             `json:"scanMode,omitempty"`
+	SourceDeletePolicy                  string             `json:"sourceDeletePolicy,omitempty"`
 	AutoRecoverTasks                    int                `json:"autoRecoverTasks"`
 	AutoRecoverRunnableTasks            int                `json:"autoRecoverRunnableTasks"`
 	AutoRecoverWaitingCooldownTasks     int                `json:"autoRecoverWaitingCooldownTasks"`
@@ -634,27 +637,27 @@ type targetInspection struct {
 }
 
 type retryQueueSummary struct {
-	ShouldBlock              bool
-	BlockedReason            string
-	BlockedAction            string
-	BlockedAdvice            string
-	NextRetryAt              string
-	WindowBlocked            bool
-	CanAutoRetry             bool
-	RetryableNowCount        int
-	CooldownCount            int
-	PendingManualCount       int
-	AuthExpiredCount         int
-	LocalMissingCount        int
-	ExhaustedCount           int
+	ShouldBlock                         bool
+	BlockedReason                       string
+	BlockedAction                       string
+	BlockedAdvice                       string
+	NextRetryAt                         string
+	WindowBlocked                       bool
+	CanAutoRetry                        bool
+	RetryableNowCount                   int
+	CooldownCount                       int
+	PendingManualCount                  int
+	AuthExpiredCount                    int
+	LocalMissingCount                   int
+	ExhaustedCount                      int
 	AutoRecoverWaitingAuthRefreshTasks  int
 	AutoRecoverWaitingLocalRestoreTasks int
 	AutoRecoverWaitingManualTasks       int
 	AutoRecoverWaitingRetryLimitTasks   int
-	UploadCheckpointEligible int
-	AutoRecoverEligible      bool
-	AutoRecoverMode          string
-	AutoRecoverAdvice        string
+	UploadCheckpointEligible            int
+	AutoRecoverEligible                 bool
+	AutoRecoverMode                     string
+	AutoRecoverAdvice                   string
 }
 
 type pendingTreeBuilderNode struct {
@@ -2876,6 +2879,17 @@ func normalizeEvidenceReportTitle(title string) string {
 	return title
 }
 
+func formatSourceDeletePolicyLabel(value string) string {
+	switch planner.SourceDeletePolicy(strings.TrimSpace(value)) {
+	case planner.SourceDeletePolicyRecordOnly:
+		return "record_only（只记录，不删目标端）"
+	case "":
+		return "record_only（只记录，不删目标端）"
+	default:
+		return strings.TrimSpace(value)
+	}
+}
+
 func buildEvidenceReport(summary EvidenceSummary, statuses []StatusSummary, smokeSummaries []ProviderSmokeSummary, smokeMatrix []ProviderSmokeMatrixRow, samples []EvidenceSample, generatedAt string, title string, note string) EvidenceReport {
 	title = normalizeEvidenceReportTitle(title)
 	note = strings.TrimSpace(note)
@@ -2895,6 +2909,9 @@ func buildEvidenceReport(summary EvidenceSummary, statuses []StatusSummary, smok
 	fmt.Fprintf(&b, "- 总任务数: %d\n", summary.TotalTasks)
 	fmt.Fprintf(&b, "- 已完成任务: %d\n", summary.CompletedTasks)
 	fmt.Fprintf(&b, "- 阻塞任务: %d\n", summary.BlockedTasks)
+	fmt.Fprintf(&b, "- 执行模式: %s\n", firstNonEmpty(summary.ExecutionMode, "-"))
+	fmt.Fprintf(&b, "- 扫描方式: %s\n", firstNonEmpty(summary.ScanMode, "-"))
+	fmt.Fprintf(&b, "- 源端删除策略: %s\n", formatSourceDeletePolicyLabel(summary.SourceDeletePolicy))
 	fmt.Fprintf(&b, "- 成功结果: %d\n", summary.DoneResultCount)
 	fmt.Fprintf(&b, "- 跳过结果: %d\n", summary.SkippedResultCount)
 	fmt.Fprintf(&b, "- 待补传结果: %d\n", summary.PendingResultCount)
