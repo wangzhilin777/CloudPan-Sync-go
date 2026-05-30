@@ -299,6 +299,9 @@ func TestAppWorkflowMainline(t *testing.T) {
 	if got := recentProbePayload["executionMode"].(string); got != "pre_scan_flat" {
 		t.Fatalf("expected probe executionMode pre_scan_flat, got %s", got)
 	}
+	if got, ok := recentProbePayload["scanMode"].(string); !ok || got != "pre_scan_flat" {
+		t.Fatalf("expected probe scanMode pre_scan_flat, got %s", got)
+	}
 	if got := recentProbePayload["sourceDeletePolicy"].(string); got != "record_only" {
 		t.Fatalf("expected probe sourceDeletePolicy record_only, got %s", got)
 	}

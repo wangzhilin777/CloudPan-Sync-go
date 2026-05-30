@@ -4793,7 +4793,7 @@ func buildProviderProbe(detail Detail, profile provider.AuthProfile, results []R
 			"executionMode":                  detail.Plan.Metadata["executionMode"],
 			"recommendedExecutionMode":       detail.Plan.Metadata["recommendedExecutionMode"],
 			"recommendedExecutionModeReason": detail.Plan.Metadata["recommendedExecutionModeReason"],
-			"scanMode":                       detail.Plan.Metadata["scanMode"],
+			"scanMode":                       scanModeValue(detail.Plan.Metadata),
 			"selectedRoots":                  detail.Plan.Metadata["selectedRoots"],
 			"scanTrace":                      detail.Plan.Metadata["scanTrace"],
 			"riskProfile":                    detail.Plan.Metadata["riskProfile"],

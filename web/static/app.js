@@ -3694,6 +3694,7 @@ function renderRecentProbesTable(items) {
           <th>Profile</th>
           <th>Execution Mode</th>
           <th>Scan Mode</th>
+          <th>Source Delete</th>
           <th>Risk Hit</th>
           <th>Payload</th>
           <th>Created</th>
@@ -3709,6 +3710,7 @@ function renderRecentProbesTable(items) {
                 <td>${item.profileId || "-"}</td>
                 <td>${stringifyValue(item.payload?.executionMode)}</td>
                 <td>${stringifyValue(item.payload?.scanMode)}</td>
+                <td>${renderSourceDeletePolicy(item.payload?.sourceDeletePolicy)}</td>
                 <td>${stringifyValue(item.payload?.lastRiskStatus || item.payload?.riskHitCount)}</td>
                 <td><code>${JSON.stringify(item.payload || {})}</code></td>
                 <td>${item.createdAt || "-"}</td>

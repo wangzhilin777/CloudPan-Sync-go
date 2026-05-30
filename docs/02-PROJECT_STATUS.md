@@ -507,6 +507,7 @@
   - evidence 总览与报告摘要现在会直接显示 `AcceptedSmokeGroups / InProgressSmokeGroups / PendingSmokeGroups / UploadSuccessGroups / UploadSuccessSamples`
   - evidence 状态汇总现在会直接显示 `executionMode / scanMode / sourceDeletePolicy`
   - Provider 状态矩阵现在也直接显示 `Scan Mode / Source Delete`，方便和任务计划里的执行策略对齐
+  - 最近 Probe 表现在也直接显示 `Source Delete`，避免排障时还要展开 payload 才能确认策略
   - `accepted` 表示“真实上传成功样本 + 该协议组已有任务覆盖”，`pending` 表示还缺其中一项或两项
 
 ### 7. 前端控制台
