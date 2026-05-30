@@ -28,3 +28,11 @@
 - 这样状态矩阵里的单条决策从查看、预演到执行，使用的是同一份策略上下文，和当前筛选链路保持一致。
 - 回归验证已通过：`go test ./internal/app ./internal/task`、`node --check web/static/app.js`。
 - 清理情况：本轮未启动额外后台进程；未新增临时目录或构建残留。
+
+## 2026-05-31 - 后台补传决策级策略筛选状态同步
+
+- 继续对齐 [docs/01-GO_REBUILD_PLAN.md](E:/Workspace/VSCode/CloudPan-Sync-go/docs/01-GO_REBUILD_PLAN.md) 中后台补传多策略调度细化目标，补齐决策级 action 与当前筛选状态之间最后一段 `strategy` 同步链路。
+- `triggerAutoRecoverDecision()` 现在会把 `payload.strategy` 一起写回 `applyAutoRecoverFilters(...)`，因此从“预演该决策 / 执行该决策”进入时，页面当前筛选条件会和本次决策请求保持同一份策略上下文。
+- Web smoke 断言已补强：静态资源测试现在同时校验 `data-auto-recover-decision-strategy` 数据透传，以及 `strategy: payload.strategy` 这段前端状态同步代码仍然存在。
+- 回归验证已通过：`go test ./internal/app ./internal/task`、`node --check web/static/app.js`。
+- 清理情况：本轮未启动额外后台进程；未生成需保留的临时目录、smoke 目录或构建残留。

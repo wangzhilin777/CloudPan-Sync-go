@@ -3535,6 +3535,7 @@ async function triggerAutoRecoverDecision(button, options = {}) {
   }
   applyAutoRecoverFilters({
     mode: payload.mode,
+    strategy: payload.strategy,
     protocolGroup: payload.protocolGroup,
     providerKey: payload.providerKey,
     profileId: payload.profileId,

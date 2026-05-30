@@ -228,6 +228,12 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "data-auto-recover-decision-mode-budget") {
 		t.Fatalf("expected auto recover decision mode budget wiring in app.js, got %q", body)
 	}
+	if !strings.Contains(body, "data-auto-recover-decision-strategy") {
+		t.Fatalf("expected auto recover decision strategy wiring in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "strategy: payload.strategy") {
+		t.Fatalf("expected auto recover decision strategy filter sync in app.js, got %q", body)
+	}
 	if !strings.Contains(body, "data-auto-recover-decision-lane-budget") {
 		t.Fatalf("expected auto recover decision lane budget wiring in app.js, got %q", body)
 	}
