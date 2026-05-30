@@ -2863,6 +2863,7 @@ function renderStatus() {
           <th>Coverage</th>
           <th>Execution Mode</th>
           <th>Scan Mode</th>
+          <th>Source Delete</th>
           <th>Risk Mode</th>
           <th>Latest Probe</th>
           <th>Last Task State</th>
@@ -2885,6 +2886,7 @@ function renderStatus() {
                 <td>${item.protocolCoverage ? `${stringifyValue(item.protocolCoverage.realSuccessTaskCount, "0")}/${stringifyValue(item.protocolCoverage.providerCount, "0")}` : "-"}</td>
                 <td>${stringifyValue(item.snapshotSummary?.executionMode)}</td>
                 <td>${stringifyValue(item.snapshotSummary?.scanMode)}</td>
+                <td>${renderSourceDeletePolicy(item.snapshotSummary?.sourceDeletePolicy)}</td>
                 <td>${stringifyValue(item.snapshotSummary?.riskProfile?.mode)}</td>
                 <td>${item.latestProbe || "-"}</td>
                 <td>${item.lastTaskState || "-"}</td>
