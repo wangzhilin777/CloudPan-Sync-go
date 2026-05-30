@@ -45,3 +45,12 @@
 - Web smoke 断言已补强：静态资源测试现在同时校验 lane 级 `data-auto-recover-focus-lane-strategy / data-auto-recover-preview-lane-strategy / data-auto-recover-run-lane-strategy` 透传，以及请求构造优先读取当前筛选 state 的实现仍然存在。
 - 回归验证已通过：`go test ./internal/app ./internal/task`、`node --check web/static/app.js`。
 - 清理情况：本轮未启动额外后台进程；未新增需保留的临时目录、smoke 目录或构建残留。
+
+## 2026-05-31 - 后台补传决策明细 lane 级策略状态同步
+
+- 继续对齐 [docs/01-GO_REBUILD_PLAN.md](E:/Workspace/VSCode/CloudPan-Sync-go/docs/01-GO_REBUILD_PLAN.md) 中后台补传多策略调度的细化目标，把“最近一次后台补传结果”里的决策明细 lane 级聚焦动作也补齐 `strategy` 上下文。
+- 决策明细里的“只看该 lane”按钮现在会额外透传 `data-auto-recover-decision-focus-lane-strategy`，避免用户从单条决策收敛 lane 候选池时丢失策略筛选条件。
+- `wireAutoRecoverLastResultDetail()` 现已在决策明细 lane 聚焦时同步写回 `{ mode, strategy, retryClass, blockedAction }`，并在提示文案里回显完整 lane 维度，和 summary 区域的 lane 动作保持一致。
+- Web smoke 断言已补强：静态资源测试现在同时校验决策明细 lane 级 `data-auto-recover-decision-focus-lane-strategy` 透传，以及 `const strategy = button.dataset.autoRecoverDecisionFocusLaneStrategy || ""` 这段前端状态同步代码仍然存在。
+- 回归验证待本次提交前执行：`go test ./internal/app ./internal/task`、`node --check web/static/app.js`。
+- 清理情况：本轮验证结束后会确认未遗留额外后台进程、临时目录、smoke 目录或构建残留。
