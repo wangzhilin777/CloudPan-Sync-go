@@ -1173,6 +1173,16 @@ func TestAppRecoverTasksEndpointReturnsSummary(t *testing.T) {
 	} else if got := int(counts["runnable_now"].(float64)); got != 1 {
 		t.Fatalf("expected runnable_now state count 1, got %d", got)
 	}
+	if counts, ok := recoverData["protocolGroupCounts"].(map[string]interface{}); !ok {
+		t.Fatalf("expected protocolGroupCounts map, got %#v", recoverData["protocolGroupCounts"])
+	} else if got := int(counts["fake_target"].(float64)); got != 1 {
+		t.Fatalf("expected fake_target protocol group count 1, got %d", got)
+	}
+	if counts, ok := recoverData["providerCounts"].(map[string]interface{}); !ok {
+		t.Fatalf("expected providerCounts map, got %#v", recoverData["providerCounts"])
+	} else if got := int(counts["recover_api_target"].(float64)); got != 1 {
+		t.Fatalf("expected recover_api_target provider count 1, got %d", got)
+	}
 	if got := recoverData["mode"].(string); got != "upload_checkpoint_auto_resume" {
 		t.Fatalf("expected mode upload_checkpoint_auto_resume, got %s", got)
 	}
@@ -1449,6 +1459,16 @@ func TestAppRecoverTasksEndpointDryRunDoesNotMutateTask(t *testing.T) {
 	} else if got := int(counts["runnable_now"].(float64)); got != 1 {
 		t.Fatalf("expected preview runnable_now count 1, got %d", got)
 	}
+	if counts, ok := previewData["protocolGroupCounts"].(map[string]interface{}); !ok {
+		t.Fatalf("expected preview protocolGroupCounts map, got %#v", previewData["protocolGroupCounts"])
+	} else if got := int(counts["recover_dry_run_api_group"].(float64)); got != 1 {
+		t.Fatalf("expected preview recover_dry_run_api_group count 1, got %d", got)
+	}
+	if counts, ok := previewData["providerCounts"].(map[string]interface{}); !ok {
+		t.Fatalf("expected preview providerCounts map, got %#v", previewData["providerCounts"])
+	} else if got := int(counts["recover_dry_run_api_target"].(float64)); got != 1 {
+		t.Fatalf("expected preview recover_dry_run_api_target count 1, got %d", got)
+	}
 	if got := int(previewData["matchedCount"].(float64)); got != 1 {
 		t.Fatalf("expected matchedCount 1, got %d", got)
 	}
@@ -1487,6 +1507,16 @@ func TestAppRecoverTasksEndpointDryRunDoesNotMutateTask(t *testing.T) {
 		t.Fatalf("expected execute recoverStateCounts map, got %#v", recoverData["recoverStateCounts"])
 	} else if got := int(counts["runnable_now"].(float64)); got != 1 {
 		t.Fatalf("expected execute runnable_now count 1, got %d", got)
+	}
+	if counts, ok := recoverData["protocolGroupCounts"].(map[string]interface{}); !ok {
+		t.Fatalf("expected execute protocolGroupCounts map, got %#v", recoverData["protocolGroupCounts"])
+	} else if got := int(counts["recover_dry_run_api_group"].(float64)); got != 1 {
+		t.Fatalf("expected execute recover_dry_run_api_group count 1, got %d", got)
+	}
+	if counts, ok := recoverData["providerCounts"].(map[string]interface{}); !ok {
+		t.Fatalf("expected execute providerCounts map, got %#v", recoverData["providerCounts"])
+	} else if got := int(counts["recover_dry_run_api_target"].(float64)); got != 1 {
+		t.Fatalf("expected execute recover_dry_run_api_target count 1, got %d", got)
 	}
 	if got := int(recoverData["recoveredCount"].(float64)); got != 1 {
 		t.Fatalf("expected recoveredCount 1, got %d", got)
@@ -2002,6 +2032,16 @@ func TestAppRecoverTasksEndpointFiltersWaitingRetryWindowState(t *testing.T) {
 		t.Fatalf("expected waiting window blockedActionCounts map, got %#v", previewData["blockedActionCounts"])
 	} else if got := int(counts["wait_for_retry_window"].(float64)); got != 1 {
 		t.Fatalf("expected wait_for_retry_window action count 1, got %d", got)
+	}
+	if counts, ok := previewData["protocolGroupCounts"].(map[string]interface{}); !ok {
+		t.Fatalf("expected waiting window protocolGroupCounts map, got %#v", previewData["protocolGroupCounts"])
+	} else if got := int(counts["recover_waiting_window_group"].(float64)); got != 1 {
+		t.Fatalf("expected recover_waiting_window_group count 1, got %d", got)
+	}
+	if counts, ok := previewData["providerCounts"].(map[string]interface{}); !ok {
+		t.Fatalf("expected waiting window providerCounts map, got %#v", previewData["providerCounts"])
+	} else if got := int(counts["recover_waiting_window_api_target"].(float64)); got != 1 {
+		t.Fatalf("expected recover_waiting_window_api_target count 1, got %d", got)
 	}
 	if uploadCalls != 1 {
 		t.Fatalf("expected preview not to trigger extra upload, got %d", uploadCalls)

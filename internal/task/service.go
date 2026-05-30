@@ -90,6 +90,8 @@ type RecoverResult struct {
 	OutcomeCounts                map[string]int    `json:"outcomeCounts,omitempty"`
 	RecoverStateCounts           map[string]int    `json:"recoverStateCounts,omitempty"`
 	BlockedActionCounts          map[string]int    `json:"blockedActionCounts,omitempty"`
+	ProtocolGroupCounts          map[string]int    `json:"protocolGroupCounts,omitempty"`
+	ProviderCounts               map[string]int    `json:"providerCounts,omitempty"`
 	Decisions                    []RecoverDecision `json:"decisions,omitempty"`
 }
 
@@ -1518,6 +1520,18 @@ func appendRecoverDecision(result *RecoverResult, decision RecoverDecision) {
 			result.BlockedActionCounts = make(map[string]int)
 		}
 		result.BlockedActionCounts[decision.BlockedAction] = result.BlockedActionCounts[decision.BlockedAction] + 1
+	}
+	if strings.TrimSpace(decision.ProtocolGroup) != "" {
+		if result.ProtocolGroupCounts == nil {
+			result.ProtocolGroupCounts = make(map[string]int)
+		}
+		result.ProtocolGroupCounts[decision.ProtocolGroup] = result.ProtocolGroupCounts[decision.ProtocolGroup] + 1
+	}
+	if strings.TrimSpace(decision.ProviderKey) != "" {
+		if result.ProviderCounts == nil {
+			result.ProviderCounts = make(map[string]int)
+		}
+		result.ProviderCounts[decision.ProviderKey] = result.ProviderCounts[decision.ProviderKey] + 1
 	}
 	if len(result.Decisions) >= recoverDecisionPreviewLimit {
 		return

@@ -3251,6 +3251,34 @@ function renderAutoRecoverBlockedActionCounts(result) {
   return parts.length ? ` / actions ${parts.join(" / ")}` : "";
 }
 
+function renderAutoRecoverProtocolGroupCounts(result) {
+  const counts = result && typeof result === "object" && result.protocolGroupCounts && typeof result.protocolGroupCounts === "object"
+    ? result.protocolGroupCounts
+    : null;
+  if (!counts) {
+    return "";
+  }
+  const parts = Object.keys(counts)
+    .sort()
+    .filter((key) => Number(counts[key] || 0) > 0)
+    .map((key) => `${key} ${stringifyValue(counts[key], "0")}`);
+  return parts.length ? ` / groups ${parts.join(" / ")}` : "";
+}
+
+function renderAutoRecoverProviderCounts(result) {
+  const counts = result && typeof result === "object" && result.providerCounts && typeof result.providerCounts === "object"
+    ? result.providerCounts
+    : null;
+  if (!counts) {
+    return "";
+  }
+  const parts = Object.keys(counts)
+    .sort()
+    .filter((key) => Number(counts[key] || 0) > 0)
+    .map((key) => `${key} ${stringifyValue(counts[key], "0")}`);
+  return parts.length ? ` / providers ${parts.join(" / ")}` : "";
+}
+
 function renderAutoRecoverLastResultSummary() {
   const result = state.autoRecoverLastResult;
   if (!result || typeof result !== "object") {
@@ -3258,7 +3286,7 @@ function renderAutoRecoverLastResultSummary() {
   }
   const label = result.dryRun ? "最近预演" : "最近执行";
   const recoveredLabel = result.dryRun ? "可放行" : "recovered";
-  return `${label}：matched ${stringifyValue(result.matchedCount, "0")} / ${recoveredLabel} ${stringifyValue(result.recoveredCount, "0")} / limit ${stringifyValue(result.skippedByLimit, "0")} / modeBudget ${stringifyValue(result.skippedByModeBudget, "0")} / laneBudget ${stringifyValue(result.skippedByLaneBudget, "0")} / protocolGroupBudget ${stringifyValue(result.skippedByProtocolGroupBudget, "0")} / providerBudget ${stringifyValue(result.skippedByProviderBudget, "0")} / profileBudget ${stringifyValue(result.skippedByProfileBudget, "0")} / cooldownWait ${stringifyValue(result.skippedByCooldownWait, "0")} / retryWindowWait ${stringifyValue(result.skippedByRetryWindowWait, "0")} / blocked ${stringifyValue(result.skippedByBlockedReason, "0")}${renderAutoRecoverOutcomeCounts(result)}${renderAutoRecoverRecoverStateCounts(result)}${renderAutoRecoverBlockedActionCounts(result)}`;
+  return `${label}：matched ${stringifyValue(result.matchedCount, "0")} / ${recoveredLabel} ${stringifyValue(result.recoveredCount, "0")} / limit ${stringifyValue(result.skippedByLimit, "0")} / modeBudget ${stringifyValue(result.skippedByModeBudget, "0")} / laneBudget ${stringifyValue(result.skippedByLaneBudget, "0")} / protocolGroupBudget ${stringifyValue(result.skippedByProtocolGroupBudget, "0")} / providerBudget ${stringifyValue(result.skippedByProviderBudget, "0")} / profileBudget ${stringifyValue(result.skippedByProfileBudget, "0")} / cooldownWait ${stringifyValue(result.skippedByCooldownWait, "0")} / retryWindowWait ${stringifyValue(result.skippedByRetryWindowWait, "0")} / blocked ${stringifyValue(result.skippedByBlockedReason, "0")}${renderAutoRecoverOutcomeCounts(result)}${renderAutoRecoverRecoverStateCounts(result)}${renderAutoRecoverBlockedActionCounts(result)}${renderAutoRecoverProtocolGroupCounts(result)}${renderAutoRecoverProviderCounts(result)}`;
 }
 
 function renderAutoRecoverLastResultDetail() {
