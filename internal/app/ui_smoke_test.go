@@ -166,6 +166,17 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 		waitForText(`#status-runtime-checkpoints`, "恢复等待 - AUTH 刷新"),
 	)
 
+	runStep(t, runCtx, "status snapshot panels",
+		waitForText("body", "Provider 状态矩阵"),
+		waitForText("body", "SOURCE DELETE"),
+		waitForText("body", "最近 Probe"),
+		waitForText("body", "最近结果"),
+		waitForText("body", "最近目录状态"),
+		waitForText("body", "最近待补传树"),
+		waitForText("body", "/demo"),
+		waitForText("body", "暂无待补传项。"),
+	)
+
 	runStep(t, runCtx, "status report save",
 		chromedp.SetValue(`#report-title`, "UI Smoke 里程碑报告", chromedp.ByID),
 		chromedp.SetValue(`#report-note`, "用于验证报告历史与保存流程", chromedp.ByID),

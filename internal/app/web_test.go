@@ -50,14 +50,23 @@ func TestHandleIndexServesHTML(t *testing.T) {
 	if !strings.Contains(body, `id="plan-execution-mode"`) {
 		t.Fatalf("expected execution mode selector in html body, got %q", body)
 	}
+	if !strings.Contains(body, `id="plan-source-delete-policy"`) {
+		t.Fatalf("expected source delete policy selector in html body, got %q", body)
+	}
 	if !strings.Contains(body, `id="plan-preview-meta"`) {
 		t.Fatalf("expected preview meta panel in html body, got %q", body)
 	}
 	if !strings.Contains(body, `id="task-directory-states"`) {
 		t.Fatalf("expected task directory states panel in html body, got %q", body)
 	}
+	if !strings.Contains(body, `id="task-pending-tree"`) {
+		t.Fatalf("expected task pending tree panel in html body, got %q", body)
+	}
 	if !strings.Contains(body, `id="status-directory-states"`) {
 		t.Fatalf("expected status directory states panel in html body, got %q", body)
+	}
+	if !strings.Contains(body, `id="status-pending-tree"`) {
+		t.Fatalf("expected status pending tree panel in html body, got %q", body)
 	}
 	if !strings.Contains(body, `id="auto-recover-run"`) {
 		t.Fatalf("expected auto recover controls in html body, got %q", body)
