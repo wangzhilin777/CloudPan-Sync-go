@@ -225,6 +225,12 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "data-auto-recover-decision-open-task") {
 		t.Fatalf("expected auto recover decision open task action in app.js, got %q", body)
 	}
+	if !strings.Contains(body, "data-auto-recover-decision-mode-budget") {
+		t.Fatalf("expected auto recover decision mode budget wiring in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "data-auto-recover-decision-lane-budget") {
+		t.Fatalf("expected auto recover decision lane budget wiring in app.js, got %q", body)
+	}
 	if !strings.Contains(body, "outcomes ") {
 		t.Fatalf("expected outcome summary text in app.js, got %q", body)
 	}
