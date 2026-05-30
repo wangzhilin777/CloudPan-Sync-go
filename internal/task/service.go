@@ -102,6 +102,7 @@ type RecoverResult struct {
 	ProtocolGroupCounts            map[string]int    `json:"protocolGroupCounts,omitempty"`
 	ProviderCounts                 map[string]int    `json:"providerCounts,omitempty"`
 	ProfileCounts                  map[string]int    `json:"profileCounts,omitempty"`
+	StrategyCounts                 map[string]int    `json:"strategyCounts,omitempty"`
 	LaneCounts                     map[string]int    `json:"laneCounts,omitempty"`
 	EarliestNextRetryAt            string            `json:"earliestNextRetryAt,omitempty"`
 	Decisions                      []RecoverDecision `json:"decisions,omitempty"`
@@ -111,6 +112,7 @@ type RecoverDecision struct {
 	TaskID                       string `json:"taskId,omitempty"`
 	ProviderKey                  string `json:"providerKey,omitempty"`
 	ProfileID                    string `json:"profileId,omitempty"`
+	Strategy                     string `json:"strategy,omitempty"`
 	Mode                         string `json:"mode,omitempty"`
 	ProtocolGroup                string `json:"protocolGroup,omitempty"`
 	RetryClass                   string `json:"retryClass,omitempty"`
@@ -1537,6 +1539,7 @@ func buildRecoverDecision(candidate recoverCandidate, outcome, message string, s
 		TaskID:                       detail.Task.ID,
 		ProviderKey:                  providerKey,
 		ProfileID:                    profileID,
+		Strategy:                     recoverTaskStrategy(detail),
 		Mode:                         candidate.Mode,
 		ProtocolGroup:                recoverProtocolGroupBudgetKey(candidate.ProtocolGroup),
 		RetryClass:                   candidate.PrimaryRetryClass,
@@ -1668,6 +1671,12 @@ func appendRecoverDecision(result *RecoverResult, decision RecoverDecision) {
 			result.ProviderCounts = make(map[string]int)
 		}
 		result.ProviderCounts[decision.ProviderKey] = result.ProviderCounts[decision.ProviderKey] + 1
+	}
+	if strings.TrimSpace(decision.Strategy) != "" {
+		if result.StrategyCounts == nil {
+			result.StrategyCounts = make(map[string]int)
+		}
+		result.StrategyCounts[decision.Strategy] = result.StrategyCounts[decision.Strategy] + 1
 	}
 	if decision.SuggestedModeBudget > result.SuggestedLimitPerMode {
 		result.SuggestedLimitPerMode = decision.SuggestedModeBudget

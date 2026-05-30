@@ -3390,6 +3390,12 @@ func TestServiceRecoverBlockedTasksWithOptionsFiltersStrategy(t *testing.T) {
 	if result.MatchedCount != 1 || result.RecoveredCount != 0 || result.SkippedByCooldownWait != 1 || result.Strategy != "download_upload" {
 		t.Fatalf("unexpected strategy filter result: %#v", result)
 	}
+	if got := result.StrategyCounts["download_upload"]; got != 1 {
+		t.Fatalf("expected strategyCounts download_upload=1, got %#v", result.StrategyCounts)
+	}
+	if len(result.Decisions) != 1 || result.Decisions[0].Strategy != "download_upload" {
+		t.Fatalf("expected decisions to carry strategy download_upload, got %#v", result.Decisions)
+	}
 
 	fastAfter, ok, err := svc.Get(ctx, fastID)
 	if err != nil || !ok {

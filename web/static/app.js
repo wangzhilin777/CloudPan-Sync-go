@@ -3365,6 +3365,20 @@ function renderAutoRecoverProviderCounts(result) {
   return parts.length ? ` / providers ${parts.join(" / ")}` : "";
 }
 
+function renderAutoRecoverStrategyCounts(result) {
+  const counts = result && typeof result === "object" && result.strategyCounts && typeof result.strategyCounts === "object"
+    ? result.strategyCounts
+    : null;
+  if (!counts) {
+    return "";
+  }
+  const parts = Object.keys(counts)
+    .sort()
+    .filter((key) => Number(counts[key] || 0) > 0)
+    .map((key) => `${key} ${stringifyValue(counts[key], "0")}`);
+  return parts.length ? ` / strategies ${parts.join(" / ")}` : "";
+}
+
 function renderAutoRecoverProfileCounts(result) {
   const counts = result && typeof result === "object" && result.profileCounts && typeof result.profileCounts === "object"
     ? result.profileCounts
@@ -3440,7 +3454,7 @@ function renderAutoRecoverLastResultSummary() {
   }
   const label = result.dryRun ? "最近预演" : "最近执行";
   const recoveredLabel = result.dryRun ? "可放行" : "recovered";
-  return `${label}：matched ${stringifyValue(result.matchedCount, "0")} / ${recoveredLabel} ${stringifyValue(result.recoveredCount, "0")} / limit ${stringifyValue(result.skippedByLimit, "0")} / modeBudget ${stringifyValue(result.skippedByModeBudget, "0")} / laneBudget ${stringifyValue(result.skippedByLaneBudget, "0")} / protocolGroupBudget ${stringifyValue(result.skippedByProtocolGroupBudget, "0")} / providerBudget ${stringifyValue(result.skippedByProviderBudget, "0")} / profileBudget ${stringifyValue(result.skippedByProfileBudget, "0")} / cooldownWait ${stringifyValue(result.skippedByCooldownWait, "0")} / retryWindowWait ${stringifyValue(result.skippedByRetryWindowWait, "0")} / blocked ${stringifyValue(result.skippedByBlockedReason, "0")}${renderAutoRecoverOutcomeCounts(result)}${renderAutoRecoverRetryClassCounts(result)}${renderAutoRecoverRecoverStateCounts(result)}${renderAutoRecoverBlockedActionCounts(result)}${renderAutoRecoverProtocolGroupCounts(result)}${renderAutoRecoverProviderCounts(result)}${renderAutoRecoverProfileCounts(result)}${renderAutoRecoverLaneCounts(result)}${renderAutoRecoverSuggestedBudgets(result)}${result.earliestNextRetryAt ? ` / earliest ${result.earliestNextRetryAt}` : ""}`;
+  return `${label}：matched ${stringifyValue(result.matchedCount, "0")} / ${recoveredLabel} ${stringifyValue(result.recoveredCount, "0")} / limit ${stringifyValue(result.skippedByLimit, "0")} / modeBudget ${stringifyValue(result.skippedByModeBudget, "0")} / laneBudget ${stringifyValue(result.skippedByLaneBudget, "0")} / protocolGroupBudget ${stringifyValue(result.skippedByProtocolGroupBudget, "0")} / providerBudget ${stringifyValue(result.skippedByProviderBudget, "0")} / profileBudget ${stringifyValue(result.skippedByProfileBudget, "0")} / cooldownWait ${stringifyValue(result.skippedByCooldownWait, "0")} / retryWindowWait ${stringifyValue(result.skippedByRetryWindowWait, "0")} / blocked ${stringifyValue(result.skippedByBlockedReason, "0")}${renderAutoRecoverOutcomeCounts(result)}${renderAutoRecoverRetryClassCounts(result)}${renderAutoRecoverRecoverStateCounts(result)}${renderAutoRecoverBlockedActionCounts(result)}${renderAutoRecoverProtocolGroupCounts(result)}${renderAutoRecoverProviderCounts(result)}${renderAutoRecoverStrategyCounts(result)}${renderAutoRecoverProfileCounts(result)}${renderAutoRecoverLaneCounts(result)}${renderAutoRecoverSuggestedBudgets(result)}${result.earliestNextRetryAt ? ` / earliest ${result.earliestNextRetryAt}` : ""}`;
 }
 
 function renderAutoRecoverLastResultDetail() {
@@ -3460,6 +3474,7 @@ function renderAutoRecoverLastResultDetail() {
           <div class="directory-metrics">
             <span class="pill">provider ${escapeHTML(stringifyValue(item.providerKey, "-"))}</span>
             <span class="pill">profile ${escapeHTML(stringifyValue(item.profileId, "-"))}</span>
+            <span class="pill">strategy ${escapeHTML(stringifyValue(item.strategy, "-"))}</span>
             <span class="pill">mode ${escapeHTML(stringifyValue(item.mode, "-"))}</span>
             <span class="pill">state ${escapeHTML(autoRecoverStateLabel(item.recoverState))}</span>
             <span class="pill">mode budget ${escapeHTML(stringifyValue(item.suggestedModeBudget, "-"))}</span>
