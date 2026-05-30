@@ -163,6 +163,8 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 		waitForText(`#status-runtime-checkpoints`, "恢复等待 - AUTH 刷新"),
 		chromedp.Click(`#status-directory-states [data-tree-sync-panel="directory"][data-tree-sync-path="/demo"]`, chromedp.ByQuery),
 		waitForValue(`#status-pending-filter-query`, "/demo"),
+		waitForText(`#status-table`, "executionMode"),
+		waitForText(`#status-table`, "scanMode"),
 		chromedp.Click(`#status-directory-copy-visible`, chromedp.ByID),
 		waitForText(`#flash`, "已复制"),
 		waitForSelectorCount(`button[data-tree-bulk-scope="status"][data-tree-bulk-panel="directory"][data-tree-bulk-action="collapse"]`, 1),

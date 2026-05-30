@@ -3610,6 +3610,8 @@ function renderSnapshotSummary(summary) {
   if (retrySummary && typeof retrySummary === "object") {
     return `
       <div><strong>lastTaskState</strong> <code>${escapeHTML(stringifyValue(summary.lastTaskState))}</code></div>
+      <div><strong>executionMode</strong> <code>${escapeHTML(stringifyValue(summary.executionMode, "-"))}</code></div>
+      <div><strong>scanMode</strong> <code>${escapeHTML(stringifyValue(summary.scanMode, "-"))}</code></div>
       <div><strong>blockedCount</strong> <code>${escapeHTML(stringifyValue(summary.blockedCount, "0"))}</code></div>
       <div><strong>autoRecoverCount</strong> <code>${escapeHTML(stringifyValue(summary.autoRecoverCount, "0"))}</code></div>
       <div><strong>retryBlocked</strong> <code>${escapeHTML(stringifyValue(retrySummary.blockedReason, "-"))}</code></div>
