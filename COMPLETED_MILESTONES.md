@@ -64,3 +64,12 @@
 - 回归验证待本次提交前执行：`go test ./internal/app ./internal/task`、`node --check web/static/app.js`。
 - 清理情况：本轮验证结束后会确认未遗留额外后台进程、临时目录、smoke 目录或构建残留。
 
+
+## 2026-05-31 - 推荐模式与风险解释静态契约补强
+
+- 继续对齐 [docs/01-GO_REBUILD_PLAN.md](E:/Workspace/VSCode/CloudPan-Sync-go/docs/01-GO_REBUILD_PLAN.md) 中“页面与 API 应给出推荐语义”要求，把前端已展示的推荐模式与风险解释字段补成 smoke 级静态契约。
+- `internal/app/web_test.go` 现在会同时校验 `recommendedExecutionMode`、`recommendedExecutionModeReason`、`风险档位`、`风险节流`、`风险模板解释` 这些关键展示点仍然存在，避免后续前端回归时把推荐语义悄悄删掉。
+- 这次改动不改业务逻辑，只把已经落地的推荐模式 / 风险解释展示进一步固定成可回归验证的契约。
+- 回归验证待本次提交前执行：`go test ./internal/app`。
+- 清理情况：本轮验证结束后会确认未遗留额外后台进程、临时目录、smoke 目录或构建残留。
+

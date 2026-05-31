@@ -150,6 +150,21 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "CALIBRATED") {
 		t.Fatalf("expected CALIBRATED risk resolution detail in app.js, got %q", body)
 	}
+	if !strings.Contains(body, "recommendedExecutionMode") {
+		t.Fatalf("expected recommendedExecutionMode wiring in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "recommendedExecutionModeReason") {
+		t.Fatalf("expected recommendedExecutionModeReason wiring in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "风险档位") {
+		t.Fatalf("expected risk mode label in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "风险节流") {
+		t.Fatalf("expected risk throttle label in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "风险模板解释") {
+		t.Fatalf("expected risk resolution label in app.js, got %q", body)
+	}
 	if !strings.Contains(body, "OVERRIDE FIELDS") {
 		t.Fatalf("expected OVERRIDE FIELDS risk resolution detail in app.js, got %q", body)
 	}
