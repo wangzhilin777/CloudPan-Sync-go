@@ -1,5 +1,14 @@
 # Completed Milestones
 
+## 2026-05-31 - planner 推荐模式与 provider overwrite 契约补强
+
+- 继续按 [docs/01-GO_REBUILD_PLAN.md](E:/Workspace/VSCode/CloudPan-Sync-go/docs/01-GO_REBUILD_PLAN.md) 的 Phase 2 / Phase 3 主线推进，这轮不再停留在前端护栏，而是补核心 planner/provider 契约测试，直接收紧推荐模式、源删记录归根和 provider overwrite 语义。
+- 新增 [internal/planner/recommendation_contract_test.go](E:/Workspace/VSCode/CloudPan-Sync-go/internal/planner/recommendation_contract_test.go)，把 `recommendedExecutionMode` / `recommendedExecutionModeReason` / `executionOrder` 的关键推荐分支，以及 deleted entry `rootPath` 回收规则固定成回归契约。
+- 新增 [internal/provider/catalog_overwrite_contract_test.go](E:/Workspace/VSCode/CloudPan-Sync-go/internal/provider/catalog_overwrite_contract_test.go)，把 `aliyundrive_open / 123_open / 189cloud / 115_open` 的 `SupportsOverwrite`、`SupportsAutoRename`、`OverwriteBehavior` 和 `ConflictPolicies` 声明固定成 catalog 级契约。
+- 这次改动不覆盖你当前 worktree 里已存在但无正文 diff 的 planner/provider 假脏文件，而是通过新增测试文件继续把主线里已落地的能力变成可验证基线。
+- 回归验证已通过：`go test ./internal/planner ./internal/provider`。
+- 清理情况：本轮未启动额外后台进程；未生成需清理的临时目录、smoke 目录或构建产物。
+
 ## 2026-05-31 - 报告历史与 smoke Markdown 下载静态契约补强
 
 - 继续沿着 [docs/01-GO_REBUILD_PLAN.md](E:/Workspace/VSCode/CloudPan-Sync-go/docs/01-GO_REBUILD_PLAN.md) 中“状态矩阵/证据页展示”和“真实 provider smoke 记录”方向，把验收报告历史、下载文件名、smoke Markdown 查看/下载链路补成更完整的前端静态契约。
