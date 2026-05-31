@@ -321,6 +321,15 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "验收报告已下载") {
 		t.Fatalf("expected report download flash text in app.js, got %q", body)
 	}
+	if !strings.Contains(body, "验收报告已刷新") {
+		t.Fatalf("expected report refresh flash text in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "Provider smoke 记录已保存") {
+		t.Fatalf("expected provider smoke save flash text in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "状态矩阵已刷新") {
+		t.Fatalf("expected status refresh flash text in app.js, got %q", body)
+	}
 	if !strings.Contains(body, "renderTaskResolutionGuide") {
 		t.Fatalf("expected task resolution guide renderer in app.js, got %q", body)
 	}
@@ -488,6 +497,18 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	}
 	if !strings.Contains(body, "data-auto-recover-preview-mode-budget") {
 		t.Fatalf("expected auto recover summary preview mode budget wiring in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "data-auto-recover-run-state") {
+		t.Fatalf("expected auto recover run-state dataset in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "data-auto-recover-run-retry-class") {
+		t.Fatalf("expected auto recover run retry-class dataset in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "data-auto-recover-run-primary-blocked-action") {
+		t.Fatalf("expected auto recover run primary blocked action dataset in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "data-auto-recover-run-blocked-action") {
+		t.Fatalf("expected auto recover run blocked action dataset in app.js, got %q", body)
 	}
 	if !strings.Contains(body, "currentAutoRecoverScopedRequest") {
 		t.Fatalf("expected scoped auto recover request helper in app.js, got %q", body)

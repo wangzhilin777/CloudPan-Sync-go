@@ -154,3 +154,21 @@
 - 回归验证已通过：`go test ./internal/app -run TestRoutesServeAppJSIncludesRetryEvidenceLabels -v`、`go test ./internal/app -run TestConsoleUISmokeMainline -v`、`node --check web/static/app.js`。
 - 清理情况：本轮验证未遗留额外后台进程、临时目录、smoke 目录或构建残留。
 
+
+## 2026-05-31 - 状态页刷新与保存反馈静态契约补强
+
+- 继续沿着 [docs/01-GO_REBUILD_PLAN.md](E:/Workspace/VSCode/CloudPan-Sync-go/docs/01-GO_REBUILD_PLAN.md) 中“状态矩阵/证据页展示”方向，把状态页和证据区常用刷新/保存反馈语义补成前端静态契约。
+- `internal/app/web_test.go` 现在会额外校验“验收报告已刷新”“Provider smoke 记录已保存”“状态矩阵已刷新”这些提示语仍然存在，和已有的任务刷新、报告保存、报告下载、smoke Markdown 查看/下载提示一起形成更完整的反馈链路约束。
+- 这次改动不改刷新或持久化逻辑，只把现有用户反馈语义补成可回归契约，避免后续前端改动时把关键反馈文案静默删掉。
+- 回归验证已通过：`go test ./internal/app -run TestRoutesServeAppJSIncludesRetryEvidenceLabels -v`、`go test ./internal/app -run TestConsoleUISmokeMainline -v`、`node --check web/static/app.js`。
+- 清理情况：本轮验证未遗留额外后台进程、临时目录、smoke 目录或构建残留。
+
+
+## 2026-05-31 - 后台补传按状态与主阻塞动作执行契约补强
+
+- 继续对齐 [docs/01-GO_REBUILD_PLAN.md](E:/Workspace/VSCode/CloudPan-Sync-go/docs/01-GO_REBUILD_PLAN.md) 中“更复杂的后台补传编排、批量筛选与多策略调度”方向，把状态页 summary 里按执行状态、主失败类型、主阻塞动作直接执行的入口补成静态契约。
+- `internal/app/web_test.go` 现在会额外校验 `data-auto-recover-run-state`、`data-auto-recover-run-retry-class`、`data-auto-recover-run-primary-blocked-action`、`data-auto-recover-run-blocked-action` 这些关键数据集仍然存在，保证“只执行等冷却/等授权/主重试类型/主阻塞动作”等 summary 动作不会被前端重构悄悄删掉。
+- 这次改动不改后台补传调度逻辑，只把已经落地的直执行入口补成可回归约束，让 auto recover summary 的批量执行入口更稳。
+- 回归验证已通过：`go test ./internal/app -run TestRoutesServeAppJSIncludesRetryEvidenceLabels -v`、`go test ./internal/app -run TestConsoleUISmokeMainline -v`、`node --check web/static/app.js`。
+- 清理情况：本轮验证未遗留额外后台进程、临时目录、smoke 目录或构建残留。
+
