@@ -3987,6 +3987,15 @@ function renderAutoRecoverSummary(items) {
                 ? `<button
               type="button"
               class="ghost"
+              data-auto-recover-preview-protocol-group="${escapeHTML(stringifyValue(item.sampleProtocolGroup, ""))}"
+            >${Array.isArray(item.protocolGroups) && item.protocolGroups.length <= 1 ? "预演该协议族" : "预演样本协议族"}</button>`
+                : ""
+            }
+            ${
+              item.sampleProtocolGroup
+                ? `<button
+              type="button"
+              class="ghost"
               data-auto-recover-run-protocol-group="${escapeHTML(stringifyValue(item.sampleProtocolGroup, ""))}"
             >${Array.isArray(item.protocolGroups) && item.protocolGroups.length <= 1 ? "执行该协议族" : "执行样本协议族"}</button>`
                 : ""
@@ -4565,6 +4574,16 @@ function wireAutoRecoverSummary() {
       try {
         applyAutoRecoverFilters({ mode: button.dataset.autoRecoverRunMode || "" }, { render: false });
         await triggerAutoRecover();
+      } catch (error) {
+        showFlash(error.message, true);
+      }
+    });
+  });
+  wrap.querySelectorAll("[data-auto-recover-preview-protocol-group]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      try {
+        applyAutoRecoverFilters({ protocolGroup: button.dataset.autoRecoverPreviewProtocolGroup || "" });
+        await triggerAutoRecover({ dryRun: true });
       } catch (error) {
         showFlash(error.message, true);
       }

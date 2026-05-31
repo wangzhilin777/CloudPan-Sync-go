@@ -54,3 +54,13 @@
 - Web smoke 断言已补强：静态资源测试现在同时校验决策明细 lane 级 `data-auto-recover-decision-focus-lane-strategy` 透传，以及 `const strategy = button.dataset.autoRecoverDecisionFocusLaneStrategy || ""` 这段前端状态同步代码仍然存在。
 - 回归验证待本次提交前执行：`go test ./internal/app ./internal/task`、`node --check web/static/app.js`。
 - 清理情况：本轮验证结束后会确认未遗留额外后台进程、临时目录、smoke 目录或构建残留。
+
+## 2026-05-31 - 后台补传协议族预演走通
+
+- 继续对齐 [docs/01-GO_REBUILD_PLAN.md](E:/Workspace/VSCode/CloudPan-Sync-go/docs/01-GO_REBUILD_PLAN.md) 中“更复杂的后台补传编排、批量筛选与多策略调度”方向，把协议族维度的后台补传动作也补齐 dry-run 预演链路。
+- 状态页 summary 里的样本协议族现在新增 `data-auto-recover-preview-protocol-group` 按钮，用户可以先按协议族收敛候选并直接预演，而不必先执行真实后台补传。
+- `wireAutoRecoverSummary()` 现已在协议族预演时同步写回 `protocolGroup` 过滤条件，并走 `triggerAutoRecover({ dryRun: true })`，和 lane 级预演保持一致的交互节奏。
+- Web smoke 断言已补强：静态资源测试现在同时校验协议族预演按钮透传，以及 `button.dataset.autoRecoverPreviewProtocolGroup || ""` 这段前端请求构造代码仍然存在。
+- 回归验证待本次提交前执行：`go test ./internal/app ./internal/task`、`node --check web/static/app.js`。
+- 清理情况：本轮验证结束后会确认未遗留额外后台进程、临时目录、smoke 目录或构建残留。
+
