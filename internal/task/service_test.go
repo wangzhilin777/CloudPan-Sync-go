@@ -6251,6 +6251,15 @@ func TestServiceRunSkipsAlreadySyncedTargetFile(t *testing.T) {
 	if got, _ := running.Results[0].Payload["syncDecision"].(string); got != "skip" {
 		t.Fatalf("expected syncDecision skip, got %v", running.Results[0].Payload["syncDecision"])
 	}
+	if got, _ := running.Results[0].Payload["executionMode"].(string); got != string(planner.ExecutionModeLeafFirstLazy) {
+		t.Fatalf("expected skip result execution mode leaf_first_lazy, got %v", running.Results[0].Payload["executionMode"])
+	}
+	if got, _ := running.Results[0].Payload["scanMode"].(string); got != "lazy_leaf_first" {
+		t.Fatalf("expected skip result scan mode lazy_leaf_first, got %v", running.Results[0].Payload["scanMode"])
+	}
+	if got, _ := running.Results[0].Payload["sourceDeletePolicy"].(string); got != string(planner.SourceDeletePolicyRecordOnly) {
+		t.Fatalf("expected skip result source delete policy record_only, got %v", running.Results[0].Payload["sourceDeletePolicy"])
+	}
 	if running.Runtime.SkippedCount != 1 {
 		t.Fatalf("expected runtime skipped count 1, got %d", running.Runtime.SkippedCount)
 	}
@@ -6557,6 +6566,12 @@ func TestServiceRunTreatsAmbiguousMetadataOKAsCreate(t *testing.T) {
 	}
 	if got, _ := running.Results[0].Payload["syncDecision"].(string); got != "create" {
 		t.Fatalf("expected syncDecision create, got %v", running.Results[0].Payload["syncDecision"])
+	}
+	if got, _ := running.Results[0].Payload["executionMode"].(string); got != string(planner.ExecutionModeLeafFirstLazy) {
+		t.Fatalf("expected create result execution mode leaf_first_lazy, got %v", running.Results[0].Payload["executionMode"])
+	}
+	if got, _ := running.Results[0].Payload["scanMode"].(string); got != "lazy_leaf_first" {
+		t.Fatalf("expected create result scan mode lazy_leaf_first, got %v", running.Results[0].Payload["scanMode"])
 	}
 	if got, _ := running.Results[0].Payload["syncDecisionReason"].(string); got != "target_missing_or_metadata_unavailable" {
 		t.Fatalf("expected conservative missing/unavailable reason, got %v", running.Results[0].Payload["syncDecisionReason"])

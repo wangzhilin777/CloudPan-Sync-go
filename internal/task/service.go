@@ -510,6 +510,7 @@ func (s *Service) Run(ctx context.Context, id string) (Detail, bool, error) {
 		localPath := lookupLocalPath(detail.SourceEntries, item.Path)
 		targetState := s.inspectTargetState(entry, providerProfile, detail.SourceEntries, item.Path, item.Size)
 		result.Payload["targetState"] = targetState
+		attachPlanContextToResult(&result, detail.Plan.Metadata)
 		switch targetState.Decision {
 		case "skip":
 			result.Mode = "runtime_skip"
@@ -573,32 +574,8 @@ func (s *Service) Run(ctx context.Context, id string) (Detail, bool, error) {
 		if fastCheckPayload != nil {
 			result.Payload["fastCheck"] = fastCheckPayload
 		}
-		if executionMode, ok := detail.Plan.Metadata["executionMode"]; ok {
-			result.Payload["executionMode"] = executionMode
-		}
-		if recommendedMode, ok := detail.Plan.Metadata["recommendedExecutionMode"]; ok {
-			result.Payload["recommendedExecutionMode"] = recommendedMode
-		}
-		if recommendedReason, ok := detail.Plan.Metadata["recommendedExecutionModeReason"]; ok {
-			result.Payload["recommendedExecutionModeReason"] = recommendedReason
-		}
-		if sourceDeletePolicy, ok := detail.Plan.Metadata["sourceDeletePolicy"]; ok {
-			result.Payload["sourceDeletePolicy"] = sourceDeletePolicy
-		}
-		if retryMode, ok := detail.Plan.Metadata["retryMode"]; ok {
-			result.Payload["retryMode"] = retryMode
-		}
-		if retryScope, ok := detail.Plan.Metadata["retryScope"]; ok {
-			result.Payload["retryScope"] = retryScope
-		}
-		if retrySelectedPaths, ok := detail.Plan.Metadata["retrySelectedPaths"]; ok {
-			result.Payload["retrySelectedPaths"] = retrySelectedPaths
-		}
 		if item.Sequence > 0 {
 			result.Payload["sequence"] = item.Sequence
-		}
-		if riskProfile, ok := detail.Plan.Metadata["riskProfile"]; ok {
-			result.Payload["riskProfile"] = riskProfile
 		}
 		if autoRecovery := runtimeAutoRecoveryPayload(detail.Runtime); autoRecovery != nil {
 			result.Payload["autoRecovery"] = autoRecovery
@@ -2272,6 +2249,41 @@ func (s *Service) executeUpload(entry provider.Entry, req provider.UploadRequest
 		fallback.Message = "Fast upload hash miss, fallback to download_upload succeeded."
 	}
 	return fallback, true, fastCheckPayload
+}
+
+func attachPlanContextToResult(result *Result, metadata map[string]interface{}) {
+	if result == nil || len(metadata) == 0 {
+		return
+	}
+	if executionMode, ok := metadata["executionMode"]; ok {
+		result.Payload["executionMode"] = executionMode
+	}
+	if scanMode, ok := metadata["scanMode"]; ok {
+		result.Payload["scanMode"] = scanMode
+	} else if mode, err := executionModeFromMetadata(metadata); err == nil {
+		result.Payload["scanMode"] = scanModeForExecutionMode(mode)
+	}
+	if recommendedMode, ok := metadata["recommendedExecutionMode"]; ok {
+		result.Payload["recommendedExecutionMode"] = recommendedMode
+	}
+	if recommendedReason, ok := metadata["recommendedExecutionModeReason"]; ok {
+		result.Payload["recommendedExecutionModeReason"] = recommendedReason
+	}
+	if sourceDeletePolicy, ok := metadata["sourceDeletePolicy"]; ok {
+		result.Payload["sourceDeletePolicy"] = sourceDeletePolicy
+	}
+	if retryMode, ok := metadata["retryMode"]; ok {
+		result.Payload["retryMode"] = retryMode
+	}
+	if retryScope, ok := metadata["retryScope"]; ok {
+		result.Payload["retryScope"] = retryScope
+	}
+	if retrySelectedPaths, ok := metadata["retrySelectedPaths"]; ok {
+		result.Payload["retrySelectedPaths"] = retrySelectedPaths
+	}
+	if riskProfile, ok := metadata["riskProfile"]; ok {
+		result.Payload["riskProfile"] = riskProfile
+	}
 }
 
 func supportsFallback(modes []string, expected string) bool {

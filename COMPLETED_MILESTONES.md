@@ -1,5 +1,14 @@
 # Completed Milestones
 
+## 2026-05-31 - 运行结果执行上下文透传收口
+
+- 继续按 [docs/01-GO_REBUILD_PLAN.md](E:/Workspace/VSCode/CloudPan-Sync-go/docs/01-GO_REBUILD_PLAN.md) 中“task runtime evidence / provider probe 也应透传当前执行模式和扫描模式”方向推进，这轮把运行结果在 `skip / create / overwrite / upload` 各分支上的上下文字段透传统一收口。
+- [internal/task/service.go](E:/Workspace/VSCode/CloudPan-Sync-go/internal/task/service.go) 新增 `attachPlanContextToResult()`，统一把 `executionMode`、`scanMode`、`recommendedExecutionMode`、`recommendedExecutionModeReason`、`sourceDeletePolicy`、retry 上下文和 `riskProfile` 注入到单条运行结果，避免 `skip` 分支遗漏字段。
+- 同一处实现对 `scanMode` 做了按 `executionMode` 的兜底推导，因此即使 plan metadata 尚未预先写入 `scanMode`，运行结果里仍能稳定看到 `lazy_leaf_first / pre_scan_flat` 语义。
+- [internal/task/service_test.go](E:/Workspace/VSCode/CloudPan-Sync-go/internal/task/service_test.go) 补强了 `skip` 与保守 `create` 两条契约，固定运行结果必须带出 `executionMode`、`scanMode` 和 `sourceDeletePolicy`，避免后续 runtime 重构时再次出现结果字段不一致。
+- 回归验证已通过：`go test ./internal/planner ./internal/provider ./internal/task`。
+- 清理情况：本轮未遗留额外后台进程；测试使用临时目录并自动清理，未保留临时数据库、smoke 目录或构建产物。
+
 ## 2026-05-31 - 多根推荐优先级与元数据保守判定契约补强
 
 - 继续按 [docs/01-GO_REBUILD_PLAN.md](E:/Workspace/VSCode/CloudPan-Sync-go/docs/01-GO_REBUILD_PLAN.md) 中“多个顶层目录按勾选顺序逐棵子树推进”和“目标明确存在的保守判定”两条核心执行语义推进，本轮一次补齐 planner 推荐优先级和 runtime metadata 判定边界。
