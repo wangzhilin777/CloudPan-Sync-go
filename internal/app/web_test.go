@@ -276,14 +276,29 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "data-provider-smoke-filter-status") {
 		t.Fatalf("expected provider smoke matrix status filter action in app.js, got %q", body)
 	}
+	if !strings.Contains(body, "data-provider-smoke-open-record") {
+		t.Fatalf("expected provider smoke matrix open-record action in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "data-provider-smoke-open-task") {
+		t.Fatalf("expected provider smoke matrix open-task action in app.js, got %q", body)
+	}
 	if !strings.Contains(body, "draftProviderSmokeFromMatrix") {
 		t.Fatalf("expected provider smoke matrix draft helper in app.js, got %q", body)
 	}
 	if !strings.Contains(body, "focusProviderSmokeRecordsByGroup") {
 		t.Fatalf("expected provider smoke matrix focus helper in app.js, got %q", body)
 	}
+	if !strings.Contains(body, "setProviderSmokeMatrixFilter") {
+		t.Fatalf("expected provider smoke matrix filter helper in app.js, got %q", body)
+	}
 	if !strings.Contains(body, "已按验收矩阵预填 smoke 表单") {
 		t.Fatalf("expected provider smoke matrix draft flash text in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "已打开 smoke 样本") {
+		t.Fatalf("expected provider smoke matrix open-record flash text in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "已打开 blocked 摘要对应的样本任务") {
+		t.Fatalf("expected provider smoke matrix open-task flash text in app.js, got %q", body)
 	}
 	if !strings.Contains(body, "data-report-view") {
 		t.Fatalf("expected report history view action in app.js, got %q", body)
@@ -302,6 +317,9 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	}
 	if !strings.Contains(body, "验收报告已保存") {
 		t.Fatalf("expected report save flash text in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "验收报告已下载") {
+		t.Fatalf("expected report download flash text in app.js, got %q", body)
 	}
 	if !strings.Contains(body, "renderTaskResolutionGuide") {
 		t.Fatalf("expected task resolution guide renderer in app.js, got %q", body)

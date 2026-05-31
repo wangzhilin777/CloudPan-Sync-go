@@ -136,3 +136,21 @@
 - 回归验证已通过：`go test ./internal/app -run TestRoutesServeAppJSIncludesRetryEvidenceLabels -v`、`go test ./internal/app -run TestConsoleUISmokeMainline -v`、`node --check web/static/app.js`。
 - 清理情况：本轮验证未遗留额外后台进程、临时目录、smoke 目录或构建残留。
 
+
+## 2026-05-31 - 验收矩阵样本直达动作静态契约补强
+
+- 继续沿着 [docs/01-GO_REBUILD_PLAN.md](E:/Workspace/VSCode/CloudPan-Sync-go/docs/01-GO_REBUILD_PLAN.md) 中“状态矩阵/证据页展示”和“真实 provider smoke 记录与协议组聚合矩阵”方向，把验收矩阵中直达样本的动作入口固定成前端静态契约。
+- `internal/app/web_test.go` 现在会额外校验 `data-provider-smoke-open-record`、`data-provider-smoke-open-task`、`setProviderSmokeMatrixFilter()`，以及“已打开 smoke 样本”“已打开 blocked 摘要对应的样本任务”这些关键提示语仍然存在，避免后续前端重构时把矩阵里的直达样本入口悄悄删掉。
+- 这次改动不改 API 或业务状态，只把已经落地的矩阵动作入口补成可回归约束，让协议组验收矩阵和 smoke / 样本任务之间的跳转关系更稳。
+- 回归验证已通过：`go test ./internal/app -run TestRoutesServeAppJSIncludesRetryEvidenceLabels -v`、`go test ./internal/app -run TestConsoleUISmokeMainline -v`、`node --check web/static/app.js`。
+- 清理情况：本轮验证未遗留额外后台进程、临时目录、smoke 目录或构建残留。
+
+
+## 2026-05-31 - 验收报告下载入口静态契约补强
+
+- 继续沿着 [docs/01-GO_REBUILD_PLAN.md](E:/Workspace/VSCode/CloudPan-Sync-go/docs/01-GO_REBUILD_PLAN.md) 中“状态矩阵/证据页展示”方向，把验收报告下载链路补成可回归的前端静态契约。
+- `internal/app/web_test.go` 现在会额外校验“验收报告已下载”这条提示语仍然存在，与已落地的 `data-report-download`、`renderReportHistory()`、`selectedEvidenceReport()` 一起兜住报告下载交互。
+- 这次改动不改报告生成或持久化逻辑，只把现有下载入口补成更完整的契约，避免后续前端改动时把下载反馈语义弄丢。
+- 回归验证已通过：`go test ./internal/app -run TestRoutesServeAppJSIncludesRetryEvidenceLabels -v`、`go test ./internal/app -run TestConsoleUISmokeMainline -v`、`node --check web/static/app.js`。
+- 清理情况：本轮验证未遗留额外后台进程、临时目录、smoke 目录或构建残留。
+
