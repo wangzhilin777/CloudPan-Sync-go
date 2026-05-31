@@ -53,6 +53,9 @@ func TestHandleIndexServesHTML(t *testing.T) {
 	if !strings.Contains(body, `id="plan-source-delete-policy"`) {
 		t.Fatalf("expected source delete policy selector in html body, got %q", body)
 	}
+	if !strings.Contains(body, `id="plan-selected-roots"`) {
+		t.Fatalf("expected selected roots input in html body, got %q", body)
+	}
 	if !strings.Contains(body, `id="plan-preview-meta"`) {
 		t.Fatalf("expected preview meta panel in html body, got %q", body)
 	}
@@ -167,6 +170,48 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	}
 	if !strings.Contains(body, "OVERRIDE FIELDS") {
 		t.Fatalf("expected OVERRIDE FIELDS risk resolution detail in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "renderSourceDeletePolicy") {
+		t.Fatalf("expected source delete policy renderer in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "record_only（只记录，不删目标端）") {
+		t.Fatalf("expected source delete policy label in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "Selected Roots") {
+		t.Fatalf("expected selected roots label in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "Scan Trace") {
+		t.Fatalf("expected scan trace label in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "data-runtime-focus-path") {
+		t.Fatalf("expected runtime focus path dataset in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "data-runtime-focus-scope") {
+		t.Fatalf("expected runtime focus scope dataset in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "data-runtime-focus-kind") {
+		t.Fatalf("expected runtime focus kind dataset in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "renderRuntimePathChips") {
+		t.Fatalf("expected runtime path chips renderer in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "focusRuntimeTreeByPath") {
+		t.Fatalf("expected runtime path focus helper in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "已按扫描轨迹定位任务目录树") {
+		t.Fatalf("expected task scan trace focus flash text in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "已按选定根目录定位任务目录树") {
+		t.Fatalf("expected task selected root focus flash text in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "已按最近扫描轨迹定位状态目录树") {
+		t.Fatalf("expected status scan trace focus flash text in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "已按选定根目录定位状态目录树") {
+		t.Fatalf("expected status selected root focus flash text in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "sourceDeletePolicy") {
+		t.Fatalf("expected sourceDeletePolicy field wiring in app.js, got %q", body)
 	}
 	if !strings.Contains(body, "waiting_auth_refresh") {
 		t.Fatalf("expected waiting_auth_refresh recoverState affordance in app.js, got %q", body)

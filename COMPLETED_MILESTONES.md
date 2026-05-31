@@ -1,5 +1,15 @@
 # Completed Milestones
 
+## 2026-05-31 - 源端删除策略与运行路径聚焦静态契约补强
+
+- 继续沿着 [docs/01-GO_REBUILD_PLAN.md](E:/Workspace/VSCode/CloudPan-Sync-go/docs/01-GO_REBUILD_PLAN.md) 中“源端删除默认仅记录、不默认删除目标端”和“页面/运行证据应表达执行模式与扫描路径”方向，把这批已落地的前端展示语义补成可回归静态契约。
+- `internal/app/web_test.go` 现在会额外校验 `plan-selected-roots`、`renderSourceDeletePolicy()`、`record_only（只记录，不删目标端）`、`Selected Roots`、`Scan Trace`、`renderRuntimePathChips()`、`focusRuntimeTreeByPath()`，以及任务/状态页运行路径聚焦提示语仍然存在。
+- 同一组契约也会兜住 `data-runtime-focus-path / scope / kind` 和 `sourceDeletePolicy` 字段透传，避免后续前端重构时把运行路径聚焦和源端删除语义悄悄删掉。
+- 浏览器级 smoke 这轮只保留稳定主线，并额外补上计划预览阶段 `record_only / 只记录，不删目标端` 的展示断言；更细的运行路径点击流仍在单独稳定中，避免把整包验证绑死在易抖的浏览器交互上。
+- 回归验证已通过：`go test ./internal/app -run TestRoutesServeAppJSIncludesRetryEvidenceLabels -v`、`node --check web/static/app.js`。
+- 额外验证情况：`go test ./internal/app -run TestConsoleUISmokeMainline -v` 在本轮长跑中未收敛，当前仍需后续单独稳定。
+- 清理情况：本轮已主动清理测试拉起的 `go/chrome` 进程；未新增需保留的临时目录、smoke 目录或构建产物。
+
 ## 2026-05-31 - 后台补传策略筛选与推荐预算展示
 
 - 对齐 [docs/01-GO_REBUILD_PLAN.md](E:/Workspace/VSCode/CloudPan-Sync-go/docs/01-GO_REBUILD_PLAN.md) 中“更复杂的后台补传编排、批量筛选与多策略调度”方向，先补齐 `strategy` 维度的后台补传筛选链路。
