@@ -109,3 +109,12 @@
 - 回归验证已通过：`go test ./internal/app`、`node --check web/static/app.js`。
 - 清理情况：本轮验证未遗留额外后台进程、临时目录、smoke 目录或构建残留。
 
+
+## 2026-05-31 - blocked action 处理引导静态契约补强
+
+- 继续沿着 [docs/01-GO_REBUILD_PLAN.md](E:/Workspace/VSCode/CloudPan-Sync-go/docs/01-GO_REBUILD_PLAN.md) 中“状态矩阵/证据页展示”和“blockedAction / blockedAdvice 便于定位处理步骤”方向，补齐任务详情“下一步处理”引导区的前端契约。
+- `internal/app/web_test.go` 现在会额外校验 `renderTaskResolutionGuide()`、`wireTaskResolutionGuide()`、`data-task-guide-view`、`data-task-guide-intent`，以及 `refresh_auth_profile`、`restore_local_source_file`、`manual_confirmation_required`、`review_and_reset_retry_strategy` 这些关键 blocked action 分支仍然存在。
+- 同一组契约也会兜住“打开授权面板”“查看状态矩阵”等处理入口文案，避免后续前端重构时把任务详情里的处理引导和直达按钮悄悄删掉。
+- 回归验证已通过：`go test ./internal/app -run TestRoutesServeAppJSIncludesRetryEvidenceLabels -v`、`go test ./internal/app -run TestConsoleUISmokeMainline -v`、`node --check web/static/app.js`。
+- 清理情况：本轮验证未遗留额外后台进程、临时目录、smoke 目录或构建残留。
+

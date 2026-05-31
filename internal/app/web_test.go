@@ -303,6 +303,36 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "验收报告已保存") {
 		t.Fatalf("expected report save flash text in app.js, got %q", body)
 	}
+	if !strings.Contains(body, "renderTaskResolutionGuide") {
+		t.Fatalf("expected task resolution guide renderer in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "wireTaskResolutionGuide") {
+		t.Fatalf("expected task resolution guide wiring in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "data-task-guide-view") {
+		t.Fatalf("expected task resolution guide view action in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "data-task-guide-intent") {
+		t.Fatalf("expected task resolution guide intent action in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "refresh_auth_profile") {
+		t.Fatalf("expected refresh_auth_profile guide action in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "restore_local_source_file") {
+		t.Fatalf("expected restore_local_source_file guide action in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "manual_confirmation_required") {
+		t.Fatalf("expected manual_confirmation_required guide action in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "review_and_reset_retry_strategy") {
+		t.Fatalf("expected review_and_reset_retry_strategy guide action in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "打开授权面板") {
+		t.Fatalf("expected open providers guide label in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "查看状态矩阵") {
+		t.Fatalf("expected open status guide label in app.js, got %q", body)
+	}
 	if !strings.Contains(body, "data-auto-recover-decision-focus-lane-strategy") {
 		t.Fatalf("expected auto recover decision lane strategy focus wiring in app.js, got %q", body)
 	}
