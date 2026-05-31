@@ -513,8 +513,41 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "data-auto-recover-run-lane-mode") {
 		t.Fatalf("expected auto recover run lane-mode dataset in app.js, got %q", body)
 	}
+	if !strings.Contains(body, "data-auto-recover-run-mode") {
+		t.Fatalf("expected auto recover run mode dataset in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "data-auto-recover-run-protocol-group") {
+		t.Fatalf("expected auto recover run protocol-group dataset in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "data-auto-recover-focus-mode") {
+		t.Fatalf("expected auto recover focus mode dataset in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "data-auto-recover-focus-lane-mode") {
+		t.Fatalf("expected auto recover focus lane-mode dataset in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "data-auto-recover-apply-budgets") {
+		t.Fatalf("expected auto recover apply budgets dataset in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "data-auto-recover-preview-lane-mode") {
+		t.Fatalf("expected auto recover preview lane-mode dataset in app.js, got %q", body)
+	}
 	if !strings.Contains(body, "data-auto-recover-open-task") {
 		t.Fatalf("expected auto recover open-task dataset in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "执行该模式") {
+		t.Fatalf("expected auto recover run mode label in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "执行该协议族") {
+		t.Fatalf("expected auto recover run protocol group label in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "预演该协议族") {
+		t.Fatalf("expected auto recover preview protocol group label in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "采用建议预算") {
+		t.Fatalf("expected auto recover apply suggested budgets label in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "预演该 lane") {
+		t.Fatalf("expected auto recover preview lane label in app.js, got %q", body)
 	}
 	if !strings.Contains(body, "执行主重试类型") {
 		t.Fatalf("expected auto recover primary retry-class label in app.js, got %q", body)

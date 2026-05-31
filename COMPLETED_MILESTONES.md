@@ -181,3 +181,12 @@
 - 回归验证已通过：`go test ./internal/app -run TestRoutesServeAppJSIncludesRetryEvidenceLabels -v`、`go test ./internal/app -run TestConsoleUISmokeMainline -v`、`node --check web/static/app.js`。
 - 清理情况：本轮验证未遗留额外后台进程、临时目录、smoke 目录或构建残留。
 
+
+## 2026-05-31 - 后台补传模式协议族预算动作契约补强
+
+- 继续对齐 [docs/01-GO_REBUILD_PLAN.md](E:/Workspace/VSCode/CloudPan-Sync-go/docs/01-GO_REBUILD_PLAN.md) 中“更复杂的后台补传编排、批量筛选与多策略调度”方向，把 auto recover summary 里按模式、协议族、建议预算和 lane 预演的动作入口补成静态契约。
+- `internal/app/web_test.go` 现在会额外校验 `data-auto-recover-run-mode`、`data-auto-recover-run-protocol-group`、`data-auto-recover-focus-mode`、`data-auto-recover-focus-lane-mode`、`data-auto-recover-apply-budgets`、`data-auto-recover-preview-lane-mode` 这些关键数据集仍然存在，并兜住“执行该模式”“执行该协议族”“预演该协议族”“采用建议预算”“预演该 lane”等动作文案。
+- 这次改动不改后台补传调度逻辑，只把已经落地的 summary 多入口补成更完整的可回归约束，让 auto recover 看板在模式/协议族/预算/预演维度的动作链更稳。
+- 回归验证已通过：`go test ./internal/app -run TestRoutesServeAppJSIncludesRetryEvidenceLabels -v`、`go test ./internal/app -run TestConsoleUISmokeMainline -v`、`node --check web/static/app.js`。
+- 清理情况：本轮验证未遗留额外后台进程、临时目录、smoke 目录或构建残留。
+
