@@ -98,6 +98,9 @@ func TestHandleIndexServesHTML(t *testing.T) {
 	if !strings.Contains(body, `value="waiting_retry_limit"`) {
 		t.Fatalf("expected waiting_retry_limit option in html body, got %q", body)
 	}
+	if !strings.Contains(body, `value="provider_session_missing"`) {
+		t.Fatalf("expected provider_session_missing option in html body, got %q", body)
+	}
 	if !strings.Contains(body, `id="risk-max-concurrent"`) {
 		t.Fatalf("expected risk concurrency input in html body, got %q", body)
 	}
@@ -464,6 +467,12 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	}
 	if !strings.Contains(body, "manual_confirmation_required") {
 		t.Fatalf("expected manual_confirmation_required guide action in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "manual_intervention_required") {
+		t.Fatalf("expected manual_intervention_required guide action in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "provider_session_missing") {
+		t.Fatalf("expected provider_session_missing helper in app.js, got %q", body)
 	}
 	if !strings.Contains(body, "review_and_reset_retry_strategy") {
 		t.Fatalf("expected review_and_reset_retry_strategy guide action in app.js, got %q", body)
