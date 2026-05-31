@@ -118,3 +118,12 @@
 - 回归验证已通过：`go test ./internal/app -run TestRoutesServeAppJSIncludesRetryEvidenceLabels -v`、`go test ./internal/app -run TestConsoleUISmokeMainline -v`、`node --check web/static/app.js`。
 - 清理情况：本轮验证未遗留额外后台进程、临时目录、smoke 目录或构建残留。
 
+
+## 2026-05-31 - blocked 聚合与 smoke 记录动作静态契约补强
+
+- 继续沿着 [docs/01-GO_REBUILD_PLAN.md](E:/Workspace/VSCode/CloudPan-Sync-go/docs/01-GO_REBUILD_PLAN.md) 中“状态矩阵/证据页展示”和“真实 provider smoke 记录与协议组聚合矩阵”方向，把状态页 blocked 聚合和 smoke 记录区的前端动作补成静态契约。
+- `internal/app/web_test.go` 现在会额外校验 `renderBlockedActionsSummary()`、`data-blocked-focus-action`、`focusBlockedActionSummary()`、`已按 blocked action 收敛最近重试队列`，保证状态页 blocked 聚合看板的聚焦入口仍然存在。
+- 同一组契约也会兜住 `data-provider-smoke-view`、`data-provider-smoke-download`、`provider-smoke-records-filter-clear`，以及“已切换 smoke Markdown”“smoke Markdown 已下载”“已清空 smoke 记录筛选”等提示语，避免后续前端重构时把 smoke 记录查看/下载/清空筛选链路删掉。
+- 回归验证已通过：`go test ./internal/app -run TestRoutesServeAppJSIncludesRetryEvidenceLabels -v`、`go test ./internal/app -run TestConsoleUISmokeMainline -v`、`node --check web/static/app.js`。
+- 清理情况：本轮验证未遗留额外后台进程、临时目录、smoke 目录或构建残留。
+

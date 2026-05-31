@@ -333,6 +333,36 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "查看状态矩阵") {
 		t.Fatalf("expected open status guide label in app.js, got %q", body)
 	}
+	if !strings.Contains(body, "renderBlockedActionsSummary") {
+		t.Fatalf("expected blocked actions summary renderer in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "data-blocked-focus-action") {
+		t.Fatalf("expected blocked action focus dataset in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "focusBlockedActionSummary") {
+		t.Fatalf("expected blocked action focus helper in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "已按 blocked action 收敛最近重试队列") {
+		t.Fatalf("expected blocked action summary flash text in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "data-provider-smoke-view") {
+		t.Fatalf("expected provider smoke record view action in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "data-provider-smoke-download") {
+		t.Fatalf("expected provider smoke record download action in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "provider-smoke-records-filter-clear") {
+		t.Fatalf("expected provider smoke filter clear action in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "已切换 smoke Markdown") {
+		t.Fatalf("expected provider smoke markdown switch flash text in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "smoke Markdown 已下载") {
+		t.Fatalf("expected provider smoke markdown download flash text in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "已清空 smoke 记录筛选") {
+		t.Fatalf("expected provider smoke filter clear flash text in app.js, got %q", body)
+	}
 	if !strings.Contains(body, "data-auto-recover-decision-focus-lane-strategy") {
 		t.Fatalf("expected auto recover decision lane strategy focus wiring in app.js, got %q", body)
 	}
