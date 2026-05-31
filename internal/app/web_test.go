@@ -306,6 +306,24 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "button.dataset.autoRecoverPreviewProtocolGroup || \"\"") {
 		t.Fatalf("expected auto recover preview protocol group filter sync in app.js, got %q", body)
 	}
+	if !strings.Contains(body, "renderProviderSmokeMatrixControls") {
+		t.Fatalf("expected provider smoke matrix controls renderer in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "providerSmokeMatrixCounts") {
+		t.Fatalf("expected provider smoke matrix counts helper in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "data-provider-smoke-filter") {
+		t.Fatalf("expected provider smoke matrix filter toolbar action in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "已验收") {
+		t.Fatalf("expected provider smoke matrix accepted label in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "进行中") {
+		t.Fatalf("expected provider smoke matrix in-progress label in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "待补齐") {
+		t.Fatalf("expected provider smoke matrix pending label in app.js, got %q", body)
+	}
 	if !strings.Contains(body, "data-provider-smoke-draft") {
 		t.Fatalf("expected provider smoke matrix draft action in app.js, got %q", body)
 	}
@@ -582,11 +600,38 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "预演该协议族") {
 		t.Fatalf("expected auto recover preview protocol group label in app.js, got %q", body)
 	}
+	if !strings.Contains(body, "预演样本协议族") {
+		t.Fatalf("expected auto recover preview sample protocol group label in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "执行样本协议族") {
+		t.Fatalf("expected auto recover run sample protocol group label in app.js, got %q", body)
+	}
 	if !strings.Contains(body, "采用建议预算") {
 		t.Fatalf("expected auto recover apply suggested budgets label in app.js, got %q", body)
 	}
 	if !strings.Contains(body, "预演该 lane") {
 		t.Fatalf("expected auto recover preview lane label in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "执行该阻塞动作") {
+		t.Fatalf("expected auto recover run blocked action label in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "只执行可执行态") {
+		t.Fatalf("expected auto recover runnable-now label in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "只执行等时间窗") {
+		t.Fatalf("expected auto recover retry-window label in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "只执行等补源文件") {
+		t.Fatalf("expected auto recover local-restore label in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "只执行等人工确认") {
+		t.Fatalf("expected auto recover manual-confirmation label in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "只执行重试耗尽") {
+		t.Fatalf("expected auto recover retry-limit label in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "只执行其它等待") {
+		t.Fatalf("expected auto recover other-waiting label in app.js, got %q", body)
 	}
 	if !strings.Contains(body, "执行主重试类型") {
 		t.Fatalf("expected auto recover primary retry-class label in app.js, got %q", body)

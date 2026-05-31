@@ -199,3 +199,21 @@
 - 回归验证已通过：`go test ./internal/app -run TestRoutesServeAppJSIncludesRetryEvidenceLabels -v`、`go test ./internal/app -run TestConsoleUISmokeMainline -v`、`node --check web/static/app.js`。
 - 清理情况：本轮验证未遗留额外后台进程、临时目录、smoke 目录或构建残留。
 
+
+## 2026-05-31 - 验收矩阵工具栏筛选契约补强
+
+- 继续沿着 [docs/01-GO_REBUILD_PLAN.md](E:/Workspace/VSCode/CloudPan-Sync-go/docs/01-GO_REBUILD_PLAN.md) 中“真实 provider smoke 记录与协议组聚合矩阵”方向，把验收矩阵顶部工具栏筛选入口补成静态契约。
+- `internal/app/web_test.go` 现在会额外校验 `renderProviderSmokeMatrixControls()`、`providerSmokeMatrixCounts()`、`data-provider-smoke-filter`，以及“已验收”“进行中”“待补齐”这些筛选文案仍然存在，避免后续前端重构时把矩阵工具栏筛选入口悄悄删掉。
+- 这次改动不改验收矩阵聚合逻辑，只把已经落地的筛选工具栏补成可回归约束，让协议组验收矩阵的筛选入口更稳。
+- 回归验证已通过：`go test ./internal/app -run TestRoutesServeAppJSIncludesRetryEvidenceLabels -v`、`go test ./internal/app -run TestConsoleUISmokeMainline -v`、`node --check web/static/app.js`。
+- 清理情况：本轮验证未遗留额外后台进程、临时目录、smoke 目录或构建残留。
+
+
+## 2026-05-31 - 补传等待态与样本协议族动作契约补强
+
+- 继续对齐 [docs/01-GO_REBUILD_PLAN.md](E:/Workspace/VSCode/CloudPan-Sync-go/docs/01-GO_REBUILD_PLAN.md) 中“更复杂的后台补传编排、批量筛选与多策略调度”方向，把 auto recover summary 里等待态、样本协议族和阻塞动作相关入口补成静态契约。
+- `internal/app/web_test.go` 现在会额外校验“执行该阻塞动作”“预演样本协议族”“执行样本协议族”“只执行可执行态”“只执行等时间窗”“只执行等补源文件”“只执行等人工确认”“只执行重试耗尽”“只执行其它等待”这些关键动作文案仍然存在。
+- 这次改动不改后台补传调度逻辑，只把已经落地的等待态和样本协议族直达入口补成可回归约束，让 auto recover 看板在不同等待态和协议族维度的动作链更完整。
+- 回归验证已通过：`go test ./internal/app -run TestRoutesServeAppJSIncludesRetryEvidenceLabels -v`、`go test ./internal/app -run TestConsoleUISmokeMainline -v`、`node --check web/static/app.js`。
+- 清理情况：本轮验证未遗留额外后台进程、临时目录、smoke 目录或构建残留。
+
