@@ -550,14 +550,14 @@ func normalizeSourceDeletePolicy(policy SourceDeletePolicy) (SourceDeletePolicy,
 }
 
 func recommendExecutionMode(req PreviewRequest, riskProfile RiskProfile) (ExecutionMode, string) {
+	if len(req.SelectedRoots) > 1 {
+		return ExecutionModeLeafFirstLazy, "Multiple top-level roots are safer to process subtree by subtree."
+	}
 	if len(req.Entries) > 0 && len(req.Entries) <= 20 && len(req.SelectedRoots) <= 1 && riskProfile.Mode == RiskModeFast {
 		return ExecutionModePreScanFlat, "Known small input set with aggressive risk mode can finish analysis up front."
 	}
 	if len(req.Entries) > 0 && len(req.Entries) <= 20 && len(req.SelectedRoots) <= 1 {
 		return ExecutionModePreScanFlat, "Known small input set is suitable for up-front scan and simpler progress visibility."
-	}
-	if len(req.SelectedRoots) > 1 {
-		return ExecutionModeLeafFirstLazy, "Multiple top-level roots are safer to process subtree by subtree."
 	}
 	if len(req.Entries) == 0 {
 		return ExecutionModeLeafFirstLazy, "Unknown full tree size should default to on-demand leaf-first scanning."

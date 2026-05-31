@@ -6368,6 +6368,204 @@ func TestServiceRunUploadsWhenTargetFingerprintDiffers(t *testing.T) {
 	}
 }
 
+func TestServiceRunTreatsMetadataStatusExistsAsExplicitTargetExistence(t *testing.T) {
+	ctx := context.Background()
+	store, err := sqlitestore.New(ctx, filepath.Join(t.TempDir(), "runtime-status-exists.db"))
+	if err != nil {
+		t.Fatalf("new store: %v", err)
+	}
+	defer func() { _ = store.Close() }()
+
+	uploadCalls := 0
+	adapter := &scriptedAdapter{
+		meta: provider.Provider{
+			Key:              "runtime_status_exists",
+			DisplayName:      "Runtime Status Exists",
+			ProtocolGroup:    "fake",
+			AuthModes:        []string{"manual_token"},
+			FastUploadInputs: []string{"md5", "size"},
+			FallbackModes:    []string{"download_upload"},
+			Status:           "planned",
+		},
+		capability: provider.CapabilitySet{
+			SupportsAuthValidation: true,
+			SupportsMetadata:       true,
+			SupportsUpload:         true,
+		},
+		metadataFunc: func(req provider.MetadataRequest) provider.MetadataResult {
+			return provider.MetadataResult{
+				OperationResult: provider.OperationResult{
+					OK:      true,
+					Status:  "exists",
+					Message: "exists by status",
+					Mode:    "scripted_metadata",
+				},
+				Entry: map[string]interface{}{
+					"path": req.Path,
+					"size": int64(1024),
+					"md5":  "abc",
+				},
+			}
+		},
+		uploadFunc: func(req provider.UploadRequest) provider.UploadResult {
+			uploadCalls++
+			return provider.UploadResult{
+				OperationResult: provider.OperationResult{
+					OK:      true,
+					Status:  "ok",
+					Message: "uploaded",
+					Mode:    "scripted_upload",
+				},
+			}
+		},
+	}
+
+	registry := provider.NewRegistry(adapter)
+	authSvc := auth.NewService(store, registry)
+	svc := NewService(store, registry, authSvc)
+	profile, err := authSvc.CreateProfile(ctx, auth.CreateProfileInput{
+		ProviderKey: "runtime_status_exists",
+		AuthMode:    "manual_token",
+		DisplayName: "runtime status exists",
+		Token:       "token-1",
+	})
+	if err != nil {
+		t.Fatalf("CreateProfile() error = %v", err)
+	}
+
+	detail, err := svc.Create(ctx, CreateRequest{
+		SourceProvider:  "guangya",
+		TargetProvider:  "runtime_status_exists",
+		TargetProfileID: profile.ID,
+		ThresholdMB:     10,
+		Entries: []planner.SourceEntry{
+			{Path: "/same-by-status.bin", Size: 1024, MD5: "abc"},
+		},
+	})
+	if err != nil {
+		t.Fatalf("Create() error = %v", err)
+	}
+
+	running, ok, err := svc.Run(ctx, detail.Task.ID)
+	if err != nil {
+		t.Fatalf("Run() error = %v", err)
+	}
+	if !ok {
+		t.Fatal("expected task to exist")
+	}
+	if uploadCalls != 0 {
+		t.Fatalf("expected upload not to be called for explicit exists status, got %d", uploadCalls)
+	}
+	if got, _ := running.Results[0].Payload["syncDecision"].(string); got != "skip" {
+		t.Fatalf("expected syncDecision skip, got %v", running.Results[0].Payload["syncDecision"])
+	}
+	if got, _ := running.Results[0].Payload["syncDecisionReason"].(string); got != "target_already_synced" {
+		t.Fatalf("expected target_already_synced reason, got %v", running.Results[0].Payload["syncDecisionReason"])
+	}
+	if running.Runtime.SkippedCount != 1 {
+		t.Fatalf("expected skipped count 1, got %d", running.Runtime.SkippedCount)
+	}
+}
+
+func TestServiceRunTreatsAmbiguousMetadataOKAsCreate(t *testing.T) {
+	ctx := context.Background()
+	store, err := sqlitestore.New(ctx, filepath.Join(t.TempDir(), "runtime-ambiguous-metadata.db"))
+	if err != nil {
+		t.Fatalf("new store: %v", err)
+	}
+	defer func() { _ = store.Close() }()
+
+	uploadCalls := 0
+	adapter := &scriptedAdapter{
+		meta: provider.Provider{
+			Key:              "runtime_ambiguous_metadata",
+			DisplayName:      "Runtime Ambiguous Metadata",
+			ProtocolGroup:    "fake",
+			AuthModes:        []string{"manual_token"},
+			FastUploadInputs: []string{"md5", "size"},
+			FallbackModes:    []string{"download_upload"},
+			Status:           "planned",
+		},
+		capability: provider.CapabilitySet{
+			SupportsAuthValidation: true,
+			SupportsMetadata:       true,
+			SupportsUpload:         true,
+		},
+		metadataFunc: func(req provider.MetadataRequest) provider.MetadataResult {
+			return provider.MetadataResult{
+				OperationResult: provider.OperationResult{
+					OK:      true,
+					Status:  "ok",
+					Message: "generic ok must not imply existence",
+					Mode:    "scripted_metadata",
+				},
+				Entry: map[string]interface{}{
+					"path": req.Path,
+					"size": int64(1024),
+					"md5":  "abc",
+				},
+			}
+		},
+		uploadFunc: func(req provider.UploadRequest) provider.UploadResult {
+			uploadCalls++
+			return provider.UploadResult{
+				OperationResult: provider.OperationResult{
+					OK:      true,
+					Status:  "ok",
+					Message: "created",
+					Mode:    "scripted_upload",
+				},
+			}
+		},
+	}
+
+	registry := provider.NewRegistry(adapter)
+	authSvc := auth.NewService(store, registry)
+	svc := NewService(store, registry, authSvc)
+	profile, err := authSvc.CreateProfile(ctx, auth.CreateProfileInput{
+		ProviderKey: "runtime_ambiguous_metadata",
+		AuthMode:    "manual_token",
+		DisplayName: "runtime ambiguous metadata",
+		Token:       "token-1",
+	})
+	if err != nil {
+		t.Fatalf("CreateProfile() error = %v", err)
+	}
+
+	detail, err := svc.Create(ctx, CreateRequest{
+		SourceProvider:  "guangya",
+		TargetProvider:  "runtime_ambiguous_metadata",
+		TargetProfileID: profile.ID,
+		ThresholdMB:     10,
+		Entries: []planner.SourceEntry{
+			{Path: "/ambiguous-ok.bin", Size: 1024, MD5: "abc"},
+		},
+	})
+	if err != nil {
+		t.Fatalf("Create() error = %v", err)
+	}
+
+	running, ok, err := svc.Run(ctx, detail.Task.ID)
+	if err != nil {
+		t.Fatalf("Run() error = %v", err)
+	}
+	if !ok {
+		t.Fatal("expected task to exist")
+	}
+	if uploadCalls != 1 {
+		t.Fatalf("expected upload to be called for ambiguous metadata, got %d", uploadCalls)
+	}
+	if got, _ := running.Results[0].Payload["syncDecision"].(string); got != "create" {
+		t.Fatalf("expected syncDecision create, got %v", running.Results[0].Payload["syncDecision"])
+	}
+	if got, _ := running.Results[0].Payload["syncDecisionReason"].(string); got != "target_missing_or_metadata_unavailable" {
+		t.Fatalf("expected conservative missing/unavailable reason, got %v", running.Results[0].Payload["syncDecisionReason"])
+	}
+	if running.Runtime.SkippedCount != 0 {
+		t.Fatalf("expected skipped count 0, got %d", running.Runtime.SkippedCount)
+	}
+}
+
 func TestServiceRunLazilyScansLeafFirstByRootSubtree(t *testing.T) {
 	ctx := context.Background()
 	store, err := sqlitestore.New(ctx, filepath.Join(t.TempDir(), "lazy-scan.db"))

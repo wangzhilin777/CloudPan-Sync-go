@@ -1,5 +1,14 @@
 # Completed Milestones
 
+## 2026-05-31 - 多根推荐优先级与元数据保守判定契约补强
+
+- 继续按 [docs/01-GO_REBUILD_PLAN.md](E:/Workspace/VSCode/CloudPan-Sync-go/docs/01-GO_REBUILD_PLAN.md) 中“多个顶层目录按勾选顺序逐棵子树推进”和“目标明确存在的保守判定”两条核心执行语义推进，本轮一次补齐 planner 推荐优先级和 runtime metadata 判定边界。
+- [internal/planner/service.go](E:/Workspace/VSCode/CloudPan-Sync-go/internal/planner/service.go) 调整 `recommendExecutionMode()` 优先级，确保多 `selectedRoots` 即使在 `fast` 风险模式和小输入集下，也优先推荐 `leaf_first_lazy`，避免错误推荐成预扫模式。
+- [internal/planner/recommendation_contract_test.go](E:/Workspace/VSCode/CloudPan-Sync-go/internal/planner/recommendation_contract_test.go) 新增 fast 模式多根契约，固定“多顶层目录优先子树逐棵推进”的推荐原因与 `leaf_first` 执行顺序。
+- [internal/task/service_test.go](E:/Workspace/VSCode/CloudPan-Sync-go/internal/task/service_test.go) 新增 runtime metadata 契约，固定 `MetadataResult.Status == "exists"` 可作为明确存在并跳过上传，同时普通 `Status == "ok"` 且未声明 `entry.exists=true` 时必须保守按 `create` 处理，避免占位 provider 把文件误判为已同步。
+- 回归验证已通过：`go test ./internal/planner ./internal/provider ./internal/task`。
+- 清理情况：本轮未启动额外后台进程；测试使用 `t.TempDir()` 自动清理，未保留 smoke 目录、临时数据库或构建产物。
+
 ## 2026-05-31 - 快传输入与冲突策略主线契约补强
 
 - 继续按 [docs/01-GO_REBUILD_PLAN.md](E:/Workspace/VSCode/CloudPan-Sync-go/docs/01-GO_REBUILD_PLAN.md) 中 Phase 2 / Phase 3 的 planner-provider-task 主线推进，把快传输入判定、provider 快传能力声明和 runtime 冲突策略降级一起补成可回归契约。

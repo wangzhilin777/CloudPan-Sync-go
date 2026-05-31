@@ -32,6 +32,22 @@ func TestBuildPreviewRecommendationContracts(t *testing.T) {
 			wantReasonPart: "Multiple top-level roots",
 		},
 		{
+			name: "multiple roots still prefer leaf-first even in fast mode",
+			req: PreviewRequest{
+				SourceProvider: "guangya",
+				TargetProvider: "aliyundrive_open",
+				RiskMode:       RiskModeFast,
+				SelectedRoots:  []string{"/alpha", "/beta"},
+				Entries: []SourceEntry{
+					{Path: "/alpha/a.bin", Size: 8, SHA1: "sha1-a"},
+					{Path: "/beta/b.bin", Size: 8, SHA1: "sha1-b"},
+				},
+			},
+			wantMode:       ExecutionModeLeafFirstLazy,
+			wantExecution:  "leaf_first",
+			wantReasonPart: "Multiple top-level roots",
+		},
+		{
 			name: "small single-root balanced set recommends pre-scan",
 			req: PreviewRequest{
 				SourceProvider: "guangya",
