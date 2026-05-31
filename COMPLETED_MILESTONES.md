@@ -190,3 +190,12 @@
 - 回归验证已通过：`go test ./internal/app -run TestRoutesServeAppJSIncludesRetryEvidenceLabels -v`、`go test ./internal/app -run TestConsoleUISmokeMainline -v`、`node --check web/static/app.js`。
 - 清理情况：本轮验证未遗留额外后台进程、临时目录、smoke 目录或构建残留。
 
+
+## 2026-05-31 - 后台补传决策明细动作契约补强
+
+- 继续对齐 [docs/01-GO_REBUILD_PLAN.md](E:/Workspace/VSCode/CloudPan-Sync-go/docs/01-GO_REBUILD_PLAN.md) 中“更复杂的后台补传编排、批量筛选与多策略调度”方向，把最近一次后台补传结果明细里的聚焦、预算采用、预演和执行动作补成静态契约。
+- `internal/app/web_test.go` 现在会额外校验 `data-auto-recover-decision-focus-state`、`data-auto-recover-decision-focus-lane-mode`、`data-auto-recover-decision-apply-budgets` 这些关键数据集仍然存在，并兜住“只看该状态”“只看该 lane”“采用建议预算”“预演该决策”“执行该决策”以及对应的提示语。
+- 这次改动不改后台补传调度逻辑，只把已经落地的决策明细动作链补成可回归约束，让最近一次后台补传结果从查看到聚焦、预算回填、预演和执行都更稳。
+- 回归验证已通过：`go test ./internal/app -run TestRoutesServeAppJSIncludesRetryEvidenceLabels -v`、`go test ./internal/app -run TestConsoleUISmokeMainline -v`、`node --check web/static/app.js`。
+- 清理情况：本轮验证未遗留额外后台进程、临时目录、smoke 目录或构建残留。
+

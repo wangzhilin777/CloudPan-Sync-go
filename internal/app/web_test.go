@@ -240,6 +240,15 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "data-auto-recover-decision-open-task") {
 		t.Fatalf("expected auto recover decision open task action in app.js, got %q", body)
 	}
+	if !strings.Contains(body, "data-auto-recover-decision-focus-state") {
+		t.Fatalf("expected auto recover decision focus-state action in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "data-auto-recover-decision-focus-lane-mode") {
+		t.Fatalf("expected auto recover decision focus lane-mode action in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "data-auto-recover-decision-apply-budgets") {
+		t.Fatalf("expected auto recover decision apply budgets action in app.js, got %q", body)
+	}
 	if !strings.Contains(body, "data-auto-recover-decision-mode-budget") {
 		t.Fatalf("expected auto recover decision mode budget wiring in app.js, got %q", body)
 	}
@@ -251,6 +260,36 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	}
 	if !strings.Contains(body, "data-auto-recover-decision-lane-budget") {
 		t.Fatalf("expected auto recover decision lane budget wiring in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "只看该状态") {
+		t.Fatalf("expected auto recover decision focus-state label in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "只看该 lane") {
+		t.Fatalf("expected auto recover decision focus lane label in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "采用建议预算") {
+		t.Fatalf("expected auto recover decision apply budgets label in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "预演该决策") {
+		t.Fatalf("expected auto recover decision preview label in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "执行该决策") {
+		t.Fatalf("expected auto recover decision run label in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "已按决策状态") {
+		t.Fatalf("expected auto recover decision focus-state flash text in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "已按决策 lane 收敛后台补传候选") {
+		t.Fatalf("expected auto recover decision focus lane flash text in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "已按决策采用建议预算") {
+		t.Fatalf("expected auto recover decision apply budgets flash text in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "已按决策预演后台补传") {
+		t.Fatalf("expected auto recover decision preview flash text in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "已按决策执行后台补传") {
+		t.Fatalf("expected auto recover decision run flash text in app.js, got %q", body)
 	}
 	if !strings.Contains(body, "data-auto-recover-focus-lane-strategy") {
 		t.Fatalf("expected auto recover summary lane strategy focus wiring in app.js, got %q", body)
