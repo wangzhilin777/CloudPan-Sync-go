@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"crypto/md5"
-	"encoding/json"
 	"fmt"
 	"io"
 	"mime/multipart"
@@ -807,12 +806,9 @@ func decodeBaiduJSON(resp *http.Response) (int, map[string]interface{}, error) {
 	if err != nil {
 		return resp.StatusCode, nil, err
 	}
-	if len(bodyBytes) == 0 {
-		return resp.StatusCode, map[string]interface{}{}, nil
-	}
-	var payload map[string]interface{}
-	if err := json.Unmarshal(bodyBytes, &payload); err != nil {
-		return resp.StatusCode, nil, fmt.Errorf("decode provider json: %w", err)
+	payload, err := decodeProviderJSONResponse(resp.StatusCode, bodyBytes)
+	if err != nil {
+		return resp.StatusCode, nil, err
 	}
 	return resp.StatusCode, payload, nil
 }

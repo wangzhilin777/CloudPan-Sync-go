@@ -1120,6 +1120,117 @@ func TestServiceRuntimeHandlesPendingManualAuthExpiredRateLimitAndMissingLocalFi
 	if len(running.Runtime.RetryQueue) != 4 {
 		t.Fatalf("expected retry queue len 4, got %d", len(running.Runtime.RetryQueue))
 	}
+	retryItemByPath := func(path string) RetryQueueItem {
+		t.Helper()
+		for _, item := range running.Runtime.RetryQueue {
+			if item.Path == path {
+				return item
+			}
+		}
+		t.Fatalf("expected retry queue item for %s, got %#v", path, running.Runtime.RetryQueue)
+		return RetryQueueItem{}
+	}
+	pendingRetry := retryItemByPath("/pending.bin")
+	if pendingRetry.RetryClass != "pending_manual" || pendingRetry.RetryAction != "retry_after_manual_confirmation" || !pendingRetry.Retryable || pendingRetry.Blocked {
+		t.Fatalf("unexpected pending retry item: %#v", pendingRetry)
+	}
+	authRetry := retryItemByPath("/auth.bin")
+	if authRetry.RetryClass != "auth_expired" || authRetry.RetryAction != "refresh_auth_profile" || authRetry.Retryable || !authRetry.Blocked {
+		t.Fatalf("unexpected auth retry item: %#v", authRetry)
+	}
+	rateRetry := retryItemByPath("/rate.bin")
+	if rateRetry.RetryClass != "rate_limited" || rateRetry.RetryAction != "retry_after_cooldown" || !rateRetry.Retryable || rateRetry.Blocked {
+		t.Fatalf("unexpected rate-limited retry item: %#v", rateRetry)
+	}
+	localRetry := retryItemByPath("/missing.bin")
+	if localRetry.RetryClass != "local_file_missing" || localRetry.RetryAction != "restore_local_file" || localRetry.Retryable || !localRetry.Blocked {
+		t.Fatalf("unexpected local-file retry item: %#v", localRetry)
+	}
+}
+
+func TestServiceRuntimeMapsAuthInvalidIntoAuthRefreshRetryQueue(t *testing.T) {
+	ctx := context.Background()
+	store, err := sqlitestore.New(ctx, filepath.Join(t.TempDir(), "runtime-auth-invalid.db"))
+	if err != nil {
+		t.Fatalf("new store: %v", err)
+	}
+	defer func() { _ = store.Close() }()
+
+	adapter := &scriptedAdapter{
+		meta: provider.Provider{
+			Key:              "runtime_auth_invalid",
+			DisplayName:      "Runtime Auth Invalid",
+			ProtocolGroup:    "fake",
+			AuthModes:        []string{"manual_token"},
+			FastUploadInputs: []string{"md5", "size"},
+			FallbackModes:    []string{"download_upload"},
+			ConflictPolicies: []provider.ConflictPolicy{provider.ConflictPolicyAutoRenameNew},
+			Status:           "planned",
+		},
+		capability: provider.CapabilitySet{
+			SupportsAuthValidation: true,
+			SupportsUpload:         true,
+		},
+		uploadFunc: func(req provider.UploadRequest) provider.UploadResult {
+			return provider.UploadResult{
+				OperationResult: provider.OperationResult{
+					Status:  "auth_invalid",
+					Message: "provider rejected token",
+					Mode:    "fake_auth_invalid",
+				},
+			}
+		},
+	}
+
+	registry := provider.NewRegistry(adapter)
+	authSvc := auth.NewService(store, registry)
+	svc := NewService(store, registry, authSvc)
+	profile, err := authSvc.CreateProfile(ctx, auth.CreateProfileInput{
+		ProviderKey: "runtime_auth_invalid",
+		AuthMode:    "manual_token",
+		DisplayName: "runtime auth invalid",
+		Token:       "token-1",
+	})
+	if err != nil {
+		t.Fatalf("CreateProfile() error = %v", err)
+	}
+
+	detail, err := svc.Create(ctx, CreateRequest{
+		SourceProvider:  "guangya",
+		TargetProvider:  "runtime_auth_invalid",
+		TargetProfileID: profile.ID,
+		ThresholdMB:     1,
+		Entries: []planner.SourceEntry{
+			{Path: "/auth-invalid.bin", Size: 1024, MD5: "abc", LocalPath: filepath.Join(t.TempDir(), "auth-invalid.bin")},
+		},
+	})
+	if err != nil {
+		t.Fatalf("Create() error = %v", err)
+	}
+
+	running, ok, err := svc.Run(ctx, detail.Task.ID)
+	if err != nil {
+		t.Fatalf("Run() error = %v", err)
+	}
+	if !ok {
+		t.Fatal("expected task to exist")
+	}
+	if running.Task.State != StateBlocked {
+		t.Fatalf("expected blocked, got %s", running.Task.State)
+	}
+	if len(running.Runtime.RetryQueue) != 1 {
+		t.Fatalf("expected retry queue len 1, got %#v", running.Runtime.RetryQueue)
+	}
+	retryItem := running.Runtime.RetryQueue[0]
+	if retryItem.ProviderStatus != "auth_invalid" {
+		t.Fatalf("expected providerStatus auth_invalid, got %#v", retryItem)
+	}
+	if retryItem.RetryClass != "auth_expired" || retryItem.RetryAction != "refresh_auth_profile" || retryItem.Retryable || !retryItem.Blocked {
+		t.Fatalf("unexpected auth_invalid retry mapping: %#v", retryItem)
+	}
+	if running.Runtime.BlockedAction != "refresh_auth_profile" {
+		t.Fatalf("expected blockedAction refresh_auth_profile, got %#v", running.Runtime.BlockedAction)
+	}
 }
 
 func TestServiceRuntimeBuildsPendingRelayTreeByRootAndDirectory(t *testing.T) {

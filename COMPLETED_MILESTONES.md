@@ -1,5 +1,29 @@
 # Completed Milestones
 
+## 2026-06-01 - provider auth_invalid 与上传失败归类契约补强
+
+- 继续按 [docs/01-GO_REBUILD_PLAN.md](E:/Workspace/VSCode/CloudPan-Sync-go/docs/01-GO_REBUILD_PLAN.md) 中 Phase 3 provider 核心上传接口契约、runtime `auth expired / retry queue` 和 Phase 6 错误收口主线推进，这轮把 provider 上传阶段 `auth_invalid / provider_request_failed / missing_uploadid` 的上游语义补成 catalog 契约，并把 runtime 对真实授权失效状态的归一化补平。
+- 新增 [internal/provider/catalog_auth_invalid_contract_test.go](E:/Workspace/VSCode/CloudPan-Sync-go/internal/provider/catalog_auth_invalid_contract_test.go)，覆盖 `guangya / aliyundrive_open / 123_open / 115_open / quark / uc / xunlei / pikpak / baidu_netdisk / 189cloud` 十家 provider 的真实上传入口，固定“坏 token/cookie 进入上传调用路径时必须显式返回 `auth_invalid`，不能伪装成一般失败或假成功”。
+- 新增 [internal/provider/catalog_provider_request_failed_contract_test.go](E:/Workspace/VSCode/CloudPan-Sync-go/internal/provider/catalog_provider_request_failed_contract_test.go)，固定 `aliyundrive_open` 分片上传失败仍保持 `provider_request_failed + upload checkpoint`，以及 `baidu_netdisk` precreate 缺少 `uploadid` 时保持显式 `missing_uploadid` 特例，不被吞成普通失败。
+- [internal/provider/http_json.go](E:/Workspace/VSCode/CloudPan-Sync-go/internal/provider/http_json.go) 与多家 provider family 的 JSON 解码 helper 统一补上 `401/403 + 非 JSON 响应体` 兜底，避免真实未授权响应被误吞成 `decode provider json`，从而把 `auth_invalid` 错分成 `provider_request_failed`。
+- [internal/task/service.go](E:/Workspace/VSCode/CloudPan-Sync-go/internal/task/service.go) 现在会把真实 provider 返回的 `auth_invalid` 归一化映射进 runtime `auth_expired` retry lane；[internal/task/service_test.go](E:/Workspace/VSCode/CloudPan-Sync-go/internal/task/service_test.go) 也补上了对应契约，固定 `auth_invalid -> refresh_auth_profile` 这条处理链。
+- 回归验证已通过：`go test ./internal/planner ./internal/provider ./internal/task`。
+- 清理情况：本轮未遗留额外测试缓存、smoke 目录、临时数据库或后台测试服务；测试使用 `httptest` 与 `t.TempDir()`，结束后已自动清理，未额外停止用户自有进程。
+- 回归验证已通过：`go test ./internal/planner ./internal/provider ./internal/task`。
+- 清理情况：本轮未启动额外测试后台服务；`httptest` server 与 `t.TempDir()` 临时文件均已随测试结束自动清理，未保留 smoke 目录、临时数据库或构建残留。
+
+## 2026-06-01 - runtime 错误分类到 retry queue 契约补强
+
+- 继续按 [docs/01-GO_REBUILD_PLAN.md](E:/Workspace/VSCode/CloudPan-Sync-go/docs/01-GO_REBUILD_PLAN.md) 中 runtime `pending_manual / auth expired / rate limit / local file missing / retry queue` 主线推进，这轮把 provider 返回状态到 `retryQueue` 分类与动作映射补成更直接的集成契约。
+- [internal/task/service_test.go](E:/Workspace/VSCode/CloudPan-Sync-go/internal/task/service_test.go) 在现有 `TestServiceRuntimeHandlesPendingManualAuthExpiredRateLimitAndMissingLocalFile` 上新增逐项断言，固定：
+- `pending_manual_requires_confirmation -> RetryClass pending_manual + RetryAction retry_after_manual_confirmation`
+- `auth_expired -> RetryClass auth_expired + RetryAction refresh_auth_profile`
+- `rate_limited -> RetryClass rate_limited + RetryAction retry_after_cooldown`
+- `local_file_missing -> RetryClass local_file_missing + RetryAction restore_local_file`
+- 同时也固定这些项在 blocked / retryable 维度上的差异，避免后续 runtime 重构时把“可自动重试”和“必须人工处理”的边界悄悄混掉。
+- 回归验证已通过：`go test ./internal/planner ./internal/provider ./internal/task`。
+- 清理情况：本轮未遗留额外后台进程；测试使用临时目录并自动清理，未保留 smoke 目录、临时数据库或构建残留。
+
 ## 2026-06-01 - provider 缺本地文件与 hash miss fallback 契约补强
 
 - 继续按 [docs/01-GO_REBUILD_PLAN.md](E:/Workspace/VSCode/CloudPan-Sync-go/docs/01-GO_REBUILD_PLAN.md) 中 runtime `hash miss -> binary fallback`、`local file missing` 与 Provider 核心上传接口契约推进，这轮把各家 provider 在“缺本地文件”场景下的上传阶段行为补成 catalog 级回归约束。

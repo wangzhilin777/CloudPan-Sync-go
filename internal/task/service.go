@@ -4789,7 +4789,7 @@ func buildRetryQueue(metadata map[string]interface{}, results []Result) []RetryQ
 					item.EligibleAt = createdAt.Add(time.Duration(item.CooldownSeconds) * time.Second).UTC().Format(time.RFC3339)
 				}
 			}
-		case "auth_expired":
+		case "auth_expired", "auth_invalid":
 			item.RetryClass = "auth_expired"
 			item.RetryAction = "refresh_auth_profile"
 			item.Blocked = true

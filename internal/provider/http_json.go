@@ -13,6 +13,22 @@ import (
 
 var providerHTTPClient = &http.Client{Timeout: 8 * time.Second}
 
+func decodeProviderJSONResponse(statusCode int, bodyBytes []byte) (map[string]interface{}, error) {
+	if len(bodyBytes) == 0 {
+		return map[string]interface{}{}, nil
+	}
+	var payloadMap map[string]interface{}
+	if err := json.Unmarshal(bodyBytes, &payloadMap); err != nil {
+		if statusCode == http.StatusUnauthorized || statusCode == http.StatusForbidden {
+			return map[string]interface{}{
+				"rawBody": strings.TrimSpace(string(bodyBytes)),
+			}, nil
+		}
+		return nil, fmt.Errorf("decode provider json: %w", err)
+	}
+	return payloadMap, nil
+}
+
 func postProviderJSON(ctx context.Context, endpoint string, token string, body interface{}) (int, map[string]interface{}, error) {
 	payload := []byte("{}")
 	if body != nil {
@@ -42,13 +58,9 @@ func postProviderJSON(ctx context.Context, endpoint string, token string, body i
 	if err != nil {
 		return resp.StatusCode, nil, err
 	}
-	if len(bodyBytes) == 0 {
-		return resp.StatusCode, map[string]interface{}{}, nil
-	}
-
-	var payloadMap map[string]interface{}
-	if err := json.Unmarshal(bodyBytes, &payloadMap); err != nil {
-		return resp.StatusCode, nil, fmt.Errorf("decode provider json: %w", err)
+	payloadMap, err := decodeProviderJSONResponse(resp.StatusCode, bodyBytes)
+	if err != nil {
+		return resp.StatusCode, nil, err
 	}
 	return resp.StatusCode, payloadMap, nil
 }

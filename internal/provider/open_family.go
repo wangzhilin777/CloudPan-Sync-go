@@ -2425,12 +2425,9 @@ func getPan123OpenJSON(ctx context.Context, session pan123OpenSession, requestPa
 	if err != nil {
 		return resp.StatusCode, nil, err
 	}
-	if len(bodyBytes) == 0 {
-		return resp.StatusCode, map[string]interface{}{}, nil
-	}
-	var payload map[string]interface{}
-	if err := json.Unmarshal(bodyBytes, &payload); err != nil {
-		return resp.StatusCode, nil, fmt.Errorf("decode provider json: %w", err)
+	payload, err := decodeProviderJSONResponse(resp.StatusCode, bodyBytes)
+	if err != nil {
+		return resp.StatusCode, nil, err
 	}
 	return resp.StatusCode, payload, nil
 }
@@ -2458,12 +2455,9 @@ func postPan123OpenJSON(ctx context.Context, session pan123OpenSession, requestP
 	if err != nil {
 		return resp.StatusCode, nil, err
 	}
-	if len(bodyBytes) == 0 {
-		return resp.StatusCode, map[string]interface{}{}, nil
-	}
-	var payloadMap map[string]interface{}
-	if err := json.Unmarshal(bodyBytes, &payloadMap); err != nil {
-		return resp.StatusCode, nil, fmt.Errorf("decode provider json: %w", err)
+	payloadMap, err := decodeProviderJSONResponse(resp.StatusCode, bodyBytes)
+	if err != nil {
+		return resp.StatusCode, nil, err
 	}
 	return resp.StatusCode, payloadMap, nil
 }

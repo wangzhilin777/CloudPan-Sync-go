@@ -5,7 +5,6 @@ import (
 	"crypto/hmac"
 	"crypto/md5"
 	"crypto/sha1"
-	"encoding/json"
 	"encoding/xml"
 	"fmt"
 	"io"
@@ -1181,12 +1180,9 @@ func cloud189RequestJSON(ctx context.Context, method string, endpoint string, he
 	if err != nil {
 		return resp.StatusCode, nil, err
 	}
-	if len(bodyBytes) == 0 {
-		return resp.StatusCode, map[string]interface{}{}, nil
-	}
-	var payload map[string]interface{}
-	if err := json.Unmarshal(bodyBytes, &payload); err != nil {
-		return resp.StatusCode, nil, fmt.Errorf("decode provider json: %w", err)
+	payload, err := decodeProviderJSONResponse(resp.StatusCode, bodyBytes)
+	if err != nil {
+		return resp.StatusCode, nil, err
 	}
 	return resp.StatusCode, payload, nil
 }
@@ -1517,12 +1513,16 @@ func cloud189GetUploadSession(ctx context.Context, session cloud189Session) (clo
 	}
 	var payload map[string]interface{}
 	if len(bodyBytes) > 0 {
-		if err := json.Unmarshal(bodyBytes, &payload); err != nil {
-			return cloud189UploadAuthSession{}, fmt.Errorf("decode provider json: %w", err)
+		payload, err = decodeProviderJSONResponse(statusCode, bodyBytes)
+		if err != nil {
+			return cloud189UploadAuthSession{}, err
 		}
 	}
 	if payload == nil {
 		payload = map[string]interface{}{}
+	}
+	if statusCode == http.StatusUnauthorized || statusCode == http.StatusForbidden {
+		return cloud189UploadAuthSession{}, fmt.Errorf("auth_invalid")
 	}
 	return cloud189UploadAuthSession{
 		SessionKey:    firstNonEmptyString(payload, "sessionKey"),
@@ -1546,12 +1546,9 @@ func cloud189SignedJSON(ctx context.Context, session cloud189Session, authSessio
 	if err != nil {
 		return 0, nil, err
 	}
-	if len(bodyBytes) == 0 {
-		return statusCode, map[string]interface{}{}, nil
-	}
-	var payload map[string]interface{}
-	if err := json.Unmarshal(bodyBytes, &payload); err != nil {
-		return statusCode, nil, fmt.Errorf("decode provider json: %w", err)
+	payload, err := decodeProviderJSONResponse(statusCode, bodyBytes)
+	if err != nil {
+		return statusCode, nil, err
 	}
 	return statusCode, payload, nil
 }
