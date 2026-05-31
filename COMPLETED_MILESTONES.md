@@ -1,5 +1,14 @@
 # Completed Milestones
 
+## 2026-06-01 - provider 缺本地文件与 hash miss fallback 契约补强
+
+- 继续按 [docs/01-GO_REBUILD_PLAN.md](E:/Workspace/VSCode/CloudPan-Sync-go/docs/01-GO_REBUILD_PLAN.md) 中 runtime `hash miss -> binary fallback`、`local file missing` 与 Provider 核心上传接口契约推进，这轮把各家 provider 在“缺本地文件”场景下的上传阶段行为补成 catalog 级回归约束。
+- 新增 [internal/provider/catalog_local_file_missing_contract_test.go](E:/Workspace/VSCode/CloudPan-Sync-go/internal/provider/catalog_local_file_missing_contract_test.go)，复用现有本地 test server / helper profile，固定 `guangya / aliyundrive_open / 123_open / 115_open / quark / uc / baidu_netdisk / 189cloud` 在 `Upload(strategy=download_upload)` 且无 `LocalPath` 时必须返回 `local_file_missing`。
+- 同一组契约也把 `xunlei / pikpak` 单独收口为真实特例：当上传阶段已拿到 `GCID` 但没有本地文件可继续 binary fallback 时，provider 必须保持 `hash_miss` 阻断，并在消息里明确说明缺少本地文件，而不是伪装成成功上传或混成其它错误。
+- 这样 provider 侧“缺本地文件 / hash miss 但无 fallback 文件”语义就和 [internal/task/service.go](E:/Workspace/VSCode/CloudPan-Sync-go/internal/task/service.go) 中 runtime `local_file_missing` 结果、hash miss fallback 护栏与 retry queue 分类形成了更稳定的上下游契约。
+- 回归验证已通过：`go test ./internal/provider ./internal/task`。
+- 清理情况：本轮未遗留额外后台进程；测试使用本地 `httptest` server 与临时目录，结束后已自动清理，未保留 smoke 目录或构建残留。
+
 ## 2026-06-01 - provider pending_manual 上传契约补强
 
 - 继续按 [docs/01-GO_REBUILD_PLAN.md](E:/Workspace/VSCode/CloudPan-Sync-go/docs/01-GO_REBUILD_PLAN.md) 中 “Provider 契约测试覆盖每家 provider 的核心接口” 与 runtime `pending_manual` 主线推进，这轮把各家 provider 在上传阶段对 `pending_manual` 的统一阻断语义补成 catalog 级回归契约。
