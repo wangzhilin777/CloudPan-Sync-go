@@ -1,5 +1,14 @@
 # Completed Milestones
 
+## 2026-05-31 - 快传输入与冲突策略主线契约补强
+
+- 继续按 [docs/01-GO_REBUILD_PLAN.md](E:/Workspace/VSCode/CloudPan-Sync-go/docs/01-GO_REBUILD_PLAN.md) 中 Phase 2 / Phase 3 的 planner-provider-task 主线推进，把快传输入判定、provider 快传能力声明和 runtime 冲突策略降级一起补成可回归契约。
+- 新增 [internal/planner/fastupload_contract_test.go](E:/Workspace/VSCode/CloudPan-Sync-go/internal/planner/fastupload_contract_test.go)，固定 `md5` provider 可接受 `etag` 兜底、`gcid + size` 家族快传输入、缺失指纹时小文件走 `download_upload`、大文件进入 `pending_manual` 的 planner 判定。
+- 新增 [internal/provider/catalog_fastupload_contract_test.go](E:/Workspace/VSCode/CloudPan-Sync-go/internal/provider/catalog_fastupload_contract_test.go)，固定 `aliyundrive_open / 123_open / xunlei / guangya` 的 `FastUploadInputs`、`FallbackModes`、协议组和授权模式数量，避免 catalog 重构时破坏协议族能力声明。
+- 新增 [internal/task/conflict_policy_contract_test.go](E:/Workspace/VSCode/CloudPan-Sync-go/internal/task/conflict_policy_contract_test.go)，固定 runtime `resolveConflictPolicy()` 的默认 auto-rename、provider 支持 overwrite 时保留、仅支持 auto-rename 时降级，以及两者都不支持时不伪造降级的行为。
+- 回归验证已通过：`go test ./internal/planner ./internal/provider ./internal/task`。
+- 清理情况：本轮未启动额外后台进程；测试使用临时目录并自动清理，未保留 smoke 目录或构建产物。
+
 ## 2026-05-31 - planner 推荐模式与 provider overwrite 契约补强
 
 - 继续按 [docs/01-GO_REBUILD_PLAN.md](E:/Workspace/VSCode/CloudPan-Sync-go/docs/01-GO_REBUILD_PLAN.md) 的 Phase 2 / Phase 3 主线推进，这轮不再停留在前端护栏，而是补核心 planner/provider 契约测试，直接收紧推荐模式、源删记录归根和 provider overwrite 语义。
