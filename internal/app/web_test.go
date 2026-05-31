@@ -408,11 +408,23 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "data-report-download") {
 		t.Fatalf("expected report history download action in app.js, got %q", body)
 	}
+	if !strings.Contains(body, "selectedReportId") {
+		t.Fatalf("expected selectedReportId state in app.js, got %q", body)
+	}
 	if !strings.Contains(body, "renderReportHistory") {
 		t.Fatalf("expected report history renderer in app.js, got %q", body)
 	}
 	if !strings.Contains(body, "selectedEvidenceReport") {
 		t.Fatalf("expected selectedEvidenceReport helper in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "item.id === state.selectedReportId ? \"active\" : \"\"") {
+		t.Fatalf("expected report history selected-row state in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "cloudpan-sync-report") {
+		t.Fatalf("expected report download fallback filename in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "replace(/\\s+/g, \"-\")") {
+		t.Fatalf("expected report download filename sanitizer in app.js, got %q", body)
 	}
 	if !strings.Contains(body, "已切换验收报告") {
 		t.Fatalf("expected report history switch flash text in app.js, got %q", body)
@@ -479,6 +491,30 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	}
 	if !strings.Contains(body, "data-provider-smoke-download") {
 		t.Fatalf("expected provider smoke record download action in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "selectedProviderSmokeId") {
+		t.Fatalf("expected selectedProviderSmokeId state in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "selectedProviderSmokeMarkdown") {
+		t.Fatalf("expected selectedProviderSmokeMarkdown state in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "renderProviderSmokeMarkdown") {
+		t.Fatalf("expected provider smoke markdown renderer in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "loadProviderSmokeMarkdown") {
+		t.Fatalf("expected provider smoke markdown loader in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "?format=markdown") {
+		t.Fatalf("expected provider smoke markdown format query in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "\"Accept\": \"text/plain\"") {
+		t.Fatalf("expected provider smoke markdown Accept header in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "item.id === state.selectedProviderSmokeId ? \"active\" : \"\"") {
+		t.Fatalf("expected provider smoke selected-row state in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "provider-smoke-markdown") {
+		t.Fatalf("expected provider smoke markdown panel in app.js, got %q", body)
 	}
 	if !strings.Contains(body, "provider-smoke-records-filter-clear") {
 		t.Fatalf("expected provider smoke filter clear action in app.js, got %q", body)

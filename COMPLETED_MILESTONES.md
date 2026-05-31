@@ -1,5 +1,14 @@
 # Completed Milestones
 
+## 2026-05-31 - 报告历史与 smoke Markdown 下载静态契约补强
+
+- 继续沿着 [docs/01-GO_REBUILD_PLAN.md](E:/Workspace/VSCode/CloudPan-Sync-go/docs/01-GO_REBUILD_PLAN.md) 中“状态矩阵/证据页展示”和“真实 provider smoke 记录”方向，把验收报告历史、下载文件名、smoke Markdown 查看/下载链路补成更完整的前端静态契约。
+- `internal/app/web_test.go` 现在会额外校验 `selectedReportId`、报告历史 active 选中态、`selectedEvidenceReport()`、`cloudpan-sync-report` 默认下载文件名和空白替换规则仍然存在。
+- 同一组契约也会兜住 `selectedProviderSmokeId`、`selectedProviderSmokeMarkdown`、`renderProviderSmokeMarkdown()`、`loadProviderSmokeMarkdown()`、`?format=markdown`、`Accept: text/plain`、smoke 记录 active 选中态和 `provider-smoke-markdown` 面板。
+- 这次改动不改 API 或持久化逻辑，只把已落地的报告/Markdown 交互链路固定成回归保护，避免后续前端重构时丢失查看、选中和下载语义。
+- 回归验证待本次提交前执行：`go test ./internal/app -run TestRoutesServeAppJSIncludesRetryEvidenceLabels -v`、`node --check web/static/app.js`。
+- 清理情况：本轮验证结束后会确认未遗留额外后台进程、临时目录、smoke 目录或构建残留。
+
 ## 2026-05-31 - 源端删除策略与运行路径聚焦静态契约补强
 
 - 继续沿着 [docs/01-GO_REBUILD_PLAN.md](E:/Workspace/VSCode/CloudPan-Sync-go/docs/01-GO_REBUILD_PLAN.md) 中“源端删除默认仅记录、不默认删除目标端”和“页面/运行证据应表达执行模式与扫描路径”方向，把这批已落地的前端展示语义补成可回归静态契约。
