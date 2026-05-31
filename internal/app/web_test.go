@@ -363,6 +363,90 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "已清空 smoke 记录筛选") {
 		t.Fatalf("expected provider smoke filter clear flash text in app.js, got %q", body)
 	}
+	if !strings.Contains(body, "data-tree-group-toggle") {
+		t.Fatalf("expected tree group toggle dataset in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "data-tree-focus-path") {
+		t.Fatalf("expected tree focus path dataset in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "data-tree-sync-path") {
+		t.Fatalf("expected tree sync path dataset in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "data-tree-prefill-path") {
+		t.Fatalf("expected tree prefill path dataset in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "data-tree-retry-path") {
+		t.Fatalf("expected tree retry path dataset in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "data-tree-copy-path") {
+		t.Fatalf("expected tree copy path dataset in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "data-tree-parent-path") {
+		t.Fatalf("expected tree parent path dataset in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "同步另一棵树") {
+		t.Fatalf("expected tree sync label in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "只看当前路径") {
+		t.Fatalf("expected tree focus label in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "wireTreeGroupToggles") {
+		t.Fatalf("expected tree node action wiring in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "task-directory-prefill-visible") {
+		t.Fatalf("expected task directory visible prefill action in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "task-retry-visible-directory") {
+		t.Fatalf("expected task directory visible retry action in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "task-directory-copy-visible") {
+		t.Fatalf("expected task directory visible copy action in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "task-pending-prefill-visible") {
+		t.Fatalf("expected task pending visible prefill action in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "task-retry-visible-pending") {
+		t.Fatalf("expected task pending visible retry action in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "task-pending-copy-visible") {
+		t.Fatalf("expected task pending visible copy action in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "status-directory-prefill-visible") {
+		t.Fatalf("expected status directory visible prefill action in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "status-retry-visible-directory") {
+		t.Fatalf("expected status directory visible retry action in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "status-directory-copy-visible") {
+		t.Fatalf("expected status directory visible copy action in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "status-pending-prefill-visible") {
+		t.Fatalf("expected status pending visible prefill action in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "status-retry-visible-pending") {
+		t.Fatalf("expected status pending visible retry action in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "status-pending-copy-visible") {
+		t.Fatalf("expected status pending visible copy action in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "task-directory-filter-clear") {
+		t.Fatalf("expected task directory filter clear action in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "task-pending-filter-clear") {
+		t.Fatalf("expected task pending filter clear action in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "status-directory-filter-clear") {
+		t.Fatalf("expected status directory filter clear action in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "status-pending-filter-clear") {
+		t.Fatalf("expected status pending filter clear action in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "已按当前任务重建向导参数") {
+		t.Fatalf("expected visible selection wizard flash text in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "已复制") {
+		t.Fatalf("expected visible path copy flash text in app.js, got %q", body)
+	}
 	if !strings.Contains(body, "data-auto-recover-decision-focus-lane-strategy") {
 		t.Fatalf("expected auto recover decision lane strategy focus wiring in app.js, got %q", body)
 	}

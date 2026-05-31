@@ -127,3 +127,12 @@
 - 回归验证已通过：`go test ./internal/app -run TestRoutesServeAppJSIncludesRetryEvidenceLabels -v`、`go test ./internal/app -run TestConsoleUISmokeMainline -v`、`node --check web/static/app.js`。
 - 清理情况：本轮验证未遗留额外后台进程、临时目录、smoke 目录或构建残留。
 
+
+## 2026-05-31 - 目录树与待补传可见动作静态契约补强
+
+- 继续沿着 [docs/01-GO_REBUILD_PLAN.md](E:/Workspace/VSCode/CloudPan-Sync-go/docs/01-GO_REBUILD_PLAN.md) 中“状态矩阵/证据页展示”和“目录树/待补传树辅助操作”方向，把树节点动作和可见筛选动作补成前端静态契约。
+- `internal/app/web_test.go` 现在会额外校验 `data-tree-group-toggle`、`data-tree-focus-path`、`data-tree-sync-path`、`data-tree-prefill-path`、`data-tree-retry-path`、`data-tree-copy-path`、`data-tree-parent-path`，以及 `wireTreeGroupToggles()`、`同步另一棵树`、`只看当前路径` 这些树节点动作钩子与文案仍然存在。
+- 同一组契约也会兜住 `task-directory-prefill-visible`、`task-retry-visible-directory`、`task-directory-copy-visible`、`task-pending-prefill-visible`、`task-retry-visible-pending`、`task-pending-copy-visible`、`status-directory-prefill-visible`、`status-retry-visible-directory`、`status-directory-copy-visible`、`status-pending-prefill-visible`、`status-retry-visible-pending`、`status-pending-copy-visible`，以及筛选清空按钮和“已按当前任务重建向导参数”“已复制”等提示语，避免后续前端重构时把可见路径操作链路删掉。
+- 回归验证已通过：`go test ./internal/app -run TestRoutesServeAppJSIncludesRetryEvidenceLabels -v`、`go test ./internal/app -run TestConsoleUISmokeMainline -v`、`node --check web/static/app.js`。
+- 清理情况：本轮验证未遗留额外后台进程、临时目录、smoke 目录或构建残留。
+
