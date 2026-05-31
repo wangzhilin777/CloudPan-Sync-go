@@ -510,6 +510,24 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "data-auto-recover-run-blocked-action") {
 		t.Fatalf("expected auto recover run blocked action dataset in app.js, got %q", body)
 	}
+	if !strings.Contains(body, "data-auto-recover-run-lane-mode") {
+		t.Fatalf("expected auto recover run lane-mode dataset in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "data-auto-recover-open-task") {
+		t.Fatalf("expected auto recover open-task dataset in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "执行主重试类型") {
+		t.Fatalf("expected auto recover primary retry-class label in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "执行主阻塞动作") {
+		t.Fatalf("expected auto recover primary blocked action label in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "执行该 lane") {
+		t.Fatalf("expected auto recover run lane label in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "打开样本任务") {
+		t.Fatalf("expected auto recover open sample task label in app.js, got %q", body)
+	}
 	if !strings.Contains(body, "currentAutoRecoverScopedRequest") {
 		t.Fatalf("expected scoped auto recover request helper in app.js, got %q", body)
 	}

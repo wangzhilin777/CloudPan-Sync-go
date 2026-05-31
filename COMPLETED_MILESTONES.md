@@ -172,3 +172,12 @@
 - 回归验证已通过：`go test ./internal/app -run TestRoutesServeAppJSIncludesRetryEvidenceLabels -v`、`go test ./internal/app -run TestConsoleUISmokeMainline -v`、`node --check web/static/app.js`。
 - 清理情况：本轮验证未遗留额外后台进程、临时目录、smoke 目录或构建残留。
 
+
+## 2026-05-31 - 后台补传 lane 执行与样本任务直达契约补强
+
+- 继续对齐 [docs/01-GO_REBUILD_PLAN.md](E:/Workspace/VSCode/CloudPan-Sync-go/docs/01-GO_REBUILD_PLAN.md) 中“更复杂的后台补传编排、批量筛选与多策略调度”方向，把 auto recover summary 中 lane 级执行和样本任务直达入口补成静态契约。
+- `internal/app/web_test.go` 现在会额外校验 `data-auto-recover-run-lane-mode`、`data-auto-recover-open-task`，以及“执行主重试类型”“执行主阻塞动作”“执行该 lane”“打开样本任务”这些关键动作文案仍然存在，避免后续前端重构时把 summary 的直达入口悄悄删掉。
+- 这次改动不改后台补传调度逻辑，只把已经落地的 lane 级执行与样本任务跳转入口补成可回归约束，让状态页 auto recover 看板的动作链更完整。
+- 回归验证已通过：`go test ./internal/app -run TestRoutesServeAppJSIncludesRetryEvidenceLabels -v`、`go test ./internal/app -run TestConsoleUISmokeMainline -v`、`node --check web/static/app.js`。
+- 清理情况：本轮验证未遗留额外后台进程、临时目录、smoke 目录或构建残留。
+
