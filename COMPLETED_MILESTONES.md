@@ -1,5 +1,14 @@
 # Completed Milestones
 
+## 2026-06-01 - provider pending_manual 上传契约补强
+
+- 继续按 [docs/01-GO_REBUILD_PLAN.md](E:/Workspace/VSCode/CloudPan-Sync-go/docs/01-GO_REBUILD_PLAN.md) 中 “Provider 契约测试覆盖每家 provider 的核心接口” 与 runtime `pending_manual` 主线推进，这轮把各家 provider 在上传阶段对 `pending_manual` 的统一阻断语义补成 catalog 级回归契约。
+- 新增 [internal/provider/catalog_pending_manual_contract_test.go](E:/Workspace/VSCode/CloudPan-Sync-go/internal/provider/catalog_pending_manual_contract_test.go)，复用现有本地 test server / helper profile，覆盖 `guangya / aliyundrive_open / 123_open / 115_open / quark / uc / xunlei / pikpak / baidu_netdisk / 189cloud` 十家 provider 的 `Upload(strategy=pending_manual)` 行为。
+- 这组契约固定各家在通过最小 live mock 前置校验后，`pending_manual` 仍必须返回 `pending_manual_requires_confirmation`，不能伪装成上传成功，也不能被 auth 前置噪音掩盖成错误的主线语义。
+- 这样 provider 侧“待人工确认”分支就和 [internal/task/service.go](E:/Workspace/VSCode/CloudPan-Sync-go/internal/task/service.go) 里已有的 runtime `pending_manual` 重试分类、blocked reason 与 pending tree 聚合形成了更稳定的上下游契约。
+- 回归验证已通过：`go test ./internal/provider ./internal/task`。
+- 清理情况：本轮未遗留额外后台进程；测试使用本地 `httptest` server 与临时目录，结束后已自动清理，未保留 smoke 目录或构建残留。
+
 ## 2026-05-31 - 运行结果执行上下文透传收口
 
 - 继续按 [docs/01-GO_REBUILD_PLAN.md](E:/Workspace/VSCode/CloudPan-Sync-go/docs/01-GO_REBUILD_PLAN.md) 中“task runtime evidence / provider probe 也应透传当前执行模式和扫描模式”方向推进，这轮把运行结果在 `skip / create / overwrite / upload` 各分支上的上下文字段透传统一收口。
