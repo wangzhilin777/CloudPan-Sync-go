@@ -82,3 +82,21 @@
 - 回归验证待本次提交前执行：`go test ./internal/app`。
 - 清理情况：本轮验证结束后会确认未遗留额外后台进程、临时目录、smoke 目录或构建残留。
 
+
+## 2026-05-31 - 验收矩阵 UI 预填与筛选闭环走通
+
+- 继续对齐 [docs/01-GO_REBUILD_PLAN.md](E:/Workspace/VSCode/CloudPan-Sync-go/docs/01-GO_REBUILD_PLAN.md) 中“状态矩阵与证据页展示”和“真实 provider smoke 记录与协议组聚合矩阵”方向，把真实样本矩阵从展示推进到可操作闭环。
+- `internal/app/ui_smoke_test.go` 现在会在状态页等待 `provider-smoke-matrix` 渲染出 `aliyun_123_open`，再触发“预填 smoke 表单”，校验 provider、protocol group、标题和备注都被矩阵行回填。
+- 同一条浏览器级 smoke 还会触发“只看该组记录”，校验 `#provider-smoke-records-filter-group` 被同步成 `aliyun_123_open`，保证验收矩阵能直接收敛下方 smoke 记录视图。
+- 回归验证已通过：`go test ./internal/app`、`node --check web/static/app.js`。
+- 清理情况：本轮验证中曾清理超时调试遗留的 `go/chrome` 测试进程；最终通过的验证未遗留额外后台进程、临时目录、smoke 目录或构建残留。
+
+
+## 2026-05-31 - 验收矩阵前端交互静态契约补强
+
+- 在浏览器级 smoke 的基础上，继续把验收矩阵关键交互固定成静态资源契约，避免后续前端重构时把矩阵动作钩子悄悄删掉。
+- `internal/app/web_test.go` 现在会校验 `data-provider-smoke-draft`、`data-provider-smoke-focus-group`、`data-provider-smoke-filter-status`、`draftProviderSmokeFromMatrix()`、`focusProviderSmokeRecordsByGroup()` 和“已按验收矩阵预填 smoke 表单”提示语仍然存在。
+- 这次改动不改 API 或业务状态，只把已经落地的真实样本矩阵操作入口补成可回归契约。
+- 回归验证已通过：`go test ./internal/app`、`node --check web/static/app.js`。
+- 清理情况：本轮验证中曾清理超时调试遗留的 `go/chrome` 测试进程；最终通过的验证未遗留额外后台进程、临时目录、smoke 目录或构建残留。
+

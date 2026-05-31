@@ -267,6 +267,24 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "button.dataset.autoRecoverPreviewProtocolGroup || \"\"") {
 		t.Fatalf("expected auto recover preview protocol group filter sync in app.js, got %q", body)
 	}
+	if !strings.Contains(body, "data-provider-smoke-draft") {
+		t.Fatalf("expected provider smoke matrix draft action in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "data-provider-smoke-focus-group") {
+		t.Fatalf("expected provider smoke matrix focus-group action in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "data-provider-smoke-filter-status") {
+		t.Fatalf("expected provider smoke matrix status filter action in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "draftProviderSmokeFromMatrix") {
+		t.Fatalf("expected provider smoke matrix draft helper in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "focusProviderSmokeRecordsByGroup") {
+		t.Fatalf("expected provider smoke matrix focus helper in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "已按验收矩阵预填 smoke 表单") {
+		t.Fatalf("expected provider smoke matrix draft flash text in app.js, got %q", body)
+	}
 	if !strings.Contains(body, "data-auto-recover-decision-focus-lane-strategy") {
 		t.Fatalf("expected auto recover decision lane strategy focus wiring in app.js, got %q", body)
 	}
@@ -293,6 +311,24 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	}
 	if !strings.Contains(body, "currentAutoRecoverScopedRequest") {
 		t.Fatalf("expected scoped auto recover request helper in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "data-provider-smoke-draft") {
+		t.Fatalf("expected provider smoke draft action in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "data-provider-smoke-focus-group") {
+		t.Fatalf("expected provider smoke focus group action in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "data-provider-smoke-filter-status") {
+		t.Fatalf("expected provider smoke status filter action in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "focusProviderSmokeRecordsByGroup") {
+		t.Fatalf("expected provider smoke focus helper in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "draftProviderSmokeFromMatrix") {
+		t.Fatalf("expected provider smoke draft helper in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "providerSmokeMatrixFilterLabel") {
+		t.Fatalf("expected provider smoke matrix filter label helper in app.js, got %q", body)
 	}
 	if !strings.Contains(body, "后台补传筛选已执行：paths") {
 		t.Fatalf("expected scoped auto recover selection flash text in app.js, got %q", body)

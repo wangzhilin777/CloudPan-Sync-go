@@ -175,6 +175,18 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 		waitForText(`body`, "下载 Markdown"),
 		waitForText(`body`, "报告标题"),
 	)
+
+	runStep(t, runCtx, "provider smoke matrix workflow",
+		waitForText(`#provider-smoke-matrix`, "aliyun_123_open"),
+		chromedp.Evaluate(`(() => document.querySelector('#provider-smoke-matrix [data-provider-smoke-draft="aliyun_123_open"]')?.click())()`, nil),
+		waitForValue(`#provider-smoke-provider-key`, "123_open"),
+		waitForValue(`#provider-smoke-protocol-group`, "aliyun_123_open"),
+		waitForValueContains(`#provider-smoke-title`, "aliyun_123_open"),
+		waitForValueContains(`#provider-smoke-note`, "协议组：aliyun_123_open"),
+		chromedp.Evaluate(`(() => document.querySelector('#provider-smoke-matrix [data-provider-smoke-focus-group="aliyun_123_open"]')?.click())()`, nil),
+		waitForValue(`#provider-smoke-records-filter-group`, "aliyun_123_open"),
+		waitForText(`#provider-smoke-records-filter-summary`, "当前没有 smoke 记录。"),
+	)
 }
 
 func waitForText(selector string, substring string) chromedp.ActionFunc {
