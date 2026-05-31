@@ -674,6 +674,7 @@ type retryQueueSummary struct {
 	PendingManualCount                  int
 	AuthExpiredCount                    int
 	LocalMissingCount                   int
+	ProviderSessionMissingCount         int
 	ExhaustedCount                      int
 	AutoRecoverWaitingAuthRefreshTasks  int
 	AutoRecoverWaitingLocalRestoreTasks int
@@ -4428,6 +4429,8 @@ func blockedGuidance(reason string) (string, string) {
 		return "wait_for_retry_window", "当前已满足自动补传条件，但不在允许的自动补传时间窗内，等待 nextRetryAt 后系统会自动接管。"
 	case "retry_queue_pending_manual_confirmation":
 		return "manual_confirmation_required", "存在 pending_manual 项，需要人工确认或等待后续真实 fallback 运行时能力。"
+	case "retry_queue_requires_provider_session_rebuild":
+		return "manual_intervention_required", "provider 返回的上传会话信息不完整，请检查 uploadid / upload session / provider 返回体后再重新发起。"
 	default:
 		return "", ""
 	}
@@ -4489,6 +4492,7 @@ func summarizeRetryQueue(queue []RetryQueueItem) retryQueueSummary {
 	pendingManualCount := 0
 	authExpiredCount := 0
 	localMissingCount := 0
+	providerSessionMissingCount := 0
 	exhaustedCount := 0
 	uploadCheckpointEligible := 0
 	now := time.Now().UTC()
@@ -4504,6 +4508,8 @@ func summarizeRetryQueue(queue []RetryQueueItem) retryQueueSummary {
 			authExpiredCount++
 		case "local_file_missing":
 			localMissingCount++
+		case "provider_session_missing":
+			providerSessionMissingCount++
 		case "rate_limited":
 			if item.EligibleAt != "" {
 				eligibleAt, err := time.Parse(time.RFC3339, item.EligibleAt)
@@ -4532,14 +4538,15 @@ func summarizeRetryQueue(queue []RetryQueueItem) retryQueueSummary {
 	summary.PendingManualCount = pendingManualCount
 	summary.AuthExpiredCount = authExpiredCount
 	summary.LocalMissingCount = localMissingCount
+	summary.ProviderSessionMissingCount = providerSessionMissingCount
 	summary.ExhaustedCount = exhaustedCount
 	summary.AutoRecoverWaitingAuthRefreshTasks = authExpiredCount
 	summary.AutoRecoverWaitingLocalRestoreTasks = localMissingCount
-	summary.AutoRecoverWaitingManualTasks = pendingManualCount
+	summary.AutoRecoverWaitingManualTasks = pendingManualCount + providerSessionMissingCount
 	summary.AutoRecoverWaitingRetryLimitTasks = exhaustedCount
 	summary.UploadCheckpointEligible = uploadCheckpointEligible
 	if immediateRetry > 0 {
-		summary.CanAutoRetry = pendingManualCount == 0 && authExpiredCount == 0 && localMissingCount == 0
+		summary.CanAutoRetry = pendingManualCount == 0 && authExpiredCount == 0 && localMissingCount == 0 && providerSessionMissingCount == 0
 		if retryQueueCanAutoResumeUploads(queue) {
 			summary.AutoRecoverEligible = true
 			summary.AutoRecoverMode = "upload_checkpoint_auto_resume"
@@ -4566,6 +4573,12 @@ func summarizeRetryQueue(queue []RetryQueueItem) retryQueueSummary {
 	if localMissingCount > 0 {
 		summary.ShouldBlock = true
 		summary.BlockedReason = "retry_queue_requires_local_file_restore"
+		summary.BlockedAction, summary.BlockedAdvice = blockedGuidance(summary.BlockedReason)
+		return summary
+	}
+	if providerSessionMissingCount > 0 {
+		summary.ShouldBlock = true
+		summary.BlockedReason = "retry_queue_requires_provider_session_rebuild"
 		summary.BlockedAction, summary.BlockedAdvice = blockedGuidance(summary.BlockedReason)
 		return summary
 	}
@@ -4792,6 +4805,10 @@ func buildRetryQueue(metadata map[string]interface{}, results []Result) []RetryQ
 		case "auth_expired", "auth_invalid":
 			item.RetryClass = "auth_expired"
 			item.RetryAction = "refresh_auth_profile"
+			item.Blocked = true
+		case "missing_uploadid":
+			item.RetryClass = "provider_session_missing"
+			item.RetryAction = "manual_intervention_required"
 			item.Blocked = true
 		case "local_file_missing":
 			item.RetryClass = "local_file_missing"

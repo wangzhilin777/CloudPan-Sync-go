@@ -1206,6 +1206,65 @@ func TestAppRecoverTasksEndpointReturnsSummary(t *testing.T) {
 	}
 }
 
+func TestAppWorkflowSurfacesMissingUploadIDAsManualIntervention(t *testing.T) {
+	ctx := context.Background()
+	application := mustNewTestApp(t, ctx)
+	handler := application.routes()
+
+	targetAdapter := &appScriptedAdapter{
+		meta:       provider.Provider{Key: "missing_uploadid_target", DisplayName: "Missing UploadID Target", ProtocolGroup: "fake_target", AuthModes: []string{"manual_token"}, FastUploadInputs: []string{"md5", "size"}, FallbackModes: []string{"download_upload"}, Status: "planned"},
+		capability: provider.CapabilitySet{SupportsAuthValidation: true, SupportsUpload: true},
+		uploadFunc: func(req provider.UploadRequest) provider.UploadResult {
+			return provider.UploadResult{OperationResult: provider.OperationResult{Status: "missing_uploadid", Message: "provider omitted uploadid", Mode: "scripted_missing_uploadid"}}
+		},
+	}
+	registry := provider.NewRegistry(targetAdapter)
+	authSvc := auth.NewService(application.store, registry)
+	taskSvc := task.NewService(application.store, registry, authSvc)
+	application.providers = registry
+	application.auth = authSvc
+	application.tasks = taskSvc
+	handler = application.routes()
+
+	profileResp := invokeJSON(t, handler, http.MethodPost, "/api/auth/profiles", map[string]interface{}{"providerKey": "missing_uploadid_target", "authMode": "manual_token", "displayName": "Missing UploadID Target", "token": "token-missing-uploadid"})
+	profileID := profileResp.Data.(map[string]interface{})["id"].(string)
+	localFile := filepath.Join(t.TempDir(), "missing-uploadid.bin")
+	if err := os.WriteFile(localFile, []byte("missing-uploadid"), 0o644); err != nil {
+		t.Fatalf("WriteFile() error = %v", err)
+	}
+	taskResp := invokeJSON(t, handler, http.MethodPost, "/api/tasks", map[string]interface{}{"sourceProvider": "missing_uploadid_source", "targetProvider": "missing_uploadid_target", "targetProfileId": profileID, "thresholdMB": 1, "entries": []map[string]interface{}{{"path": "/missing-uploadid.bin", "size": 1024, "md5": "missing-md5", "localPath": localFile}}})
+	taskID := taskResp.Data.(map[string]interface{})["task"].(map[string]interface{})["id"].(string)
+	runResp := invokeJSON(t, handler, http.MethodPost, "/api/tasks/"+taskID+"/run", nil)
+	runData := runResp.Data.(map[string]interface{})
+	if got := runData["task"].(map[string]interface{})["state"].(string); got != "blocked" {
+		t.Fatalf("expected blocked, got %s", got)
+	}
+	runtimeData := runData["runtime"].(map[string]interface{})
+	if got := runtimeData["blockedReason"].(string); got != "retry_queue_requires_provider_session_rebuild" {
+		t.Fatalf("expected blockedReason retry_queue_requires_provider_session_rebuild, got %s", got)
+	}
+	if got := runtimeData["blockedAction"].(string); got != "manual_intervention_required" {
+		t.Fatalf("expected blockedAction manual_intervention_required, got %s", got)
+	}
+	if got := runtimeData["blockedAdvice"].(string); got == "" {
+		t.Fatal("expected blockedAdvice on runtime payload")
+	}
+	retryQueue := runtimeData["retryQueue"].([]interface{})
+	if len(retryQueue) != 1 {
+		t.Fatalf("expected retryQueue len 1, got %#v", retryQueue)
+	}
+	item := retryQueue[0].(map[string]interface{})
+	if got := item["providerStatus"].(string); got != "missing_uploadid" {
+		t.Fatalf("expected providerStatus missing_uploadid, got %s", got)
+	}
+	if got := item["retryClass"].(string); got != "provider_session_missing" {
+		t.Fatalf("expected retryClass provider_session_missing, got %s", got)
+	}
+	if got := item["retryAction"].(string); got != "manual_intervention_required" {
+		t.Fatalf("expected retryAction manual_intervention_required, got %s", got)
+	}
+}
+
 func TestAppRecoverTasksEndpointReportsProviderBudgetSkips(t *testing.T) {
 	ctx := context.Background()
 	application := mustNewTestApp(t, ctx)

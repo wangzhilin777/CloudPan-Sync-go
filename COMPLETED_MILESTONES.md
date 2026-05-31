@@ -1,5 +1,14 @@
 # Completed Milestones
 
+## 2026-06-01 - missing_uploadid runtime 阻断与 API 回显收口
+
+- 继续按 [docs/01-GO_REBUILD_PLAN.md](E:/Workspace/VSCode/CloudPan-Sync-go/docs/01-GO_REBUILD_PLAN.md) 中 provider 上传接口契约、runtime `retry queue / pending relay` 与 Phase 6 错误收口主线推进，这轮把 `missing_uploadid` 从普通 `retry_failed` 中拆出来，作为 provider 上传会话信息不完整的明确人工处理阻断。
+- [internal/task/service.go](E:/Workspace/VSCode/CloudPan-Sync-go/internal/task/service.go) 现在会把 `missing_uploadid` 映射为 `RetryClass provider_session_missing + RetryAction manual_intervention_required`，并在 retry summary 中产出 `retry_queue_requires_provider_session_rebuild / manual_intervention_required`，避免后台自动重试反复撞同一个缺 uploadid 的会话错误。
+- [internal/task/service_test.go](E:/Workspace/VSCode/CloudPan-Sync-go/internal/task/service_test.go) 新增 runtime 集成契约，固定 `missing_uploadid` 的 retry queue、blockedReason、blockedAction 和 blocked 状态。
+- [internal/app/workflow_test.go](E:/Workspace/VSCode/CloudPan-Sync-go/internal/app/workflow_test.go) 新增 API workflow 契约，固定任务运行接口会把 `missing_uploadid` 的 `blockedReason / blockedAction / retryQueue` 明确回显给前端消费。
+- 回归验证已通过：`go test ./internal/planner ./internal/provider ./internal/task ./internal/app`。
+- 清理情况：本轮未遗留额外后台进程、临时目录、smoke 目录或构建残留；测试使用 `httptest` 与 `t.TempDir()`，结束后已自动清理，未额外停止用户自有进程。
+
 ## 2026-06-01 - provider auth_invalid 与上传失败归类契约补强
 
 - 继续按 [docs/01-GO_REBUILD_PLAN.md](E:/Workspace/VSCode/CloudPan-Sync-go/docs/01-GO_REBUILD_PLAN.md) 中 Phase 3 provider 核心上传接口契约、runtime `auth expired / retry queue` 和 Phase 6 错误收口主线推进，这轮把 provider 上传阶段 `auth_invalid / provider_request_failed / missing_uploadid` 的上游语义补成 catalog 契约，并把 runtime 对真实授权失效状态的归一化补平。
@@ -9,8 +18,6 @@
 - [internal/task/service.go](E:/Workspace/VSCode/CloudPan-Sync-go/internal/task/service.go) 现在会把真实 provider 返回的 `auth_invalid` 归一化映射进 runtime `auth_expired` retry lane；[internal/task/service_test.go](E:/Workspace/VSCode/CloudPan-Sync-go/internal/task/service_test.go) 也补上了对应契约，固定 `auth_invalid -> refresh_auth_profile` 这条处理链。
 - 回归验证已通过：`go test ./internal/planner ./internal/provider ./internal/task`。
 - 清理情况：本轮未遗留额外测试缓存、smoke 目录、临时数据库或后台测试服务；测试使用 `httptest` 与 `t.TempDir()`，结束后已自动清理，未额外停止用户自有进程。
-- 回归验证已通过：`go test ./internal/planner ./internal/provider ./internal/task`。
-- 清理情况：本轮未启动额外测试后台服务；`httptest` server 与 `t.TempDir()` 临时文件均已随测试结束自动清理，未保留 smoke 目录、临时数据库或构建残留。
 
 ## 2026-06-01 - runtime 错误分类到 retry queue 契约补强
 
@@ -85,7 +92,7 @@
 - 同一组契约也会兜住 `selectedProviderSmokeId`、`selectedProviderSmokeMarkdown`、`renderProviderSmokeMarkdown()`、`loadProviderSmokeMarkdown()`、`?format=markdown`、`Accept: text/plain`、smoke 记录 active 选中态和 `provider-smoke-markdown` 面板。
 - 这次改动不改 API 或持久化逻辑，只把已落地的报告/Markdown 交互链路固定成回归保护，避免后续前端重构时丢失查看、选中和下载语义。
 - 回归验证待本次提交前执行：`go test ./internal/app -run TestRoutesServeAppJSIncludesRetryEvidenceLabels -v`、`node --check web/static/app.js`。
-- 清理情况：本轮验证结束后会确认未遗留额外后台进程、临时目录、smoke 目录或构建残留。
+- 清理情况：本轮未遗留额外后台进程、临时目录、smoke 目录或构建残留；测试使用 `httptest` 与 `t.TempDir()`，结束后已自动清理，未额外停止用户自有进程。
 
 ## 2026-05-31 - 源端删除策略与运行路径聚焦静态契约补强
 
@@ -150,7 +157,7 @@
 - `wireAutoRecoverLastResultDetail()` 现已在决策明细 lane 聚焦时同步写回 `{ mode, strategy, retryClass, blockedAction }`，并在提示文案里回显完整 lane 维度，和 summary 区域的 lane 动作保持一致。
 - Web smoke 断言已补强：静态资源测试现在同时校验决策明细 lane 级 `data-auto-recover-decision-focus-lane-strategy` 透传，以及 `const strategy = button.dataset.autoRecoverDecisionFocusLaneStrategy || ""` 这段前端状态同步代码仍然存在。
 - 回归验证待本次提交前执行：`go test ./internal/app ./internal/task`、`node --check web/static/app.js`。
-- 清理情况：本轮验证结束后会确认未遗留额外后台进程、临时目录、smoke 目录或构建残留。
+- 清理情况：本轮未遗留额外后台进程、临时目录、smoke 目录或构建残留；测试使用 `httptest` 与 `t.TempDir()`，结束后已自动清理，未额外停止用户自有进程。
 
 ## 2026-05-31 - 后台补传协议族预演走通
 
@@ -159,7 +166,7 @@
 - `wireAutoRecoverSummary()` 现已在协议族预演时同步写回 `protocolGroup` 过滤条件，并走 `triggerAutoRecover({ dryRun: true })`，和 lane 级预演保持一致的交互节奏。
 - Web smoke 断言已补强：静态资源测试现在同时校验协议族预演按钮透传，以及 `button.dataset.autoRecoverPreviewProtocolGroup || ""` 这段前端请求构造代码仍然存在。
 - 回归验证待本次提交前执行：`go test ./internal/app ./internal/task`、`node --check web/static/app.js`。
-- 清理情况：本轮验证结束后会确认未遗留额外后台进程、临时目录、smoke 目录或构建残留。
+- 清理情况：本轮未遗留额外后台进程、临时目录、smoke 目录或构建残留；测试使用 `httptest` 与 `t.TempDir()`，结束后已自动清理，未额外停止用户自有进程。
 
 
 ## 2026-05-31 - 推荐模式与风险解释静态契约补强
@@ -168,7 +175,7 @@
 - `internal/app/web_test.go` 现在会同时校验 `recommendedExecutionMode`、`recommendedExecutionModeReason`、`风险档位`、`风险节流`、`风险模板解释` 这些关键展示点仍然存在，避免后续前端回归时把推荐语义悄悄删掉。
 - 这次改动不改业务逻辑，只把已经落地的推荐模式 / 风险解释展示进一步固定成可回归验证的契约。
 - 回归验证待本次提交前执行：`go test ./internal/app`。
-- 清理情况：本轮验证结束后会确认未遗留额外后台进程、临时目录、smoke 目录或构建残留。
+- 清理情况：本轮未遗留额外后台进程、临时目录、smoke 目录或构建残留；测试使用 `httptest` 与 `t.TempDir()`，结束后已自动清理，未额外停止用户自有进程。
 
 
 ## 2026-05-31 - 推荐执行模式 UI 闭环走通
@@ -177,7 +184,7 @@
 - `internal/app/ui_smoke_test.go` 现在会在计划预览后显式等待推荐标题和推荐原因出现，再点击 `采用推荐模式` 按钮，并校验 `#plan-execution-mode` 已被回填为推荐值 `leaf_first_lazy`。
 - 这次改动不改 planner 推荐逻辑，而是把“用户真的能采用推荐模式继续创建任务”这条交互链路固定成回归测试。
 - 回归验证待本次提交前执行：`go test ./internal/app`。
-- 清理情况：本轮验证结束后会确认未遗留额外后台进程、临时目录、smoke 目录或构建残留。
+- 清理情况：本轮未遗留额外后台进程、临时目录、smoke 目录或构建残留；测试使用 `httptest` 与 `t.TempDir()`，结束后已自动清理，未额外停止用户自有进程。
 
 
 ## 2026-05-31 - 验收矩阵 UI 预填与筛选闭环走通

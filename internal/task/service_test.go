@@ -1148,6 +1148,77 @@ func TestServiceRuntimeHandlesPendingManualAuthExpiredRateLimitAndMissingLocalFi
 	}
 }
 
+func TestServiceRuntimeMapsProviderSessionMissingIntoManualIntervention(t *testing.T) {
+	ctx := context.Background()
+	store, err := sqlitestore.New(ctx, filepath.Join(t.TempDir(), "runtime-missing-uploadid.db"))
+	if err != nil {
+		t.Fatalf("new store: %v", err)
+	}
+	defer func() { _ = store.Close() }()
+
+	adapter := &scriptedAdapter{
+		meta: provider.Provider{
+			Key:              "runtime_missing_uploadid",
+			DisplayName:      "Runtime Missing UploadID",
+			ProtocolGroup:    "fake",
+			AuthModes:        []string{"manual_token"},
+			FastUploadInputs: []string{"md5", "size"},
+			FallbackModes:    []string{"download_upload"},
+			ConflictPolicies: []provider.ConflictPolicy{provider.ConflictPolicyAutoRenameNew},
+			Status:           "planned",
+		},
+		capability: provider.CapabilitySet{
+			SupportsAuthValidation: true,
+			SupportsUpload:         true,
+		},
+		uploadFunc: func(req provider.UploadRequest) provider.UploadResult {
+			return provider.UploadResult{OperationResult: provider.OperationResult{Status: "missing_uploadid", Message: "provider omitted uploadid", Mode: "fake_missing_uploadid"}}
+		},
+	}
+
+	registry := provider.NewRegistry(adapter)
+	authSvc := auth.NewService(store, registry)
+	svc := NewService(store, registry, authSvc)
+	profile, err := authSvc.CreateProfile(ctx, auth.CreateProfileInput{ProviderKey: "runtime_missing_uploadid", AuthMode: "manual_token", DisplayName: "runtime missing uploadid", Token: "token-1"})
+	if err != nil {
+		t.Fatalf("CreateProfile() error = %v", err)
+	}
+	localFile := filepath.Join(t.TempDir(), "missing-uploadid.bin")
+	if err := os.WriteFile(localFile, []byte("missing-uploadid"), 0o600); err != nil {
+		t.Fatalf("WriteFile() error = %v", err)
+	}
+	detail, err := svc.Create(ctx, CreateRequest{SourceProvider: "guangya", TargetProvider: "runtime_missing_uploadid", TargetProfileID: profile.ID, ThresholdMB: 1, Entries: []planner.SourceEntry{{Path: "/missing-uploadid.bin", Size: 1024, MD5: "abc", LocalPath: localFile}}})
+	if err != nil {
+		t.Fatalf("Create() error = %v", err)
+	}
+	running, ok, err := svc.Run(ctx, detail.Task.ID)
+	if err != nil {
+		t.Fatalf("Run() error = %v", err)
+	}
+	if !ok {
+		t.Fatal("expected task to exist")
+	}
+	if running.Task.State != StateBlocked {
+		t.Fatalf("expected blocked, got %s", running.Task.State)
+	}
+	if len(running.Runtime.RetryQueue) != 1 {
+		t.Fatalf("expected retry queue len 1, got %#v", running.Runtime.RetryQueue)
+	}
+	item := running.Runtime.RetryQueue[0]
+	if item.ProviderStatus != "missing_uploadid" {
+		t.Fatalf("expected providerStatus missing_uploadid, got %#v", item)
+	}
+	if item.RetryClass != "provider_session_missing" || item.RetryAction != "manual_intervention_required" || item.Retryable || !item.Blocked {
+		t.Fatalf("unexpected missing_uploadid retry mapping: %#v", item)
+	}
+	if running.Runtime.BlockedReason != "retry_queue_requires_provider_session_rebuild" {
+		t.Fatalf("expected blockedReason retry_queue_requires_provider_session_rebuild, got %#v", running.Runtime.BlockedReason)
+	}
+	if running.Runtime.BlockedAction != "manual_intervention_required" {
+		t.Fatalf("expected blockedAction manual_intervention_required, got %#v", running.Runtime.BlockedAction)
+	}
+}
+
 func TestServiceRuntimeMapsAuthInvalidIntoAuthRefreshRetryQueue(t *testing.T) {
 	ctx := context.Background()
 	store, err := sqlitestore.New(ctx, filepath.Join(t.TempDir(), "runtime-auth-invalid.db"))
