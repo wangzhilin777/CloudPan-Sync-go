@@ -1583,6 +1583,8 @@ function blockedActionFilterPreset(action) {
       return { retryClass: "auth_expired", retryState: "blocked" };
     case "restore_local_source_file":
       return { retryClass: "local_file_missing", retryState: "blocked" };
+    case "manual_intervention_required":
+      return { retryClass: "provider_session_missing", retryState: "blocked" };
     case "wait_for_retry_window":
       return { retryClass: "", retryState: "blocked" };
     case "wait_for_cooldown":
@@ -2122,6 +2124,19 @@ function renderTaskResolutionGuide(detail) {
         { label: "只看本地缺失队列", view: "tasks", intent: "focus_task_retry" },
         { label: "打开任务向导", view: "wizard", providerKey, intent: "prefill_wizard" },
         { label: "打开状态矩阵", view: "status" },
+      ],
+    },
+    manual_intervention_required: {
+      title: "修复 provider 会话缺口",
+      steps: [
+        "当前 retryClass 是 provider_session_missing，说明 provider 返回体缺少 uploadid / upload session 这类关键会话字段。",
+        "先核对 provider 返回体、上传会话构建逻辑和目标端授权档案，确认是否需要重新生成会话或刷新授权。",
+        "修复后回到状态矩阵，确认该类 blocked 项已经收敛，再执行 Retry。",
+      ],
+      buttons: [
+        { label: "只看会话缺口队列", view: "tasks", intent: "focus_task_retry" },
+        { label: "打开授权面板", view: "providers", providerKey, profileId, intent: "focus_profile" },
+        { label: "查看状态矩阵", view: "status" },
       ],
     },
     wait_for_cooldown: {
@@ -3246,6 +3261,8 @@ function retryClassSummaryLabel(retryClass) {
       return "限流冷却";
     case "pending_manual":
       return "人工确认";
+    case "provider_session_missing":
+      return "会话缺口";
     case "auth_expired":
       return "授权过期";
     case "local_file_missing":
@@ -3262,7 +3279,7 @@ function renderAutoRecoverRetryClassCounts(result) {
   if (!counts) {
     return "";
   }
-  const order = ["retry_failed", "rate_limited", "pending_manual", "auth_expired", "local_file_missing"];
+  const order = ["retry_failed", "rate_limited", "pending_manual", "provider_session_missing", "auth_expired", "local_file_missing"];
   const parts = order
     .filter((key) => Number(counts[key] || 0) > 0)
     .map((key) => `${retryClassSummaryLabel(key)} ${stringifyValue(counts[key], "0")}`);
@@ -3309,6 +3326,8 @@ function blockedActionSummaryLabel(action) {
       return "补回本地文件";
     case "manual_confirmation_required":
       return "人工确认";
+    case "manual_intervention_required":
+      return "人工介入";
     case "review_and_reset_retry_strategy":
       return "重置重试策略";
     default:
@@ -3329,6 +3348,7 @@ function renderAutoRecoverBlockedActionCounts(result) {
     "refresh_auth_profile",
     "restore_local_source_file",
     "manual_confirmation_required",
+    "manual_intervention_required",
     "review_and_reset_retry_strategy",
   ];
   const parts = order

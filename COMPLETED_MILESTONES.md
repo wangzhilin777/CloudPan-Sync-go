@@ -1,5 +1,14 @@
 # Completed Milestones
 
+## 2026-06-01 - provider_session_missing 前端筛选与处理契约补强
+
+- 继续沿着 [docs/01-GO_REBUILD_PLAN.md](E:/Workspace/VSCode/CloudPan-Sync-go/docs/01-GO_REBUILD_PLAN.md) 中“状态矩阵/证据页展示”与“更复杂的后台补传编排、批量筛选与多策略调度”方向推进，这轮把新引入的 `manual_intervention_required` / `provider_session_missing` 处理链补进前端可见筛选与静态契约。
+- [web/static/app.js](E:/Workspace/VSCode/CloudPan-Sync-go/web/static/app.js) 现在能把 `manual_intervention_required` 映射成 provider 会话缺口的明确处理引导，并把 `provider_session_missing` 纳入 retry class / blocked action 统计与过滤入口。
+- [web/static/index.html](E:/Workspace/VSCode/CloudPan-Sync-go/web/static/index.html) 现在补上 `provider_session_missing` 的重试分类筛选项，状态页、任务页与后台补传候选池都能直接按这类失败定位。
+- [internal/app/web_test.go](E:/Workspace/VSCode/CloudPan-Sync-go/internal/app/web_test.go) 继续补齐静态契约，固定前端引导文案与新筛选入口不会在后续重构中丢失。
+- 回归验证已通过：`go test ./...`、`node --check web/static/app.js`。
+- 清理情况：本轮验证未遗留额外后台进程、临时脚本、smoke 目录或构建残留。
+
 ## 2026-06-01 - missing_uploadid runtime 阻断与 API 回显收口
 
 - 继续按 [docs/01-GO_REBUILD_PLAN.md](E:/Workspace/VSCode/CloudPan-Sync-go/docs/01-GO_REBUILD_PLAN.md) 中 provider 上传接口契约、runtime `retry queue / pending relay` 与 Phase 6 错误收口主线推进，这轮把 `missing_uploadid` 从普通 `retry_failed` 中拆出来，作为 provider 上传会话信息不完整的明确人工处理阻断。
