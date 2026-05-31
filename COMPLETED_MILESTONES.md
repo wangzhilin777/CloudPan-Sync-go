@@ -73,3 +73,12 @@
 - 回归验证待本次提交前执行：`go test ./internal/app`。
 - 清理情况：本轮验证结束后会确认未遗留额外后台进程、临时目录、smoke 目录或构建残留。
 
+
+## 2026-05-31 - 推荐执行模式 UI 闭环走通
+
+- 继续对齐 [docs/01-GO_REBUILD_PLAN.md](E:/Workspace/VSCode/CloudPan-Sync-go/docs/01-GO_REBUILD_PLAN.md) 中“可选模式 + 默认推荐模式 + 推荐提示语义”要求，把推荐执行模式从静态展示补成可点击、可回填、可验证的 UI 闭环。
+- `internal/app/ui_smoke_test.go` 现在会在计划预览后显式等待推荐标题和推荐原因出现，再点击 `采用推荐模式` 按钮，并校验 `#plan-execution-mode` 已被回填为推荐值 `leaf_first_lazy`。
+- 这次改动不改 planner 推荐逻辑，而是把“用户真的能采用推荐模式继续创建任务”这条交互链路固定成回归测试。
+- 回归验证待本次提交前执行：`go test ./internal/app`。
+- 清理情况：本轮验证结束后会确认未遗留额外后台进程、临时目录、smoke 目录或构建残留。
+
