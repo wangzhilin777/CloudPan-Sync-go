@@ -100,3 +100,12 @@
 - 回归验证已通过：`go test ./internal/app`、`node --check web/static/app.js`。
 - 清理情况：本轮验证中曾清理超时调试遗留的 `go/chrome` 测试进程；最终通过的验证未遗留额外后台进程、临时目录、smoke 目录或构建残留。
 
+
+## 2026-05-31 - 验收报告历史交互静态契约补强
+
+- 继续沿着 [docs/01-GO_REBUILD_PLAN.md](E:/Workspace/VSCode/CloudPan-Sync-go/docs/01-GO_REBUILD_PLAN.md) 中“状态矩阵/证据页展示”方向补齐验收报告链路，把报告历史切换与下载入口固定成前端静态契约。
+- `internal/app/web_test.go` 现在会额外校验 `data-report-view`、`data-report-download`、`renderReportHistory()`、`selectedEvidenceReport()`、`验收报告已保存`、`已切换验收报告` 这些关键钩子和提示语仍然存在。
+- 这次改动不改 API 或持久化逻辑，只把已经落地的报告历史交互入口补成可回归约束，避免后续前端重构时丢失历史查看/下载链路。
+- 回归验证已通过：`go test ./internal/app`、`node --check web/static/app.js`。
+- 清理情况：本轮验证未遗留额外后台进程、临时目录、smoke 目录或构建残留。
+

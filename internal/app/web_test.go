@@ -285,6 +285,24 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "已按验收矩阵预填 smoke 表单") {
 		t.Fatalf("expected provider smoke matrix draft flash text in app.js, got %q", body)
 	}
+	if !strings.Contains(body, "data-report-view") {
+		t.Fatalf("expected report history view action in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "data-report-download") {
+		t.Fatalf("expected report history download action in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "renderReportHistory") {
+		t.Fatalf("expected report history renderer in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "selectedEvidenceReport") {
+		t.Fatalf("expected selectedEvidenceReport helper in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "已切换验收报告") {
+		t.Fatalf("expected report history switch flash text in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "验收报告已保存") {
+		t.Fatalf("expected report save flash text in app.js, got %q", body)
+	}
 	if !strings.Contains(body, "data-auto-recover-decision-focus-lane-strategy") {
 		t.Fatalf("expected auto recover decision lane strategy focus wiring in app.js, got %q", body)
 	}
