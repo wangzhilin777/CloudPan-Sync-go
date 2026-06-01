@@ -172,33 +172,57 @@ function renderRiskResolutionSummary(resolution) {
     return "-";
   }
   const providerKey = stringifyValue(resolution.providerKey, "-");
-  const reasons = Array.isArray(resolution.calibrationReasons) ? resolution.calibrationReasons.filter(Boolean) : [];
+  const profileSource = stringifyValue(resolution.profileDefaultSource, "provider default only");
   const profileDefaultFields = Array.isArray(resolution.profileDefaultFields)
     ? resolution.profileDefaultFields.filter(Boolean)
     : [];
   const overrideFields = Array.isArray(resolution.overrideFields) ? resolution.overrideFields.filter(Boolean) : [];
-  const providerHints = Array.isArray(resolution.providerRiskHints) ? resolution.providerRiskHints.filter(Boolean) : [];
-  const providerTraits = Array.isArray(resolution.providerRiskTraits) ? resolution.providerRiskTraits.filter(Boolean) : [];
-  const parts = [`provider ${providerKey}`];
-  if (resolution.profileDefaultSource) {
-    parts.push(`profile ${stringifyValue(resolution.profileDefaultSource, "-")}`);
-  }
-  if (providerTraits.length) {
-    parts.push(`traits ${providerTraits.join(", ")}`);
-  }
-  if (providerHints.length) {
-    parts.push(`hint ${providerHints[0]}`);
-  }
-  if (reasons.length) {
-    parts.push(`校准 ${reasons.join(" / ")}`);
-  }
+  const steps = [`provider ${providerKey}`];
+  steps.push(`profile ${profileSource}`);
   if (profileDefaultFields.length) {
-    parts.push(`profile-default ${profileDefaultFields.join(", ")}`);
+    steps.push(`profile fields ${profileDefaultFields.join(", ")}`);
   }
-  if (overrideFields.length) {
-    parts.push(`override ${overrideFields.join(", ")}`);
+  steps.push(`override ${overrideFields.length ? overrideFields.join(", ") : "none"}`);
+  steps.push(`final ${stringifyValue(resolution.applied?.mode, stringifyValue(resolution.calibrated?.mode, "balanced"))}`);
+  return steps.join(" -> ");
+}
+
+function renderRiskResolutionFlow(resolution) {
+  if (!resolution || typeof resolution !== "object") {
+    return `
+      <div class="insight-card">
+        <strong>风控链路</strong>
+        <span>-</span>
+      </div>
+    `;
   }
-  return parts.join(" | ");
+  const profileDefaultFields = Array.isArray(resolution.profileDefaultFields)
+    ? resolution.profileDefaultFields.filter(Boolean)
+    : [];
+  const overrideFields = Array.isArray(resolution.overrideFields) ? resolution.overrideFields.filter(Boolean) : [];
+  return `
+    <div class="insight-card">
+      <strong>Provider 基线</strong>
+      <span>${escapeHTML(renderRiskProfileCompact(resolution.base))}</span>
+    </div>
+    <div class="insight-card">
+      <strong>Provider 校准后</strong>
+      <span>${escapeHTML(renderRiskProfileCompact(resolution.calibrated))}</span>
+    </div>
+    <div class="insight-card">
+      <strong>账号默认注入</strong>
+      <span>${escapeHTML(renderRiskProfileCompact(resolution.profileApplied))}</span>
+      <div class="muted">source ${escapeHTML(stringifyValue(resolution.profileDefaultSource, "provider default only"))} / fields ${escapeHTML(profileDefaultFields.join(", ") || "-")}</div>
+    </div>
+    <div class="insight-card">
+      <strong>任务覆盖</strong>
+      <span>${overrideFields.length ? escapeHTML(overrideFields.join(", ")) : "无"}</span>
+    </div>
+    <div class="insight-card">
+      <strong>最终生效</strong>
+      <span>${escapeHTML(renderRiskProfileCompact(resolution.applied))}</span>
+    </div>
+  `;
 }
 
 function renderRiskProfileCompact(profile) {
@@ -397,6 +421,7 @@ function syncTargetProfileInsight() {
   }
   const riskDefaults = parseProfileRiskDefaultsFromExtra(profile.extra);
   const extraKeys = profile.extra && typeof profile.extra === "object" ? Object.keys(profile.extra).filter(Boolean) : [];
+  const profileDefaultFields = riskDefaults && typeof riskDefaults === "object" ? Object.keys(riskDefaults).filter(Boolean) : [];
   wrap.innerHTML = `
     <div class="section-head">
       <h3>${escapeHTML(stringifyValue(profile.displayName, profileID))}</h3>
@@ -406,6 +431,7 @@ function syncTargetProfileInsight() {
       <div class="insight-card">
         <strong>账号默认风控</strong>
         <span>${escapeHTML(renderRiskProfileCompact(riskDefaults))}</span>
+        <div class="muted">可直接写入本次任务覆盖，便于在此基础上再细调。</div>
       </div>
       <div class="insight-card">
         <strong>来源</strong>
@@ -415,8 +441,37 @@ function syncTargetProfileInsight() {
         <strong>Extra Keys</strong>
         <span>${escapeHTML(extraKeys.join(", ") || "-")}</span>
       </div>
+      <div class="insight-card">
+        <strong>命中字段</strong>
+        <span>${escapeHTML(profileDefaultFields.join(", ") || "-")}</span>
+      </div>
+    </div>
+    <div class="actions compact-actions">
+      <button type="button" class="ghost" id="apply-profile-default-risk"${riskDefaults ? "" : " disabled"}>应用账号默认到任务覆盖</button>
+      <button type="button" class="ghost" id="clear-profile-default-risk">改回账号默认</button>
     </div>
   `;
+  const applyButton = $("#apply-profile-default-risk");
+  if (applyButton) {
+    applyButton.onclick = () => {
+      if (!riskDefaults) {
+        showFlash("当前授权档案没有账号默认风控可写入", true);
+        return;
+      }
+      hydrateRiskOverrideForm(riskDefaults);
+      $("#plan-risk-override").value = JSON.stringify(riskDefaults, null, 2);
+      setSelectValueIfPresent("#plan-risk-mode", "custom");
+      showFlash("已将账号默认风控写入任务覆盖，可继续按任务单独微调");
+    };
+  }
+  const clearButton = $("#clear-profile-default-risk");
+  if (clearButton) {
+    clearButton.onclick = () => {
+      hydrateRiskOverrideForm(null);
+      $("#plan-risk-override").value = "";
+      showFlash("已清空任务覆盖，将回到账号默认 / provider 默认链路");
+    };
+  }
 }
 
 async function loadProviderCapabilityDetail(providerKey, { force = false } = {}) {
@@ -452,6 +507,7 @@ function renderRiskResolutionDetail(resolution) {
     ? recoverBudget.sensitiveProviders.filter(Boolean)
     : [];
   return `
+    <div class="muted">FLOW ${escapeHTML(renderRiskResolutionSummary(resolution))}</div>
     <div class="muted">BASE ${escapeHTML(renderRiskProfileCompact(resolution.base))}</div>
     <div class="muted">CALIBRATED ${escapeHTML(renderRiskProfileCompact(resolution.calibrated))}</div>
     <div class="muted">PROFILE DEFAULT SOURCE ${escapeHTML(stringifyValue(resolution.profileDefaultSource, "-"))}</div>
@@ -3093,6 +3149,14 @@ function renderSelectedTask() {
       <span>${stringifyValue(metadata.riskProfile?.requestIntervalMs, "0")}ms / dir ${stringifyValue(metadata.riskProfile?.directoryIntervalMs, "0")}ms / retry ${stringifyValue(metadata.riskProfile?.retryLimit, "0")} / conc ${stringifyValue(metadata.riskProfile?.maxConcurrent, "0")}</span>
     </div>
     <div class="insight-card">
+      <strong>账号默认来源</strong>
+      <span>${stringifyValue(metadata.profileDefaultSource, "-")}</span>
+    </div>
+    <div class="insight-card">
+      <strong>账号默认字段</strong>
+      <span>${Array.isArray(metadata.riskProfileResolution?.profileDefaultFields) && metadata.riskProfileResolution.profileDefaultFields.length ? metadata.riskProfileResolution.profileDefaultFields.join(", ") : "-"}</span>
+    </div>
+    <div class="insight-card">
       <strong>推荐风控</strong>
       <span>${stringifyValue(metadata.recommendedRiskMode, "-")}</span>
     </div>
@@ -3113,6 +3177,7 @@ function renderSelectedTask() {
       <span>${escapeHTML(renderRiskResolutionSummary(metadata.riskProfileResolution))}</span>
       ${renderRiskResolutionDetail(metadata.riskProfileResolution)}
     </div>
+    ${renderRiskResolutionFlow(metadata.riskProfileResolution)}
     <div class="insight-card">
       <strong>自动补传时间窗</strong>
       <span>${escapeHTML(renderRiskWindow(metadata.riskProfile))}</span>
@@ -3208,6 +3273,14 @@ function renderPreview() {
       <span>${stringifyValue(metadata.riskProfile?.requestIntervalMs, "0")}ms / dir ${stringifyValue(metadata.riskProfile?.directoryIntervalMs, "0")}ms / retry ${stringifyValue(metadata.riskProfile?.retryLimit, "0")} / conc ${stringifyValue(metadata.riskProfile?.maxConcurrent, "0")}</span>
     </div>
     <div class="insight-card">
+      <strong>账号默认来源</strong>
+      <span>${stringifyValue(metadata.profileDefaultSource, "-")}</span>
+    </div>
+    <div class="insight-card">
+      <strong>账号默认字段</strong>
+      <span>${Array.isArray(metadata.riskProfileResolution?.profileDefaultFields) && metadata.riskProfileResolution.profileDefaultFields.length ? metadata.riskProfileResolution.profileDefaultFields.join(", ") : "-"}</span>
+    </div>
+    <div class="insight-card">
       <strong>推荐风控</strong>
       <span>${stringifyValue(metadata.recommendedRiskMode, "-")}</span>
     </div>
@@ -3224,6 +3297,7 @@ function renderPreview() {
       <span>${escapeHTML(renderRiskResolutionSummary(metadata.riskProfileResolution))}</span>
       ${renderRiskResolutionDetail(metadata.riskProfileResolution)}
     </div>
+    ${renderRiskResolutionFlow(metadata.riskProfileResolution)}
     <div class="insight-card">
       <strong>自动补传时间窗</strong>
       <span>${escapeHTML(renderRiskWindow(metadata.riskProfile))}</span>
