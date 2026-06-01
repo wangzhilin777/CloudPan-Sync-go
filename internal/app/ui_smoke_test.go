@@ -506,7 +506,7 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 		waitForValue(`#auto-recover-blocked-action`, "refresh_auth_profile"),
 	)
 
-	runStep(t, runCtx, "provider smoke matrix workflow",
+	runStep(t, runCtx, "provider smoke matrix draft workflow",
 		waitForText(`#provider-smoke-matrix`, "aliyun_123_open"),
 		chromedp.Evaluate(`(() => document.querySelector('#provider-smoke-matrix [data-provider-smoke-draft="aliyun_123_open"]')?.click())()`, nil),
 		waitForValue(`#provider-smoke-provider-key`, "123_open"),
@@ -531,14 +531,61 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 		waitForText(`#flash`, "已打开 smoke 样本并回填表单"),
 		chromedp.Evaluate(`(() => document.querySelector('#provider-smoke-matrix [data-provider-smoke-filter-status="accepted"]')?.click())()`, nil),
 		waitForText(`#flash`, "已按 accepted 收敛验收矩阵"),
+	)
+
+	runStep(t, runCtx, "provider smoke matrix prefill profile risk",
 		chromedp.Evaluate(`(() => document.querySelector('#provider-smoke-matrix [data-provider-smoke-prefill-profile-risk="aliyun_123_open"]')?.click())()`, nil),
 		waitForText(`#flash`, "已按真实样本预填账号默认风控"),
 		waitForValue(`#profile-provider`, "123_open"),
 		waitForValueContains(`#profile-display-name`, "aliyun_123_open 风控模板"),
 		waitForValueContains(`#profile-extra`, `riskDefaults`),
+		waitForValueContains(`#profile-extra`, `riskDefaultsSourceDisplay`),
+		waitForValueContains(`#profile-extra`, `Smoke Matrix aliyun_123_open (accepted)`),
 		waitForValueContains(`#profile-extra`, `accepted_group`),
 		waitForValue(`#profile-risk-request-interval`, "1800"),
 		waitForValue(`#profile-risk-directory-interval`, "2600"),
+	)
+
+	runStep(t, runCtx, "provider smoke save auth profile",
+		chromedp.SetValue(`#profile-token`, "token-smoke-risk-template", chromedp.ByID),
+		chromedp.Evaluate(`(() => document.querySelector('#profile-form button[type="submit"]')?.click())()`, nil),
+		waitForText(`#flash`, "授权档案已创建"),
+		waitForText(`#profiles-table`, "aliyun_123_open 风控模板"),
+	)
+
+	runStep(t, runCtx, "provider smoke sync wizard profile insight",
+		waitForScriptTrue(`(() => {
+			if (typeof loadProfiles === 'function') {
+				loadProfiles();
+			}
+			const provider = document.querySelector('#plan-target-provider');
+			const profile = document.querySelector('#plan-target-profile');
+			const profiles = Array.isArray(state?.profiles) ? state.profiles : [];
+			const matchedProfile = profiles.find((item) => item && item.providerKey === '123_open' && String(item.displayName || '').includes('aliyun_123_open 风控模板'));
+			if (!provider || !profile || !matchedProfile) {
+				return false;
+			}
+			provider.value = '123_open';
+			provider.dispatchEvent(new Event('change', { bubbles: true }));
+			if (typeof syncTargetProfiles === 'function') {
+				syncTargetProfiles();
+			}
+			let option = Array.from(profile.options || []).find((item) => item.value === matchedProfile.id);
+			if (!option) {
+				option = document.createElement('option');
+				option.value = matchedProfile.id;
+				option.textContent = matchedProfile.displayName || matchedProfile.id;
+				profile.appendChild(option);
+			}
+			profile.value = matchedProfile.id;
+			profile.dispatchEvent(new Event('change', { bubbles: true }));
+			if (typeof syncTargetProfileInsight === 'function') {
+				syncTargetProfileInsight();
+			}
+			return true;
+		})()`),
+		waitForTextContent(`#plan-target-profile-insight`, "Smoke Matrix aliyun_123_open (accepted)"),
+		waitForTextContent(`#plan-target-profile-insight`, "req 1800ms"),
 	)
 }
 
@@ -556,10 +603,34 @@ func waitForText(selector string, substring string) chromedp.ActionFunc {
 	})
 }
 
+func waitForTextContent(selector string, substring string) chromedp.ActionFunc {
+	return chromedp.ActionFunc(func(ctx context.Context) error {
+		var matched bool
+		script := fmt.Sprintf(`(() => {
+			const el = document.querySelector(%q);
+			return !!el && String(el.textContent || "").includes(%q);
+		})()`, selector, substring)
+		return chromedp.Poll(script, &matched,
+			chromedp.WithPollingInterval(120*time.Millisecond),
+			chromedp.WithPollingTimeout(30*time.Second),
+		).Do(ctx)
+	})
+}
+
 func waitForSelectorCount(selector string, minCount int) chromedp.ActionFunc {
 	return chromedp.ActionFunc(func(ctx context.Context) error {
 		var matched bool
 		script := fmt.Sprintf(`(() => document.querySelectorAll(%q).length >= %d)()`, selector, minCount)
+		return chromedp.Poll(script, &matched,
+			chromedp.WithPollingInterval(120*time.Millisecond),
+			chromedp.WithPollingTimeout(30*time.Second),
+		).Do(ctx)
+	})
+}
+
+func waitForScriptTrue(script string) chromedp.ActionFunc {
+	return chromedp.ActionFunc(func(ctx context.Context) error {
+		var matched bool
 		return chromedp.Poll(script, &matched,
 			chromedp.WithPollingInterval(120*time.Millisecond),
 			chromedp.WithPollingTimeout(30*time.Second),
