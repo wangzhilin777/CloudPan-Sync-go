@@ -2,6 +2,15 @@ package provider
 
 import "strings"
 
+type RiskTemplateSummary struct {
+	RecommendedMode       string   `json:"recommendedMode,omitempty"`
+	Base                  any      `json:"base,omitempty"`
+	Calibrated            any      `json:"calibrated,omitempty"`
+	CalibrationReasons    []string `json:"calibrationReasons,omitempty"`
+	RecommendedReason     string   `json:"recommendedReason,omitempty"`
+	AggressiveRiskWarning string   `json:"aggressiveRiskWarning,omitempty"`
+}
+
 type ConflictPolicy string
 
 const (
@@ -10,19 +19,20 @@ const (
 )
 
 type Provider struct {
-	Key                string           `json:"key"`
-	DisplayName        string           `json:"displayName"`
-	ProtocolGroup      string           `json:"protocolGroup"`
-	RiskHints          []string         `json:"riskHints,omitempty"`
-	RiskTraits         []string         `json:"riskTraits,omitempty"`
-	AuthModes          []string         `json:"authModes"`
-	FastUploadInputs   []string         `json:"fastUploadInputs"`
-	FallbackModes      []string         `json:"fallbackModes"`
-	ConflictPolicies   []ConflictPolicy `json:"conflictPolicies"`
-	SupportsOverwrite  bool             `json:"supportsOverwrite"`
-	SupportsAutoRename bool             `json:"supportsAutoRename"`
-	OverwriteBehavior  string           `json:"overwriteBehavior"`
-	Status             string           `json:"status"`
+	Key                 string              `json:"key"`
+	DisplayName         string              `json:"displayName"`
+	ProtocolGroup       string              `json:"protocolGroup"`
+	RiskHints           []string            `json:"riskHints,omitempty"`
+	RiskTraits          []string            `json:"riskTraits,omitempty"`
+	DefaultRiskTemplate RiskTemplateSummary `json:"defaultRiskTemplate,omitempty"`
+	AuthModes           []string            `json:"authModes"`
+	FastUploadInputs    []string            `json:"fastUploadInputs"`
+	FallbackModes       []string            `json:"fallbackModes"`
+	ConflictPolicies    []ConflictPolicy    `json:"conflictPolicies"`
+	SupportsOverwrite   bool                `json:"supportsOverwrite"`
+	SupportsAutoRename  bool                `json:"supportsAutoRename"`
+	OverwriteBehavior   string              `json:"overwriteBehavior"`
+	Status              string              `json:"status"`
 }
 
 type CapabilitySet struct {

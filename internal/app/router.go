@@ -186,8 +186,12 @@ func (a *App) handleProviders(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusMethodNotAllowed, "method_not_allowed", "Method not allowed.")
 		return
 	}
+	items := a.providers.List()
+	for index := range items {
+		items[index].Meta.DefaultRiskTemplate = planner.ProviderDefaultRiskTemplate(items[index].Meta)
+	}
 	writeOK(w, http.StatusOK, map[string]interface{}{
-		"items": a.providers.List(),
+		"items": items,
 	})
 }
 
@@ -207,8 +211,10 @@ func (a *App) handleProviderByKey(w http.ResponseWriter, r *http.Request) {
 
 	switch {
 	case len(parts) == 2 && parts[1] == "capabilities" && r.Method == http.MethodGet:
+		meta := item.Meta
+		meta.DefaultRiskTemplate = planner.ProviderDefaultRiskTemplate(meta)
 		writeOK(w, http.StatusOK, map[string]interface{}{
-			"provider":     item.Meta,
+			"provider":     meta,
 			"capabilities": item.Capability,
 		})
 	case len(parts) == 2 && parts[1] == "list" && r.Method == http.MethodPost:
@@ -870,4 +876,3 @@ func (a *App) resolveProviderProfile(ctx context.Context, profileID string) (pro
 		Extra:       profile.Extra,
 	}, nil
 }
-

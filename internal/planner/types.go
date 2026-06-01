@@ -57,6 +57,20 @@ type RiskProfileResolution struct {
 	OverrideFields      []string             `json:"overrideFields,omitempty"`
 }
 
+type ProviderRiskDefaults struct {
+	ProviderKey           string              `json:"providerKey"`
+	ProviderDisplayName   string              `json:"providerDisplayName,omitempty"`
+	DefaultMode           RiskMode            `json:"defaultMode"`
+	Profile               RiskProfile         `json:"profile"`
+	RecoverBudget         RecoverBudgetPolicy `json:"recoverBudget"`
+	CalibrationReasons    []string            `json:"calibrationReasons,omitempty"`
+	ProviderRiskHints     []string            `json:"providerRiskHints,omitempty"`
+	ProviderRiskTraits    []string            `json:"providerRiskTraits,omitempty"`
+	RecommendedRiskMode   RiskMode            `json:"recommendedRiskMode"`
+	RecommendedRiskReason string              `json:"recommendedRiskModeReason,omitempty"`
+	AggressiveRiskWarning string              `json:"aggressiveRiskWarning,omitempty"`
+}
+
 type RecoverBudgetPolicy struct {
 	ProtocolGroupBudget int      `json:"protocolGroupBudget,omitempty"`
 	ProviderBudget      int      `json:"providerBudget,omitempty"`

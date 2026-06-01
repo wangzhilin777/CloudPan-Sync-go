@@ -2297,6 +2297,10 @@ function renderProviders() {
       (entry) => {
         const riskHints = Array.isArray(entry.meta.riskHints) ? entry.meta.riskHints.filter(Boolean) : [];
         const riskTraits = Array.isArray(entry.meta.riskTraits) ? entry.meta.riskTraits.filter(Boolean) : [];
+        const defaultRiskTemplate =
+          entry.meta.defaultRiskTemplate && typeof entry.meta.defaultRiskTemplate === "object"
+            ? entry.meta.defaultRiskTemplate
+            : null;
         const fallbackModes = Array.isArray(entry.meta.fallbackModes) ? entry.meta.fallbackModes.filter(Boolean) : [];
         const conflictPolicies = Array.isArray(entry.meta.conflictPolicies) ? entry.meta.conflictPolicies.filter(Boolean) : [];
         return `
@@ -2314,6 +2318,9 @@ function renderProviders() {
           <div class="muted">conflict: ${escapeHTML(conflictPolicies.join(", ") || "-")}</div>
           <div class="muted">risk traits: ${escapeHTML(riskTraits.join(", ") || "-")}</div>
           <div class="muted">risk hints: ${escapeHTML(riskHints.join(" / ") || "-")}</div>
+          <div class="muted">default risk: ${escapeHTML(renderRiskProfileCompact(defaultRiskTemplate?.calibrated))}</div>
+          <div class="muted">recommended risk: ${escapeHTML(stringifyValue(defaultRiskTemplate?.recommendedMode, "-"))}</div>
+          <div class="muted">risk calibration: ${escapeHTML((defaultRiskTemplate?.calibrationReasons || []).join(" / ") || "-")}</div>
         </article>
       `;
       },

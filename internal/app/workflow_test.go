@@ -48,6 +48,30 @@ func TestAppWorkflowMainline(t *testing.T) {
 	if traits, ok := providerMeta["riskTraits"].([]interface{}); !ok || len(traits) == 0 {
 		t.Fatalf("expected provider riskTraits in providers list, got %#v", providerMeta["riskTraits"])
 	}
+	defaultRiskTemplate, ok := providerMeta["defaultRiskTemplate"].(map[string]interface{})
+	if !ok || defaultRiskTemplate == nil {
+		t.Fatalf("expected provider defaultRiskTemplate in providers list, got %#v", providerMeta["defaultRiskTemplate"])
+	}
+	if got := defaultRiskTemplate["recommendedMode"].(string); got == "" {
+		t.Fatalf("expected provider recommendedMode in defaultRiskTemplate, got %#v", defaultRiskTemplate["recommendedMode"])
+	}
+	if _, ok := defaultRiskTemplate["calibrated"].(map[string]interface{}); !ok {
+		t.Fatalf("expected provider calibrated defaultRiskTemplate profile, got %#v", defaultRiskTemplate["calibrated"])
+	}
+	if reasons, ok := defaultRiskTemplate["calibrationReasons"].([]interface{}); !ok || len(reasons) == 0 {
+		t.Fatalf("expected provider calibrationReasons in defaultRiskTemplate, got %#v", defaultRiskTemplate["calibrationReasons"])
+	}
+
+	capabilityResp := invokeJSON(t, handler, http.MethodGet, "/api/providers/123_open/capabilities", nil)
+	capabilityData := capabilityResp.Data.(map[string]interface{})
+	capabilityProvider := capabilityData["provider"].(map[string]interface{})
+	capabilityRiskTemplate, ok := capabilityProvider["defaultRiskTemplate"].(map[string]interface{})
+	if !ok || capabilityRiskTemplate == nil {
+		t.Fatalf("expected provider defaultRiskTemplate in capability response, got %#v", capabilityProvider["defaultRiskTemplate"])
+	}
+	if got := capabilityRiskTemplate["recommendedReason"].(string); got == "" {
+		t.Fatalf("expected provider defaultRiskTemplate recommendedReason, got %#v", capabilityRiskTemplate["recommendedReason"])
+	}
 
 	profileResp := invokeJSON(t, handler, http.MethodPost, "/api/auth/profiles", map[string]interface{}{
 		"providerKey": "123_open",

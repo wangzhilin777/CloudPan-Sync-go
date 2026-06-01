@@ -285,6 +285,45 @@ func defaultRiskProfile(providerKey string, mode RiskMode) RiskProfile {
 	return applyProviderRiskCalibration(providerKey, profile)
 }
 
+func ProviderDefaultRiskTemplate(meta provider.Provider) provider.RiskTemplateSummary {
+	defaults := DescribeProviderRiskDefaults(meta)
+	return provider.RiskTemplateSummary{
+		RecommendedMode:       string(defaults.RecommendedRiskMode),
+		Base:                  defaults.Profile,
+		Calibrated:            defaults.Profile,
+		CalibrationReasons:    append([]string(nil), defaults.CalibrationReasons...),
+		RecommendedReason:     defaults.RecommendedRiskReason,
+		AggressiveRiskWarning: defaults.AggressiveRiskWarning,
+	}
+}
+
+func DescribeProviderRiskDefaults(meta provider.Provider) ProviderRiskDefaults {
+	resolution := resolveRiskProfile(meta, RiskModeBalanced, nil)
+	recommended := RiskModeBalanced
+	reason := "Balanced is the default provider template for steady transfer pacing."
+	if isRiskSensitiveProvider(meta.Key) {
+		recommended = RiskModeSafe
+		reason = "This provider is more risk-sensitive, so large or unknown workloads should start from safe pacing."
+	}
+	if len(meta.RiskHints) > 0 {
+		reason = reason + " Provider hint: " + meta.RiskHints[0]
+	}
+	_, _, warning := recommendRiskMode(meta, PreviewRequest{RiskMode: RiskModeFast, SelectedRoots: []string{"/unknown"}}, resolution)
+	return ProviderRiskDefaults{
+		ProviderKey:           meta.Key,
+		ProviderDisplayName:   meta.DisplayName,
+		DefaultMode:           RiskModeBalanced,
+		Profile:               resolution.Calibrated,
+		RecoverBudget:         resolution.RecoverBudget,
+		CalibrationReasons:    append([]string(nil), resolution.CalibrationReasons...),
+		ProviderRiskHints:     append([]string(nil), meta.RiskHints...),
+		ProviderRiskTraits:    append([]string(nil), meta.RiskTraits...),
+		RecommendedRiskMode:   recommended,
+		RecommendedRiskReason: reason,
+		AggressiveRiskWarning: warning,
+	}
+}
+
 func resolveRiskProfile(meta provider.Provider, mode RiskMode, override *RiskProfileOverride) RiskProfileResolution {
 	normalizedMode := normalizeRiskMode(mode)
 	base := baseRiskProfile(normalizedMode, meta.Key)
