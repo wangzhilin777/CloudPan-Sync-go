@@ -318,6 +318,24 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "data-runtime-focus-kind") {
 		t.Fatalf("expected runtime focus kind dataset in app.js, got %q", body)
 	}
+	if !strings.Contains(body, "sourceDeletionRecordPaths") {
+		t.Fatalf("expected source deletion path helper in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "wireSourceDeletionSummary") {
+		t.Fatalf("expected source deletion summary wiring in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "data-source-delete-prefill-path") {
+		t.Fatalf("expected per-record source deletion prefill action in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "data-source-delete-prefill-paths") {
+		t.Fatalf("expected batch source deletion prefill action in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "用此删除记录重建向导") {
+		t.Fatalf("expected per-record source deletion rebuild label in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "按全部删除记录重建向导") {
+		t.Fatalf("expected batch source deletion rebuild label in app.js, got %q", body)
+	}
 	if !strings.Contains(body, "renderRuntimePathChips") {
 		t.Fatalf("expected runtime path chips renderer in app.js, got %q", body)
 	}

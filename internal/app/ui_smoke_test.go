@@ -63,6 +63,12 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 			"md5":       "md5-ui-smoke",
 			"localPath": localFile,
 		},
+		{
+			"path":         "/demo/deleted.bin",
+			"deleted":      true,
+			"deletedAt":    "2026-05-29T10:00:00Z",
+			"deleteReason": "source_removed",
+		},
 	})
 	if err != nil {
 		t.Fatalf("marshal ui smoke entries: %v", err)
@@ -270,7 +276,14 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 		waitForText(`#task-summary`, "CALIBRATED"),
 		waitForText(`#task-summary`, "OVERRIDE FIELDS"),
 		waitForText(`#task-runtime`, "SELECTED ROOTS"),
+		waitForText(`#task-runtime`, "删除记录摘要"),
+		waitForText(`#task-runtime`, "默认只记录，不会自动删除目标端真实文件。"),
 		waitForText(`#task-detail`, `"state": "ready"`),
+		chromedp.Click(`#task-runtime [data-source-delete-prefill-paths]`, chromedp.ByQuery),
+		waitForValueContains(`#plan-selected-roots`, "/demo/deleted.bin"),
+		waitForText(`#flash`, "已按全部删除记录重建向导范围"),
+		chromedp.Click(`button[data-view="tasks"]`, chromedp.ByQuery),
+		waitForText(`#task-runtime`, "删除记录摘要"),
 		waitForText(`#task-directory-states`, "/demo"),
 		chromedp.Click(`#task-summary [data-runtime-focus-kind="roots"]`, chromedp.ByQuery),
 		waitForText(`#task-directory-filter-summary`, "当前显示"),

@@ -1250,17 +1250,32 @@ function renderRuntimeCheckpoint(runtime, metadata = null, scope = "task") {
         `
         : ""
     }
-    ${renderSourceDeletionSummary(runtime.sourceDeletionRecords || metadata?.sourceDeletionRecords || [], runtime.sourceDeletionCount || metadata?.deletedEntryCount || 0, scope)}
+    ${renderSourceDeletionSummary(runtime.sourceDeletionRecords || metadata?.sourceDeletionRecords || [], runtime.sourceDeletionCount || metadata?.deletedEntryCount || 0, scope, scope)}
     ${renderUploadCheckpoint(runtime.uploadCheckpoint)}
   `;
 }
 
-function renderSourceDeletionSummary(records, count = 0, scope = "task") {
+function sourceDeletionRecordPaths(records) {
+  const seen = new Set();
+  return (Array.isArray(records) ? records : [])
+    .map((item) => normalizeComparePath(firstNonEmpty(item?.path, "")))
+    .filter((path) => {
+      if (!path || seen.has(path)) {
+        return false;
+      }
+      seen.add(path);
+      return true;
+    });
+}
+
+function renderSourceDeletionSummary(records, count = 0, scope = "task", prefillScope = null) {
   const items = Array.isArray(records) ? records.filter((item) => item && typeof item === "object") : [];
   const resolvedCount = Number(count || items.length || 0);
   if (!resolvedCount && !items.length) {
     return "";
   }
+  const paths = sourceDeletionRecordPaths(items);
+  const canPrefill = Boolean(prefillScope && paths.length);
   const shown = items.slice(0, 4);
   const rows = shown
     .map((item) => {
@@ -1268,14 +1283,24 @@ function renderSourceDeletionSummary(records, count = 0, scope = "task") {
       const reason = firstNonEmpty(item.deleteReason, item.reason, "-");
       const deletedAt = firstNonEmpty(item.deletedAt, "-");
       return `
-        <div class="muted">
-          <button
-            type="button"
-            class="ghost path-chip"
-            data-runtime-focus-path="${escapeHTML(path)}"
-            data-runtime-focus-scope="${escapeHTML(scope)}"
-            data-runtime-focus-kind="roots"
-          >${escapeHTML(path)}</button>
+        <div class="muted source-deletion-row">
+          <div class="actions compact">
+            <button
+              type="button"
+              class="ghost path-chip"
+              data-runtime-focus-path="${escapeHTML(path)}"
+              data-runtime-focus-scope="${escapeHTML(scope)}"
+              data-runtime-focus-kind="roots"
+            >${escapeHTML(path)}</button>
+            ${canPrefill && path !== "-" ? `
+              <button
+                type="button"
+                class="ghost"
+                data-source-delete-prefill-path="${escapeHTML(path)}"
+                data-source-delete-prefill-scope="${escapeHTML(prefillScope)}"
+              >用此删除记录重建向导</button>
+            ` : ""}
+          </div>
           <span> | reason ${escapeHTML(reason)} | deletedAt ${escapeHTML(deletedAt)}</span>
         </div>
       `;
@@ -1285,6 +1310,17 @@ function renderSourceDeletionSummary(records, count = 0, scope = "task") {
     <div class="insight-card checkpoint-card">
       <strong>删除记录摘要</strong>
       <div>${resolvedCount} 条，默认只记录，不会自动删除目标端真实文件。</div>
+      ${canPrefill ? `
+        <div class="actions compact">
+          <button
+            type="button"
+            class="ghost"
+            data-source-delete-prefill-paths="${escapeHTML(JSON.stringify(paths))}"
+            data-source-delete-prefill-scope="${escapeHTML(prefillScope)}"
+            data-source-delete-prefill-label="全部删除记录"
+          >按全部删除记录重建向导</button>
+        </div>
+      ` : ""}
       ${rows || '<div class="muted">暂无可展开样本。</div>'}
       ${items.length > shown.length ? `<div class="muted">还有 ${items.length - shown.length} 条未展开。</div>` : ""}
     </div>
@@ -2444,7 +2480,7 @@ function pathMatchesSubtree(candidatePath, rootPath) {
   return candidate === root || candidate.startsWith(`${root}/`);
 }
 
-function buildCreatePayloadFromTaskPath(detail, path) {
+function buildCreatePayloadFromTaskPath(detail, path, options = {}) {
   const payload = buildCreatePayloadFromTask(detail);
   const normalizedPath = normalizeComparePath(path);
   if (!payload || !normalizedPath) {
@@ -2452,12 +2488,16 @@ function buildCreatePayloadFromTaskPath(detail, path) {
   }
   const narrowedEntries = (payload.entries || []).filter((entry) => pathMatchesSubtree(entry?.path, normalizedPath));
   const narrowedRoots = (payload.selectedRoots || []).filter((root) => pathMatchesSubtree(normalizedPath, root) || pathMatchesSubtree(root, normalizedPath));
-  payload.selectedRoots = narrowedRoots.length ? narrowedRoots.filter((root) => pathMatchesSubtree(normalizedPath, root)) : [normalizedPath];
+  payload.selectedRoots = options.exactRoots
+    ? [normalizedPath]
+    : narrowedRoots.length
+      ? narrowedRoots.filter((root) => pathMatchesSubtree(normalizedPath, root))
+      : [normalizedPath];
   payload.entries = narrowedEntries.length ? narrowedEntries : payload.entries;
   return payload;
 }
 
-function buildCreatePayloadFromTaskPaths(detail, paths) {
+function buildCreatePayloadFromTaskPaths(detail, paths, options = {}) {
   const payload = buildCreatePayloadFromTask(detail);
   const normalizedPaths = Array.from(new Set((Array.isArray(paths) ? paths : []).map((path) => normalizeComparePath(path)).filter(Boolean)));
   if (!payload || !normalizedPaths.length) {
@@ -2469,7 +2509,7 @@ function buildCreatePayloadFromTaskPaths(detail, paths) {
   const narrowedRoots = (payload.selectedRoots || []).filter((root) =>
     normalizedPaths.some((path) => pathMatchesSubtree(path, root) || pathMatchesSubtree(root, path)),
   );
-  payload.selectedRoots = narrowedRoots.length ? narrowedRoots : normalizedPaths;
+  payload.selectedRoots = options.exactRoots ? normalizedPaths : narrowedRoots.length ? narrowedRoots : normalizedPaths;
   payload.entries = narrowedEntries.length ? narrowedEntries : payload.entries;
   return payload;
 }
@@ -2869,8 +2909,8 @@ function renderProviders() {
   syncTargetProviderInsight();
 }
 
-function prefillWizardFromTaskPath(detail, path) {
-  const payload = buildCreatePayloadFromTaskPath(detail, path);
+function prefillWizardFromTaskPath(detail, path, options = {}) {
+  const payload = buildCreatePayloadFromTaskPath(detail, path, options);
   if (!payload) {
     showFlash("请先选择任务", true);
     return;
@@ -2895,8 +2935,8 @@ function prefillWizardFromTaskPath(detail, path) {
   showFlash(`已按 ${path} 重建向导范围`);
 }
 
-function prefillWizardFromTaskPaths(detail, paths, label = "当前筛选") {
-  const payload = buildCreatePayloadFromTaskPaths(detail, paths);
+function prefillWizardFromTaskPaths(detail, paths, label = "当前筛选", options = {}) {
+  const payload = buildCreatePayloadFromTaskPaths(detail, paths, options);
   if (!payload) {
     showFlash("请先选择任务", true);
     return;
@@ -2919,6 +2959,51 @@ function prefillWizardFromTaskPaths(detail, paths, label = "当前筛选") {
   $("#plan-entries").value = JSON.stringify(payload.entries || [], null, 2);
   syncExecutionModeHint();
   showFlash(`已按${label}重建向导范围`);
+}
+
+function wireSourceDeletionSummary(scope, selector = null) {
+  const wrap = selector ? $(selector) : scope === "task" ? $("#task-runtime") : $("#status-runtime-checkpoints");
+  if (!wrap) {
+    return;
+  }
+  wrap.querySelectorAll("[data-source-delete-prefill-path]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const focusScope = button.dataset.sourceDeletePrefillScope || scope;
+      const context = taskContextByScope(focusScope);
+      if (!context?.detail) {
+        showFlash(focusScope === "task" ? "请先选择任务" : "当前状态样本没有可用任务", true);
+        return;
+      }
+      const path = button.dataset.sourceDeletePrefillPath || "";
+      if (!path) {
+        showFlash("缺少可重建路径", true);
+        return;
+      }
+      prefillWizardFromTaskPath(context.detail, path, { exactRoots: true });
+    });
+  });
+  wrap.querySelectorAll("[data-source-delete-prefill-paths]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const focusScope = button.dataset.sourceDeletePrefillScope || scope;
+      const context = taskContextByScope(focusScope);
+      if (!context?.detail) {
+        showFlash(focusScope === "task" ? "请先选择任务" : "当前状态样本没有可用任务", true);
+        return;
+      }
+      let paths = [];
+      try {
+        paths = JSON.parse(button.dataset.sourceDeletePrefillPaths || "[]");
+      } catch {
+        paths = [];
+      }
+      const normalizedPaths = Array.isArray(paths) ? paths.map((path) => normalizeComparePath(path)).filter(Boolean) : [];
+      if (!normalizedPaths.length) {
+        showFlash("当前没有可重建的删除记录", true);
+        return;
+      }
+      prefillWizardFromTaskPaths(context.detail, normalizedPaths, button.dataset.sourceDeletePrefillLabel || "全部删除记录", { exactRoots: true });
+    });
+  });
 }
 
 function syncAuthModes() {
@@ -3391,6 +3476,7 @@ function renderSelectedTask() {
   $("#task-runtime").innerHTML = renderRuntimeCheckpoint(runtime, metadata, "task");
   wireRuntimePathFocus("task", "#task-summary");
   wireRuntimePathFocus("task");
+  wireSourceDeletionSummary("task", "#task-runtime");
   updateTaskRetryQueue(detail);
   $("#task-resolution-guide").innerHTML = renderTaskResolutionGuide(detail);
   updateTaskTreePanels(detail);
@@ -3650,6 +3736,7 @@ function renderStatus() {
   const runtimePayload = recentRuntimePayload();
   $("#status-runtime-checkpoints").innerHTML = renderRuntimeCheckpoint(runtimePayload?.runtime || runtimePayload, runtimePayload, "status");
   wireRuntimePathFocus("status");
+  wireSourceDeletionSummary("status", "#status-runtime-checkpoints");
   updateStatusRetryQueue(runtimePayload);
   updateStatusTreePanels(runtimePayload);
 }
@@ -6974,4 +7061,3 @@ async function init() {
 }
 
 window.addEventListener("DOMContentLoaded", init);
-
