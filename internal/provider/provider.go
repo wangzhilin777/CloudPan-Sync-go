@@ -13,6 +13,8 @@ type Provider struct {
 	Key                string           `json:"key"`
 	DisplayName        string           `json:"displayName"`
 	ProtocolGroup      string           `json:"protocolGroup"`
+	RiskHints          []string         `json:"riskHints,omitempty"`
+	RiskTraits         []string         `json:"riskTraits,omitempty"`
 	AuthModes          []string         `json:"authModes"`
 	FastUploadInputs   []string         `json:"fastUploadInputs"`
 	FallbackModes      []string         `json:"fallbackModes"`

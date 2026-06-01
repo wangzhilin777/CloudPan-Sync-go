@@ -131,6 +131,12 @@ func TestAppWorkflowMainline(t *testing.T) {
 	if reasons, ok := riskResolution["calibrationReasons"].([]interface{}); !ok || len(reasons) == 0 {
 		t.Fatalf("expected preview calibrationReasons, got %#v", riskResolution["calibrationReasons"])
 	}
+	if hints, ok := riskResolution["providerRiskHints"].([]interface{}); !ok || len(hints) == 0 {
+		t.Fatalf("expected preview providerRiskHints, got %#v", riskResolution["providerRiskHints"])
+	}
+	if traits, ok := riskResolution["providerRiskTraits"].([]interface{}); !ok || len(traits) == 0 {
+		t.Fatalf("expected preview providerRiskTraits, got %#v", riskResolution["providerRiskTraits"])
+	}
 	if got := metadata["recommendedRiskMode"].(string); got == "" {
 		t.Fatal("expected recommendedRiskMode in preview metadata")
 	}
@@ -219,6 +225,12 @@ func TestAppWorkflowMainline(t *testing.T) {
 	}
 	if _, ok := createdResolution["applied"].(map[string]interface{}); !ok {
 		t.Fatalf("expected task risk resolution applied, got %#v", createdResolution["applied"])
+	}
+	if hints, ok := createdResolution["providerRiskHints"].([]interface{}); !ok || len(hints) == 0 {
+		t.Fatalf("expected task providerRiskHints, got %#v", createdResolution["providerRiskHints"])
+	}
+	if traits, ok := createdResolution["providerRiskTraits"].([]interface{}); !ok || len(traits) == 0 {
+		t.Fatalf("expected task providerRiskTraits, got %#v", createdResolution["providerRiskTraits"])
 	}
 
 	pauseResp := invokeJSON(t, handler, http.MethodPost, "/api/tasks/"+taskID+"/pause", nil)

@@ -172,7 +172,15 @@ function renderRiskResolutionSummary(resolution) {
   const providerKey = stringifyValue(resolution.providerKey, "-");
   const reasons = Array.isArray(resolution.calibrationReasons) ? resolution.calibrationReasons.filter(Boolean) : [];
   const overrideFields = Array.isArray(resolution.overrideFields) ? resolution.overrideFields.filter(Boolean) : [];
+  const providerHints = Array.isArray(resolution.providerRiskHints) ? resolution.providerRiskHints.filter(Boolean) : [];
+  const providerTraits = Array.isArray(resolution.providerRiskTraits) ? resolution.providerRiskTraits.filter(Boolean) : [];
   const parts = [`provider ${providerKey}`];
+  if (providerTraits.length) {
+    parts.push(`traits ${providerTraits.join(", ")}`);
+  }
+  if (providerHints.length) {
+    parts.push(`hint ${providerHints[0]}`);
+  }
   if (reasons.length) {
     parts.push(`校准 ${reasons.join(" / ")}`);
   }
@@ -214,6 +222,8 @@ function renderRiskResolutionDetail(resolution) {
   }
   const reasons = Array.isArray(resolution.calibrationReasons) ? resolution.calibrationReasons.filter(Boolean) : [];
   const overrideFields = Array.isArray(resolution.overrideFields) ? resolution.overrideFields.filter(Boolean) : [];
+  const providerHints = Array.isArray(resolution.providerRiskHints) ? resolution.providerRiskHints.filter(Boolean) : [];
+  const providerTraits = Array.isArray(resolution.providerRiskTraits) ? resolution.providerRiskTraits.filter(Boolean) : [];
   const recoverBudget = resolution.recoverBudget && typeof resolution.recoverBudget === "object" ? resolution.recoverBudget : null;
   const sensitiveProviders = Array.isArray(recoverBudget?.sensitiveProviders)
     ? recoverBudget.sensitiveProviders.filter(Boolean)
@@ -225,6 +235,8 @@ function renderRiskResolutionDetail(resolution) {
     <div class="muted">RECOVER BUDGET ${escapeHTML(renderRecoverBudgetCompact(recoverBudget))}</div>
     <div class="muted">RECOVER REASON ${escapeHTML(stringifyValue(recoverBudget?.reason, "-"))}</div>
     <div class="muted">SENSITIVE PROVIDERS ${escapeHTML(sensitiveProviders.join(", ") || "-")}</div>
+    <div class="muted">PROVIDER HINTS ${escapeHTML(providerHints.join(" / ") || "-")}</div>
+    <div class="muted">PROVIDER TRAITS ${escapeHTML(providerTraits.join(", ") || "-")}</div>
     <div class="muted">CALIBRATION REASONS ${escapeHTML(reasons.join(" / ") || "-")}</div>
     <div class="muted">OVERRIDE FIELDS ${escapeHTML(overrideFields.join(", ") || "-")}</div>
   `;

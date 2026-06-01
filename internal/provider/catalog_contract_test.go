@@ -42,6 +42,12 @@ func TestDefaultCatalogProviderContractCoverage(t *testing.T) {
 		if len(entry.Meta.ConflictPolicies) == 0 {
 			t.Fatalf("expected provider %s conflict policies", key)
 		}
+		if len(entry.Meta.RiskHints) == 0 {
+			t.Fatalf("expected provider %s risk hints", key)
+		}
+		if len(entry.Meta.RiskTraits) == 0 {
+			t.Fatalf("expected provider %s risk traits", key)
+		}
 		if !entry.Capability.SupportsAuthValidation ||
 			!entry.Capability.SupportsList ||
 			!entry.Capability.SupportsMetadata ||

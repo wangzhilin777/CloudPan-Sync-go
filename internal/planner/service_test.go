@@ -102,6 +102,12 @@ func TestBuildPreviewIncludesRiskProfileDefaults(t *testing.T) {
 	if !ok {
 		t.Fatalf("expected riskProfileResolution metadata, got %#v", plan.Metadata["riskProfileResolution"])
 	}
+	if len(resolution.ProviderRiskHints) == 0 {
+		t.Fatalf("expected provider risk hints in resolution, got %+v", resolution)
+	}
+	if len(resolution.ProviderRiskTraits) == 0 {
+		t.Fatalf("expected provider risk traits in resolution, got %+v", resolution)
+	}
 	if resolution.ProviderKey != "189cloud" || resolution.Mode != RiskModeSafe {
 		t.Fatalf("unexpected risk profile resolution: %+v", resolution)
 	}
