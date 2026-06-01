@@ -4256,14 +4256,18 @@ func riskProfileResolutionFromRaw(raw interface{}) (planner.RiskProfileResolutio
 		return typed, true
 	case map[string]interface{}:
 		return planner.RiskProfileResolution{
-			ProviderKey:        stringValue(typed["providerKey"]),
-			Mode:               planner.RiskMode(stringValue(typed["mode"])),
-			Base:               riskProfileFromRaw(typed["base"]),
-			Calibrated:         riskProfileFromRaw(typed["calibrated"]),
-			Applied:            riskProfileFromRaw(typed["applied"]),
-			RecoverBudget:      recoverBudgetPolicyFromRaw(typed["recoverBudget"]),
-			CalibrationReasons: metadataStringSlice(map[string]interface{}{"items": typed["calibrationReasons"]}, "items"),
-			OverrideFields:     metadataStringSlice(map[string]interface{}{"items": typed["overrideFields"]}, "items"),
+			ProviderKey:              stringValue(typed["providerKey"]),
+			ProfileDefaultSource:     stringValue(typed["profileDefaultSource"]),
+			ProfileDefaultSourceKind: stringValue(typed["profileDefaultSourceKind"]),
+			ProfileDefaultBias:       stringValue(typed["profileDefaultBias"]),
+			Mode:                     planner.RiskMode(stringValue(typed["mode"])),
+			Base:                     riskProfileFromRaw(typed["base"]),
+			Calibrated:               riskProfileFromRaw(typed["calibrated"]),
+			Applied:                  riskProfileFromRaw(typed["applied"]),
+			RecoverBudget:            recoverBudgetPolicyFromRaw(typed["recoverBudget"]),
+			CalibrationReasons:       metadataStringSlice(map[string]interface{}{"items": typed["calibrationReasons"]}, "items"),
+			ProfileDefaultFields:     metadataStringSlice(map[string]interface{}{"items": typed["profileDefaultFields"]}, "items"),
+			OverrideFields:           metadataStringSlice(map[string]interface{}{"items": typed["overrideFields"]}, "items"),
 		}, true
 	default:
 		return planner.RiskProfileResolution{}, false

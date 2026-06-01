@@ -340,25 +340,30 @@ func resolveRiskProfile(meta provider.Provider, mode RiskMode, profileDefaults *
 	calibrated, calibrationReasons := applyProviderRiskCalibrationWithReasons(meta.Key, base)
 	profileApplied, profileDefaultFields := applyRiskProfileOverrideWithFields(calibrated, profileDefaults)
 	applied, overrideFields := applyRiskProfileOverrideWithFields(profileApplied, override)
+	profileDefaultSource = strings.TrimSpace(profileDefaultSource)
+	profileDefaultSourceKind := classifyProfileDefaultSourceKind(profileDefaultSource)
+	profileDefaultBias := classifyProfileDefaultBias(calibrated, profileApplied, profileDefaultFields)
 	// 根据最终的 RiskProfile 计算恢复预算策略，统一由 Planner 提供。
-	recoverBudget := deriveRecoverBudgetPolicy(meta.Key, applied)
+	recoverBudget := deriveRecoverBudgetPolicy(meta.Key, calibrated, applied, profileDefaultSourceKind, profileDefaultBias)
 	return RiskProfileResolution{
-		ProviderKey:          meta.Key,
-		ProviderDisplayName:  meta.DisplayName,
-		ProviderRiskHints:    append([]string(nil), meta.RiskHints...),
-		ProviderRiskTraits:   append([]string(nil), meta.RiskTraits...),
-		ProfileDefaultSource: strings.TrimSpace(profileDefaultSource),
-		Mode:                 normalizedMode,
-		Base:                 base,
-		Calibrated:           calibrated,
-		ProfileApplied:       profileApplied,
-		Applied:              applied,
-		RecoverBudget:        recoverBudget,
-		CalibrationReasons:   calibrationReasons,
-		ProfileDefaults:      profileDefaults,
-		ProfileDefaultFields: profileDefaultFields,
-		Override:             override,
-		OverrideFields:       overrideFields,
+		ProviderKey:              meta.Key,
+		ProviderDisplayName:      meta.DisplayName,
+		ProviderRiskHints:        append([]string(nil), meta.RiskHints...),
+		ProviderRiskTraits:       append([]string(nil), meta.RiskTraits...),
+		ProfileDefaultSourceKind: profileDefaultSourceKind,
+		ProfileDefaultBias:       profileDefaultBias,
+		ProfileDefaultSource:     profileDefaultSource,
+		Mode:                     normalizedMode,
+		Base:                     base,
+		Calibrated:               calibrated,
+		ProfileApplied:           profileApplied,
+		Applied:                  applied,
+		RecoverBudget:            recoverBudget,
+		CalibrationReasons:       calibrationReasons,
+		ProfileDefaults:          profileDefaults,
+		ProfileDefaultFields:     profileDefaultFields,
+		Override:                 override,
+		OverrideFields:           overrideFields,
 	}
 }
 
@@ -528,7 +533,7 @@ func minPositive(current int, limit int) int {
 	return limit
 }
 
-func deriveRecoverBudgetPolicy(providerKey string, profile RiskProfile) RecoverBudgetPolicy {
+func deriveRecoverBudgetPolicy(providerKey string, calibrated RiskProfile, profile RiskProfile, profileDefaultSourceKind string, profileDefaultBias string) RecoverBudgetPolicy {
 	policy := RecoverBudgetPolicy{}
 	if profile.MaxConcurrent <= 0 {
 		return policy
@@ -538,6 +543,16 @@ func deriveRecoverBudgetPolicy(providerKey string, profile RiskProfile) RecoverB
 		policy.ProtocolGroupBudget = 1
 	} else {
 		policy.ProtocolGroupBudget = minPositive(profile.MaxConcurrent, 2)
+	}
+	_ = calibrated
+	if profileDefaultSourceKind == "smoke_matrix" && profileDefaultBias == "more_conservative" {
+		policy.ProtocolGroupBudget = 1
+		policy.ProfileBudget = 1
+		policy.Reason = "Accepted smoke-matrix profile defaults are more conservative than provider baseline, so recover budget narrows to one protocol group/profile per round."
+		if isSensitiveRecoverBudgetProvider(providerKey) {
+			policy.SensitiveProviders = []string{providerKey}
+		}
+		return policy
 	}
 	sensitive := isSensitiveRecoverBudgetProvider(providerKey)
 	if sensitive {
@@ -554,6 +569,70 @@ func deriveRecoverBudgetPolicy(providerKey string, profile RiskProfile) RecoverB
 	policy.ProfileBudget = minPositive(profile.MaxConcurrent, 2)
 	policy.Reason = "Recover budgets inherit maxConcurrent and keep profile fairness within each provider."
 	return policy
+}
+
+func classifyProfileDefaultSourceKind(source string) string {
+	source = strings.TrimSpace(source)
+	if source == "" {
+		return ""
+	}
+	if strings.HasPrefix(strings.ToLower(source), "smoke matrix ") {
+		return "smoke_matrix"
+	}
+	return "auth_profile"
+}
+
+func classifyProfileDefaultBias(base RiskProfile, applied RiskProfile, fields []string) string {
+	if len(fields) == 0 {
+		return "same_as_provider"
+	}
+	conservative := 0
+	aggressive := 0
+	for _, field := range fields {
+		switch strings.TrimSpace(field) {
+		case "requestIntervalMs":
+			compareBiasInt(applied.RequestIntervalMS, base.RequestIntervalMS, &conservative, &aggressive, true)
+		case "directoryIntervalMs":
+			compareBiasInt(applied.DirectoryIntervalMS, base.DirectoryIntervalMS, &conservative, &aggressive, true)
+		case "cooldownSeconds":
+			compareBiasInt(applied.CooldownSeconds, base.CooldownSeconds, &conservative, &aggressive, true)
+		case "pageSize":
+			compareBiasInt(applied.PageSize, base.PageSize, &conservative, &aggressive, false)
+		case "retryLimit":
+			compareBiasInt(applied.RetryLimit, base.RetryLimit, &conservative, &aggressive, false)
+		case "maxConcurrent":
+			compareBiasInt(applied.MaxConcurrent, base.MaxConcurrent, &conservative, &aggressive, false)
+		}
+	}
+	switch {
+	case conservative > 0 && aggressive == 0:
+		return "more_conservative"
+	case aggressive > 0 && conservative == 0:
+		return "more_aggressive"
+	case conservative == 0 && aggressive == 0:
+		return "same_as_provider"
+	default:
+		return "mixed"
+	}
+}
+
+func compareBiasInt(current int, base int, conservative *int, aggressive *int, higherIsConservative bool) {
+	if current == base {
+		return
+	}
+	if higherIsConservative {
+		if current > base {
+			*conservative = *conservative + 1
+			return
+		}
+		*aggressive = *aggressive + 1
+		return
+	}
+	if current < base {
+		*conservative = *conservative + 1
+		return
+	}
+	*aggressive = *aggressive + 1
 }
 
 func isSensitiveRecoverBudgetProvider(providerKey string) bool {
@@ -692,6 +771,19 @@ func recommendRiskMode(meta provider.Provider, req PreviewRequest, resolution Ri
 	case entryCount <= 20 && rootCount <= 1:
 		recommended = RiskModeFast
 		reason = "Known small input set can use a faster profile to finish validation and transfer with fewer long waits."
+	}
+
+	if resolution.ProfileDefaultSourceKind == "smoke_matrix" && resolution.ProfileDefaultBias == "more_conservative" {
+		if recommended == RiskModeFast {
+			recommended = RiskModeBalanced
+		}
+		reason = reason + " Accepted smoke-matrix account defaults are more conservative than provider baseline, so recommendation stays aligned with account evidence."
+	} else if resolution.ProfileDefaultBias == "more_conservative" {
+		reason = reason + " Account profile defaults are more conservative than provider baseline and should be respected before raising throughput."
+	} else if resolution.ProfileDefaultBias == "more_aggressive" {
+		warning = "Account profile defaults are more aggressive than provider baseline. Re-check pacing, retry limit, and concurrency before large runs."
+	} else if resolution.ProfileDefaultBias == "mixed" {
+		reason = reason + " Account profile defaults mix conservative and aggressive fields, so final pacing should be validated against runtime evidence."
 	}
 
 	if selectedMode == RiskModeFast {

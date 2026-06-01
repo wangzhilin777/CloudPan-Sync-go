@@ -365,6 +365,12 @@ func TestBuildPreviewAppliesProfileRiskDefaultsBeforeTaskOverride(t *testing.T) 
 	if resolution.ProfileDefaultSource != "Profile 123" {
 		t.Fatalf("expected profile default source Profile 123, got %+v", resolution)
 	}
+	if resolution.ProfileDefaultSourceKind != "auth_profile" {
+		t.Fatalf("expected auth_profile source kind, got %+v", resolution)
+	}
+	if resolution.ProfileDefaultBias != "mixed" {
+		t.Fatalf("expected mixed profile bias, got %+v", resolution)
+	}
 	if resolution.ProfileApplied.RequestIntervalMS != 1666 {
 		t.Fatalf("expected profileApplied request interval 1666, got %+v", resolution.ProfileApplied)
 	}
@@ -385,6 +391,119 @@ func TestBuildPreviewAppliesProfileRiskDefaultsBeforeTaskOverride(t *testing.T) 
 	}
 }
 
+func TestBuildPreviewSmokeMatrixProfileDefaultsTightenRecoverBudgetAndRecommendation(t *testing.T) {
+	registry := provider.NewRegistry(provider.DefaultCatalog()...)
+	plan, err := BuildPreview(registry, PreviewRequest{
+		SourceProvider:       "guangya",
+		TargetProvider:       "123_open",
+		TargetProfileID:      "profile-smoke",
+		RiskMode:             RiskModeFast,
+		ProfileDefaultSource: "Smoke Matrix aliyun_123_open (accepted)",
+		ProfileRiskDefaults: &RiskProfileOverride{
+			RequestIntervalMS:   intPtr(1800),
+			DirectoryIntervalMS: intPtr(2600),
+			RetryLimit:          intPtr(3),
+			MaxConcurrent:       intPtr(1),
+		},
+		Entries: []SourceEntry{{Path: "/small.bin", Size: 10, MD5: "md5-a"}},
+	})
+	if err != nil {
+		t.Fatalf("BuildPreview() error = %v", err)
+	}
+	resolution, ok := plan.Metadata["riskProfileResolution"].(RiskProfileResolution)
+	if !ok {
+		t.Fatalf("expected riskProfileResolution metadata, got %#v", plan.Metadata["riskProfileResolution"])
+	}
+	if resolution.ProfileDefaultSourceKind != "smoke_matrix" {
+		t.Fatalf("expected smoke_matrix source kind, got %+v", resolution)
+	}
+	if resolution.ProfileDefaultBias != "more_conservative" {
+		t.Fatalf("expected more_conservative profile bias, got %+v", resolution)
+	}
+	if resolution.RecoverBudget.ProtocolGroupBudget != 1 || resolution.RecoverBudget.ProfileBudget != 1 {
+		t.Fatalf("expected tightened recover budget for smoke defaults, got %+v", resolution.RecoverBudget)
+	}
+	if !strings.Contains(resolution.RecoverBudget.Reason, "smoke-matrix") {
+		t.Fatalf("expected smoke-matrix recover budget reason, got %+v", resolution.RecoverBudget)
+	}
+	if got, _ := plan.Metadata["recommendedRiskMode"].(RiskMode); got != RiskModeBalanced {
+		t.Fatalf("expected recommendedRiskMode balanced after conservative smoke defaults, got %v", plan.Metadata["recommendedRiskMode"])
+	}
+	reason, _ := plan.Metadata["recommendedRiskModeReason"].(string)
+	if !strings.Contains(reason, "smoke-matrix") {
+		t.Fatalf("expected recommendedRiskModeReason to mention smoke-matrix defaults, got %#v", reason)
+	}
+}
+
+func TestBuildPreviewClassifiesProfileDefaultSourceAndBias(t *testing.T) {
+	registry := provider.NewRegistry(provider.DefaultCatalog()...)
+	plan, err := BuildPreview(registry, PreviewRequest{
+		SourceProvider:       "guangya",
+		TargetProvider:       "123_open",
+		RiskMode:             RiskModeBalanced,
+		ProfileDefaultSource: "Smoke Matrix aliyun_123_open (accepted)",
+		ProfileRiskDefaults: &RiskProfileOverride{
+			RequestIntervalMS:   intPtr(1800),
+			DirectoryIntervalMS: intPtr(2600),
+			RetryLimit:          intPtr(3),
+			MaxConcurrent:       intPtr(1),
+		},
+		Entries: []SourceEntry{{Path: "/a.bin", Size: 10, MD5: "md5-a"}},
+	})
+	if err != nil {
+		t.Fatalf("BuildPreview() error = %v", err)
+	}
+	resolution, ok := plan.Metadata["riskProfileResolution"].(RiskProfileResolution)
+	if !ok {
+		t.Fatalf("expected riskProfileResolution metadata, got %#v", plan.Metadata["riskProfileResolution"])
+	}
+	if resolution.ProfileDefaultSourceKind != "smoke_matrix" {
+		t.Fatalf("expected profile default source kind smoke_matrix, got %+v", resolution)
+	}
+	if resolution.ProfileDefaultBias != "more_conservative" {
+		t.Fatalf("expected profile default bias more_conservative, got %+v", resolution)
+	}
+	if resolution.RecoverBudget.ProtocolGroupBudget != 1 || resolution.RecoverBudget.ProfileBudget != 1 {
+		t.Fatalf("expected conservative smoke defaults to narrow recover budget, got %+v", resolution.RecoverBudget)
+	}
+	reason, _ := plan.Metadata["recommendedRiskModeReason"].(string)
+	if !strings.Contains(reason, "smoke-matrix") {
+		t.Fatalf("expected recommendedRiskModeReason to mention smoke-matrix defaults, got %#v", reason)
+	}
+}
+
+func TestBuildPreviewWarnsWhenProfileDefaultsAreMoreAggressive(t *testing.T) {
+	registry := provider.NewRegistry(provider.DefaultCatalog()...)
+	plan, err := BuildPreview(registry, PreviewRequest{
+		SourceProvider:       "guangya",
+		TargetProvider:       "123_open",
+		RiskMode:             RiskModeBalanced,
+		ProfileDefaultSource: "Profile 123",
+		ProfileRiskDefaults: &RiskProfileOverride{
+			RequestIntervalMS: intPtr(300),
+			PageSize:          intPtr(500),
+			MaxConcurrent:     intPtr(3),
+		},
+		Entries: []SourceEntry{{Path: "/a.bin", Size: 10, MD5: "md5-a"}},
+	})
+	if err != nil {
+		t.Fatalf("BuildPreview() error = %v", err)
+	}
+	resolution, ok := plan.Metadata["riskProfileResolution"].(RiskProfileResolution)
+	if !ok {
+		t.Fatalf("expected riskProfileResolution metadata, got %#v", plan.Metadata["riskProfileResolution"])
+	}
+	if resolution.ProfileDefaultSourceKind != "auth_profile" {
+		t.Fatalf("expected profile default source kind auth_profile, got %+v", resolution)
+	}
+	if resolution.ProfileDefaultBias != "more_aggressive" {
+		t.Fatalf("expected profile default bias more_aggressive, got %+v", resolution)
+	}
+	warning, _ := plan.Metadata["aggressiveRiskWarning"].(string)
+	if !strings.Contains(warning, "Account profile defaults are more aggressive") {
+		t.Fatalf("expected aggressive warning to mention account defaults, got %#v", warning)
+	}
+}
 func TestBuildPreviewSupportsPreScanFlatMode(t *testing.T) {
 	registry := provider.NewRegistry(provider.DefaultCatalog()...)
 	plan, err := BuildPreview(registry, PreviewRequest{

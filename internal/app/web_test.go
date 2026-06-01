@@ -234,6 +234,18 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "PROVIDER TRAITS") {
 		t.Fatalf("expected PROVIDER TRAITS risk resolution detail in app.js, got %q", body)
 	}
+	if !strings.Contains(body, "PROFILE DEFAULT SOURCE KIND") {
+		t.Fatalf("expected PROFILE DEFAULT SOURCE KIND risk resolution detail in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "PROFILE DEFAULT BIAS") {
+		t.Fatalf("expected PROFILE DEFAULT BIAS risk resolution detail in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "profile-kind") {
+		t.Fatalf("expected profile-kind summary token in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "profile-bias") {
+		t.Fatalf("expected profile-bias summary token in app.js, got %q", body)
+	}
 	if !strings.Contains(body, "PROFILE DEFAULT SOURCE") {
 		t.Fatalf("expected PROFILE DEFAULT SOURCE risk resolution detail in app.js, got %q", body)
 	}
