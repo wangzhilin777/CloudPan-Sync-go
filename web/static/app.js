@@ -539,6 +539,37 @@ function renderRiskResolutionDetail(resolution) {
   `;
 }
 
+function renderRiskResolutionMetaCards(resolution) {
+  if (!resolution || typeof resolution !== "object") {
+    return "";
+  }
+  const recoverBudget = resolution.recoverBudget && typeof resolution.recoverBudget === "object" ? resolution.recoverBudget : {};
+  const profileSource = stringifyValue(resolution.profileDefaultSource, "provider default only");
+  const profileSourceKind = stringifyValue(resolution.profileDefaultSourceKind, "-");
+  const profileDefaultBias = stringifyValue(resolution.profileDefaultBias, "same_as_provider");
+  const profileDefaultFields = Array.isArray(resolution.profileDefaultFields)
+    ? resolution.profileDefaultFields.filter(Boolean)
+    : [];
+  return `
+    <div class="insight-card">
+      <strong>账号默认来源</strong>
+      <span>${escapeHTML(profileSource)}</span>
+    </div>
+    <div class="insight-card">
+      <strong>来源类型 / 偏向</strong>
+      <span>${escapeHTML(`${profileSourceKind} / ${profileDefaultBias}`)}</span>
+    </div>
+    <div class="insight-card">
+      <strong>账号默认字段</strong>
+      <span>${escapeHTML(profileDefaultFields.join(", ") || "-")}</span>
+    </div>
+    <div class="insight-card">
+      <strong>恢复预算理由</strong>
+      <span>${escapeHTML(stringifyValue(recoverBudget.reason, "-"))}</span>
+    </div>
+  `;
+}
+
 function renderRiskWindow(profile) {
   if (!profile || typeof profile !== "object") {
     return "-";
@@ -3184,14 +3215,7 @@ function renderSelectedTask() {
       <strong>风险节流</strong>
       <span>${stringifyValue(metadata.riskProfile?.requestIntervalMs, "0")}ms / dir ${stringifyValue(metadata.riskProfile?.directoryIntervalMs, "0")}ms / retry ${stringifyValue(metadata.riskProfile?.retryLimit, "0")} / conc ${stringifyValue(metadata.riskProfile?.maxConcurrent, "0")}</span>
     </div>
-    <div class="insight-card">
-      <strong>账号默认来源</strong>
-      <span>${stringifyValue(metadata.profileDefaultSource, "-")}</span>
-    </div>
-    <div class="insight-card">
-      <strong>账号默认字段</strong>
-      <span>${Array.isArray(metadata.riskProfileResolution?.profileDefaultFields) && metadata.riskProfileResolution.profileDefaultFields.length ? metadata.riskProfileResolution.profileDefaultFields.join(", ") : "-"}</span>
-    </div>
+    ${renderRiskResolutionMetaCards(metadata.riskProfileResolution)}
     <div class="insight-card">
       <strong>推荐风控</strong>
       <span>${stringifyValue(metadata.recommendedRiskMode, "-")}</span>
@@ -3308,14 +3332,7 @@ function renderPreview() {
       <strong>风险节流</strong>
       <span>${stringifyValue(metadata.riskProfile?.requestIntervalMs, "0")}ms / dir ${stringifyValue(metadata.riskProfile?.directoryIntervalMs, "0")}ms / retry ${stringifyValue(metadata.riskProfile?.retryLimit, "0")} / conc ${stringifyValue(metadata.riskProfile?.maxConcurrent, "0")}</span>
     </div>
-    <div class="insight-card">
-      <strong>账号默认来源</strong>
-      <span>${stringifyValue(metadata.profileDefaultSource, "-")}</span>
-    </div>
-    <div class="insight-card">
-      <strong>账号默认字段</strong>
-      <span>${Array.isArray(metadata.riskProfileResolution?.profileDefaultFields) && metadata.riskProfileResolution.profileDefaultFields.length ? metadata.riskProfileResolution.profileDefaultFields.join(", ") : "-"}</span>
-    </div>
+    ${renderRiskResolutionMetaCards(metadata.riskProfileResolution)}
     <div class="insight-card">
       <strong>推荐风控</strong>
       <span>${stringifyValue(metadata.recommendedRiskMode, "-")}</span>
@@ -4796,6 +4813,8 @@ function renderSnapshotSummary(summary) {
       <div><strong>retryScope</strong> <code>${escapeHTML(stringifyValue(summary.retryScope, "-"))}</code></div>
       <div><strong>retrySelectedPaths</strong> <code>${escapeHTML(retryPaths)}</code></div>
       <div><strong>riskProfileResolution</strong> <code>${escapeHTML(renderRiskResolutionSummary(summary.riskProfileResolution))}</code></div>
+      <div><strong>profileDefaultKindBias</strong> <code>${escapeHTML(`${stringifyValue(summary.riskProfileResolution?.profileDefaultSourceKind, "-")} / ${stringifyValue(summary.riskProfileResolution?.profileDefaultBias, "same_as_provider")}`)}</code></div>
+      <div><strong>recoverBudgetReason</strong> <code>${escapeHTML(stringifyValue(summary.riskProfileResolution?.recoverBudget?.reason, "-"))}</code></div>
       <div>${renderRiskResolutionDetail(summary.riskProfileResolution)}</div>
       <div><strong>blockedCount</strong> <code>${escapeHTML(stringifyValue(summary.blockedCount, "0"))}</code></div>
       <div><strong>autoRecoverCount</strong> <code>${escapeHTML(stringifyValue(summary.autoRecoverCount, "0"))}</code></div>
