@@ -76,7 +76,21 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 			return provider.UploadResult{OperationResult: provider.OperationResult{Status: "missing_uploadid", Message: "provider omitted uploadid", Mode: "scripted_missing_uploadid"}}
 		},
 	}
-	registry := provider.NewRegistry(append(provider.DefaultCatalog(), targetAdapter)...)
+	localMissingAdapter := &appScriptedAdapter{
+		meta: provider.Provider{Key: "local_missing_target", DisplayName: "Local Missing Target", ProtocolGroup: "fake_target", AuthModes: []string{"manual_token"}, FastUploadInputs: []string{"md5", "size"}, FallbackModes: []string{"download_upload"}, Status: "planned"},
+		capability: provider.CapabilitySet{SupportsAuthValidation: true, SupportsUpload: true},
+		uploadFunc: func(req provider.UploadRequest) provider.UploadResult {
+			return provider.UploadResult{OperationResult: provider.OperationResult{Status: "local_file_missing", Message: "local file is missing", Mode: "scripted_local_missing"}}
+		},
+	}
+	authExpiredAdapter := &appScriptedAdapter{
+		meta: provider.Provider{Key: "auth_expired_target", DisplayName: "Auth Expired Target", ProtocolGroup: "fake_target", AuthModes: []string{"manual_token"}, FastUploadInputs: []string{"md5", "size"}, FallbackModes: []string{"download_upload"}, Status: "planned"},
+		capability: provider.CapabilitySet{SupportsAuthValidation: true, SupportsUpload: true},
+		uploadFunc: func(req provider.UploadRequest) provider.UploadResult {
+			return provider.UploadResult{OperationResult: provider.OperationResult{Status: "auth_expired", Message: "auth expired", Mode: "scripted_auth_expired"}}
+		},
+	}
+	registry := provider.NewRegistry(append(provider.DefaultCatalog(), targetAdapter, localMissingAdapter, authExpiredAdapter)...)
 	authSvc := auth.NewService(application.store, registry)
 	taskSvc := task.NewService(application.store, registry, authSvc)
 	application.providers = registry
@@ -94,6 +108,28 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 	runResp := invokeJSON(t, application.routes(), http.MethodPost, "/api/tasks/"+taskID+"/run", nil)
 	if got := runResp.Data.(map[string]interface{})["task"].(map[string]interface{})["state"].(string); got != "blocked" {
 		t.Fatalf("expected blocked task for ui smoke, got %s", got)
+	}
+
+	localProfileResp := invokeJSON(t, application.routes(), http.MethodPost, "/api/auth/profiles", map[string]interface{}{"providerKey": "local_missing_target", "authMode": "manual_token", "displayName": "Local Missing Target", "token": "token-local-missing"})
+	localProfileID := localProfileResp.Data.(map[string]interface{})["id"].(string)
+	localTaskResp := invokeJSON(t, application.routes(), http.MethodPost, "/api/tasks", map[string]interface{}{"sourceProvider": "local_missing_source", "targetProvider": "local_missing_target", "targetProfileId": localProfileID, "thresholdMB": 1, "entries": []map[string]interface{}{{"path": "/local-missing.bin", "size": 1024, "md5": "local-missing-md5", "localPath": "Z:/path/that/does/not/exist.bin"}}})
+	localTaskID := localTaskResp.Data.(map[string]interface{})["task"].(map[string]interface{})["id"].(string)
+	localRunResp := invokeJSON(t, application.routes(), http.MethodPost, "/api/tasks/"+localTaskID+"/run", nil)
+	if got := localRunResp.Data.(map[string]interface{})["task"].(map[string]interface{})["state"].(string); got != "blocked" {
+		t.Fatalf("expected local missing blocked task for ui smoke, got %s", got)
+	}
+
+	authProfileResp := invokeJSON(t, application.routes(), http.MethodPost, "/api/auth/profiles", map[string]interface{}{"providerKey": "auth_expired_target", "authMode": "manual_token", "displayName": "Auth Expired Target", "token": "token-auth-expired"})
+	authProfileID := authProfileResp.Data.(map[string]interface{})["id"].(string)
+	authFile := filepath.Join(t.TempDir(), "auth-expired.bin")
+	if err := os.WriteFile(authFile, []byte("auth-expired"), 0o644); err != nil {
+		t.Fatalf("write auth expired local file: %v", err)
+	}
+	authTaskResp := invokeJSON(t, application.routes(), http.MethodPost, "/api/tasks", map[string]interface{}{"sourceProvider": "auth_expired_source", "targetProvider": "auth_expired_target", "targetProfileId": authProfileID, "thresholdMB": 1, "entries": []map[string]interface{}{{"path": "/auth-expired.bin", "size": 1024, "md5": "auth-expired-md5", "localPath": authFile}}})
+	authTaskID := authTaskResp.Data.(map[string]interface{})["task"].(map[string]interface{})["id"].(string)
+	authRunResp := invokeJSON(t, application.routes(), http.MethodPost, "/api/tasks/"+authTaskID+"/run", nil)
+	if got := authRunResp.Data.(map[string]interface{})["task"].(map[string]interface{})["state"].(string); got != "blocked" {
+		t.Fatalf("expected auth expired blocked task for ui smoke, got %s", got)
 	}
 
 	runStep(t, runCtx, "login and bootstrap",
@@ -241,6 +277,71 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 		waitForValue(`#auto-recover-blocked-action`, "manual_intervention_required"),
 		waitForText(`#status-retry-filter-summary`, "当前显示"),
 	)
+
+	runStep(t, runCtx, "local file missing blocked task",
+		chromedp.Evaluate(`(() => document.querySelector('button[data-view="tasks"]')?.click())()`, nil),
+		waitForText(`#tasks-list`, "local_missing_source -> local_missing_target"),
+		chromedp.ActionFunc(func(ctx context.Context) error {
+			var payload string
+			if err := chromedp.Evaluate(fmt.Sprintf(`(() => {
+				const hooks = window.__cloudpanTestHooks;
+				if (!hooks || !hooks.state) {
+					throw new Error("task hooks unavailable");
+				}
+				const detail = hooks.state.tasks.find((item) => item?.task?.id === %q);
+				if (!detail) {
+					throw new Error("missing local blocked task detail");
+				}
+				hooks.state.selectedTaskId = detail.task.id;
+				return JSON.stringify(detail);
+			})()`, localTaskID), &payload).Do(ctx); err != nil {
+				return err
+			}
+			if !strings.Contains(payload, `"retryClass":"local_file_missing"`) {
+				return fmt.Errorf("local blocked task retryClass missing in payload: %s", payload)
+			}
+			if !strings.Contains(payload, `"blockedAction":"restore_local_source_file"`) {
+				return fmt.Errorf("local blocked task blockedAction missing in payload: %s", payload)
+			}
+			return nil
+		}),
+		chromedp.Evaluate(`(() => window.__cloudpanTestHooks?.focusBlockedActionSummary?.("restore_local_source_file"))()`, nil),
+		waitForValue(`#auto-recover-blocked-action`, "restore_local_source_file"),
+		waitForText(`#status-retry-filter-summary`, "当前显示"),
+	)
+
+	runStep(t, runCtx, "auth expired blocked task",
+		chromedp.Evaluate(`(() => document.querySelector('button[data-view="tasks"]')?.click())()`, nil),
+		waitForText(`#tasks-list`, "auth_expired_source -> auth_expired_target"),
+		chromedp.ActionFunc(func(ctx context.Context) error {
+			var payload string
+			if err := chromedp.Evaluate(fmt.Sprintf(`(() => {
+				const hooks = window.__cloudpanTestHooks;
+				if (!hooks || !hooks.state) {
+					throw new Error("task hooks unavailable");
+				}
+				const detail = hooks.state.tasks.find((item) => item?.task?.id === %q);
+				if (!detail) {
+					throw new Error("missing auth blocked task detail");
+				}
+				hooks.state.selectedTaskId = detail.task.id;
+				return JSON.stringify(detail);
+			})()`, authTaskID), &payload).Do(ctx); err != nil {
+				return err
+			}
+			if !strings.Contains(payload, `"retryClass":"auth_expired"`) {
+				return fmt.Errorf("auth blocked task retryClass missing in payload: %s", payload)
+			}
+			if !strings.Contains(payload, `"blockedAction":"refresh_auth_profile"`) {
+				return fmt.Errorf("auth blocked task blockedAction missing in payload: %s", payload)
+			}
+			return nil
+		}),
+		chromedp.Evaluate(`(() => window.__cloudpanTestHooks?.focusBlockedActionSummary?.("refresh_auth_profile"))()`, nil),
+		waitForValue(`#auto-recover-blocked-action`, "refresh_auth_profile"),
+		waitForText(`#status-retry-filter-summary`, "当前显示"),
+	)
+
 	runStep(t, runCtx, "provider smoke matrix workflow",
 		waitForText(`#provider-smoke-matrix`, "aliyun_123_open"),
 		chromedp.Evaluate(`(() => document.querySelector('#provider-smoke-matrix [data-provider-smoke-draft="aliyun_123_open"]')?.click())()`, nil),
