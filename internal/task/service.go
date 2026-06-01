@@ -371,17 +371,24 @@ func NewService(store *sqlitestore.Store, registry *provider.Registry, authSvc *
 }
 
 func (s *Service) Create(ctx context.Context, req CreateRequest) (Detail, error) {
+	profileRiskDefaults, profileDefaultSource, err := s.resolveTargetProfileRiskDefaults(ctx, req.TargetProfileID)
+	if err != nil {
+		return Detail{}, err
+	}
 	plan, err := planner.BuildPreview(s.registry, planner.PreviewRequest{
-		SourceProvider:     req.SourceProvider,
-		TargetProvider:     req.TargetProvider,
-		ThresholdMB:        req.ThresholdMB,
-		RiskMode:           req.RiskMode,
-		RiskOverride:       req.RiskOverride,
-		ExecutionMode:      req.ExecutionMode,
-		SourceDeletePolicy: req.SourceDeletePolicy,
-		ConflictPolicy:     req.ConflictPolicy,
-		SelectedRoots:      req.SelectedRoots,
-		Entries:            req.Entries,
+		SourceProvider:       req.SourceProvider,
+		TargetProvider:       req.TargetProvider,
+		TargetProfileID:      req.TargetProfileID,
+		ThresholdMB:          req.ThresholdMB,
+		RiskMode:             req.RiskMode,
+		ProfileRiskDefaults:  profileRiskDefaults,
+		ProfileDefaultSource: profileDefaultSource,
+		RiskOverride:         req.RiskOverride,
+		ExecutionMode:        req.ExecutionMode,
+		SourceDeletePolicy:   req.SourceDeletePolicy,
+		ConflictPolicy:       req.ConflictPolicy,
+		SelectedRoots:        req.SelectedRoots,
+		Entries:              req.Entries,
 	})
 	if err != nil {
 		return Detail{}, err
@@ -768,15 +775,18 @@ func (s *Service) materializeTaskEntriesIfNeeded(ctx context.Context, detail *De
 		return err
 	}
 	plan, err := planner.BuildPreview(s.registry, planner.PreviewRequest{
-		SourceProvider: detail.Task.SourceProvider,
-		TargetProvider: detail.Task.TargetProvider,
-		ThresholdMB:    detail.Plan.ThresholdMB,
-		RiskMode:       planner.RiskMode(metadataStringFromRisk(riskProfile, "mode")),
-		RiskOverride:   riskOverrideFromMetadata(detail.Plan.Metadata),
-		ExecutionMode:  executionMode,
-		ConflictPolicy: provider.ConflictPolicy(detail.ConflictPolicy),
-		SelectedRoots:  selectedRoots,
-		Entries:        entries,
+		SourceProvider:       detail.Task.SourceProvider,
+		TargetProvider:       detail.Task.TargetProvider,
+		TargetProfileID:      detail.TargetProfileID,
+		ThresholdMB:          detail.Plan.ThresholdMB,
+		RiskMode:             planner.RiskMode(metadataStringFromRisk(riskProfile, "mode")),
+		ProfileRiskDefaults:  profileRiskDefaultsFromMetadata(detail.Plan.Metadata),
+		ProfileDefaultSource: metadataString(detail.Plan.Metadata, "profileDefaultSource"),
+		RiskOverride:         riskOverrideFromMetadata(detail.Plan.Metadata),
+		ExecutionMode:        executionMode,
+		ConflictPolicy:       provider.ConflictPolicy(detail.ConflictPolicy),
+		SelectedRoots:        selectedRoots,
+		Entries:              entries,
 	})
 	if err != nil {
 		return err
@@ -977,15 +987,18 @@ func (s *Service) buildRetryDetail(detail Detail, opts RetryOptions) (Detail, er
 		retryAttempts := incrementRetryAttempts(detail.Plan.Metadata, retryPaths)
 		retryUploadCheckpoints := buildRetryUploadCheckpointMetadata(detail.Runtime.RetryQueue, retryPaths)
 		plan, err := planner.BuildPreview(s.registry, planner.PreviewRequest{
-			SourceProvider: detail.Task.SourceProvider,
-			TargetProvider: detail.Task.TargetProvider,
-			ThresholdMB:    detail.Plan.ThresholdMB,
-			RiskMode:       riskProfile.Mode,
-			RiskOverride:   riskOverrideFromMetadata(detail.Plan.Metadata),
-			ExecutionMode:  executionMode,
-			ConflictPolicy: provider.ConflictPolicy(detail.ConflictPolicy),
-			SelectedRoots:  selectedRoots,
-			Entries:        retryEntries,
+			SourceProvider:       detail.Task.SourceProvider,
+			TargetProvider:       detail.Task.TargetProvider,
+			TargetProfileID:      detail.TargetProfileID,
+			ThresholdMB:          detail.Plan.ThresholdMB,
+			RiskMode:             riskProfile.Mode,
+			ProfileRiskDefaults:  profileRiskDefaultsFromMetadata(detail.Plan.Metadata),
+			ProfileDefaultSource: metadataString(detail.Plan.Metadata, "profileDefaultSource"),
+			RiskOverride:         riskOverrideFromMetadata(detail.Plan.Metadata),
+			ExecutionMode:        executionMode,
+			ConflictPolicy:       provider.ConflictPolicy(detail.ConflictPolicy),
+			SelectedRoots:        selectedRoots,
+			Entries:              retryEntries,
 		})
 		if err != nil {
 			return Detail{}, err
@@ -2569,6 +2582,18 @@ func metadataStringSlice(values map[string]interface{}, key string) []string {
 	return interfaceStringSlice(raw)
 }
 
+func metadataString(values map[string]interface{}, key string) string {
+	if values == nil {
+		return ""
+	}
+	raw, ok := values[key]
+	if !ok || raw == nil {
+		return ""
+	}
+	value, _ := raw.(string)
+	return strings.TrimSpace(value)
+}
+
 func interfaceStringSlice(raw interface{}) []string {
 	switch typed := raw.(type) {
 	case []string:
@@ -2649,6 +2674,75 @@ func riskOverrideFromMetadata(values map[string]interface{}) *planner.RiskProfil
 	default:
 		return nil
 	}
+}
+
+func profileRiskDefaultsFromMetadata(values map[string]interface{}) *planner.RiskProfileOverride {
+	if values == nil {
+		return nil
+	}
+	raw, ok := values["profileRiskDefaults"]
+	if !ok || raw == nil {
+		return nil
+	}
+	switch typed := raw.(type) {
+	case *planner.RiskProfileOverride:
+		return typed
+	case planner.RiskProfileOverride:
+		override := typed
+		return &override
+	case map[string]interface{}:
+		override := planner.RiskProfileOverride{}
+		if value, ok := intPointerFromRaw(typed["requestIntervalMs"]); ok {
+			override.RequestIntervalMS = value
+		}
+		if value, ok := intPointerFromRaw(typed["pageSize"]); ok {
+			override.PageSize = value
+		}
+		if value, ok := intPointerFromRaw(typed["directoryIntervalMs"]); ok {
+			override.DirectoryIntervalMS = value
+		}
+		if value, ok := intPointerFromRaw(typed["cooldownSeconds"]); ok {
+			override.CooldownSeconds = value
+		}
+		if value, ok := intPointerFromRaw(typed["retryLimit"]); ok {
+			override.RetryLimit = value
+		}
+		if value, ok := intPointerFromRaw(typed["maxConcurrent"]); ok {
+			override.MaxConcurrent = value
+		}
+		if value, ok := intPointerFromRaw(typed["autoRetryStartHour"]); ok {
+			override.AutoRetryStartHour = value
+		}
+		if value, ok := intPointerFromRaw(typed["autoRetryEndHour"]); ok {
+			override.AutoRetryEndHour = value
+		}
+		override.RiskKeywords = interfaceStringSlice(typed["riskKeywords"])
+		return &override
+	default:
+		return nil
+	}
+}
+
+func (s *Service) resolveTargetProfileRiskDefaults(ctx context.Context, profileID string) (*planner.RiskProfileOverride, string, error) {
+	profileID = strings.TrimSpace(profileID)
+	if profileID == "" {
+		return nil, "", nil
+	}
+	profile, ok, err := s.authSvc.GetProfile(ctx, profileID)
+	if err != nil {
+		return nil, "", err
+	}
+	if !ok {
+		return nil, "", fmt.Errorf("target_profile_not_found")
+	}
+	override, raw, err := planner.RiskProfileOverrideFromExtra(profile.Extra)
+	if err != nil {
+		return nil, raw, fmt.Errorf("invalid_profile_risk_defaults")
+	}
+	if override == nil {
+		return nil, "", nil
+	}
+	return override, profile.DisplayName, nil
 }
 
 func executionModeFromMetadata(values map[string]interface{}) (planner.ExecutionMode, error) {

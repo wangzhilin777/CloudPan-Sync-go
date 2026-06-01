@@ -337,6 +337,54 @@ func TestBuildPreviewAppliesRiskOverride(t *testing.T) {
 	}
 }
 
+func TestBuildPreviewAppliesProfileRiskDefaultsBeforeTaskOverride(t *testing.T) {
+	registry := provider.NewRegistry(provider.DefaultCatalog()...)
+	plan, err := BuildPreview(registry, PreviewRequest{
+		SourceProvider:       "guangya",
+		TargetProvider:       "123_open",
+		TargetProfileID:      "profile-123",
+		RiskMode:             RiskModeBalanced,
+		ProfileDefaultSource: "Profile 123",
+		ProfileRiskDefaults: &RiskProfileOverride{
+			RequestIntervalMS:   intPtr(1666),
+			DirectoryIntervalMS: intPtr(2888),
+			RetryLimit:          intPtr(4),
+		},
+		RiskOverride: &RiskProfileOverride{
+			RetryLimit: intPtr(1),
+		},
+		Entries: []SourceEntry{{Path: "/a.bin", Size: 10, MD5: "md5-a"}},
+	})
+	if err != nil {
+		t.Fatalf("BuildPreview() error = %v", err)
+	}
+	resolution, ok := plan.Metadata["riskProfileResolution"].(RiskProfileResolution)
+	if !ok {
+		t.Fatalf("expected riskProfileResolution metadata, got %#v", plan.Metadata["riskProfileResolution"])
+	}
+	if resolution.ProfileDefaultSource != "Profile 123" {
+		t.Fatalf("expected profile default source Profile 123, got %+v", resolution)
+	}
+	if resolution.ProfileApplied.RequestIntervalMS != 1666 {
+		t.Fatalf("expected profileApplied request interval 1666, got %+v", resolution.ProfileApplied)
+	}
+	if resolution.ProfileApplied.DirectoryIntervalMS != 2888 {
+		t.Fatalf("expected profileApplied directory interval 2888, got %+v", resolution.ProfileApplied)
+	}
+	if resolution.ProfileApplied.RetryLimit != 4 {
+		t.Fatalf("expected profileApplied retry limit 4, got %+v", resolution.ProfileApplied)
+	}
+	if resolution.Applied.RetryLimit != 1 {
+		t.Fatalf("expected task override retry limit 1, got %+v", resolution.Applied)
+	}
+	if len(resolution.ProfileDefaultFields) != 3 {
+		t.Fatalf("expected 3 profile default fields, got %#v", resolution.ProfileDefaultFields)
+	}
+	if len(resolution.OverrideFields) != 1 || resolution.OverrideFields[0] != "retryLimit" {
+		t.Fatalf("expected retryLimit override field, got %#v", resolution.OverrideFields)
+	}
+}
+
 func TestBuildPreviewSupportsPreScanFlatMode(t *testing.T) {
 	registry := provider.NewRegistry(provider.DefaultCatalog()...)
 	plan, err := BuildPreview(registry, PreviewRequest{

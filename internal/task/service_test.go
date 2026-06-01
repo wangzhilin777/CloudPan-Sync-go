@@ -198,6 +198,81 @@ func TestServiceCreateCarriesSourceDeletionRecordsIntoRuntimeAndEvidence(t *test
 	}
 }
 
+func TestServiceCreateAppliesTargetProfileRiskDefaults(t *testing.T) {
+	ctx := context.Background()
+	store, err := sqlitestore.New(ctx, filepath.Join(t.TempDir(), "profile-risk-defaults.db"))
+	if err != nil {
+		t.Fatalf("new store: %v", err)
+	}
+	defer func() { _ = store.Close() }()
+
+	registry := provider.NewRegistry(provider.DefaultCatalog()...)
+	authSvc := auth.NewService(store, registry)
+	svc := NewService(store, registry, authSvc)
+	profile, err := authSvc.CreateProfile(ctx, auth.CreateProfileInput{
+		ProviderKey: "123_open",
+		AuthMode:    "manual_token",
+		DisplayName: "123 profile defaults",
+		Token:       "token-profile-defaults",
+		Extra: map[string]string{
+			"riskDefaults": "{\"requestIntervalMs\":1666,\"directoryIntervalMs\":2888,\"retryLimit\":4,\"riskKeywords\":[\"profile_limit\"]}",
+		},
+	})
+	if err != nil {
+		t.Fatalf("CreateProfile() error = %v", err)
+	}
+
+	detail, err := svc.Create(ctx, CreateRequest{
+		SourceProvider:  "guangya",
+		TargetProvider:  "123_open",
+		TargetProfileID: profile.ID,
+		RiskMode:        planner.RiskModeBalanced,
+		Entries: []planner.SourceEntry{
+			{Path: "/a.bin", Size: 1024, MD5: "abc"},
+		},
+	})
+	if err != nil {
+		t.Fatalf("Create() error = %v", err)
+	}
+
+	riskProfile, ok := detail.Plan.Metadata["riskProfile"].(planner.RiskProfile)
+	if !ok {
+		t.Fatalf("expected riskProfile metadata, got %#v", detail.Plan.Metadata["riskProfile"])
+	}
+	if riskProfile.RequestIntervalMS != 1666 {
+		t.Fatalf("expected applied requestIntervalMs 1666, got %+v", riskProfile)
+	}
+	if riskProfile.DirectoryIntervalMS != 2888 {
+		t.Fatalf("expected applied directoryIntervalMs 2888, got %+v", riskProfile)
+	}
+	if riskProfile.RetryLimit != 4 {
+		t.Fatalf("expected applied retryLimit 4, got %+v", riskProfile)
+	}
+	if got, _ := detail.Plan.Metadata["profileDefaultSource"].(string); got != "123 profile defaults" {
+		t.Fatalf("expected profileDefaultSource 123 profile defaults, got %#v", detail.Plan.Metadata["profileDefaultSource"])
+	}
+	profileDefaults, ok := detail.Plan.Metadata["profileRiskDefaults"].(*planner.RiskProfileOverride)
+	if !ok || profileDefaults == nil {
+		t.Fatalf("expected profileRiskDefaults metadata, got %#v", detail.Plan.Metadata["profileRiskDefaults"])
+	}
+	if profileDefaults.RequestIntervalMS == nil || *profileDefaults.RequestIntervalMS != 1666 {
+		t.Fatalf("expected profileRiskDefaults requestIntervalMs 1666, got %#v", profileDefaults)
+	}
+	resolution, ok := detail.Plan.Metadata["riskProfileResolution"].(planner.RiskProfileResolution)
+	if !ok {
+		t.Fatalf("expected riskProfileResolution metadata, got %#v", detail.Plan.Metadata["riskProfileResolution"])
+	}
+	if resolution.ProfileDefaultSource != "123 profile defaults" {
+		t.Fatalf("expected resolution profileDefaultSource 123 profile defaults, got %+v", resolution)
+	}
+	if resolution.ProfileApplied.RequestIntervalMS != 1666 {
+		t.Fatalf("expected resolution profileApplied requestIntervalMs 1666, got %+v", resolution.ProfileApplied)
+	}
+	if len(resolution.ProfileDefaultFields) != 4 {
+		t.Fatalf("expected 4 profile default fields, got %#v", resolution.ProfileDefaultFields)
+	}
+}
+
 func TestServiceProtocolCoverageSummary(t *testing.T) {
 	ctx := context.Background()
 	store, err := sqlitestore.New(ctx, filepath.Join(t.TempDir(), "protocol-coverage.db"))

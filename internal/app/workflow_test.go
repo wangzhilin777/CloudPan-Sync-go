@@ -786,6 +786,142 @@ func TestAppWorkflowMainline(t *testing.T) {
 	}
 }
 
+func TestAppWorkflowAppliesTargetProfileRiskDefaults(t *testing.T) {
+	ctx := context.Background()
+	application := mustNewTestApp(t, ctx)
+	handler := application.routes()
+	providerServer, _ := newAppPan123OpenTestServer(t)
+	t.Cleanup(providerServer.Close)
+
+	profileResp := invokeJSON(t, handler, http.MethodPost, "/api/auth/profiles", map[string]interface{}{
+		"providerKey": "123_open",
+		"authMode":    "manual_token",
+		"displayName": "Profile Risk Defaults",
+		"token":       "token-profile-risk",
+		"extra": map[string]interface{}{
+			"apiEndpoint":  providerServer.URL,
+			"riskDefaults": "{\"requestIntervalMs\":1666,\"directoryIntervalMs\":2888,\"retryLimit\":4,\"riskKeywords\":[\"profile_limit\"]}",
+		},
+	})
+	profileID := profileResp.Data.(map[string]interface{})["id"].(string)
+
+	previewResp := invokeJSON(t, handler, http.MethodPost, "/api/plans/preview", map[string]interface{}{
+		"sourceProvider":  "baidu_netdisk",
+		"targetProvider":  "123_open",
+		"targetProfileId": profileID,
+		"riskMode":        "balanced",
+		"entries": []map[string]interface{}{{
+			"path": "/demo/a.bin",
+			"size": 2048,
+			"md5":  "md5-a",
+		}},
+	})
+	previewMetadata := previewResp.Data.(map[string]interface{})["metadata"].(map[string]interface{})
+	profileRiskDefaults, ok := previewMetadata["profileRiskDefaults"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("expected preview profileRiskDefaults metadata, got %#v", previewMetadata["profileRiskDefaults"])
+	}
+	if got := previewMetadata["profileDefaultSource"].(string); got != "Profile Risk Defaults" {
+		t.Fatalf("expected preview profileDefaultSource Profile Risk Defaults, got %s", got)
+	}
+	if got := int(profileRiskDefaults["requestIntervalMs"].(float64)); got != 1666 {
+		t.Fatalf("expected preview profile requestIntervalMs 1666, got %d", got)
+	}
+	previewRiskProfile := previewMetadata["riskProfile"].(map[string]interface{})
+	if got := int(previewRiskProfile["requestIntervalMs"].(float64)); got != 1666 {
+		t.Fatalf("expected preview applied requestIntervalMs 1666, got %d", got)
+	}
+	if got := int(previewRiskProfile["directoryIntervalMs"].(float64)); got != 2888 {
+		t.Fatalf("expected preview applied directoryIntervalMs 2888, got %d", got)
+	}
+	if got := int(previewRiskProfile["retryLimit"].(float64)); got != 4 {
+		t.Fatalf("expected preview applied retryLimit 4, got %d", got)
+	}
+	previewResolution := previewMetadata["riskProfileResolution"].(map[string]interface{})
+	if got := previewResolution["profileDefaultSource"].(string); got != "Profile Risk Defaults" {
+		t.Fatalf("expected preview resolution profileDefaultSource Profile Risk Defaults, got %s", got)
+	}
+	previewProfileApplied := previewResolution["profileApplied"].(map[string]interface{})
+	if got := int(previewProfileApplied["requestIntervalMs"].(float64)); got != 1666 {
+		t.Fatalf("expected preview profileApplied requestIntervalMs 1666, got %d", got)
+	}
+	previewDefaultFields := previewResolution["profileDefaultFields"].([]interface{})
+	if len(previewDefaultFields) != 4 {
+		t.Fatalf("expected 4 preview profileDefaultFields, got %#v", previewDefaultFields)
+	}
+
+	taskResp := invokeJSON(t, handler, http.MethodPost, "/api/tasks", map[string]interface{}{
+		"sourceProvider":  "baidu_netdisk",
+		"targetProvider":  "123_open",
+		"targetProfileId": profileID,
+		"riskMode":        "balanced",
+		"entries": []map[string]interface{}{{
+			"path": "/demo/a.bin",
+			"size": 2048,
+			"md5":  "md5-a",
+		}},
+	})
+	createdMetadata := taskResp.Data.(map[string]interface{})["plan"].(map[string]interface{})["metadata"].(map[string]interface{})
+	if got := createdMetadata["profileDefaultSource"].(string); got != "Profile Risk Defaults" {
+		t.Fatalf("expected task profileDefaultSource Profile Risk Defaults, got %s", got)
+	}
+	createdRiskProfile := createdMetadata["riskProfile"].(map[string]interface{})
+	if got := int(createdRiskProfile["requestIntervalMs"].(float64)); got != 1666 {
+		t.Fatalf("expected task applied requestIntervalMs 1666, got %d", got)
+	}
+	createdResolution := createdMetadata["riskProfileResolution"].(map[string]interface{})
+	createdProfileApplied := createdResolution["profileApplied"].(map[string]interface{})
+	if got := int(createdProfileApplied["directoryIntervalMs"].(float64)); got != 2888 {
+		t.Fatalf("expected task profileApplied directoryIntervalMs 2888, got %d", got)
+	}
+	createdDefaultFields := createdResolution["profileDefaultFields"].([]interface{})
+	if len(createdDefaultFields) != 4 {
+		t.Fatalf("expected 4 task profileDefaultFields, got %#v", createdDefaultFields)
+	}
+	createdProfileDefaults := createdMetadata["profileRiskDefaults"].(map[string]interface{})
+	if got := int(createdProfileDefaults["retryLimit"].(float64)); got != 4 {
+		t.Fatalf("expected task profileRiskDefaults retryLimit 4, got %d", got)
+	}
+	resolutionApplied := createdResolution["applied"].(map[string]interface{})
+	if got := int(resolutionApplied["retryLimit"].(float64)); got != 4 {
+		t.Fatalf("expected task applied retryLimit 4, got %d", got)
+	}
+}
+
+func TestAppPlanPreviewRejectsMalformedTargetProfileRiskDefaults(t *testing.T) {
+	ctx := context.Background()
+	application := mustNewTestApp(t, ctx)
+	handler := application.routes()
+
+	profileResp := invokeJSON(t, handler, http.MethodPost, "/api/auth/profiles", map[string]interface{}{
+		"providerKey": "123_open",
+		"authMode":    "manual_token",
+		"displayName": "Broken Risk Defaults",
+		"token":       "token-broken-risk",
+		"extra": map[string]interface{}{
+			"riskDefaults": "{bad-json}",
+		},
+	})
+	profileID := profileResp.Data.(map[string]interface{})["id"].(string)
+
+	errResp, status := invokeJSONError(t, handler, http.MethodPost, "/api/plans/preview", map[string]interface{}{
+		"sourceProvider":  "baidu_netdisk",
+		"targetProvider":  "123_open",
+		"targetProfileId": profileID,
+		"entries": []map[string]interface{}{{
+			"path": "/demo/a.bin",
+			"size": 2048,
+			"md5":  "md5-a",
+		}},
+	})
+	if status != http.StatusBadRequest {
+		t.Fatalf("expected 400 for malformed profile risk defaults, got %d", status)
+	}
+	if got := errResp.Error.Code; got != "invalid_profile_risk_defaults" {
+		t.Fatalf("expected invalid_profile_risk_defaults, got %s", got)
+	}
+}
+
 func TestAppPlanPreviewRejectsInvalidSourceDeletePolicy(t *testing.T) {
 	ctx := context.Background()
 	application := mustNewTestApp(t, ctx)

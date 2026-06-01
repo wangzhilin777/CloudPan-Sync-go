@@ -173,10 +173,16 @@ function renderRiskResolutionSummary(resolution) {
   }
   const providerKey = stringifyValue(resolution.providerKey, "-");
   const reasons = Array.isArray(resolution.calibrationReasons) ? resolution.calibrationReasons.filter(Boolean) : [];
+  const profileDefaultFields = Array.isArray(resolution.profileDefaultFields)
+    ? resolution.profileDefaultFields.filter(Boolean)
+    : [];
   const overrideFields = Array.isArray(resolution.overrideFields) ? resolution.overrideFields.filter(Boolean) : [];
   const providerHints = Array.isArray(resolution.providerRiskHints) ? resolution.providerRiskHints.filter(Boolean) : [];
   const providerTraits = Array.isArray(resolution.providerRiskTraits) ? resolution.providerRiskTraits.filter(Boolean) : [];
   const parts = [`provider ${providerKey}`];
+  if (resolution.profileDefaultSource) {
+    parts.push(`profile ${stringifyValue(resolution.profileDefaultSource, "-")}`);
+  }
   if (providerTraits.length) {
     parts.push(`traits ${providerTraits.join(", ")}`);
   }
@@ -185,6 +191,9 @@ function renderRiskResolutionSummary(resolution) {
   }
   if (reasons.length) {
     parts.push(`校准 ${reasons.join(" / ")}`);
+  }
+  if (profileDefaultFields.length) {
+    parts.push(`profile-default ${profileDefaultFields.join(", ")}`);
   }
   if (overrideFields.length) {
     parts.push(`override ${overrideFields.join(", ")}`);
@@ -397,6 +406,9 @@ function renderRiskResolutionDetail(resolution) {
     return "";
   }
   const reasons = Array.isArray(resolution.calibrationReasons) ? resolution.calibrationReasons.filter(Boolean) : [];
+  const profileDefaultFields = Array.isArray(resolution.profileDefaultFields)
+    ? resolution.profileDefaultFields.filter(Boolean)
+    : [];
   const overrideFields = Array.isArray(resolution.overrideFields) ? resolution.overrideFields.filter(Boolean) : [];
   const providerHints = Array.isArray(resolution.providerRiskHints) ? resolution.providerRiskHints.filter(Boolean) : [];
   const providerTraits = Array.isArray(resolution.providerRiskTraits) ? resolution.providerRiskTraits.filter(Boolean) : [];
@@ -407,6 +419,8 @@ function renderRiskResolutionDetail(resolution) {
   return `
     <div class="muted">BASE ${escapeHTML(renderRiskProfileCompact(resolution.base))}</div>
     <div class="muted">CALIBRATED ${escapeHTML(renderRiskProfileCompact(resolution.calibrated))}</div>
+    <div class="muted">PROFILE DEFAULT SOURCE ${escapeHTML(stringifyValue(resolution.profileDefaultSource, "-"))}</div>
+    <div class="muted">PROFILE DEFAULT ${escapeHTML(renderRiskProfileCompact(resolution.profileApplied))}</div>
     <div class="muted">APPLIED ${escapeHTML(renderRiskProfileCompact(resolution.applied))}</div>
     <div class="muted">RECOVER BUDGET ${escapeHTML(renderRecoverBudgetCompact(recoverBudget))}</div>
     <div class="muted">RECOVER REASON ${escapeHTML(stringifyValue(recoverBudget?.reason, "-"))}</div>
@@ -414,6 +428,7 @@ function renderRiskResolutionDetail(resolution) {
     <div class="muted">PROVIDER HINTS ${escapeHTML(providerHints.join(" / ") || "-")}</div>
     <div class="muted">PROVIDER TRAITS ${escapeHTML(providerTraits.join(", ") || "-")}</div>
     <div class="muted">CALIBRATION REASONS ${escapeHTML(reasons.join(" / ") || "-")}</div>
+    <div class="muted">PROFILE DEFAULT FIELDS ${escapeHTML(profileDefaultFields.join(", ") || "-")}</div>
     <div class="muted">OVERRIDE FIELDS ${escapeHTML(overrideFields.join(", ") || "-")}</div>
   `;
 }

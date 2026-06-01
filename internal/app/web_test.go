@@ -210,6 +210,18 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "PROVIDER TRAITS") {
 		t.Fatalf("expected PROVIDER TRAITS risk resolution detail in app.js, got %q", body)
 	}
+	if !strings.Contains(body, "PROFILE DEFAULT SOURCE") {
+		t.Fatalf("expected PROFILE DEFAULT SOURCE risk resolution detail in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "PROFILE DEFAULT FIELDS") {
+		t.Fatalf("expected PROFILE DEFAULT FIELDS risk resolution detail in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "PROFILE DEFAULT ") {
+		t.Fatalf("expected PROFILE DEFAULT risk resolution detail in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "profile-default") {
+		t.Fatalf("expected profile-default summary token in app.js, got %q", body)
+	}
 	if !strings.Contains(body, "renderSourceDeletePolicy") {
 		t.Fatalf("expected source delete policy renderer in app.js, got %q", body)
 	}
