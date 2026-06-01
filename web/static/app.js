@@ -2571,7 +2571,7 @@ function renderTaskResolutionGuide(detail) {
       buttons: [
         { label: "打开授权面板", view: "providers", providerKey, profileId, intent: "focus_profile" },
         { label: "只看授权失效队列", view: "tasks", intent: "focus_task_retry" },
-        { label: "打开状态矩阵", view: "status" },
+        { label: "按当前阻塞打开状态矩阵", view: "status", intent: "focus_status_blocked" },
       ],
     },
     restore_local_source_file: {
@@ -2585,7 +2585,7 @@ function renderTaskResolutionGuide(detail) {
         { label: "定位待补传树", view: "tasks", intent: "focus_task_pending" },
         { label: "只看本地缺失队列", view: "tasks", intent: "focus_task_retry" },
         { label: "打开任务向导", view: "wizard", providerKey, intent: "prefill_wizard" },
-        { label: "打开状态矩阵", view: "status" },
+        { label: "按当前阻塞打开状态矩阵", view: "status", intent: "focus_status_blocked" },
       ],
     },
     manual_intervention_required: {
@@ -2598,7 +2598,7 @@ function renderTaskResolutionGuide(detail) {
       buttons: [
         { label: "只看会话缺口队列", view: "tasks", intent: "focus_task_retry" },
         { label: "打开授权面板", view: "providers", providerKey, profileId, intent: "focus_profile" },
-        { label: "查看状态矩阵", view: "status" },
+        { label: "按当前阻塞打开状态矩阵", view: "status", intent: "focus_status_blocked" },
       ],
     },
     wait_for_cooldown: {
@@ -2610,7 +2610,7 @@ function renderTaskResolutionGuide(detail) {
       ],
       buttons: [
         { label: "只看冷却队列", view: "tasks", intent: "focus_task_retry" },
-        { label: "查看状态矩阵", view: "status" },
+        { label: "按当前阻塞打开状态矩阵", view: "status", intent: "focus_status_blocked" },
       ],
     },
     wait_for_retry_window: {
@@ -2635,7 +2635,7 @@ function renderTaskResolutionGuide(detail) {
       buttons: [
         { label: "定位待补传树", view: "tasks", intent: "focus_task_pending" },
         { label: "只看待确认队列", view: "tasks", intent: "focus_task_retry" },
-        { label: "查看状态矩阵", view: "status" },
+        { label: "按当前阻塞打开状态矩阵", view: "status", intent: "focus_status_blocked" },
         { label: "留在任务详情", view: "tasks" },
       ],
     },
@@ -2649,7 +2649,7 @@ function renderTaskResolutionGuide(detail) {
       buttons: [
         { label: "只看 exhausted 队列", view: "tasks", intent: "focus_task_retry" },
         { label: "打开任务向导", view: "wizard", providerKey, intent: "prefill_wizard" },
-        { label: "查看状态矩阵", view: "status" },
+        { label: "按当前阻塞打开状态矩阵", view: "status", intent: "focus_status_blocked" },
       ],
     },
   };
@@ -2713,6 +2713,11 @@ function wireTaskResolutionGuide(detail) {
         }
         if (intent === "focus_task_pending") {
           focusTaskPendingByDetail(detail);
+        }
+      }
+      if (view === "status") {
+        if (intent === "focus_status_blocked") {
+          focusBlockedActionSummary(detail?.runtime?.blockedAction || detail?.plan?.metadata?.retrySummary?.blockedAction || "");
         }
       }
       if (view === "wizard") {

@@ -645,8 +645,11 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "打开授权面板") {
 		t.Fatalf("expected open providers guide label in app.js, got %q", body)
 	}
-	if !strings.Contains(body, "查看状态矩阵") {
-		t.Fatalf("expected open status guide label in app.js, got %q", body)
+	if !strings.Contains(body, "按当前阻塞打开状态矩阵") {
+		t.Fatalf("expected focus status blocked guide label in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "focus_status_blocked") {
+		t.Fatalf("expected focus_status_blocked guide intent in app.js, got %q", body)
 	}
 	if !strings.Contains(body, "renderBlockedActionsSummary") {
 		t.Fatalf("expected blocked actions summary renderer in app.js, got %q", body)
