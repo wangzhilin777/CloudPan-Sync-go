@@ -173,12 +173,20 @@ function renderRiskResolutionSummary(resolution) {
   }
   const providerKey = stringifyValue(resolution.providerKey, "-");
   const profileSource = stringifyValue(resolution.profileDefaultSource, "provider default only");
+  const profileSourceKind = stringifyValue(resolution.profileDefaultSourceKind, "-");
+  const profileDefaultBias = stringifyValue(resolution.profileDefaultBias, "same_as_provider");
   const profileDefaultFields = Array.isArray(resolution.profileDefaultFields)
     ? resolution.profileDefaultFields.filter(Boolean)
     : [];
   const overrideFields = Array.isArray(resolution.overrideFields) ? resolution.overrideFields.filter(Boolean) : [];
   const steps = [`provider ${providerKey}`];
   steps.push(`profile ${profileSource}`);
+  if (profileSourceKind !== "-") {
+    steps.push(`profile-kind ${profileSourceKind}`);
+  }
+  if (profileDefaultBias !== "same_as_provider") {
+    steps.push(`profile-bias ${profileDefaultBias}`);
+  }
   if (profileDefaultFields.length) {
     steps.push(`profile fields ${profileDefaultFields.join(", ")}`);
   }
@@ -196,6 +204,8 @@ function renderRiskResolutionFlow(resolution) {
       </div>
     `;
   }
+  const profileSourceKind = stringifyValue(resolution.profileDefaultSourceKind, "-");
+  const profileDefaultBias = stringifyValue(resolution.profileDefaultBias, "same_as_provider");
   const profileDefaultFields = Array.isArray(resolution.profileDefaultFields)
     ? resolution.profileDefaultFields.filter(Boolean)
     : [];
@@ -212,7 +222,7 @@ function renderRiskResolutionFlow(resolution) {
     <div class="insight-card">
       <strong>账号默认注入</strong>
       <span>${escapeHTML(renderRiskProfileCompact(resolution.profileApplied))}</span>
-      <div class="muted">source ${escapeHTML(stringifyValue(resolution.profileDefaultSource, "provider default only"))} / fields ${escapeHTML(profileDefaultFields.join(", ") || "-")}</div>
+      <div class="muted">source ${escapeHTML(stringifyValue(resolution.profileDefaultSource, "provider default only"))} / kind ${escapeHTML(profileSourceKind)} / bias ${escapeHTML(profileDefaultBias)} / fields ${escapeHTML(profileDefaultFields.join(", ") || "-")}</div>
     </div>
     <div class="insight-card">
       <strong>任务覆盖</strong>
@@ -497,6 +507,8 @@ function renderRiskResolutionDetail(resolution) {
     return "";
   }
   const reasons = Array.isArray(resolution.calibrationReasons) ? resolution.calibrationReasons.filter(Boolean) : [];
+  const profileSourceKind = stringifyValue(resolution.profileDefaultSourceKind, "-");
+  const profileDefaultBias = stringifyValue(resolution.profileDefaultBias, "same_as_provider");
   const profileDefaultFields = Array.isArray(resolution.profileDefaultFields)
     ? resolution.profileDefaultFields.filter(Boolean)
     : [];
@@ -512,6 +524,8 @@ function renderRiskResolutionDetail(resolution) {
     <div class="muted">BASE ${escapeHTML(renderRiskProfileCompact(resolution.base))}</div>
     <div class="muted">CALIBRATED ${escapeHTML(renderRiskProfileCompact(resolution.calibrated))}</div>
     <div class="muted">PROFILE DEFAULT SOURCE ${escapeHTML(stringifyValue(resolution.profileDefaultSource, "-"))}</div>
+    <div class="muted">PROFILE DEFAULT SOURCE KIND ${escapeHTML(profileSourceKind)}</div>
+    <div class="muted">PROFILE DEFAULT BIAS ${escapeHTML(profileDefaultBias)}</div>
     <div class="muted">PROFILE DEFAULT ${escapeHTML(renderRiskProfileCompact(resolution.profileApplied))}</div>
     <div class="muted">APPLIED ${escapeHTML(renderRiskProfileCompact(resolution.applied))}</div>
     <div class="muted">RECOVER BUDGET ${escapeHTML(renderRecoverBudgetCompact(recoverBudget))}</div>

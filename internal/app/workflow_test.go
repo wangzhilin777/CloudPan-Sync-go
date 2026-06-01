@@ -841,6 +841,12 @@ func TestAppWorkflowAppliesTargetProfileRiskDefaults(t *testing.T) {
 	if got := previewResolution["profileDefaultSource"].(string); got != "Profile Risk Defaults" {
 		t.Fatalf("expected preview resolution profileDefaultSource Profile Risk Defaults, got %s", got)
 	}
+	if got := previewResolution["profileDefaultSourceKind"].(string); got != "auth_profile" {
+		t.Fatalf("expected preview resolution profileDefaultSourceKind auth_profile, got %s", got)
+	}
+	if got := previewResolution["profileDefaultBias"].(string); got == "" {
+		t.Fatalf("expected preview resolution profileDefaultBias, got %q", got)
+	}
 	previewProfileApplied := previewResolution["profileApplied"].(map[string]interface{})
 	if got := int(previewProfileApplied["requestIntervalMs"].(float64)); got != 1666 {
 		t.Fatalf("expected preview profileApplied requestIntervalMs 1666, got %d", got)
@@ -870,6 +876,12 @@ func TestAppWorkflowAppliesTargetProfileRiskDefaults(t *testing.T) {
 		t.Fatalf("expected task applied requestIntervalMs 1666, got %d", got)
 	}
 	createdResolution := createdMetadata["riskProfileResolution"].(map[string]interface{})
+	if got := createdResolution["profileDefaultSourceKind"].(string); got != "auth_profile" {
+		t.Fatalf("expected task resolution profileDefaultSourceKind auth_profile, got %s", got)
+	}
+	if got := createdResolution["profileDefaultBias"].(string); got == "" {
+		t.Fatalf("expected task resolution profileDefaultBias, got %q", got)
+	}
 	createdProfileApplied := createdResolution["profileApplied"].(map[string]interface{})
 	if got := int(createdProfileApplied["directoryIntervalMs"].(float64)); got != 2888 {
 		t.Fatalf("expected task profileApplied directoryIntervalMs 2888, got %d", got)
