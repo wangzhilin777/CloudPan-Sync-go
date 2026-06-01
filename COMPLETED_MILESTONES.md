@@ -1,7 +1,7 @@
 ## 2026-06-01 - provider_session_missing 浏览器级异常 smoke 补强
 
 - 继续按 [docs/01-GO_REBUILD_PLAN.md](E:/Workspace/VSCode/CloudPan-Sync-go/docs/01-GO_REBUILD_PLAN.md) 中 UI smoke 与异常场景提示校验方向推进，这轮把 `provider_session_missing / manual_intervention_required` 从 API workflow 与静态契约进一步补进浏览器级 smoke。
-- [internal/app/ui_smoke_test.go](E:/Workspace/VSCode/CloudPan-Sync-go/internal/app/ui_smoke_test.go) 现在会真实构造一个缺 `uploadid` 的 blocked 任务，并在控制台里校验 blocked 任务对象、浏览器内任务选择状态，以及状态页 blocked action 筛选入口。
+- [internal/app/ui_smoke_test.go](E:/Workspace/VSCode/CloudPan-Sync-go/internal/app/ui_smoke_test.go) 现在会真实构造 `provider_session_missing`、`local_file_missing`、`auth_expired` blocked 任务，并在控制台里校验 blocked 任务对象、任务列表与状态页 blocked action 筛选入口。
 - 回归验证已通过：`go test ./internal/app -run TestConsoleUISmokeMainline -v`、`go test ./...`、`node --check web/static/app.js`。
 - 清理情况：本轮验证未遗留 `.codex_tmp*` 临时文件、额外 smoke 目录或后台测试进程；测试使用 `httptest`、`chromedp` 与 `t.TempDir()`，结束后已自动释放。
 # Completed Milestones
