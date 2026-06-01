@@ -286,12 +286,16 @@ func defaultRiskProfile(providerKey string, mode RiskMode) RiskProfile {
 }
 
 func ProviderDefaultRiskTemplate(meta provider.Provider) provider.RiskTemplateSummary {
+	resolution := resolveRiskProfile(meta, RiskModeBalanced, nil)
 	defaults := DescribeProviderRiskDefaults(meta)
 	return provider.RiskTemplateSummary{
 		RecommendedMode:       string(defaults.RecommendedRiskMode),
-		Base:                  defaults.Profile,
-		Calibrated:            defaults.Profile,
+		Base:                  resolution.Base,
+		Calibrated:            resolution.Calibrated,
+		RecoverBudget:         resolution.RecoverBudget,
 		CalibrationReasons:    append([]string(nil), defaults.CalibrationReasons...),
+		ProviderRiskHints:     append([]string(nil), defaults.ProviderRiskHints...),
+		ProviderRiskTraits:    append([]string(nil), defaults.ProviderRiskTraits...),
 		RecommendedReason:     defaults.RecommendedRiskReason,
 		AggressiveRiskWarning: defaults.AggressiveRiskWarning,
 	}

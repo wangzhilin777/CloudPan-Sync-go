@@ -58,8 +58,20 @@ func TestAppWorkflowMainline(t *testing.T) {
 	if _, ok := defaultRiskTemplate["calibrated"].(map[string]interface{}); !ok {
 		t.Fatalf("expected provider calibrated defaultRiskTemplate profile, got %#v", defaultRiskTemplate["calibrated"])
 	}
+	if _, ok := defaultRiskTemplate["base"].(map[string]interface{}); !ok {
+		t.Fatalf("expected provider base defaultRiskTemplate profile, got %#v", defaultRiskTemplate["base"])
+	}
 	if reasons, ok := defaultRiskTemplate["calibrationReasons"].([]interface{}); !ok || len(reasons) == 0 {
 		t.Fatalf("expected provider calibrationReasons in defaultRiskTemplate, got %#v", defaultRiskTemplate["calibrationReasons"])
+	}
+	if _, ok := defaultRiskTemplate["recoverBudget"].(map[string]interface{}); !ok {
+		t.Fatalf("expected provider recoverBudget in defaultRiskTemplate, got %#v", defaultRiskTemplate["recoverBudget"])
+	}
+	if hints, ok := defaultRiskTemplate["providerRiskHints"].([]interface{}); !ok || len(hints) == 0 {
+		t.Fatalf("expected providerRiskHints in defaultRiskTemplate, got %#v", defaultRiskTemplate["providerRiskHints"])
+	}
+	if traits, ok := defaultRiskTemplate["providerRiskTraits"].([]interface{}); !ok || len(traits) == 0 {
+		t.Fatalf("expected providerRiskTraits in defaultRiskTemplate, got %#v", defaultRiskTemplate["providerRiskTraits"])
 	}
 
 	capabilityResp := invokeJSON(t, handler, http.MethodGet, "/api/providers/123_open/capabilities", nil)
@@ -71,6 +83,9 @@ func TestAppWorkflowMainline(t *testing.T) {
 	}
 	if got := capabilityRiskTemplate["recommendedReason"].(string); got == "" {
 		t.Fatalf("expected provider defaultRiskTemplate recommendedReason, got %#v", capabilityRiskTemplate["recommendedReason"])
+	}
+	if _, ok := capabilityRiskTemplate["recoverBudget"].(map[string]interface{}); !ok {
+		t.Fatalf("expected provider defaultRiskTemplate recoverBudget, got %#v", capabilityRiskTemplate["recoverBudget"])
 	}
 
 	profileResp := invokeJSON(t, handler, http.MethodPost, "/api/auth/profiles", map[string]interface{}{

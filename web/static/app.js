@@ -1,6 +1,8 @@
 const state = {
   authenticated: localStorage.getItem("cloudpan_console_session") === "ok",
   providers: [],
+  providerCapabilityDetails: {},
+  selectedProviderCapabilityKey: "",
   profiles: [],
   tasks: [],
   preview: null,
@@ -214,6 +216,180 @@ function renderRecoverBudgetCompact(policy) {
     `provider ${stringifyValue(policy.providerBudget, "0")}`,
     `profile ${stringifyValue(policy.profileBudget, "0")}`,
   ].join(" / ");
+}
+
+function findProviderEntry(providerKey) {
+  const normalized = String(providerKey || "").trim();
+  if (!normalized) {
+    return null;
+  }
+  return (state.providers || []).find((entry) => entry?.meta?.key === normalized) || null;
+}
+
+function renderProviderCapabilityCompact(capability) {
+  if (!capability || typeof capability !== "object") {
+    return "-";
+  }
+  const enabled = [];
+  if (capability.supportsAuthValidation) enabled.push("auth");
+  if (capability.supportsList) enabled.push("list");
+  if (capability.supportsMetadata) enabled.push("metadata");
+  if (capability.supportsCreateDir) enabled.push("create_dir");
+  if (capability.supportsFastUpload) enabled.push("fast_check");
+  if (capability.supportsUpload) enabled.push("upload");
+  return enabled.length ? enabled.join(", ") : "-";
+}
+
+function renderProviderRiskTemplateDetail(template, { title = "默认风控模板", compact = false } = {}) {
+  if (!template || typeof template !== "object") {
+    return `
+      <div class="insight-card">
+        <strong>${escapeHTML(title)}</strong>
+        <span>-</span>
+      </div>
+    `;
+  }
+  const providerHints = Array.isArray(template.providerRiskHints) ? template.providerRiskHints.filter(Boolean) : [];
+  const providerTraits = Array.isArray(template.providerRiskTraits) ? template.providerRiskTraits.filter(Boolean) : [];
+  const reasons = Array.isArray(template.calibrationReasons) ? template.calibrationReasons.filter(Boolean) : [];
+  const parts = [
+    `<div class="insight-card">`,
+    `<strong>${escapeHTML(title)}</strong>`,
+    `<span>${escapeHTML(renderRiskProfileCompact(template.calibrated))}</span>`,
+    `<div class="muted">recommended ${escapeHTML(stringifyValue(template.recommendedMode, "-"))}</div>`,
+    `<div class="muted">recover budget ${escapeHTML(renderRecoverBudgetCompact(template.recoverBudget))}</div>`,
+  ];
+  if (!compact) {
+    parts.push(`<div class="muted">base ${escapeHTML(renderRiskProfileCompact(template.base))}</div>`);
+    parts.push(`<div class="muted">reasons ${escapeHTML(reasons.join(" / ") || "-")}</div>`);
+    parts.push(`<div class="muted">risk hints ${escapeHTML(providerHints.join(" / ") || "-")}</div>`);
+    parts.push(`<div class="muted">risk traits ${escapeHTML(providerTraits.join(", ") || "-")}</div>`);
+    parts.push(`<div class="muted">advice ${escapeHTML(stringifyValue(template.recommendedReason, "-"))}</div>`);
+    parts.push(`<div class="muted">warning ${escapeHTML(stringifyValue(template.aggressiveRiskWarning, "-"))}</div>`);
+  }
+  parts.push(`</div>`);
+  return parts.join("");
+}
+
+function renderProviderCapabilityDetail() {
+  const wrap = $("#provider-capability-detail");
+  if (!wrap) {
+    return;
+  }
+  const providerKey = state.selectedProviderCapabilityKey || "";
+  const entry = findProviderEntry(providerKey);
+  const detail = state.providerCapabilityDetails[providerKey] || null;
+  if (!providerKey || !entry) {
+    wrap.innerHTML = `<div class="muted">点击任一 provider 卡片，查看能力声明、默认风控模板和恢复预算。</div>`;
+    return;
+  }
+  if (!detail) {
+    wrap.innerHTML = `
+      <div class="insight-grid">
+        <div class="insight-card">
+          <strong>${escapeHTML(entry.meta.displayName)}</strong>
+          <span>正在加载能力详情...</span>
+        </div>
+      </div>
+    `;
+    return;
+  }
+  const provider = detail.provider || entry.meta || {};
+  const capability = detail.capabilities || entry.capability || {};
+  wrap.innerHTML = `
+    <div class="section-head">
+      <h3>${escapeHTML(stringifyValue(provider.displayName, provider.key || "-"))}</h3>
+      <span class="muted">${escapeHTML(stringifyValue(provider.key, "-"))} / ${escapeHTML(stringifyValue(provider.protocolGroup, "-"))}</span>
+    </div>
+    <div class="insight-grid">
+      <div class="insight-card">
+        <strong>能力声明</strong>
+        <span>${escapeHTML(renderProviderCapabilityCompact(capability))}</span>
+      </div>
+      <div class="insight-card">
+        <strong>鉴权模式</strong>
+        <span>${escapeHTML((provider.authModes || []).join(", ") || "-")}</span>
+      </div>
+      <div class="insight-card">
+        <strong>冲突策略</strong>
+        <span>${escapeHTML((provider.conflictPolicies || []).join(", ") || "-")}</span>
+      </div>
+      <div class="insight-card">
+        <strong>回退策略</strong>
+        <span>${escapeHTML((provider.fallbackModes || []).join(", ") || "-")}</span>
+      </div>
+      ${renderProviderRiskTemplateDetail(provider.defaultRiskTemplate, { title: "默认风控模板" })}
+    </div>
+  `;
+}
+
+function syncTargetProviderInsight() {
+  const wrap = $("#plan-target-provider-insight");
+  if (!wrap) {
+    return;
+  }
+  const providerKey = $("#plan-target-provider")?.value || "";
+  const entry = findProviderEntry(providerKey);
+  if (!providerKey || !entry) {
+    wrap.innerHTML = `<div class="muted">选择目标 provider 后，这里会显示默认风控模板、推荐档位和恢复预算。</div>`;
+    return;
+  }
+  wrap.innerHTML = `
+    <div class="section-head">
+      <h3>${escapeHTML(stringifyValue(entry.meta.displayName, providerKey))}</h3>
+      <span class="muted">${escapeHTML(providerKey)} / ${escapeHTML(stringifyValue(entry.meta.protocolGroup, "-"))}</span>
+    </div>
+    <div class="insight-grid">
+      <div class="insight-card">
+        <strong>推荐风控档位</strong>
+        <span>${escapeHTML(stringifyValue(entry.meta.defaultRiskTemplate?.recommendedMode, "-"))}</span>
+      </div>
+      <div class="insight-card">
+        <strong>能力摘要</strong>
+        <span>${escapeHTML(renderProviderCapabilityCompact(entry.capability))}</span>
+      </div>
+      ${renderProviderRiskTemplateDetail(entry.meta.defaultRiskTemplate, { title: "Provider 默认模板", compact: true })}
+    </div>
+    <div class="actions compact-actions">
+      <button type="button" class="ghost" id="apply-provider-default-risk">采用 provider 推荐风控</button>
+      <button type="button" class="ghost" id="open-target-provider-capability">查看 provider 能力详情</button>
+    </div>
+  `;
+  $("#apply-provider-default-risk").onclick = () => {
+    const recommended = entry.meta.defaultRiskTemplate?.recommendedMode || "";
+    if (!recommended) {
+      showFlash("当前 provider 没有可用的推荐风控档位", true);
+      return;
+    }
+    setSelectValueIfPresent("#plan-risk-mode", recommended);
+    showFlash(`已采用 provider 推荐风控：${recommended}`);
+  };
+  $("#open-target-provider-capability").onclick = async () => {
+    try {
+      await loadProviderCapabilityDetail(providerKey);
+      activateTab("providers");
+      showFlash(`已打开 ${providerKey} provider 能力详情`);
+    } catch (error) {
+      showFlash(error.message, true);
+    }
+  };
+}
+
+async function loadProviderCapabilityDetail(providerKey, { force = false } = {}) {
+  const normalized = String(providerKey || "").trim();
+  if (!normalized) {
+    return;
+  }
+  state.selectedProviderCapabilityKey = normalized;
+  renderProviders();
+  if (!force && state.providerCapabilityDetails[normalized]) {
+    renderProviderCapabilityDetail();
+    return;
+  }
+  const data = await api(`/api/providers/${encodeURIComponent(normalized)}/capabilities`);
+  state.providerCapabilityDetails[normalized] = data;
+  renderProviders();
+  renderProviderCapabilityDetail();
 }
 
 function renderRiskResolutionDetail(resolution) {
@@ -2284,6 +2460,9 @@ function renderProviders() {
   const sourceSelect = $("#plan-source-provider");
   const targetSelect = $("#plan-target-provider");
   const providerCards = $("#providers-grid");
+  const selectedProfileProvider = providerSelect.value || state.providers[0]?.meta?.key || "";
+  const selectedSourceProvider = sourceSelect.value || state.providers[0]?.meta?.key || "";
+  const selectedTargetProvider = targetSelect.value || state.providers[0]?.meta?.key || "";
 
   const options = state.providers
     .map((entry) => `<option value="${entry.meta.key}">${entry.meta.displayName}</option>`)
@@ -2291,6 +2470,15 @@ function renderProviders() {
   providerSelect.innerHTML = options;
   sourceSelect.innerHTML = options;
   targetSelect.innerHTML = options;
+  if ([...providerSelect.options].some((option) => option.value === selectedProfileProvider)) {
+    providerSelect.value = selectedProfileProvider;
+  }
+  if ([...sourceSelect.options].some((option) => option.value === selectedSourceProvider)) {
+    sourceSelect.value = selectedSourceProvider;
+  }
+  if ([...targetSelect.options].some((option) => option.value === selectedTargetProvider)) {
+    targetSelect.value = selectedTargetProvider;
+  }
 
   providerCards.innerHTML = state.providers
     .map(
@@ -2303,8 +2491,9 @@ function renderProviders() {
             : null;
         const fallbackModes = Array.isArray(entry.meta.fallbackModes) ? entry.meta.fallbackModes.filter(Boolean) : [];
         const conflictPolicies = Array.isArray(entry.meta.conflictPolicies) ? entry.meta.conflictPolicies.filter(Boolean) : [];
+        const active = entry.meta.key === state.selectedProviderCapabilityKey;
         return `
-        <article class="provider-card">
+        <article class="provider-card${active ? " active" : ""}">
           <h3>${entry.meta.displayName}</h3>
           <div class="meta-row">
             <span class="pill">${entry.meta.key}</span>
@@ -2321,11 +2510,19 @@ function renderProviders() {
           <div class="muted">default risk: ${escapeHTML(renderRiskProfileCompact(defaultRiskTemplate?.calibrated))}</div>
           <div class="muted">recommended risk: ${escapeHTML(stringifyValue(defaultRiskTemplate?.recommendedMode, "-"))}</div>
           <div class="muted">risk calibration: ${escapeHTML((defaultRiskTemplate?.calibrationReasons || []).join(" / ") || "-")}</div>
+          <div class="muted">recover budget: ${escapeHTML(renderRecoverBudgetCompact(defaultRiskTemplate?.recoverBudget))}</div>
+          <div class="actions compact">
+            <button type="button" class="ghost" data-provider-detail-open="${escapeHTML(entry.meta.key)}">查看能力详情</button>
+          </div>
         </article>
       `;
       },
     )
     .join("");
+
+  if (!state.selectedProviderCapabilityKey || !findProviderEntry(state.selectedProviderCapabilityKey)) {
+    state.selectedProviderCapabilityKey = state.providers[0]?.meta?.key || "";
+  }
 
   syncAuthModes();
   syncSourceProfiles();
@@ -2335,6 +2532,8 @@ function renderProviders() {
   syncAutoRecoverProfiles();
   syncAutoRecoverBlockedActions();
   syncExecutionModeHint();
+  renderProviderCapabilityDetail();
+  syncTargetProviderInsight();
 }
 
 function prefillWizardFromTaskPath(detail, path) {
@@ -2477,18 +2676,27 @@ function syncTargetProfiles() {
   const targetProvider = $("#plan-target-provider").value;
   const profiles = state.profiles.filter((item) => item.providerKey === targetProvider);
   const select = $("#plan-target-profile");
+  const current = select.value || "";
   select.innerHTML = `<option value="">无</option>${profiles
     .map((profile) => `<option value="${profile.id}">${profile.displayName}</option>`)
     .join("")}`;
+  if ([...select.options].some((option) => option.value === current)) {
+    select.value = current;
+  }
+  syncTargetProviderInsight();
 }
 
 function syncSourceProfiles() {
   const sourceProvider = $("#plan-source-provider").value;
   const profiles = state.profiles.filter((item) => item.providerKey === sourceProvider);
   const select = $("#plan-source-profile");
+  const current = select.value || "";
   select.innerHTML = `<option value="">无</option>${profiles
     .map((profile) => `<option value="${profile.id}">${profile.displayName}</option>`)
     .join("")}`;
+  if ([...select.options].some((option) => option.value === current)) {
+    select.value = current;
+  }
 }
 
 function syncAutoRecoverProviders() {
@@ -4473,6 +4681,9 @@ async function loadProviders() {
   const data = await api("/api/providers");
   state.providers = data.items || [];
   renderProviders();
+  if (state.selectedProviderCapabilityKey) {
+    await loadProviderCapabilityDetail(state.selectedProviderCapabilityKey);
+  }
 }
 
 async function loadProfiles() {
@@ -5369,10 +5580,33 @@ function wireLogin() {
 function wireProfiles() {
   $("#profile-provider").addEventListener("change", syncAuthModes);
   $("#plan-source-provider").addEventListener("change", syncSourceProfiles);
-  $("#plan-target-provider").addEventListener("change", syncTargetProfiles);
+  $("#plan-target-provider").addEventListener("change", async () => {
+    syncTargetProfiles();
+    const providerKey = $("#plan-target-provider").value;
+    if (!providerKey) {
+      return;
+    }
+    try {
+      await loadProviderCapabilityDetail(providerKey);
+    } catch (error) {
+      showFlash(`加载 provider 能力详情失败：${error.message}`, true);
+    }
+  });
   $("#plan-execution-mode").addEventListener("change", () => {
     syncExecutionModeHint();
     updateExecutionRecommendationAction(state.preview?.metadata || {});
+  });
+  $("#providers-grid").addEventListener("click", async (event) => {
+    const button = event.target.closest("[data-provider-detail-open]");
+    if (!button) {
+      return;
+    }
+    try {
+      await loadProviderCapabilityDetail(button.dataset.providerDetailOpen || "");
+      showFlash(`已加载 ${button.dataset.providerDetailOpen} provider 能力详情`);
+    } catch (error) {
+      showFlash(error.message, true);
+    }
   });
 
   $("#refresh-providers").addEventListener("click", async () => {
