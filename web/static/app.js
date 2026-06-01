@@ -5640,6 +5640,7 @@ function renderProviderSmokeMatrix(items) {
             ${item.sampleRecordId ? `<button type="button" class="ghost" data-provider-smoke-open-record="${escapeHTML(stringifyValue(item.sampleRecordId))}">打开 smoke 样本</button>` : ""}
             ${item.coverageSampleTaskId ? `<button type="button" class="ghost" data-provider-smoke-open-task="${escapeHTML(stringifyValue(item.coverageSampleTaskId))}">打开任务样本</button>` : ""}
             <button type="button" class="ghost" data-provider-smoke-draft="${escapeHTML(stringifyValue(item.protocolGroup))}">预填 smoke 表单</button>
+            <button type="button" class="ghost" data-provider-smoke-draft-action="${escapeHTML(stringifyValue(item.protocolGroup))}">${escapeHTML(providerSmokeDraftActionLabel(item))}</button>
             <button type="button" class="ghost" data-provider-smoke-focus-group="${escapeHTML(stringifyValue(item.protocolGroup))}">只看该组记录</button>
             <button type="button" class="ghost" data-provider-smoke-filter-status="${escapeHTML(item.accepted ? "accepted" : item.acceptanceStatus || "pending")}">只看此类</button>
           </div>
@@ -5693,6 +5694,10 @@ function hydrateProviderSmokeForm(record) {
   if (operationsInput) operationsInput.value = Array.isArray(record.operations) ? record.operations.join(",") : "";
 }
 
+function providerSmokeMissingReasons(item) {
+  return Array.isArray(item?.acceptanceMissing) ? item.acceptanceMissing.filter(Boolean) : [];
+}
+
 function draftProviderSmokeFromMatrix(item) {
   const protocolGroup = String(item?.protocolGroup || "").trim();
   const providerKey = firstNonEmpty(
@@ -5702,11 +5707,30 @@ function draftProviderSmokeFromMatrix(item) {
     Array.isArray(item?.coverageProviderKeys) ? String(item.coverageProviderKeys[0] || "").trim() : "",
   );
   const status = item?.accepted ? "accepted" : String(item?.acceptanceStatus || "pending");
-  const missing = Array.isArray(item?.acceptanceMissing) ? item.acceptanceMissing.filter(Boolean) : [];
+  const missing = providerSmokeMissingReasons(item);
   const actions = Array.isArray(item?.acceptanceActions) ? item.acceptanceActions.filter(Boolean) : [];
+  const operations = [];
+  let category = "partial_blocked";
+  if (missing.includes("upload_smoke_success_missing")) {
+    category = "binary_upload_success";
+    operations.push("ValidateAuth", "List", "Metadata", "CreateDir", "Upload");
+  } else if (missing.includes("real_smoke_success_missing")) {
+    category = "browse_only";
+    operations.push("ValidateAuth", "List", "Metadata");
+  } else if (missing.includes("task_coverage_missing")) {
+    category = "binary_upload_success";
+    operations.push("ValidateAuth", "List", "Metadata", "Upload");
+  } else if (item?.hasUploadSuccessSample) {
+    category = "binary_upload_success";
+    operations.push("ValidateAuth", "List", "Metadata", "CreateDir", "Upload");
+  } else if (item?.hasRealSuccessSample) {
+    category = "browse_only";
+    operations.push("ValidateAuth", "List", "Metadata");
+  }
   const noteParts = [
     protocolGroup ? `协议组：${protocolGroup}` : "",
     providerKey ? `建议 provider：${providerKey}` : "",
+    `验收状态：${status}`,
     missing.length ? `缺口：${missing.join(", ")}` : "",
     actions.length ? `动作：${actions.join("；")}` : "",
     item?.acceptanceAdvice ? `建议：${item.acceptanceAdvice}` : "",
@@ -5715,12 +5739,119 @@ function draftProviderSmokeFromMatrix(item) {
     providerKey,
     protocolGroup,
     authMode: "",
-    category: "",
+    category,
     result: "success",
     title: protocolGroup ? `${protocolGroup} ${status} smoke` : "provider smoke",
     note: noteParts.join("；"),
-    operations: [],
+    operations,
   };
+}
+
+function draftProviderSmokeActionFromMatrix(item) {
+  const draft = draftProviderSmokeFromMatrix(item);
+  const actions = Array.isArray(item?.acceptanceActions) ? item.acceptanceActions.filter(Boolean) : [];
+  if (actions.length) {
+    draft.title = `${draft.title} action`;
+    draft.note = [draft.note, `本次目标：${actions.join("；")}`].filter(Boolean).join("；");
+  }
+  if (!draft.operations.length) {
+    draft.operations = ["ValidateAuth"];
+  }
+  return draft;
+}
+
+function providerSmokeDraftActionLabel(item) {
+  const missing = providerSmokeMissingReasons(item);
+  if (missing.includes("upload_smoke_success_missing")) {
+    return "补上传 smoke";
+  }
+  if (missing.includes("task_coverage_missing")) {
+    return "补任务覆盖样本";
+  }
+  if (missing.includes("real_smoke_success_missing")) {
+    return "补 smoke 成功样本";
+  }
+  return "按缺口预填动作";
+}
+
+function focusProviderSmokeRecordsByResult(result) {
+  const normalized = String(result || "").trim().toLowerCase();
+  state.providerSmokeRecordFilters.result = normalized;
+  setFilterControlValue("#provider-smoke-records-filter-result", normalized);
+  renderStatus();
+  showFlash(normalized ? `已按 ${normalized} 收敛 smoke 记录` : "已清空 smoke 记录结果筛选");
+}
+
+function focusProviderSmokeMatrixByStatus(status) {
+  setProviderSmokeMatrixFilter(status || "all");
+  showFlash(`已按 ${status || "all"} 收敛验收矩阵`);
+}
+
+function openProviderSmokeRecordInMatrix(id) {
+  const record = (state.providerSmokes || []).find((item) => item?.id === id) || null;
+  if (record) {
+    hydrateProviderSmokeForm(record);
+    state.selectedProviderSmokeId = id;
+    focusProviderSmokeRecordsByGroup(record.protocolGroup || "");
+  }
+  return loadProviderSmokeMarkdown(id).then(() => {
+    showFlash("已打开 smoke 样本并回填表单");
+  });
+}
+
+function draftProviderSmokeFromGap(item) {
+  const draft = draftProviderSmokeActionFromMatrix(item);
+  const label = providerSmokeDraftActionLabel(item);
+  if (draft.protocolGroup) {
+    draft.title = `${draft.protocolGroup} ${label}`;
+  } else {
+    draft.title = label;
+  }
+  return draft;
+}
+
+function draftProviderSmokeAndFocus(item, { fromGap = false } = {}) {
+  const draft = fromGap ? draftProviderSmokeFromGap(item) : draftProviderSmokeFromMatrix(item);
+  hydrateProviderSmokeForm(draft);
+  focusProviderSmokeRecordsByGroup(draft.protocolGroup || "");
+  if (String(draft.result || "").trim()) {
+    focusProviderSmokeRecordsByResult(draft.result || "");
+  }
+  if (fromGap) {
+    showFlash("已按验收缺口预填 smoke 动作");
+    return;
+  }
+  showFlash("已按验收矩阵预填 smoke 表单");
+}
+
+function buildProviderSmokeDraftByProtocolGroup(protocolGroup, { fromGap = false } = {}) {
+  const row = (state.providerSmokeMatrix || []).find((item) => item.protocolGroup === protocolGroup);
+  if (!row) {
+    showFlash("未找到对应协议组的验收矩阵项", true);
+    return false;
+  }
+  draftProviderSmokeAndFocus(row, { fromGap });
+  return true;
+}
+
+function draftProviderSmokeAndOpenTask(taskID) {
+  if (!taskID) {
+    showFlash("当前验收矩阵项没有可打开的任务样本", true);
+    return;
+  }
+  openTaskByID(taskID).catch((error) => {
+    showFlash(error.message, true);
+  });
+}
+
+function draftProviderSmokeFromAccepted(item) {
+  const draft = draftProviderSmokeFromMatrix(item);
+  draft.title = draft.protocolGroup ? `${draft.protocolGroup} 边界样本 smoke` : "边界样本 smoke";
+  draft.note = [draft.note, "当前协议组已验收，建议继续补充边界场景样本。"].filter(Boolean).join("；");
+  if (!draft.operations.length) {
+    draft.operations = ["ValidateAuth", "List", "Metadata"];
+  };
+  return draft;
 }
 
 function focusProviderSmokeRecordsByGroup(protocolGroup) {
@@ -6404,8 +6535,7 @@ function wireStatus() {
     const openRecordButton = event.target.closest("[data-provider-smoke-open-record]");
     if (openRecordButton) {
       try {
-        await loadProviderSmokeMarkdown(openRecordButton.dataset.providerSmokeOpenRecord || "");
-        showFlash("已打开 smoke 样本");
+        await openProviderSmokeRecordInMatrix(openRecordButton.dataset.providerSmokeOpenRecord || "");
       } catch (error) {
         showFlash(error.message, true);
       }
@@ -6422,15 +6552,12 @@ function wireStatus() {
     }
     const draftButton = event.target.closest("[data-provider-smoke-draft]");
     if (draftButton) {
-      const protocolGroup = draftButton.dataset.providerSmokeDraft || "";
-      const row = (state.providerSmokeMatrix || []).find((item) => item.protocolGroup === protocolGroup);
-      if (!row) {
-        showFlash("未找到对应协议组的验收矩阵项", true);
-        return;
-      }
-      hydrateProviderSmokeForm(draftProviderSmokeFromMatrix(row));
-      focusProviderSmokeRecordsByGroup(protocolGroup);
-      showFlash("已按验收矩阵预填 smoke 表单");
+      buildProviderSmokeDraftByProtocolGroup(draftButton.dataset.providerSmokeDraft || "");
+      return;
+    }
+    const draftActionButton = event.target.closest("[data-provider-smoke-draft-action]");
+    if (draftActionButton) {
+      buildProviderSmokeDraftByProtocolGroup(draftActionButton.dataset.providerSmokeDraftAction || "", { fromGap: true });
       return;
     }
     const focusGroupButton = event.target.closest("[data-provider-smoke-focus-group]");
@@ -6440,7 +6567,7 @@ function wireStatus() {
     }
     const filterStatusButton = event.target.closest("[data-provider-smoke-filter-status]");
     if (filterStatusButton) {
-      setProviderSmokeMatrixFilter(filterStatusButton.dataset.providerSmokeFilterStatus || "all");
+      focusProviderSmokeMatrixByStatus(filterStatusButton.dataset.providerSmokeFilterStatus || "all");
     }
   });
 }
