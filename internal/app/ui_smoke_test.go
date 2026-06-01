@@ -266,6 +266,24 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 		waitForText(`#plan-preview-meta`, "最终生效"),
 		waitForText(`#plan-preview-meta`, "CALIBRATED"),
 		waitForText(`#plan-preview-meta`, "OVERRIDE FIELDS"),
+		waitForText(`#plan-preview-meta`, "删除记录仅用于定位"),
+		chromedp.Evaluate(`(() => {
+			const button = document.querySelector('#plan-preview-meta [data-source-delete-prefill-paths]');
+			if (!button) {
+				throw new Error('missing source deletion preview prefill button');
+			}
+			button.click();
+			const roots = document.querySelector('#plan-selected-roots')?.value || '';
+			const entries = document.querySelector('#plan-entries')?.value || '';
+			if (!roots.includes('/demo/deleted.bin') || !entries.includes('/demo/deleted.bin')) {
+				throw new Error('source deletion preview prefill did not update form: roots=' + roots + '; entries=' + entries);
+			}
+			return true;
+		})()`, nil),
+		chromedp.Click(`#plan-form button[type="submit"]`, chromedp.ByQuery),
+		waitForText(`#flash`, "当前只有删除记录，没有可执行条目；请先恢复源文件并重新预览"),
+		chromedp.SetValue(`#plan-selected-roots`, `["/demo","/archive"]`, chromedp.ByID),
+		chromedp.SetValue(`#plan-entries`, entriesJSON, chromedp.ByID),
 		waitForText(`#plan-preview`, `"strategy": "fast_upload"`),
 		chromedp.Click(`#plan-form button[type="submit"]`, chromedp.ByQuery),
 		waitForText(`#tasks-list`, "guangya -> 123_open"),

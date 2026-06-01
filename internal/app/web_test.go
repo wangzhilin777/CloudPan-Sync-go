@@ -336,6 +336,15 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "按全部删除记录重建向导") {
 		t.Fatalf("expected batch source deletion rebuild label in app.js, got %q", body)
 	}
+	if !strings.Contains(body, "删除记录仅用于定位") {
+		t.Fatalf("expected deletion-only preview warning in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "wireSourceDeletionSummary(\"preview\", \"#plan-preview-meta\")") {
+		t.Fatalf("expected preview source deletion wiring in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "payloadHasOnlyDeletedEntries") {
+		t.Fatalf("expected deleted-only submit guard in app.js, got %q", body)
+	}
 	if !strings.Contains(body, "renderRuntimePathChips") {
 		t.Fatalf("expected runtime path chips renderer in app.js, got %q", body)
 	}
