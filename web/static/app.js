@@ -2294,7 +2294,12 @@ function renderProviders() {
 
   providerCards.innerHTML = state.providers
     .map(
-      (entry) => `
+      (entry) => {
+        const riskHints = Array.isArray(entry.meta.riskHints) ? entry.meta.riskHints.filter(Boolean) : [];
+        const riskTraits = Array.isArray(entry.meta.riskTraits) ? entry.meta.riskTraits.filter(Boolean) : [];
+        const fallbackModes = Array.isArray(entry.meta.fallbackModes) ? entry.meta.fallbackModes.filter(Boolean) : [];
+        const conflictPolicies = Array.isArray(entry.meta.conflictPolicies) ? entry.meta.conflictPolicies.filter(Boolean) : [];
+        return `
         <article class="provider-card">
           <h3>${entry.meta.displayName}</h3>
           <div class="meta-row">
@@ -2305,8 +2310,13 @@ function renderProviders() {
           <div class="meta-row">
             ${entry.meta.authModes.map((mode) => `<span class="pill">${mode}</span>`).join("")}
           </div>
+          <div class="muted">fallback: ${escapeHTML(fallbackModes.join(", ") || "-")}</div>
+          <div class="muted">conflict: ${escapeHTML(conflictPolicies.join(", ") || "-")}</div>
+          <div class="muted">risk traits: ${escapeHTML(riskTraits.join(", ") || "-")}</div>
+          <div class="muted">risk hints: ${escapeHTML(riskHints.join(" / ") || "-")}</div>
         </article>
-      `,
+      `;
+      },
     )
     .join("");
 
