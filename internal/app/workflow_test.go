@@ -517,6 +517,19 @@ func TestAppWorkflowMainline(t *testing.T) {
 		if _, ok := riskResolution["applied"].(map[string]interface{}); !ok {
 			t.Fatalf("expected status summary risk resolution applied, got %#v", riskResolution["applied"])
 		}
+		if _, ok := riskResolution["profileApplied"].(map[string]interface{}); !ok {
+			t.Fatalf("expected status summary risk resolution profileApplied, got %#v", riskResolution["profileApplied"])
+		}
+		if got, ok := riskResolution["profileDefaultBias"].(string); !ok || got == "" {
+			t.Fatalf("expected status summary risk resolution profileDefaultBias, got %#v", riskResolution["profileDefaultBias"])
+		}
+		recoverBudget, ok := riskResolution["recoverBudget"].(map[string]interface{})
+		if !ok || recoverBudget == nil {
+			t.Fatalf("expected status summary recoverBudget, got %#v", riskResolution["recoverBudget"])
+		}
+		if got, ok := recoverBudget["reason"].(string); !ok || got == "" {
+			t.Fatalf("expected status summary recoverBudget reason, got %#v", recoverBudget["reason"])
+		}
 		if got := summary["runtime"].(map[string]interface{})["blockedReason"].(string); got != "retry_queue_requires_local_file_restore" {
 			t.Fatalf("expected status summary blockedReason retry_queue_requires_local_file_restore, got %s", got)
 		}

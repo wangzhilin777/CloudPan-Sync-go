@@ -240,6 +240,18 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "PROFILE DEFAULT BIAS") {
 		t.Fatalf("expected PROFILE DEFAULT BIAS risk resolution detail in app.js, got %q", body)
 	}
+	if !strings.Contains(body, "来源类型 / 偏向") {
+		t.Fatalf("expected kind/bias insight card label in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "恢复预算理由") {
+		t.Fatalf("expected recover budget reason insight card label in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "profileDefaultKindBias") {
+		t.Fatalf("expected snapshot summary profileDefaultKindBias field in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "recoverBudgetReason") {
+		t.Fatalf("expected snapshot summary recoverBudgetReason field in app.js, got %q", body)
+	}
 	if !strings.Contains(body, "profile-kind") {
 		t.Fatalf("expected profile-kind summary token in app.js, got %q", body)
 	}

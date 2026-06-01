@@ -265,8 +265,20 @@ func TestServiceCreateAppliesTargetProfileRiskDefaults(t *testing.T) {
 	if resolution.ProfileDefaultSource != "123 profile defaults" {
 		t.Fatalf("expected resolution profileDefaultSource 123 profile defaults, got %+v", resolution)
 	}
+	if resolution.ProfileDefaultSourceKind != "auth_profile" {
+		t.Fatalf("expected resolution profileDefaultSourceKind auth_profile, got %+v", resolution)
+	}
+	if resolution.ProfileDefaultBias != "mixed" {
+		t.Fatalf("expected resolution profileDefaultBias mixed, got %+v", resolution)
+	}
 	if resolution.ProfileApplied.RequestIntervalMS != 1666 {
 		t.Fatalf("expected resolution profileApplied requestIntervalMs 1666, got %+v", resolution.ProfileApplied)
+	}
+	if resolution.ProviderDisplayName == "" {
+		t.Fatalf("expected resolution provider display name, got %+v", resolution)
+	}
+	if resolution.RecoverBudget.Reason == "" {
+		t.Fatalf("expected resolution recover budget reason, got %+v", resolution.RecoverBudget)
 	}
 	if len(resolution.ProfileDefaultFields) != 4 {
 		t.Fatalf("expected 4 profile default fields, got %#v", resolution.ProfileDefaultFields)

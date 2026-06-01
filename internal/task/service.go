@@ -2723,6 +2723,49 @@ func profileRiskDefaultsFromMetadata(values map[string]interface{}) *planner.Ris
 	}
 }
 
+func riskProfileOverrideFromRaw(raw interface{}) *planner.RiskProfileOverride {
+	switch typed := raw.(type) {
+	case *planner.RiskProfileOverride:
+		return typed
+	case planner.RiskProfileOverride:
+		override := typed
+		return &override
+	case map[string]interface{}:
+		override := planner.RiskProfileOverride{}
+		if value, ok := intPointerFromRaw(typed["requestIntervalMs"]); ok {
+			override.RequestIntervalMS = value
+		}
+		if value, ok := intPointerFromRaw(typed["pageSize"]); ok {
+			override.PageSize = value
+		}
+		if value, ok := intPointerFromRaw(typed["directoryIntervalMs"]); ok {
+			override.DirectoryIntervalMS = value
+		}
+		if value, ok := intPointerFromRaw(typed["cooldownSeconds"]); ok {
+			override.CooldownSeconds = value
+		}
+		if value, ok := intPointerFromRaw(typed["retryLimit"]); ok {
+			override.RetryLimit = value
+		}
+		if value, ok := intPointerFromRaw(typed["maxConcurrent"]); ok {
+			override.MaxConcurrent = value
+		}
+		if value, ok := intPointerFromRaw(typed["autoRetryStartHour"]); ok {
+			override.AutoRetryStartHour = value
+		}
+		if value, ok := intPointerFromRaw(typed["autoRetryEndHour"]); ok {
+			override.AutoRetryEndHour = value
+		}
+		override.RiskKeywords = metadataStringSlice(map[string]interface{}{"keywords": typed["riskKeywords"]}, "keywords")
+		if override.RequestIntervalMS == nil && override.PageSize == nil && override.DirectoryIntervalMS == nil && override.CooldownSeconds == nil && override.RetryLimit == nil && override.MaxConcurrent == nil && override.AutoRetryStartHour == nil && override.AutoRetryEndHour == nil && len(override.RiskKeywords) == 0 {
+			return nil
+		}
+		return &override
+	default:
+		return nil
+	}
+}
+
 func (s *Service) resolveTargetProfileRiskDefaults(ctx context.Context, profileID string) (*planner.RiskProfileOverride, string, error) {
 	profileID = strings.TrimSpace(profileID)
 	if profileID == "" {
@@ -4257,16 +4300,22 @@ func riskProfileResolutionFromRaw(raw interface{}) (planner.RiskProfileResolutio
 	case map[string]interface{}:
 		return planner.RiskProfileResolution{
 			ProviderKey:              stringValue(typed["providerKey"]),
+			ProviderDisplayName:      stringValue(typed["providerDisplayName"]),
+			ProviderRiskHints:        metadataStringSlice(map[string]interface{}{"items": typed["providerRiskHints"]}, "items"),
+			ProviderRiskTraits:       metadataStringSlice(map[string]interface{}{"items": typed["providerRiskTraits"]}, "items"),
 			ProfileDefaultSource:     stringValue(typed["profileDefaultSource"]),
 			ProfileDefaultSourceKind: stringValue(typed["profileDefaultSourceKind"]),
 			ProfileDefaultBias:       stringValue(typed["profileDefaultBias"]),
 			Mode:                     planner.RiskMode(stringValue(typed["mode"])),
 			Base:                     riskProfileFromRaw(typed["base"]),
 			Calibrated:               riskProfileFromRaw(typed["calibrated"]),
+			ProfileApplied:           riskProfileFromRaw(typed["profileApplied"]),
 			Applied:                  riskProfileFromRaw(typed["applied"]),
 			RecoverBudget:            recoverBudgetPolicyFromRaw(typed["recoverBudget"]),
 			CalibrationReasons:       metadataStringSlice(map[string]interface{}{"items": typed["calibrationReasons"]}, "items"),
+			ProfileDefaults:          riskProfileOverrideFromRaw(typed["profileDefaults"]),
 			ProfileDefaultFields:     metadataStringSlice(map[string]interface{}{"items": typed["profileDefaultFields"]}, "items"),
+			Override:                 riskProfileOverrideFromRaw(typed["override"]),
 			OverrideFields:           metadataStringSlice(map[string]interface{}{"items": typed["overrideFields"]}, "items"),
 		}, true
 	default:
