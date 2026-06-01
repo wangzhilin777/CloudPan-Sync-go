@@ -444,6 +444,8 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 		}),
 		chromedp.Evaluate(`(() => window.__cloudpanTestHooks?.focusBlockedActionSummary?.("manual_intervention_required"))()`, nil),
 		waitForValue(`#auto-recover-blocked-action`, "manual_intervention_required"),
+		waitForText(`#blocked-actions-summary`, "next-step: 修复 provider 会话后继续"),
+		waitForText(`#blocked-actions-summary`, "manual_intervention_required"),
 	)
 
 	runStep(t, runCtx, "local file missing blocked task",
@@ -474,6 +476,8 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 		}),
 		chromedp.Evaluate(`(() => window.__cloudpanTestHooks?.focusBlockedActionSummary?.("restore_local_source_file"))()`, nil),
 		waitForValue(`#auto-recover-blocked-action`, "restore_local_source_file"),
+		waitForText(`#blocked-actions-summary`, "next-step: 补回本地文件后继续"),
+		waitForText(`#blocked-actions-summary`, "restore_local_source_file"),
 	)
 
 	runStep(t, runCtx, "auth expired blocked task",
@@ -504,6 +508,8 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 		}),
 		chromedp.Evaluate(`(() => window.__cloudpanTestHooks?.focusBlockedActionSummary?.("refresh_auth_profile"))()`, nil),
 		waitForValue(`#auto-recover-blocked-action`, "refresh_auth_profile"),
+		waitForText(`#blocked-actions-summary`, "next-step: 刷新授权后继续"),
+		waitForText(`#blocked-actions-summary`, "refresh_auth_profile"),
 	)
 
 	runStep(t, runCtx, "provider smoke matrix draft workflow",
