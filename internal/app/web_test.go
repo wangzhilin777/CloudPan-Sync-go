@@ -183,6 +183,12 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "OVERRIDE FIELDS") {
 		t.Fatalf("expected OVERRIDE FIELDS risk resolution detail in app.js, got %q", body)
 	}
+	if !strings.Contains(body, "PROVIDER HINTS") {
+		t.Fatalf("expected PROVIDER HINTS risk resolution detail in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "PROVIDER TRAITS") {
+		t.Fatalf("expected PROVIDER TRAITS risk resolution detail in app.js, got %q", body)
+	}
 	if !strings.Contains(body, "renderSourceDeletePolicy") {
 		t.Fatalf("expected source delete policy renderer in app.js, got %q", body)
 	}

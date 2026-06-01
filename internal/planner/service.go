@@ -62,10 +62,10 @@ func BuildPreview(registry *provider.Registry, req PreviewRequest) (Plan, error)
 	if err != nil {
 		return Plan{}, err
 	}
-	riskResolution := resolveRiskProfile(target.Meta.Key, req.RiskMode, req.RiskOverride)
+	riskResolution := resolveRiskProfile(target.Meta, req.RiskMode, req.RiskOverride)
 	riskProfile := riskResolution.Applied
 	recommendedMode, recommendedReason := recommendExecutionMode(req, riskProfile)
-	recommendedRiskMode, recommendedRiskReason, aggressiveRiskWarning := recommendRiskMode(target.Meta.Key, req, riskResolution)
+	recommendedRiskMode, recommendedRiskReason, aggressiveRiskWarning := recommendRiskMode(target.Meta, req, riskResolution)
 	orderedEntries := orderEntriesByMode(req.Entries, executionMode)
 	deletedRecords := buildDeletedEntryMetadata(orderedEntries, req.SelectedRoots)
 
@@ -285,23 +285,26 @@ func defaultRiskProfile(providerKey string, mode RiskMode) RiskProfile {
 	return applyProviderRiskCalibration(providerKey, profile)
 }
 
-func resolveRiskProfile(providerKey string, mode RiskMode, override *RiskProfileOverride) RiskProfileResolution {
+func resolveRiskProfile(meta provider.Provider, mode RiskMode, override *RiskProfileOverride) RiskProfileResolution {
 	normalizedMode := normalizeRiskMode(mode)
-	base := baseRiskProfile(normalizedMode, providerKey)
-	calibrated, calibrationReasons := applyProviderRiskCalibrationWithReasons(providerKey, base)
+	base := baseRiskProfile(normalizedMode, meta.Key)
+	calibrated, calibrationReasons := applyProviderRiskCalibrationWithReasons(meta.Key, base)
 	applied, overrideFields := applyRiskProfileOverrideWithFields(calibrated, override)
 	// 根据最终的 RiskProfile 计算恢复预算策略，统一由 Planner 提供。
-	recoverBudget := deriveRecoverBudgetPolicy(providerKey, applied)
+	recoverBudget := deriveRecoverBudgetPolicy(meta.Key, applied)
 	return RiskProfileResolution{
-		ProviderKey:        providerKey,
-		Mode:               normalizedMode,
-		Base:               base,
-		Calibrated:         calibrated,
-		Applied:            applied,
-		RecoverBudget:      recoverBudget,
-		CalibrationReasons: calibrationReasons,
-		Override:           override,
-		OverrideFields:     overrideFields,
+		ProviderKey:         meta.Key,
+		ProviderDisplayName: meta.DisplayName,
+		ProviderRiskHints:   append([]string(nil), meta.RiskHints...),
+		ProviderRiskTraits:  append([]string(nil), meta.RiskTraits...),
+		Mode:                normalizedMode,
+		Base:                base,
+		Calibrated:          calibrated,
+		Applied:             applied,
+		RecoverBudget:       recoverBudget,
+		CalibrationReasons:  calibrationReasons,
+		Override:            override,
+		OverrideFields:      overrideFields,
 	}
 }
 
@@ -569,7 +572,7 @@ func recommendExecutionMode(req PreviewRequest, riskProfile RiskProfile) (Execut
 	return ExecutionModeLeafFirstLazy, "Leaf-first lazy scan is the preferred default for large or risk-sensitive transfers."
 }
 
-func recommendRiskMode(providerKey string, req PreviewRequest, resolution RiskProfileResolution) (RiskMode, string, string) {
+func recommendRiskMode(meta provider.Provider, req PreviewRequest, resolution RiskProfileResolution) (RiskMode, string, string) {
 	selectedMode := normalizeRiskMode(req.RiskMode)
 	entryCount := len(req.Entries)
 	rootCount := len(req.SelectedRoots)
@@ -584,7 +587,7 @@ func recommendRiskMode(providerKey string, req PreviewRequest, resolution RiskPr
 	case rootCount > 1:
 		recommended = RiskModeBalanced
 		reason = "Multiple top-level roots benefit from balanced pacing to keep subtree progression and recoverability stable."
-	case isRiskSensitiveProvider(providerKey):
+	case isRiskSensitiveProvider(meta.Key):
 		recommended = RiskModeSafe
 		reason = "This provider family is more risk-sensitive and should default to safe pacing before raising throughput."
 	case entryCount <= 20 && rootCount <= 1:
@@ -604,8 +607,23 @@ func recommendRiskMode(providerKey string, req PreviewRequest, resolution RiskPr
 	if warning == "" && selectedMode != recommended && selectedMode != "" {
 		warning = "Current risk mode differs from the recommended profile. Review request interval, retry limit, and concurrency before large runs."
 	}
+	if len(meta.RiskHints) > 0 {
+		reason = reason + " Provider hint: " + meta.RiskHints[0]
+	}
+	if warning == "" && len(meta.RiskTraits) > 0 && containsPlannerString(meta.RiskTraits, "manual_confirmation_possible") {
+		warning = "This provider may still require manual confirmation on some fallback branches."
+	}
 	_ = resolution
 	return recommended, reason, warning
+}
+
+func containsPlannerString(values []string, target string) bool {
+	for _, value := range values {
+		if strings.TrimSpace(value) == target {
+			return true
+		}
+	}
+	return false
 }
 
 func isRiskSensitiveProvider(providerKey string) bool {
