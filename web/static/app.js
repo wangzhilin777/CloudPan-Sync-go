@@ -1105,6 +1105,33 @@ function renderAutoRecoverMode(summary) {
   return "manual_only";
 }
 
+function renderBlockedSummary(action, advice, nextRetryAt = "", autoRecoverAdvice = "") {
+  const normalizedAction = String(action || "").trim();
+  const normalizedAdvice = String(advice || "").trim();
+  const normalizedNextRetryAt = String(nextRetryAt || "").trim();
+  const normalizedAutoRecoverAdvice = String(autoRecoverAdvice || "").trim();
+  if (!normalizedAction && !normalizedAdvice && !normalizedAutoRecoverAdvice) {
+    return "-";
+  }
+  const actionLabelMap = {
+    refresh_auth_profile: "刷新授权后继续",
+    restore_local_source_file: "补回本地文件后继续",
+    manual_intervention_required: "修复 provider 会话后继续",
+    wait_for_cooldown: normalizedNextRetryAt ? `等待冷却到 ${normalizedNextRetryAt}` : "等待冷却结束后继续",
+    wait_for_retry_window: normalizedNextRetryAt ? `等待时间窗到 ${normalizedNextRetryAt}` : "等待时间窗开放后继续",
+    manual_confirmation_required: "人工确认后继续",
+    review_and_reset_retry_strategy: "调整重试策略后继续",
+  };
+  const primary = actionLabelMap[normalizedAction] || normalizedAdvice || normalizedAutoRecoverAdvice || normalizedAction;
+  if (normalizedAdvice && normalizedAdvice !== primary) {
+    return `${primary} | ${normalizedAdvice}`;
+  }
+  if (normalizedAutoRecoverAdvice && normalizedAutoRecoverAdvice !== primary && normalizedAutoRecoverAdvice !== normalizedAdvice) {
+    return `${primary} | ${normalizedAutoRecoverAdvice}`;
+  }
+  return primary;
+}
+
 function renderRuntimeCheckpoint(runtime, metadata = null, scope = "task") {
   if (!runtime || typeof runtime !== "object") {
     return `
@@ -1172,6 +1199,17 @@ function renderRuntimeCheckpoint(runtime, metadata = null, scope = "task") {
     <div class="insight-card checkpoint-card">
       <strong>处理建议</strong>
       <span>${stringifyValue(runtime.blockedAdvice, "-")}</span>
+    </div>
+    <div class="insight-card checkpoint-card">
+      <strong>阻塞摘要</strong>
+      <span>${escapeHTML(
+        renderBlockedSummary(
+          runtime.blockedAction,
+          runtime.blockedAdvice,
+          runtime.nextRetryAt,
+          metadata?.retrySummary?.autoRecoverAdvice,
+        ),
+      )}</span>
     </div>
     <div class="insight-card checkpoint-card">
       <strong>下次自动补传</strong>
@@ -3263,6 +3301,17 @@ function renderSelectedTask() {
       <span>${stringifyValue(metadata.retrySummary?.blockedReason || (metadata.retrySummary?.shouldBlock ? "blocked" : "ready"), "-")}</span>
     </div>
     <div class="insight-card">
+      <strong>下一步摘要</strong>
+      <span>${escapeHTML(
+        renderBlockedSummary(
+          runtime.blockedAction || metadata.retrySummary?.blockedAction,
+          runtime.blockedAdvice || metadata.retrySummary?.blockedAdvice,
+          runtime.nextRetryAt || metadata.retrySummary?.nextRetryAt,
+          metadata.retrySummary?.autoRecoverAdvice,
+        ),
+      )}</span>
+    </div>
+    <div class="insight-card">
       <strong>源端删除记录</strong>
       <span>${stringifyValue(runtime.sourceDeletionCount || metadata.deletedEntryCount, "0")}</span>
     </div>
@@ -3563,6 +3612,7 @@ function renderBlockedActionsSummary(items) {
             <span class="pill">next ${stringifyValue(item.nextRetryAt, "-")}</span>
           </div>
           <div class="muted">${escapeHTML(stringifyValue(item.advice, "-"))}</div>
+          <div class="muted">next-step: ${escapeHTML(renderBlockedSummary(item.action, item.advice, item.nextRetryAt))}</div>
           <div class="actions compact">
             <button
               type="button"
@@ -4821,6 +4871,14 @@ function renderSnapshotSummary(summary) {
       <div><strong>retryBlocked</strong> <code>${escapeHTML(stringifyValue(retrySummary.blockedReason, "-"))}</code></div>
       <div><strong>blockedAction</strong> <code>${escapeHTML(stringifyValue(retrySummary.blockedAction, "-"))}</code></div>
       <div><strong>blockedTop</strong> <code>${escapeHTML(stringifyValue(blockedActions[0]?.action, "-"))}</code></div>
+      <div><strong>blockedSummary</strong> <code>${escapeHTML(
+        renderBlockedSummary(
+          retrySummary.blockedAction,
+          retrySummary.blockedAdvice,
+          retrySummary.nextRetryAt,
+          retrySummary.autoRecoverAdvice,
+        ),
+      )}</code></div>
       <div><strong>nextRetryAt</strong> <code>${escapeHTML(stringifyValue(retrySummary.nextRetryAt, "-"))}</code></div>
       <div><strong>queueSize</strong> <code>${escapeHTML(stringifyValue(retrySummary.queueSize, "0"))}</code></div>
       <div><strong>autoRecover</strong> <code>${escapeHTML(renderAutoRecoverMode(retrySummary))}</code></div>
