@@ -252,6 +252,21 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "recoverBudgetReason") {
 		t.Fatalf("expected snapshot summary recoverBudgetReason field in app.js, got %q", body)
 	}
+	if !strings.Contains(body, "renderBlockedSummary") {
+		t.Fatalf("expected blocked summary helper in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "阻塞摘要") {
+		t.Fatalf("expected blocked summary label in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "下一步摘要") {
+		t.Fatalf("expected next-step summary label in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "blockedSummary") {
+		t.Fatalf("expected snapshot summary blockedSummary field in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "next-step:") {
+		t.Fatalf("expected blocked action next-step summary in app.js, got %q", body)
+	}
 	if !strings.Contains(body, "profile-kind") {
 		t.Fatalf("expected profile-kind summary token in app.js, got %q", body)
 	}
