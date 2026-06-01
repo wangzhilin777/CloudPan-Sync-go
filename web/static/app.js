@@ -2594,20 +2594,55 @@ function syncExecutionModeHint() {
 
 function updateExecutionRecommendationAction(metadata = {}) {
   const card = $("#plan-recommendation-action");
-  const button = $("#apply-recommended-execution");
-  const recommended = metadata.recommendedExecutionMode || "";
-  const selected = $("#plan-execution-mode").value;
-  if (!recommended) {
+  const executionButton = $("#apply-recommended-execution");
+  const riskButton = $("#apply-recommended-risk");
+  const recommendedExecution = metadata.recommendedExecutionMode || "";
+  const recommendedRisk = metadata.recommendedRiskMode || "";
+  const selectedExecution = $("#plan-execution-mode").value;
+  const selectedRisk = $("#plan-risk-mode").value;
+  if (!recommendedExecution && !recommendedRisk) {
     card.classList.add("hidden");
-    button.disabled = true;
+    executionButton.disabled = true;
+    riskButton.disabled = true;
     return;
   }
-  const reason = stringifyValue(metadata.recommendedExecutionModeReason, "暂无推荐原因");
+
+  const executionReason = stringifyValue(metadata.recommendedExecutionModeReason, "暂无执行模式推荐原因");
+  const riskReason = stringifyValue(metadata.recommendedRiskModeReason, "暂无风控推荐原因");
+  const aggressiveWarning = stringifyValue(metadata.aggressiveRiskWarning, "-");
   card.classList.remove("hidden");
-  $("#plan-recommendation-title").textContent =
-    recommended === selected ? `当前已采用推荐模式：${recommended}` : `建议切换到：${recommended}`;
-  $("#plan-recommendation-reason").textContent = reason;
-  button.disabled = recommended === selected;
+
+  const titleParts = [];
+  if (recommendedExecution) {
+    titleParts.push(
+      recommendedExecution === selectedExecution
+        ? `执行模式已采用推荐值：${recommendedExecution}`
+        : `建议执行模式：${recommendedExecution}`,
+    );
+  }
+  if (recommendedRisk) {
+    titleParts.push(
+      recommendedRisk === selectedRisk
+        ? `风控档位已采用推荐值：${recommendedRisk}`
+        : `建议风控档位：${recommendedRisk}`,
+    );
+  }
+  $("#plan-recommendation-title").textContent = titleParts.join(" / ");
+
+  const reasonParts = [];
+  if (recommendedExecution) {
+    reasonParts.push(`执行模式：${executionReason}`);
+  }
+  if (recommendedRisk) {
+    reasonParts.push(`风控档位：${riskReason}`);
+  }
+  if (aggressiveWarning && aggressiveWarning !== "-") {
+    reasonParts.push(`提示：${aggressiveWarning}`);
+  }
+  $("#plan-recommendation-reason").textContent = reasonParts.join(" | ");
+
+  executionButton.disabled = !recommendedExecution || recommendedExecution === selectedExecution;
+  riskButton.disabled = !recommendedRisk || recommendedRisk === selectedRisk;
 }
 
 function renderTasks() {
@@ -5424,6 +5459,15 @@ function wirePlanner() {
     }
     setSelectValueIfPresent("#plan-execution-mode", recommended);
     showFlash(`已采用推荐执行模式：${recommended}`);
+  });
+  $("#apply-recommended-risk").addEventListener("click", () => {
+    const recommended = state.preview?.metadata?.recommendedRiskMode;
+    if (!recommended) {
+      showFlash("请先生成计划预览", true);
+      return;
+    }
+    setSelectValueIfPresent("#plan-risk-mode", recommended);
+    showFlash(`已采用推荐风控档位：${recommended}`);
   });
 
   $("#preview-plan").addEventListener("click", async () => {
