@@ -223,9 +223,12 @@
                 <div id="plan-recommendation-action" class="recommendation-card hidden">
                   <div>
                     <strong id="plan-recommendation-title">等待预览推荐</strong>
-                    <span id="plan-recommendation-reason">生成预览后会显示推荐模式与当前选择是否一致。</span>
+                    <span id="plan-recommendation-reason">生成预览后会显示推荐模式、推荐风控与当前选择是否一致。</span>
                   </div>
-                  <button type="button" class="ghost" id="apply-recommended-execution">采用推荐模式</button>
+                  <div class="actions compact-actions">
+                    <button type="button" class="ghost" id="apply-recommended-execution">采用推荐模式</button>
+                    <button type="button" class="ghost" id="apply-recommended-risk">采用推荐风控</button>
+                  </div>
                 </div>
                 <label>
                   <span>阈值(MB)</span>

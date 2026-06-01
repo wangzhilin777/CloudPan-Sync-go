@@ -104,6 +104,15 @@ func TestHandleIndexServesHTML(t *testing.T) {
 	if !strings.Contains(body, `id="risk-max-concurrent"`) {
 		t.Fatalf("expected risk concurrency input in html body, got %q", body)
 	}
+	if !strings.Contains(body, `id="plan-recommendation-action"`) {
+		t.Fatalf("expected recommendation action card in html body, got %q", body)
+	}
+	if !strings.Contains(body, `id="apply-recommended-execution"`) {
+		t.Fatalf("expected apply recommended execution control in html body, got %q", body)
+	}
+	if !strings.Contains(body, `id="apply-recommended-risk"`) {
+		t.Fatalf("expected apply recommended risk control in html body, got %q", body)
+	}
 }
 
 func TestRoutesServeStaticAssets(t *testing.T) {
@@ -161,6 +170,12 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	}
 	if !strings.Contains(body, "recommendedExecutionModeReason") {
 		t.Fatalf("expected recommendedExecutionModeReason wiring in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "recommendedRiskMode") {
+		t.Fatalf("expected recommendedRiskMode wiring in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "recommendedRiskModeReason") {
+		t.Fatalf("expected recommendedRiskModeReason wiring in app.js, got %q", body)
 	}
 	if !strings.Contains(body, "风险档位") {
 		t.Fatalf("expected risk mode label in app.js, got %q", body)
@@ -827,6 +842,12 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	}
 	if !strings.Contains(body, "conflict:") {
 		t.Fatalf("expected provider conflict text in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "#apply-recommended-risk") {
+		t.Fatalf("expected apply recommended risk handler in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "已采用推荐风控档位") {
+		t.Fatalf("expected recommended risk flash text in app.js, got %q", body)
 	}
 	if !strings.Contains(body, "earliest ") {
 		t.Fatalf("expected earliest next retry summary text in app.js, got %q", body)
