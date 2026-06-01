@@ -651,6 +651,21 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "focus_status_blocked") {
 		t.Fatalf("expected focus_status_blocked guide intent in app.js, got %q", body)
 	}
+	if !strings.Contains(body, "focus_status_auto_recover_mode") {
+		t.Fatalf("expected focus_status_auto_recover_mode guide intent in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "upload_checkpoint_auto_resume") {
+		t.Fatalf("expected upload_checkpoint_auto_resume guide content in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "只看自动续跑候选") {
+		t.Fatalf("expected upload checkpoint guide button label in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "只看自动补传候选") {
+		t.Fatalf("expected auto retry guide button label in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "等待后台自动补传接管") {
+		t.Fatalf("expected auto retry guide title in app.js, got %q", body)
+	}
 	if !strings.Contains(body, "renderBlockedActionsSummary") {
 		t.Fatalf("expected blocked actions summary renderer in app.js, got %q", body)
 	}
