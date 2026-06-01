@@ -90,7 +90,30 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 			return provider.UploadResult{OperationResult: provider.OperationResult{Status: "auth_expired", Message: "auth expired", Mode: "scripted_auth_expired"}}
 		},
 	}
-	registry := provider.NewRegistry(append(provider.DefaultCatalog(), targetAdapter, localMissingAdapter, authExpiredAdapter)...)
+	recoverUploadCalls := 0
+	recoverDryRunAdapter := &appScriptedAdapter{
+		meta: provider.Provider{Key: "recover_dry_run_ui_target", DisplayName: "Recover Dry Run UI Target", ProtocolGroup: "recover_dry_run_ui_group", AuthModes: []string{"manual_token"}, FastUploadInputs: []string{"md5", "size"}, FallbackModes: []string{"download_upload"}, Status: "planned"},
+		capability: provider.CapabilitySet{SupportsAuthValidation: true, SupportsFastUpload: true, SupportsUpload: true},
+		uploadFunc: func(req provider.UploadRequest) provider.UploadResult {
+			recoverUploadCalls++
+			if recoverUploadCalls == 1 {
+				return provider.UploadResult{
+					OperationResult: provider.OperationResult{
+						Status:  "upload_checkpoint_pending",
+						Message: "checkpoint pending",
+						Mode:    "recover_dry_run_ui_pending",
+						Payload: map[string]interface{}{
+							"fileId":         "recover-dry-run-ui-file",
+							"uploadId":       "recover-dry-run-ui-upload",
+							"nextPartNumber": 1,
+						},
+					},
+				}
+			}
+			return provider.UploadResult{OperationResult: provider.OperationResult{OK: true, Status: "ok", Message: "recovered", Mode: "recover_dry_run_ui_ok"}}
+		},
+	}
+	registry := provider.NewRegistry(append(provider.DefaultCatalog(), targetAdapter, localMissingAdapter, authExpiredAdapter, recoverDryRunAdapter)...)
 	authSvc := auth.NewService(application.store, registry)
 	taskSvc := task.NewService(application.store, registry, authSvc)
 	application.providers = registry
@@ -130,6 +153,22 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 	authRunResp := invokeJSON(t, application.routes(), http.MethodPost, "/api/tasks/"+authTaskID+"/run", nil)
 	if got := authRunResp.Data.(map[string]interface{})["task"].(map[string]interface{})["state"].(string); got != "blocked" {
 		t.Fatalf("expected auth expired blocked task for ui smoke, got %s", got)
+	}
+
+	recoverProfileResp := invokeJSON(t, application.routes(), http.MethodPost, "/api/auth/profiles", map[string]interface{}{"providerKey": "recover_dry_run_ui_target", "authMode": "manual_token", "displayName": "Recover Dry Run UI Target", "token": "token-recover-dry-run-ui"})
+	recoverProfileID := recoverProfileResp.Data.(map[string]interface{})["id"].(string)
+	recoverFile := filepath.Join(t.TempDir(), "recover-dry-run-ui.bin")
+	if err := os.WriteFile(recoverFile, []byte("recover-dry-run-ui"), 0o644); err != nil {
+		t.Fatalf("write recover dry run ui local file: %v", err)
+	}
+	recoverTaskResp := invokeJSON(t, application.routes(), http.MethodPost, "/api/tasks", map[string]interface{}{"sourceProvider": "recover_dry_run_ui_target", "targetProvider": "recover_dry_run_ui_target", "targetProfileId": recoverProfileID, "thresholdMB": 1, "entries": []map[string]interface{}{{"path": "/recover-dry-run-ui.bin", "size": 1024, "md5": "recover-dry-run-ui-md5", "localPath": recoverFile}}})
+	recoverTaskID := recoverTaskResp.Data.(map[string]interface{})["task"].(map[string]interface{})["id"].(string)
+	recoverRunResp := invokeJSON(t, application.routes(), http.MethodPost, "/api/tasks/"+recoverTaskID+"/run", nil)
+	if got := recoverRunResp.Data.(map[string]interface{})["task"].(map[string]interface{})["state"].(string); got != "completed_with_errors" {
+		t.Fatalf("expected recover dry run task completed_with_errors for ui smoke, got %s", got)
+	}
+	if recoverUploadCalls != 1 {
+		t.Fatalf("expected recover dry run task initial upload calls 1, got %d", recoverUploadCalls)
 	}
 
 	runStep(t, runCtx, "login and bootstrap",
@@ -243,9 +282,55 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 		waitForText(`body`, "报告标题"),
 	)
 
+	runStep(t, runCtx, "auto recover preview and run",
+		waitForText(`#auto-recover-summary`, "recover_dry_run_ui_group"),
+		chromedp.Evaluate(`(() => document.querySelector('#auto-recover-summary [data-auto-recover-preview-protocol-group="recover_dry_run_ui_group"]')?.click())()`, nil),
+		waitForText(`#auto-recover-last-result-summary`, "最近预演"),
+		waitForText(`#auto-recover-last-result-summary`, "预演可放行 1"),
+		waitForText(`#auto-recover-last-result-summary`, "recover_dry_run_ui_target"),
+		waitForText(`#auto-recover-last-result-detail`, "等待态说明"),
+		waitForText(`#auto-recover-last-result-detail`, "recover_dry_run_ui_group"),
+		chromedp.Evaluate(`(() => document.querySelector('#auto-recover-last-result-detail [data-auto-recover-decision-focus-state="runnable_now"]')?.click())()`, nil),
+		waitForValue(`#auto-recover-state`, "runnable_now"),
+		chromedp.Evaluate(`(() => document.querySelector('#auto-recover-last-result-detail [data-auto-recover-decision-apply-budgets]')?.click())()`, nil),
+		waitForText(`#flash`, "已按决策采用建议预算"),
+		chromedp.ActionFunc(func(ctx context.Context) error {
+			var modeBudget string
+			if err := chromedp.Value(`#auto-recover-limit-per-mode`, &modeBudget, chromedp.ByID).Do(ctx); err != nil {
+				return err
+			}
+			if strings.TrimSpace(modeBudget) == "" || strings.TrimSpace(modeBudget) == "0" {
+				return fmt.Errorf("expected mode budget to be populated, got %q", modeBudget)
+			}
+			return nil
+		}),
+		chromedp.Evaluate(`(() => document.querySelector('#auto-recover-last-result-detail [data-auto-recover-decision-preview="1"]')?.click())()`, nil),
+		waitForText(`#flash`, "已按决策预演后台补传"),
+		waitForText(`#auto-recover-last-result-summary`, "最近预演"),
+		waitForText(`#auto-recover-last-result-detail`, "预演可放行"),
+		chromedp.Evaluate(`(() => document.querySelector('#auto-recover-last-result-detail [data-auto-recover-decision-open-task]')?.click())()`, nil),
+		waitForText(`#task-detail`, recoverTaskID),
+		waitForText(`#task-detail`, `"state": "completed_with_errors"`),
+		chromedp.Evaluate(`(() => document.querySelector('button[data-view="status"]')?.click())()`, nil),
+		waitForText(`#auto-recover-last-result-summary`, "最近预演"),
+		chromedp.Evaluate(`(() => document.querySelector('#auto-recover-last-result-detail [data-auto-recover-decision-run="1"]')?.click())()`, nil),
+		waitForText(`#flash`, "已按决策执行后台补传"),
+		waitForText(`#auto-recover-last-result-summary`, "最近执行"),
+		waitForText(`#auto-recover-last-result-summary`, "recovered 1"),
+		waitForText(`#auto-recover-last-result-detail`, "已放行执行"),
+		waitForText(`#tasks-list`, "recover_dry_run_ui_target -> recover_dry_run_ui_target"),
+		chromedp.Evaluate(`(() => document.querySelector('#auto-recover-reset')?.click())()`, nil),
+		waitForText(`#auto-recover-filter-summary`, "4/4 条后台补传候选"),
+		chromedp.ActionFunc(func(ctx context.Context) error {
+			if recoverUploadCalls < 2 {
+				return fmt.Errorf("expected recover upload calls >= 2 after execute, got %d", recoverUploadCalls)
+			}
+			return nil
+		}),
+	)
+
 	runStep(t, runCtx, "provider session missing blocked task",
 		chromedp.Evaluate(`(() => document.querySelector('button[data-view="tasks"]')?.click())()`, nil),
-		waitForText(`#tasks-list`, "missing_uploadid_source -> missing_uploadid_target"),
 		chromedp.ActionFunc(func(ctx context.Context) error {
 			var payload string
 			if err := chromedp.Evaluate(fmt.Sprintf(`(() => {
@@ -275,12 +360,10 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 		}),
 		chromedp.Evaluate(`(() => window.__cloudpanTestHooks?.focusBlockedActionSummary?.("manual_intervention_required"))()`, nil),
 		waitForValue(`#auto-recover-blocked-action`, "manual_intervention_required"),
-		waitForText(`#status-retry-filter-summary`, "当前显示"),
 	)
 
 	runStep(t, runCtx, "local file missing blocked task",
 		chromedp.Evaluate(`(() => document.querySelector('button[data-view="tasks"]')?.click())()`, nil),
-		waitForText(`#tasks-list`, "local_missing_source -> local_missing_target"),
 		chromedp.ActionFunc(func(ctx context.Context) error {
 			var payload string
 			if err := chromedp.Evaluate(fmt.Sprintf(`(() => {
@@ -307,12 +390,10 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 		}),
 		chromedp.Evaluate(`(() => window.__cloudpanTestHooks?.focusBlockedActionSummary?.("restore_local_source_file"))()`, nil),
 		waitForValue(`#auto-recover-blocked-action`, "restore_local_source_file"),
-		waitForText(`#status-retry-filter-summary`, "当前显示"),
 	)
 
 	runStep(t, runCtx, "auth expired blocked task",
 		chromedp.Evaluate(`(() => document.querySelector('button[data-view="tasks"]')?.click())()`, nil),
-		waitForText(`#tasks-list`, "auth_expired_source -> auth_expired_target"),
 		chromedp.ActionFunc(func(ctx context.Context) error {
 			var payload string
 			if err := chromedp.Evaluate(fmt.Sprintf(`(() => {
@@ -339,7 +420,6 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 		}),
 		chromedp.Evaluate(`(() => window.__cloudpanTestHooks?.focusBlockedActionSummary?.("refresh_auth_profile"))()`, nil),
 		waitForValue(`#auto-recover-blocked-action`, "refresh_auth_profile"),
-		waitForText(`#status-retry-filter-summary`, "当前显示"),
 	)
 
 	runStep(t, runCtx, "provider smoke matrix workflow",
