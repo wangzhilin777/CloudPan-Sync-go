@@ -2480,8 +2480,7 @@ function pathMatchesSubtree(candidatePath, rootPath) {
   return candidate === root || candidate.startsWith(`${root}/`);
 }
 
-function buildCreatePayloadFromTaskPath(detail, path, options = {}) {
-  const payload = buildCreatePayloadFromTask(detail);
+function buildCreatePayloadFromPayloadPath(payload, path, options = {}) {
   const normalizedPath = normalizeComparePath(path);
   if (!payload || !normalizedPath) {
     return payload;
@@ -2497,8 +2496,7 @@ function buildCreatePayloadFromTaskPath(detail, path, options = {}) {
   return payload;
 }
 
-function buildCreatePayloadFromTaskPaths(detail, paths, options = {}) {
-  const payload = buildCreatePayloadFromTask(detail);
+function buildCreatePayloadFromPayloadPaths(payload, paths, options = {}) {
   const normalizedPaths = Array.from(new Set((Array.isArray(paths) ? paths : []).map((path) => normalizeComparePath(path)).filter(Boolean)));
   if (!payload || !normalizedPaths.length) {
     return payload;
@@ -2512,6 +2510,14 @@ function buildCreatePayloadFromTaskPaths(detail, paths, options = {}) {
   payload.selectedRoots = options.exactRoots ? normalizedPaths : narrowedRoots.length ? narrowedRoots : normalizedPaths;
   payload.entries = narrowedEntries.length ? narrowedEntries : payload.entries;
   return payload;
+}
+
+function buildCreatePayloadFromTaskPath(detail, path, options = {}) {
+  return buildCreatePayloadFromPayloadPath(buildCreatePayloadFromTask(detail), path, options);
+}
+
+function buildCreatePayloadFromTaskPaths(detail, paths, options = {}) {
+  return buildCreatePayloadFromPayloadPaths(buildCreatePayloadFromTask(detail), paths, options);
 }
 
 function prefillWizardFromTask(detail) {
@@ -2915,6 +2921,11 @@ function prefillWizardFromTaskPath(detail, path, options = {}) {
     showFlash("请先选择任务", true);
     return;
   }
+  prefillWizardFromPayload(payload);
+  showFlash(`已按 ${path} 重建向导范围`);
+}
+
+function prefillWizardFromPayload(payload) {
   activateTab("wizard");
   setSelectValueIfPresent("#plan-source-provider", payload.sourceProvider);
   syncSourceProfiles();
@@ -2932,7 +2943,6 @@ function prefillWizardFromTaskPath(detail, path, options = {}) {
   $("#plan-selected-roots").value = JSON.stringify(payload.selectedRoots || ["/"], null, 2);
   $("#plan-entries").value = JSON.stringify(payload.entries || [], null, 2);
   syncExecutionModeHint();
-  showFlash(`已按 ${path} 重建向导范围`);
 }
 
 function prefillWizardFromTaskPaths(detail, paths, label = "当前筛选", options = {}) {
@@ -2941,23 +2951,19 @@ function prefillWizardFromTaskPaths(detail, paths, label = "当前筛选", optio
     showFlash("请先选择任务", true);
     return;
   }
-  activateTab("wizard");
-  setSelectValueIfPresent("#plan-source-provider", payload.sourceProvider);
-  syncSourceProfiles();
-  setSelectValueIfPresent("#plan-source-profile", payload.sourceProfileId || "");
-  setSelectValueIfPresent("#plan-target-provider", payload.targetProvider);
-  syncTargetProfiles();
-  setSelectValueIfPresent("#plan-target-profile", payload.targetProfileId || "");
-  setSelectValueIfPresent("#plan-execution-mode", payload.executionMode || "leaf_first_lazy");
-  setSelectValueIfPresent("#plan-source-delete-policy", payload.sourceDeletePolicy || "record_only");
-  setSelectValueIfPresent("#plan-risk-mode", payload.riskMode || "balanced");
-  setSelectValueIfPresent("#plan-conflict-policy", payload.conflictPolicy || "auto_rename_new");
-  setInputValueIfPresent("#plan-threshold", payload.thresholdMB || 0);
-  hydrateRiskOverrideForm(payload.riskOverride || null);
-  $("#plan-risk-override").value = payload.riskOverride ? JSON.stringify(payload.riskOverride, null, 2) : "";
-  $("#plan-selected-roots").value = JSON.stringify(payload.selectedRoots || ["/"], null, 2);
-  $("#plan-entries").value = JSON.stringify(payload.entries || [], null, 2);
-  syncExecutionModeHint();
+  prefillWizardFromPayload(payload);
+  showFlash(`已按${label}重建向导范围`);
+}
+
+function prefillWizardFromPreviewPaths(paths, label = "全部删除记录") {
+  let payload;
+  try {
+    payload = buildPlanPayload();
+  } catch (error) {
+    showFlash(`当前向导参数无法解析：${error.message}`, true);
+    return;
+  }
+  prefillWizardFromPayload(buildCreatePayloadFromPayloadPaths(payload, paths, { exactRoots: true }));
   showFlash(`已按${label}重建向导范围`);
 }
 
@@ -2966,43 +2972,59 @@ function wireSourceDeletionSummary(scope, selector = null) {
   if (!wrap) {
     return;
   }
-  wrap.querySelectorAll("[data-source-delete-prefill-path]").forEach((button) => {
-    button.addEventListener("click", () => {
-      const focusScope = button.dataset.sourceDeletePrefillScope || scope;
-      const context = taskContextByScope(focusScope);
-      if (!context?.detail) {
-        showFlash(focusScope === "task" ? "请先选择任务" : "当前状态样本没有可用任务", true);
-        return;
-      }
-      const path = button.dataset.sourceDeletePrefillPath || "";
+  wrap.dataset.sourceDeletionScope = scope;
+  if (wrap.dataset.sourceDeletionWired === "true") {
+    return;
+  }
+  wrap.dataset.sourceDeletionWired = "true";
+  wrap.addEventListener("click", (event) => {
+    const pathButton = event.target.closest("[data-source-delete-prefill-path]");
+    const pathsButton = event.target.closest("[data-source-delete-prefill-paths]");
+    const button = pathButton || pathsButton;
+    if (!button || !wrap.contains(button)) {
+      return;
+    }
+    const focusScope = button.dataset.sourceDeletePrefillScope || wrap.dataset.sourceDeletionScope || scope;
+    if (pathButton) {
+      const path = pathButton.dataset.sourceDeletePrefillPath || "";
       if (!path) {
         showFlash("缺少可重建路径", true);
         return;
       }
-      prefillWizardFromTaskPath(context.detail, path, { exactRoots: true });
-    });
-  });
-  wrap.querySelectorAll("[data-source-delete-prefill-paths]").forEach((button) => {
-    button.addEventListener("click", () => {
-      const focusScope = button.dataset.sourceDeletePrefillScope || scope;
+      if (focusScope === "preview") {
+        prefillWizardFromPreviewPaths([path], "此删除记录");
+        return;
+      }
       const context = taskContextByScope(focusScope);
       if (!context?.detail) {
         showFlash(focusScope === "task" ? "请先选择任务" : "当前状态样本没有可用任务", true);
         return;
       }
-      let paths = [];
-      try {
-        paths = JSON.parse(button.dataset.sourceDeletePrefillPaths || "[]");
-      } catch {
-        paths = [];
-      }
-      const normalizedPaths = Array.isArray(paths) ? paths.map((path) => normalizeComparePath(path)).filter(Boolean) : [];
-      if (!normalizedPaths.length) {
-        showFlash("当前没有可重建的删除记录", true);
-        return;
-      }
-      prefillWizardFromTaskPaths(context.detail, normalizedPaths, button.dataset.sourceDeletePrefillLabel || "全部删除记录", { exactRoots: true });
-    });
+      prefillWizardFromTaskPath(context.detail, path, { exactRoots: true });
+      return;
+    }
+
+    let paths = [];
+    try {
+      paths = JSON.parse(pathsButton.dataset.sourceDeletePrefillPaths || "[]");
+    } catch {
+      paths = [];
+    }
+    const normalizedPaths = Array.isArray(paths) ? paths.map((path) => normalizeComparePath(path)).filter(Boolean) : [];
+    if (!normalizedPaths.length) {
+      showFlash("当前没有可重建的删除记录", true);
+      return;
+    }
+    if (focusScope === "preview") {
+      prefillWizardFromPreviewPaths(normalizedPaths, pathsButton.dataset.sourceDeletePrefillLabel || "全部删除记录");
+      return;
+    }
+    const context = taskContextByScope(focusScope);
+    if (!context?.detail) {
+      showFlash(focusScope === "task" ? "请先选择任务" : "当前状态样本没有可用任务", true);
+      return;
+    }
+    prefillWizardFromTaskPaths(context.detail, normalizedPaths, pathsButton.dataset.sourceDeletePrefillLabel || "全部删除记录", { exactRoots: true });
   });
 }
 
@@ -3497,6 +3519,10 @@ function renderPreview() {
     return;
   }
   const metadata = state.preview.metadata || {};
+  const deletedEntryCount = Number(metadata.deletedEntryCount || 0);
+  const activeEntryCount = Number(metadata.activeEntryCount || 0);
+  const hasDeletedRecords = deletedEntryCount > 0;
+  const deletionOnlyPreview = hasDeletedRecords && activeEntryCount === 0;
   updateExecutionRecommendationAction(metadata);
   $("#plan-preview-meta").innerHTML = `
     <div class="insight-card">
@@ -3558,8 +3584,15 @@ function renderPreview() {
       <strong>有效条目 / 删除记录</strong>
       <span>${stringifyValue(metadata.activeEntryCount, "0")} / ${stringifyValue(metadata.deletedEntryCount, "0")}</span>
     </div>
-    ${renderSourceDeletionSummary(metadata.sourceDeletionRecords || [], metadata.deletedEntryCount || 0, "task")}
+    ${hasDeletedRecords ? `
+      <div class="insight-card checkpoint-card">
+        <strong>删除记录仅用于定位</strong>
+        <div>${deletionOnlyPreview ? "当前预览只剩删除记录，没有可执行条目；请先恢复源文件并重新预览。" : "当前预览包含删除记录，它们只会用于定位，不会生成可执行条目。"}</div>
+      </div>
+    ` : ""}
+    ${renderSourceDeletionSummary(metadata.sourceDeletionRecords || [], metadata.deletedEntryCount || 0, "preview", "preview")}
   `;
+  wireSourceDeletionSummary("preview", "#plan-preview-meta");
   $("#plan-preview").textContent = formatJSON(state.preview);
 }
 
@@ -6360,6 +6393,11 @@ function buildPlanPayload() {
   };
 }
 
+function payloadHasOnlyDeletedEntries(payload) {
+  const entries = Array.isArray(payload?.entries) ? payload.entries : [];
+  return entries.length > 0 && entries.every((entry) => Boolean(entry?.deleted));
+}
+
 function wirePlanner() {
   ["#risk-request-interval", "#risk-directory-interval", "#risk-page-size", "#risk-cooldown-seconds", "#risk-retry-limit", "#risk-max-concurrent", "#risk-auto-retry-start-hour", "#risk-auto-retry-end-hour", "#risk-keywords"].forEach(
     (selector) => {
@@ -6430,6 +6468,10 @@ function wirePlanner() {
     event.preventDefault();
     try {
       const payload = buildPlanPayload();
+      if (payloadHasOnlyDeletedEntries(payload)) {
+        showFlash("当前只有删除记录，没有可执行条目；请先恢复源文件并重新预览", true);
+        return;
+      }
       const detail = await api("/api/tasks", {
         method: "POST",
         body: payload,
