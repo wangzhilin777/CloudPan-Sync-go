@@ -71,6 +71,7 @@
                 <button type="button" class="ghost" id="refresh-profiles">刷新</button>
               </div>
               <form id="profile-form" class="stack">
+                <input id="profile-id" name="id" type="hidden" />
                 <label>
                   <span>Provider</span>
                   <select id="profile-provider" name="providerKey"></select>
@@ -95,8 +96,57 @@
                   <span>Extra(JSON)</span>
                   <textarea id="profile-extra" name="extra" rows="4" placeholder='例如：{"pwdId":"abcd"}'></textarea>
                 </label>
+                <div class="risk-builder">
+                  <div class="risk-builder-head">
+                    <strong>账号默认风控模板</strong>
+                    <span>可选。保存到 `extra.riskDefaults`，作为该授权档案默认风控。</span>
+                  </div>
+                  <div class="mini-grid">
+                    <label>
+                      <span>请求间隔(ms)</span>
+                      <input id="profile-risk-request-interval" type="number" min="0" placeholder="例如 1600" />
+                    </label>
+                    <label>
+                      <span>目录间隔(ms)</span>
+                      <input id="profile-risk-directory-interval" type="number" min="0" placeholder="例如 2600" />
+                    </label>
+                    <label>
+                      <span>分页大小</span>
+                      <input id="profile-risk-page-size" type="number" min="1" placeholder="例如 100" />
+                    </label>
+                    <label>
+                      <span>冷却时间(s)</span>
+                      <input id="profile-risk-cooldown-seconds" type="number" min="0" placeholder="例如 600" />
+                    </label>
+                    <label>
+                      <span>重试次数</span>
+                      <input id="profile-risk-retry-limit" type="number" min="0" placeholder="例如 2" />
+                    </label>
+                    <label>
+                      <span>最大并发</span>
+                      <input id="profile-risk-max-concurrent" type="number" min="0" placeholder="例如 1" />
+                    </label>
+                    <label>
+                      <span>自动补传开始时段</span>
+                      <input id="profile-risk-auto-retry-start-hour" type="number" min="0" max="23" placeholder="例如 1" />
+                    </label>
+                    <label>
+                      <span>自动补传结束时段</span>
+                      <input id="profile-risk-auto-retry-end-hour" type="number" min="0" max="24" placeholder="例如 7" />
+                    </label>
+                    <label>
+                      <span>风险关键词</span>
+                      <input id="profile-risk-keywords" type="text" placeholder="rate_limit,captcha,profile_limit" />
+                    </label>
+                  </div>
+                  <div class="actions compact-actions">
+                    <button type="button" class="ghost" id="sync-profile-risk-defaults">同步到 Extra JSON</button>
+                    <button type="button" class="ghost" id="clear-profile-risk-defaults">清空账号默认风控</button>
+                  </div>
+                </div>
                 <div class="actions">
-                  <button type="submit">创建授权档案</button>
+                  <button type="submit" id="profile-submit">创建授权档案</button>
+                  <button type="button" class="ghost" id="profile-cancel-edit">取消编辑</button>
                 </div>
               </form>
             </article>
@@ -146,6 +196,9 @@
                   <span>目标授权档案</span>
                   <select id="plan-target-profile" name="targetProfileId"></select>
                 </label>
+                <div id="plan-target-profile-insight" class="provider-detail-card compact">
+                  <div class="muted">选择目标授权档案后，这里会显示账号默认风控模板。</div>
+                </div>
                 <label>
                   <span>Risk Mode</span>
                   <select id="plan-risk-mode" name="riskMode">

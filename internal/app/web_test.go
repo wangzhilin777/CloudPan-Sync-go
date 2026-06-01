@@ -56,6 +56,18 @@ func TestHandleIndexServesHTML(t *testing.T) {
 	if !strings.Contains(body, `id="plan-selected-roots"`) {
 		t.Fatalf("expected selected roots input in html body, got %q", body)
 	}
+	if !strings.Contains(body, `id="profile-id"`) {
+		t.Fatalf("expected profile edit hidden id in html body, got %q", body)
+	}
+	if !strings.Contains(body, `id="profile-risk-request-interval"`) {
+		t.Fatalf("expected profile risk request interval input in html body, got %q", body)
+	}
+	if !strings.Contains(body, `id="profile-cancel-edit"`) {
+		t.Fatalf("expected profile cancel edit button in html body, got %q", body)
+	}
+	if !strings.Contains(body, `id="plan-target-profile-insight"`) {
+		t.Fatalf("expected target profile insight panel in html body, got %q", body)
+	}
 	if !strings.Contains(body, `id="plan-preview-meta"`) {
 		t.Fatalf("expected preview meta panel in html body, got %q", body)
 	}
@@ -224,6 +236,18 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	}
 	if !strings.Contains(body, "renderSourceDeletePolicy") {
 		t.Fatalf("expected source delete policy renderer in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "mergeProfileRiskDefaultsIntoExtra") {
+		t.Fatalf("expected profile risk defaults merge helper in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "data-profile-edit") {
+		t.Fatalf("expected profile edit action in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "auth profile riskDefaults") {
+		t.Fatalf("expected target profile risk defaults source text in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "授权档案已更新") {
+		t.Fatalf("expected profile updated flash text in app.js, got %q", body)
 	}
 	if !strings.Contains(body, "record_only（只记录，不删目标端）") {
 		t.Fatalf("expected source delete policy label in app.js, got %q", body)

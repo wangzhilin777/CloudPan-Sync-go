@@ -922,6 +922,64 @@ func TestAppPlanPreviewRejectsMalformedTargetProfileRiskDefaults(t *testing.T) {
 	}
 }
 
+func TestAppWorkflowUpdatesProfileRiskDefaults(t *testing.T) {
+	ctx := context.Background()
+	application := mustNewTestApp(t, ctx)
+	handler := application.routes()
+
+	profileResp := invokeJSON(t, handler, http.MethodPost, "/api/auth/profiles", map[string]interface{}{
+		"providerKey": "123_open",
+		"authMode":    "manual_token",
+		"displayName": "Editable Risk Defaults",
+		"token":       "token-editable-risk",
+		"extra": map[string]interface{}{
+			"riskDefaults": "{\"requestIntervalMs\":1500}",
+		},
+	})
+	profileID := profileResp.Data.(map[string]interface{})["id"].(string)
+
+	updatedResp := invokeJSON(t, handler, http.MethodPatch, "/api/auth/profiles/"+profileID, map[string]interface{}{
+		"displayName": "Editable Risk Defaults Updated",
+		"extra": map[string]interface{}{
+			"riskDefaults": "{\"requestIntervalMs\":1888,\"directoryIntervalMs\":2666,\"retryLimit\":3}",
+			"apiEndpoint":  "http://example.test",
+		},
+	})
+	updatedProfile := updatedResp.Data.(map[string]interface{})
+	if got := updatedProfile["displayName"].(string); got != "Editable Risk Defaults Updated" {
+		t.Fatalf("expected updated display name, got %s", got)
+	}
+	extra := updatedProfile["extra"].(map[string]interface{})
+	if got := extra["riskDefaults"].(string); !strings.Contains(got, "\"requestIntervalMs\":1888") {
+		t.Fatalf("expected updated riskDefaults JSON, got %s", got)
+	}
+	if got := extra["apiEndpoint"].(string); got != "http://example.test" {
+		t.Fatalf("expected apiEndpoint to be preserved, got %s", got)
+	}
+
+	previewResp := invokeJSON(t, handler, http.MethodPost, "/api/plans/preview", map[string]interface{}{
+		"sourceProvider":  "baidu_netdisk",
+		"targetProvider":  "123_open",
+		"targetProfileId": profileID,
+		"entries": []map[string]interface{}{{
+			"path": "/demo/a.bin",
+			"size": 2048,
+			"md5":  "md5-a",
+		}},
+	})
+	previewMetadata := previewResp.Data.(map[string]interface{})["metadata"].(map[string]interface{})
+	riskProfile := previewMetadata["riskProfile"].(map[string]interface{})
+	if got := int(riskProfile["requestIntervalMs"].(float64)); got != 1888 {
+		t.Fatalf("expected updated preview requestIntervalMs 1888, got %d", got)
+	}
+	if got := int(riskProfile["directoryIntervalMs"].(float64)); got != 2666 {
+		t.Fatalf("expected updated preview directoryIntervalMs 2666, got %d", got)
+	}
+	if got := int(riskProfile["retryLimit"].(float64)); got != 3 {
+		t.Fatalf("expected updated preview retryLimit 3, got %d", got)
+	}
+}
+
 func TestAppPlanPreviewRejectsInvalidSourceDeletePolicy(t *testing.T) {
 	ctx := context.Background()
 	application := mustNewTestApp(t, ctx)
