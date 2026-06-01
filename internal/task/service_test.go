@@ -7593,6 +7593,12 @@ func TestServiceProviderSmokeRecords(t *testing.T) {
 	if matrix[0].AcceptanceMissing[0] != "upload_smoke_success_missing" {
 		t.Fatalf("expected upload_smoke_success_missing reason, got %#v", matrix[0].AcceptanceMissing)
 	}
+	if len(matrix[0].AcceptanceActions) == 0 {
+		t.Fatal("expected smoke matrix acceptance actions")
+	}
+	if matrix[0].AcceptanceActions[0] != "补 1 条真实上传成功样本" {
+		t.Fatalf("expected upload success acceptance action, got %#v", matrix[0].AcceptanceActions)
+	}
 	if !strings.Contains(matrix[0].AcceptanceAdvice, "真实上传成功样本") {
 		t.Fatalf("expected advice to mention upload sample, got %s", matrix[0].AcceptanceAdvice)
 	}
@@ -7615,6 +7621,9 @@ func TestServiceProviderSmokeRecords(t *testing.T) {
 	}
 	if evidence.UploadSuccessSamples != 0 {
 		t.Fatalf("expected upload success samples 0, got %d", evidence.UploadSuccessSamples)
+	}
+	if got := evidence.AcceptanceActionCounts["补 1 条真实上传成功样本"]; got < 1 {
+		t.Fatalf("expected acceptance action count for upload success sample >= 1, got %d", got)
 	}
 }
 
@@ -7671,6 +7680,12 @@ func TestServiceProviderSmokeMatrixTracksUploadSuccessSample(t *testing.T) {
 	if matrix[0].UploadSuccessCount != 1 {
 		t.Fatalf("expected upload success count 1 in smoke matrix, got %d", matrix[0].UploadSuccessCount)
 	}
+	if len(matrix[0].AcceptanceActions) == 0 {
+		t.Fatal("expected in-progress smoke matrix acceptance actions")
+	}
+	if !strings.Contains(matrix[0].AcceptanceActions[0], "任务覆盖样本") {
+		t.Fatalf("expected in-progress smoke matrix task coverage action, got %#v", matrix[0].AcceptanceActions)
+	}
 
 	evidence, err := svc.RuntimeEvidence(ctx)
 	if err != nil {
@@ -7690,6 +7705,9 @@ func TestServiceProviderSmokeMatrixTracksUploadSuccessSample(t *testing.T) {
 	}
 	if evidence.UploadSuccessSamples != 1 {
 		t.Fatalf("expected upload success samples 1, got %d", evidence.UploadSuccessSamples)
+	}
+	if got := evidence.AcceptanceActionCounts["补 1 条真实任务覆盖样本"]; got < 1 {
+		t.Fatalf("expected acceptance action count for task coverage sample >= 1, got %d", got)
 	}
 
 	report, err := svc.EvidenceReport(ctx)
@@ -7788,4 +7806,3 @@ func autoRecoverLaneByMode(items []AutoRecoverLane, mode string) AutoRecoverLane
 	}
 	return AutoRecoverLane{}
 }
-

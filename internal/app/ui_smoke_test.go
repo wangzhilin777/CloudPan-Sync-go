@@ -379,21 +379,17 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 			if manualRecoverUploadCalls < 2 {
 				return fmt.Errorf("expected manual confirmation recovery upload calls >= 2, got %d", manualRecoverUploadCalls)
 			}
-			var payload string
-			if err := chromedp.Evaluate(fmt.Sprintf(`(() => {
-				const hooks = window.__cloudpanTestHooks;
-				if (!hooks || !hooks.state) {
-					throw new Error("task hooks unavailable");
-				}
-				const detail = hooks.state.tasks.find((item) => item?.task?.id === %q);
-				if (!detail) {
-					throw new Error("missing manual recovered task detail");
-				}
-				return JSON.stringify(detail);
-			})()`, manualTaskID), &payload).Do(ctx); err != nil {
-				return err
+			detailResp := invokeJSON(t, application.routes(), http.MethodGet, "/api/tasks/"+manualTaskID, nil)
+			payload, _ := json.Marshal(detailResp.Data)
+			taskMap, ok := detailResp.Data.(map[string]interface{})
+			if !ok {
+				return fmt.Errorf("expected task detail map, got %#v", detailResp.Data)
 			}
-			if !strings.Contains(payload, `"state":"completed"`) {
+			taskDetail, ok := taskMap["task"].(map[string]interface{})
+			if !ok {
+				return fmt.Errorf("expected task payload in detail, got %s", payload)
+			}
+			if got := taskDetail["state"]; got != "completed" {
 				return fmt.Errorf("expected manual recovered task completed payload, got %s", payload)
 			}
 			return nil

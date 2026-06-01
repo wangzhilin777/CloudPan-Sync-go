@@ -624,6 +624,9 @@ func TestAppWorkflowMainline(t *testing.T) {
 	if got := smokeMatrix[0].(map[string]interface{})["accepted"].(bool); !got {
 		t.Fatal("expected smoke matrix accepted true")
 	}
+	if got := len(smokeMatrix[0].(map[string]interface{})["acceptanceActions"].([]interface{})); got == 0 {
+		t.Fatal("expected accepted smoke matrix acceptance actions")
+	}
 	foundMissing := false
 	for _, raw := range smokeMatrix {
 		item := raw.(map[string]interface{})
@@ -631,12 +634,20 @@ func TestAppWorkflowMainline(t *testing.T) {
 			if got := len(item["acceptanceMissing"].([]interface{})); got == 0 {
 				t.Fatal("expected pending smoke matrix row to include missing reasons")
 			}
+			if got := len(item["acceptanceActions"].([]interface{})); got == 0 {
+				t.Fatal("expected pending smoke matrix row to include acceptance actions")
+			}
 			foundMissing = true
 			break
 		}
 	}
 	if !foundMissing {
 		t.Fatal("expected at least one pending smoke matrix row")
+	}
+	if counts, ok := evidenceData["acceptanceActionCounts"].(map[string]interface{}); !ok {
+		t.Fatalf("expected acceptanceActionCounts map in evidence, got %#v", evidenceData["acceptanceActionCounts"])
+	} else if got, ok := counts["补 1 条真实任务覆盖样本"].(float64); !ok || got < 1 {
+		t.Fatalf("expected acceptanceActionCounts to include follow-up action, got %#v", counts)
 	}
 
 	smokeMarkdown := invokeText(t, handler, http.MethodGet, "/api/provider-smokes/"+smokeID+"?format=markdown", nil)
@@ -654,6 +665,9 @@ func TestAppWorkflowMainline(t *testing.T) {
 	}
 	if !strings.Contains(reportData["markdown"].(string), "Missing") {
 		t.Fatalf("expected report markdown to include missing reasons column, got %s", reportData["markdown"].(string))
+	}
+	if !strings.Contains(reportData["markdown"].(string), "Actions") {
+		t.Fatalf("expected report markdown to include acceptance actions column, got %s", reportData["markdown"].(string))
 	}
 	if !strings.Contains(reportData["markdown"].(string), "已验收协议组") || !strings.Contains(reportData["markdown"].(string), "进行中协议组") || !strings.Contains(reportData["markdown"].(string), "待补齐协议组") {
 		t.Fatalf("expected report markdown to include acceptance counters, got %s", reportData["markdown"].(string))

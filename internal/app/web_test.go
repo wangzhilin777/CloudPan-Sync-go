@@ -390,6 +390,9 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "data-provider-smoke-open-task") {
 		t.Fatalf("expected provider smoke matrix open-task action in app.js, got %q", body)
 	}
+	if !strings.Contains(body, "acceptanceActions") {
+		t.Fatalf("expected provider smoke matrix acceptance actions wiring in app.js, got %q", body)
+	}
 	if !strings.Contains(body, "draftProviderSmokeFromMatrix") {
 		t.Fatalf("expected provider smoke matrix draft helper in app.js, got %q", body)
 	}
