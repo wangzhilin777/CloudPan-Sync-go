@@ -449,6 +449,26 @@ func (a *App) handlePlanPreview(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid_json", "Invalid JSON payload.")
 		return
 	}
+	if strings.TrimSpace(req.TargetProfileID) != "" && req.ProfileRiskDefaults == nil {
+		profile, ok, err := a.auth.GetProfile(r.Context(), req.TargetProfileID)
+		if err != nil {
+			handleError(w, err)
+			return
+		}
+		if !ok {
+			writeError(w, http.StatusBadRequest, "target_profile_not_found", "Target profile was not found.")
+			return
+		}
+		override, _, err := planner.RiskProfileOverrideFromExtra(profile.Extra)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "invalid_profile_risk_defaults", "Target profile riskDefaults JSON is invalid.")
+			return
+		}
+		if override != nil {
+			req.ProfileRiskDefaults = override
+			req.ProfileDefaultSource = profile.DisplayName
+		}
+	}
 	item, err := planner.BuildPreview(a.providers, req)
 	if err != nil {
 		handleServiceError(w, err)
@@ -822,6 +842,8 @@ func handleServiceError(w http.ResponseWriter, err error) {
 		writeError(w, http.StatusBadRequest, "task_state_transition_not_allowed", "Task state transition is not allowed.")
 	case err != nil && err.Error() == "target_profile_not_found":
 		writeError(w, http.StatusBadRequest, "target_profile_not_found", "Target profile was not found.")
+	case err != nil && err.Error() == "invalid_profile_risk_defaults":
+		writeError(w, http.StatusBadRequest, "invalid_profile_risk_defaults", "Target profile riskDefaults JSON is invalid.")
 	case err != nil && err.Error() == "source_profile_not_found":
 		writeError(w, http.StatusBadRequest, "source_profile_not_found", "Source profile was not found.")
 	case err != nil && err.Error() == "source_profile_required_for_lazy_scan":

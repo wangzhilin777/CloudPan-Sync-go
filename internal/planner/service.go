@@ -1,6 +1,7 @@
 package planner
 
 import (
+	"encoding/json"
 	"errors"
 	"sort"
 	"strings"
@@ -31,16 +32,19 @@ type SourceEntry struct {
 }
 
 type PreviewRequest struct {
-	SourceProvider     string                  `json:"sourceProvider"`
-	TargetProvider     string                  `json:"targetProvider"`
-	ThresholdMB        int                     `json:"thresholdMB"`
-	RiskMode           RiskMode                `json:"riskMode"`
-	RiskOverride       *RiskProfileOverride    `json:"riskOverride,omitempty"`
-	ExecutionMode      ExecutionMode           `json:"executionMode"`
-	SourceDeletePolicy SourceDeletePolicy      `json:"sourceDeletePolicy"`
-	ConflictPolicy     provider.ConflictPolicy `json:"conflictPolicy"`
-	SelectedRoots      []string                `json:"selectedRoots"`
-	Entries            []SourceEntry           `json:"entries"`
+	SourceProvider       string                  `json:"sourceProvider"`
+	TargetProvider       string                  `json:"targetProvider"`
+	TargetProfileID      string                  `json:"targetProfileId,omitempty"`
+	ThresholdMB          int                     `json:"thresholdMB"`
+	RiskMode             RiskMode                `json:"riskMode"`
+	ProfileRiskDefaults  *RiskProfileOverride    `json:"profileRiskDefaults,omitempty"`
+	ProfileDefaultSource string                  `json:"profileDefaultSource,omitempty"`
+	RiskOverride         *RiskProfileOverride    `json:"riskOverride,omitempty"`
+	ExecutionMode        ExecutionMode           `json:"executionMode"`
+	SourceDeletePolicy   SourceDeletePolicy      `json:"sourceDeletePolicy"`
+	ConflictPolicy       provider.ConflictPolicy `json:"conflictPolicy"`
+	SelectedRoots        []string                `json:"selectedRoots"`
+	Entries              []SourceEntry           `json:"entries"`
 }
 
 func BuildPreview(registry *provider.Registry, req PreviewRequest) (Plan, error) {
@@ -62,7 +66,7 @@ func BuildPreview(registry *provider.Registry, req PreviewRequest) (Plan, error)
 	if err != nil {
 		return Plan{}, err
 	}
-	riskResolution := resolveRiskProfile(target.Meta, req.RiskMode, req.RiskOverride)
+	riskResolution := resolveRiskProfile(target.Meta, req.RiskMode, req.ProfileRiskDefaults, req.ProfileDefaultSource, req.RiskOverride)
 	riskProfile := riskResolution.Applied
 	recommendedMode, recommendedReason := recommendExecutionMode(req, riskProfile)
 	recommendedRiskMode, recommendedRiskReason, aggressiveRiskWarning := recommendRiskMode(target.Meta, req, riskResolution)
@@ -113,6 +117,8 @@ func BuildPreview(registry *provider.Registry, req PreviewRequest) (Plan, error)
 			"executionOrder":                 executionOrderForMode(executionMode),
 			"riskProfile":                    riskProfile,
 			"riskProfileResolution":          riskResolution,
+			"profileRiskDefaults":            req.ProfileRiskDefaults,
+			"profileDefaultSource":           req.ProfileDefaultSource,
 			"riskOverride":                   req.RiskOverride,
 		},
 	}, nil
@@ -286,7 +292,7 @@ func defaultRiskProfile(providerKey string, mode RiskMode) RiskProfile {
 }
 
 func ProviderDefaultRiskTemplate(meta provider.Provider) provider.RiskTemplateSummary {
-	resolution := resolveRiskProfile(meta, RiskModeBalanced, nil)
+	resolution := resolveRiskProfile(meta, RiskModeBalanced, nil, "", nil)
 	defaults := DescribeProviderRiskDefaults(meta)
 	return provider.RiskTemplateSummary{
 		RecommendedMode:       string(defaults.RecommendedRiskMode),
@@ -302,7 +308,7 @@ func ProviderDefaultRiskTemplate(meta provider.Provider) provider.RiskTemplateSu
 }
 
 func DescribeProviderRiskDefaults(meta provider.Provider) ProviderRiskDefaults {
-	resolution := resolveRiskProfile(meta, RiskModeBalanced, nil)
+	resolution := resolveRiskProfile(meta, RiskModeBalanced, nil, "", nil)
 	recommended := RiskModeBalanced
 	reason := "Balanced is the default provider template for steady transfer pacing."
 	if isRiskSensitiveProvider(meta.Key) {
@@ -328,27 +334,77 @@ func DescribeProviderRiskDefaults(meta provider.Provider) ProviderRiskDefaults {
 	}
 }
 
-func resolveRiskProfile(meta provider.Provider, mode RiskMode, override *RiskProfileOverride) RiskProfileResolution {
+func resolveRiskProfile(meta provider.Provider, mode RiskMode, profileDefaults *RiskProfileOverride, profileDefaultSource string, override *RiskProfileOverride) RiskProfileResolution {
 	normalizedMode := normalizeRiskMode(mode)
 	base := baseRiskProfile(normalizedMode, meta.Key)
 	calibrated, calibrationReasons := applyProviderRiskCalibrationWithReasons(meta.Key, base)
-	applied, overrideFields := applyRiskProfileOverrideWithFields(calibrated, override)
+	profileApplied, profileDefaultFields := applyRiskProfileOverrideWithFields(calibrated, profileDefaults)
+	applied, overrideFields := applyRiskProfileOverrideWithFields(profileApplied, override)
 	// 根据最终的 RiskProfile 计算恢复预算策略，统一由 Planner 提供。
 	recoverBudget := deriveRecoverBudgetPolicy(meta.Key, applied)
 	return RiskProfileResolution{
-		ProviderKey:         meta.Key,
-		ProviderDisplayName: meta.DisplayName,
-		ProviderRiskHints:   append([]string(nil), meta.RiskHints...),
-		ProviderRiskTraits:  append([]string(nil), meta.RiskTraits...),
-		Mode:                normalizedMode,
-		Base:                base,
-		Calibrated:          calibrated,
-		Applied:             applied,
-		RecoverBudget:       recoverBudget,
-		CalibrationReasons:  calibrationReasons,
-		Override:            override,
-		OverrideFields:      overrideFields,
+		ProviderKey:          meta.Key,
+		ProviderDisplayName:  meta.DisplayName,
+		ProviderRiskHints:    append([]string(nil), meta.RiskHints...),
+		ProviderRiskTraits:   append([]string(nil), meta.RiskTraits...),
+		ProfileDefaultSource: strings.TrimSpace(profileDefaultSource),
+		Mode:                 normalizedMode,
+		Base:                 base,
+		Calibrated:           calibrated,
+		ProfileApplied:       profileApplied,
+		Applied:              applied,
+		RecoverBudget:        recoverBudget,
+		CalibrationReasons:   calibrationReasons,
+		ProfileDefaults:      profileDefaults,
+		ProfileDefaultFields: profileDefaultFields,
+		Override:             override,
+		OverrideFields:       overrideFields,
 	}
+}
+
+func ParseRiskProfileOverrideText(raw string) (*RiskProfileOverride, error) {
+	trimmed := strings.TrimSpace(raw)
+	if trimmed == "" {
+		return nil, nil
+	}
+	var override RiskProfileOverride
+	if err := json.Unmarshal([]byte(trimmed), &override); err != nil {
+		return nil, err
+	}
+	if !hasRiskProfileOverride(&override) {
+		return nil, nil
+	}
+	return &override, nil
+}
+
+func RiskProfileOverrideFromExtra(extra map[string]string) (*RiskProfileOverride, string, error) {
+	if len(extra) == 0 {
+		return nil, "", nil
+	}
+	raw := strings.TrimSpace(extra["riskDefaults"])
+	if raw == "" {
+		return nil, "", nil
+	}
+	override, err := ParseRiskProfileOverrideText(raw)
+	if err != nil {
+		return nil, raw, err
+	}
+	return override, raw, nil
+}
+
+func hasRiskProfileOverride(override *RiskProfileOverride) bool {
+	if override == nil {
+		return false
+	}
+	return override.RequestIntervalMS != nil ||
+		override.PageSize != nil ||
+		override.DirectoryIntervalMS != nil ||
+		override.CooldownSeconds != nil ||
+		override.RetryLimit != nil ||
+		override.MaxConcurrent != nil ||
+		override.AutoRetryStartHour != nil ||
+		override.AutoRetryEndHour != nil ||
+		len(override.RiskKeywords) > 0
 }
 
 func baseRiskProfile(mode RiskMode, providerKey string) RiskProfile {

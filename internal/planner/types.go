@@ -43,18 +43,22 @@ type RiskProfileOverride struct {
 }
 
 type RiskProfileResolution struct {
-	ProviderKey         string               `json:"providerKey"`
-	ProviderDisplayName string               `json:"providerDisplayName,omitempty"`
-	ProviderRiskHints   []string             `json:"providerRiskHints,omitempty"`
-	ProviderRiskTraits  []string             `json:"providerRiskTraits,omitempty"`
-	Mode                RiskMode             `json:"mode"`
-	Base                RiskProfile          `json:"base"`
-	Calibrated          RiskProfile          `json:"calibrated"`
-	Applied             RiskProfile          `json:"applied"`
-	RecoverBudget       RecoverBudgetPolicy  `json:"recoverBudget"`
-	CalibrationReasons  []string             `json:"calibrationReasons,omitempty"`
-	Override            *RiskProfileOverride `json:"override,omitempty"`
-	OverrideFields      []string             `json:"overrideFields,omitempty"`
+	ProviderKey          string               `json:"providerKey"`
+	ProviderDisplayName  string               `json:"providerDisplayName,omitempty"`
+	ProviderRiskHints    []string             `json:"providerRiskHints,omitempty"`
+	ProviderRiskTraits   []string             `json:"providerRiskTraits,omitempty"`
+	ProfileDefaultSource string               `json:"profileDefaultSource,omitempty"`
+	Mode                 RiskMode             `json:"mode"`
+	Base                 RiskProfile          `json:"base"`
+	Calibrated           RiskProfile          `json:"calibrated"`
+	ProfileApplied       RiskProfile          `json:"profileApplied"`
+	Applied              RiskProfile          `json:"applied"`
+	RecoverBudget        RecoverBudgetPolicy  `json:"recoverBudget"`
+	CalibrationReasons   []string             `json:"calibrationReasons,omitempty"`
+	ProfileDefaults      *RiskProfileOverride `json:"profileDefaults,omitempty"`
+	ProfileDefaultFields []string             `json:"profileDefaultFields,omitempty"`
+	Override             *RiskProfileOverride `json:"override,omitempty"`
+	OverrideFields       []string             `json:"overrideFields,omitempty"`
 }
 
 type ProviderRiskDefaults struct {
