@@ -5034,6 +5034,121 @@ func TestServiceRecoverBlockedTasksWithOptionsFiltersRecoverState(t *testing.T) 
 	}
 }
 
+func TestServiceRecoverBlockedTasksWithOptionsExecutesWaitingManualConfirmation(t *testing.T) {
+	ctx := context.Background()
+	store, err := sqlitestore.New(ctx, filepath.Join(t.TempDir(), "auto-recover-manual-execute.db"))
+	if err != nil {
+		t.Fatalf("new store: %v", err)
+	}
+	defer func() { _ = store.Close() }()
+
+	uploadCalls := 0
+	targetAdapter := &scriptedAdapter{
+		meta: provider.Provider{
+			Key:              "manual_confirmation_execute_target",
+			DisplayName:      "Manual Confirmation Execute Target",
+			ProtocolGroup:    "manual_execute_group",
+			AuthModes:        []string{"manual_token"},
+			FastUploadInputs: []string{"md5", "size"},
+			FallbackModes:    []string{"download_upload"},
+			Status:           "planned",
+		},
+		capability: provider.CapabilitySet{
+			SupportsAuthValidation: true,
+			SupportsUpload:         true,
+		},
+		uploadFunc: func(req provider.UploadRequest) provider.UploadResult {
+			uploadCalls++
+			if uploadCalls == 1 {
+				return provider.UploadResult{
+					OperationResult: provider.OperationResult{
+						Status:  "pending_manual_requires_confirmation",
+						Message: "pending manual",
+						Mode:    "manual_execute_pending",
+						Payload: map[string]interface{}{
+							"providerStatus": "pending_manual_requires_confirmation",
+						},
+					},
+				}
+			}
+			return provider.UploadResult{
+				OperationResult: provider.OperationResult{
+					OK:      true,
+					Status:  "ok",
+					Message: "manual confirmed",
+					Mode:    "manual_execute_ok",
+				},
+			}
+		},
+	}
+
+	registry := provider.NewRegistry(targetAdapter)
+	authSvc := auth.NewService(store, registry)
+	svc := NewService(store, registry, authSvc)
+	profile, err := authSvc.CreateProfile(ctx, auth.CreateProfileInput{
+		ProviderKey: "manual_confirmation_execute_target",
+		AuthMode:    "manual_token",
+		DisplayName: "Manual Confirmation Execute Target",
+		Token:       "token-manual-confirmation-execute",
+	})
+	if err != nil {
+		t.Fatalf("CreateProfile() error = %v", err)
+	}
+
+	detail, err := svc.Create(ctx, CreateRequest{
+		SourceProvider:  "manual_confirmation_execute_source",
+		TargetProvider:  "manual_confirmation_execute_target",
+		TargetProfileID: profile.ID,
+		ThresholdMB:     1,
+		Entries: []planner.SourceEntry{{
+			Path: "/manual.bin",
+			Size: 1024,
+			MD5:  "manual-md5",
+		}},
+	})
+	if err != nil {
+		t.Fatalf("Create() error = %v", err)
+	}
+
+	blocked, ok, err := svc.Run(ctx, detail.Task.ID)
+	if err != nil {
+		t.Fatalf("Run() error = %v", err)
+	}
+	if !ok {
+		t.Fatal("expected task to exist")
+	}
+	if blocked.Task.State != StateBlocked {
+		t.Fatalf("expected blocked after pending manual, got %s", blocked.Task.State)
+	}
+	if uploadCalls != 1 {
+		t.Fatalf("expected initial upload calls 1, got %d", uploadCalls)
+	}
+
+	result, err := svc.RecoverBlockedTasksWithOptions(ctx, RecoverOptions{RecoverState: "waiting_manual_confirmation", Limit: 5, IncludeNonRunnable: true})
+	if err != nil {
+		t.Fatalf("RecoverBlockedTasksWithOptions(waiting_manual_confirmation) error = %v", err)
+	}
+	if result.MatchedCount != 1 || result.RecoveredCount != 1 {
+		t.Fatalf("expected manual confirmation recovery to execute, got %#v", result)
+	}
+	if len(result.Decisions) == 0 || result.Decisions[0].Outcome != "recovered" {
+		t.Fatalf("expected recovered decision, got %#v", result.Decisions)
+	}
+	if uploadCalls != 2 {
+		t.Fatalf("expected manual confirmation recovery to run upload twice, got %d", uploadCalls)
+	}
+
+	detailAfter, ok, err := svc.Get(ctx, detail.Task.ID)
+	if err != nil {
+		t.Fatalf("Get() error = %v", err)
+	}
+	if !ok {
+		t.Fatal("expected task to exist after recovery")
+	}
+	if detailAfter.Task.State != StateCompleted {
+		t.Fatalf("expected completed after manual confirmation recovery, got %s", detailAfter.Task.State)
+	}
+}
 func TestServiceRecoverBlockedTasksWithOptionsFiltersProtocolGroup(t *testing.T) {
 	ctx := context.Background()
 	store, err := sqlitestore.New(ctx, filepath.Join(t.TempDir(), "auto-recover-protocol-group-filter.db"))
@@ -7673,3 +7788,4 @@ func autoRecoverLaneByMode(items []AutoRecoverLane, mode string) AutoRecoverLane
 	}
 	return AutoRecoverLane{}
 }
+
