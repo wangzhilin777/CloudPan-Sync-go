@@ -311,6 +311,24 @@ label {
   border: 1px solid var(--line);
 }
 
+.provider-card.active,
+.provider-detail-card {
+  border: 1px solid rgba(15, 118, 110, 0.22);
+  background: linear-gradient(135deg, rgba(236, 253, 245, 0.62), rgba(255, 255, 255, 0.82));
+}
+
+.provider-detail-card {
+  display: grid;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: var(--radius-md);
+  margin-top: 12px;
+}
+
+.provider-detail-card.compact {
+  margin-top: 0;
+}
+
 .inline-note,
 .insight-card {
   padding: 14px 16px;

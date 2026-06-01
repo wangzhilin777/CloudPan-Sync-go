@@ -113,6 +113,12 @@ func TestHandleIndexServesHTML(t *testing.T) {
 	if !strings.Contains(body, `id="apply-recommended-risk"`) {
 		t.Fatalf("expected apply recommended risk control in html body, got %q", body)
 	}
+	if !strings.Contains(body, `id="provider-capability-detail"`) {
+		t.Fatalf("expected provider capability detail panel in html body, got %q", body)
+	}
+	if !strings.Contains(body, `id="plan-target-provider-insight"`) {
+		t.Fatalf("expected target provider insight panel in html body, got %q", body)
+	}
 }
 
 func TestRoutesServeStaticAssets(t *testing.T) {
@@ -846,14 +852,41 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "risk calibration:") {
 		t.Fatalf("expected provider risk calibration text in app.js, got %q", body)
 	}
+	if !strings.Contains(body, "recover budget:") {
+		t.Fatalf("expected provider recover budget text in app.js, got %q", body)
+	}
 	if !strings.Contains(body, "fallback:") {
 		t.Fatalf("expected provider fallback text in app.js, got %q", body)
 	}
 	if !strings.Contains(body, "conflict:") {
 		t.Fatalf("expected provider conflict text in app.js, got %q", body)
 	}
+	if !strings.Contains(body, "renderProviderCapabilityDetail") {
+		t.Fatalf("expected provider capability detail renderer in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "syncTargetProviderInsight") {
+		t.Fatalf("expected target provider insight renderer in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "loadProviderCapabilityDetail") {
+		t.Fatalf("expected provider capability detail loader in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "data-provider-detail-open") {
+		t.Fatalf("expected provider capability detail button wiring in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "#apply-provider-default-risk") {
+		t.Fatalf("expected apply provider default risk handler in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "#open-target-provider-capability") {
+		t.Fatalf("expected open target provider capability handler in app.js, got %q", body)
+	}
 	if !strings.Contains(body, "#apply-recommended-risk") {
 		t.Fatalf("expected apply recommended risk handler in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "已采用 provider 推荐风控") {
+		t.Fatalf("expected provider default risk flash text in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "已打开 ") {
+		t.Fatalf("expected provider capability flash text in app.js, got %q", body)
 	}
 	if !strings.Contains(body, "已采用推荐风控档位") {
 		t.Fatalf("expected recommended risk flash text in app.js, got %q", body)

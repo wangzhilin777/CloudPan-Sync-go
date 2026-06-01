@@ -107,6 +107,9 @@
                 <button type="button" class="ghost" id="refresh-providers">刷新</button>
               </div>
               <div id="providers-grid" class="provider-grid"></div>
+              <div id="provider-capability-detail" class="provider-detail-card">
+                <div class="muted">点击任一 provider 卡片，查看能力声明、默认风控模板和恢复预算。</div>
+              </div>
             </article>
           </div>
 
@@ -132,6 +135,9 @@
                   <span>目标 Provider</span>
                   <select id="plan-target-provider" name="targetProvider"></select>
                 </label>
+                <div id="plan-target-provider-insight" class="provider-detail-card compact">
+                  <div class="muted">选择目标 provider 后，这里会显示默认风控模板、推荐档位和恢复预算。</div>
+                </div>
                 <label>
                   <span>源授权档案</span>
                   <select id="plan-source-profile" name="sourceProfileId"></select>
