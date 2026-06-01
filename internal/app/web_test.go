@@ -213,6 +213,18 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "风险模板解释") {
 		t.Fatalf("expected risk resolution label in app.js, got %q", body)
 	}
+	if !strings.Contains(body, "parseProfileRiskDefaultsSourceFromExtra") {
+		t.Fatalf("expected profile risk default source parser in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "riskDefaultsSourceDisplay") {
+		t.Fatalf("expected riskDefaultsSourceDisplay wiring in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "Smoke Matrix") {
+		t.Fatalf("expected Smoke Matrix source label in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "已按真实样本预填账号默认风控") {
+		t.Fatalf("expected profile risk prefill flash text in app.js, got %q", body)
+	}
 	if !strings.Contains(body, "OVERRIDE FIELDS") {
 		t.Fatalf("expected OVERRIDE FIELDS risk resolution detail in app.js, got %q", body)
 	}

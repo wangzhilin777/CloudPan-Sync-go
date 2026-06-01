@@ -420,6 +420,7 @@ function syncTargetProfileInsight() {
     return;
   }
   const riskDefaults = parseProfileRiskDefaultsFromExtra(profile.extra);
+  const riskDefaultSource = parseProfileRiskDefaultsSourceFromExtra(profile.extra);
   const extraKeys = profile.extra && typeof profile.extra === "object" ? Object.keys(profile.extra).filter(Boolean) : [];
   const profileDefaultFields = riskDefaults && typeof riskDefaults === "object" ? Object.keys(riskDefaults).filter(Boolean) : [];
   wrap.innerHTML = `
@@ -435,7 +436,7 @@ function syncTargetProfileInsight() {
       </div>
       <div class="insight-card">
         <strong>来源</strong>
-        <span>${riskDefaults ? "auth profile riskDefaults" : "未配置，使用 provider 默认模板"}</span>
+        <span>${riskDefaults ? escapeHTML(riskDefaultSource || "auth profile riskDefaults") : "未配置，使用 provider 默认模板"}</span>
       </div>
       <div class="insight-card">
         <strong>Extra Keys</strong>
@@ -2174,6 +2175,27 @@ function parseProfileRiskDefaultsFromExtra(extra) {
   } catch (error) {
     return null;
   }
+}
+
+function parseProfileRiskDefaultsSourceFromExtra(extra) {
+  if (!extra || typeof extra !== "object") {
+    return "";
+  }
+  const display = String(extra.riskDefaultsSourceDisplay || "").trim();
+  if (display) {
+    return display;
+  }
+  const raw = String(extra.riskDefaultsSource || "").trim();
+  if (!raw) {
+    return "";
+  }
+  if (raw.startsWith("smoke_matrix:")) {
+    const parts = raw.split(":");
+    if (parts.length >= 3) {
+      return `Smoke Matrix ${parts[1]} (${parts[2]})`;
+    }
+  }
+  return raw;
 }
 
 function mergeProfileRiskDefaultsIntoExtra(extra, riskDefaults) {
@@ -5881,6 +5903,8 @@ function profileRiskDefaultsFromSmokeMatrix(item) {
 function prefillProfileRiskDefaultsFromMatrix(item) {
   const draft = draftProviderSmokeFromMatrix(item);
   const defaults = profileRiskDefaultsFromSmokeMatrix(item);
+  const status = item?.accepted ? "accepted" : String(item?.acceptanceStatus || "pending").trim() || "pending";
+  const sourceDisplay = draft.protocolGroup ? `Smoke Matrix ${draft.protocolGroup} (${status})` : `Smoke Matrix (${status})`;
   activateTab("providers");
   setSelectValueIfPresent("#profile-provider", draft.providerKey || "");
   setInputValueIfPresent("#profile-display-name", draft.protocolGroup ? `${draft.protocolGroup} 风控模板` : "真实样本风控模板");
@@ -5888,9 +5912,19 @@ function prefillProfileRiskDefaultsFromMatrix(item) {
   try {
     const extra = parseJSONInput($("#profile-extra").value, {});
     const merged = mergeProfileRiskDefaultsIntoExtra(extra, defaults);
+    merged.riskDefaultsSource = draft.protocolGroup ? `smoke_matrix:${draft.protocolGroup}:${status}` : `smoke_matrix:unknown:${status}`;
+    merged.riskDefaultsSourceDisplay = sourceDisplay;
     $("#profile-extra").value = Object.keys(merged).length ? JSON.stringify(merged, null, 2) : "";
   } catch (error) {
-    $("#profile-extra").value = JSON.stringify(mergeProfileRiskDefaultsIntoExtra({}, defaults), null, 2);
+    $("#profile-extra").value = JSON.stringify(
+      {
+        ...mergeProfileRiskDefaultsIntoExtra({}, defaults),
+        riskDefaultsSource: draft.protocolGroup ? `smoke_matrix:${draft.protocolGroup}:${status}` : `smoke_matrix:unknown:${status}`,
+        riskDefaultsSourceDisplay: sourceDisplay,
+      },
+      null,
+      2,
+    );
   }
   showFlash("已按真实样本预填账号默认风控");
 }
