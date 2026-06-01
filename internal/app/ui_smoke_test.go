@@ -297,6 +297,13 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 		waitForText(`#task-runtime`, "completed"),
 		waitForText(`#task-summary`, "retry_queue_auto_retry"),
 		waitForText(`#task-runtime`, "后台补传候选"),
+		waitForText(`#task-resolution-guide`, "等待后台自动补传接管"),
+		waitForText(`#task-resolution-guide`, "只看自动补传候选"),
+		chromedp.Evaluate(`(() => document.querySelector('#task-resolution-guide [data-task-guide-intent="focus_status_auto_recover_mode"]')?.click())()`, nil),
+		waitForValue(`#auto-recover-mode`, "retry_queue_auto_retry"),
+		waitForText(`#flash`, "已按 retry_queue_auto_retry 收敛后台补传候选"),
+		chromedp.Evaluate(`(() => document.querySelector('button[data-view="tasks"]')?.click())()`, nil),
+		waitForText(`#task-resolution-guide`, "等待后台自动补传接管"),
 		chromedp.Evaluate(`(() => document.querySelector('#refresh-tasks')?.click())()`, nil),
 		waitForText(`#flash`, "任务列表已刷新"),
 		waitForText(`#task-detail`, `"state": "completed_with_errors"`),
@@ -329,6 +336,8 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 	)
 
 	runStep(t, runCtx, "auto recover preview and run",
+		chromedp.Evaluate(`(() => document.querySelector('#auto-recover-reset')?.click())()`, nil),
+		waitForText(`#auto-recover-filter-summary`, "条后台补传候选"),
 		waitForText(`#auto-recover-summary`, "recover_dry_run_ui_group"),
 		chromedp.Evaluate(`(() => document.querySelector('#auto-recover-summary [data-auto-recover-preview-protocol-group="recover_dry_run_ui_group"]')?.click())()`, nil),
 		waitForText(`#auto-recover-last-result-summary`, "最近预演"),

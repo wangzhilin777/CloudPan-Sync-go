@@ -2546,9 +2546,48 @@ function renderTaskResolutionGuide(detail) {
   const metadata = detail?.plan?.metadata || {};
   const runtime = detail?.runtime || {};
   const retrySummary = metadata.retrySummary || {};
+  const providerKey = detail?.task?.targetProvider || "";
+  const profileId = detail?.targetProfileId || "";
+  const nextRetryAt = runtime.nextRetryAt || retrySummary.nextRetryAt || "";
   const action = runtime.blockedAction || retrySummary.blockedAction || "";
   const advice = runtime.blockedAdvice || retrySummary.blockedAdvice || "";
   if (!action) {
+    if (retrySummary.autoRecoverMode === "upload_checkpoint_auto_resume" || retrySummary.autoRecoverMode === "retry_queue_auto_retry" || Number(retrySummary.uploadCheckpointEligible || 0) > 0 || Boolean(retrySummary.autoRecoverEligible)) {
+      return `
+        <div class="provider-card">
+          <h3>${retrySummary.autoRecoverMode === "retry_queue_auto_retry" ? "等待后台自动补传接管" : "等待上传会话自动续跑"}</h3>
+          <div class="meta-row">
+            <span class="pill">${escapeHTML(stringifyValue(retrySummary.autoRecoverMode, "upload_checkpoint_auto_resume"))}</span>
+            ${nextRetryAt ? `<span class="pill">${escapeHTML(nextRetryAt)}</span>` : ""}
+          </div>
+          <ol class="checklist">
+            <li>${escapeHTML(retrySummary.autoRecoverMode === "retry_queue_auto_retry" ? "当前队列满足后台自动补传条件，系统会在后续 tick 中自动尝试继续执行。" : "当前失败队列携带可恢复的 upload checkpoint，单机 worker 会优先尝试续跑上传会话。")}</li>
+            <li>${escapeHTML(retrySummary.autoRecoverMode === "retry_queue_auto_retry" ? "先到状态矩阵查看后台补传候选池，确认该任务是否已经进入 retry_queue_auto_retry lane。" : "先到状态矩阵查看后台补传候选池，确认该任务是否已经进入 upload checkpoint 自动续跑 lane。")}</li>
+            <li>${escapeHTML(retrySummary.autoRecoverMode === "retry_queue_auto_retry" ? "如果长时间未自动推进，再检查 retrySummary、provider 返回状态和风险窗口是否把它留在等待态。" : "如果长时间未自动推进，再检查 providerData / uploadId / nextPartNumber 等恢复线索是否完整。")}</li>
+          </ol>
+          <div class="muted">${escapeHTML(retrySummary.autoRecoverAdvice || "当前失败队列都带可恢复的 upload checkpoint，单机 worker 会优先尝试续跑上传会话。")}</div>
+          <div class="actions compact">
+            <button
+              type="button"
+              class="ghost"
+              data-task-guide-view="status"
+              data-task-guide-intent="focus_status_auto_recover_mode"
+              data-task-guide-mode="${escapeHTML(stringifyValue(retrySummary.autoRecoverMode, "upload_checkpoint_auto_resume"))}"
+              data-task-guide-provider="${escapeHTML(providerKey)}"
+              data-task-guide-profile="${escapeHTML(profileId)}"
+            >${escapeHTML(retrySummary.autoRecoverMode === "retry_queue_auto_retry" ? "只看自动补传候选" : "只看自动续跑候选")}</button>
+            <button
+              type="button"
+              class="ghost"
+              data-task-guide-view="status"
+              data-task-guide-intent="focus_status_open"
+              data-task-guide-provider="${escapeHTML(providerKey)}"
+              data-task-guide-profile="${escapeHTML(profileId)}"
+            >打开状态矩阵</button>
+          </div>
+        </div>
+      `;
+    }
     return `
       <div class="insight-card">
         <strong>下一步处理</strong>
@@ -2557,9 +2596,6 @@ function renderTaskResolutionGuide(detail) {
     `;
   }
 
-  const providerKey = detail.task?.targetProvider || "";
-  const profileId = detail.targetProfileId || "";
-  const nextRetryAt = runtime.nextRetryAt || retrySummary.nextRetryAt || "";
   const stepsByAction = {
     refresh_auth_profile: {
       title: "刷新授权档案",
@@ -2718,6 +2754,24 @@ function wireTaskResolutionGuide(detail) {
       if (view === "status") {
         if (intent === "focus_status_blocked") {
           focusBlockedActionSummary(detail?.runtime?.blockedAction || detail?.plan?.metadata?.retrySummary?.blockedAction || "");
+        }
+        if (intent === "focus_status_auto_recover_mode") {
+          activateTab("status");
+          state.autoRecoverFilters.mode = button.dataset.taskGuideMode || "";
+          setFilterControlValue("#auto-recover-mode", button.dataset.taskGuideMode || "");
+          state.autoRecoverFilters.blockedAction = "";
+          setFilterControlValue("#auto-recover-blocked-action", "");
+          $("#auto-recover-filter-summary").textContent = renderAutoRecoverFilterSummary(
+            filterAutoRecoverItems(state.evidence?.autoRecoverPool || []),
+            state.evidence?.autoRecoverPool || [],
+          );
+          $("#auto-recover-summary").innerHTML = renderAutoRecoverSummary(state.evidence?.autoRecoverPool || []);
+          wireAutoRecoverSummary();
+          showFlash(`已按 ${button.dataset.taskGuideMode || "-"} 收敛后台补传候选`);
+        }
+        if (intent === "focus_status_open") {
+          activateTab("status");
+          showFlash("已打开状态矩阵");
         }
       }
       if (view === "wizard") {
