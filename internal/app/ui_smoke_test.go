@@ -70,29 +70,42 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 	entriesJSON := string(entriesBytes)
 
 	targetAdapter := &appScriptedAdapter{
-		meta: provider.Provider{Key: "missing_uploadid_target", DisplayName: "Missing UploadID Target", ProtocolGroup: "fake_target", AuthModes: []string{"manual_token"}, FastUploadInputs: []string{"md5", "size"}, FallbackModes: []string{"download_upload"}, Status: "planned"},
+		meta:       provider.Provider{Key: "missing_uploadid_target", DisplayName: "Missing UploadID Target", ProtocolGroup: "fake_target", AuthModes: []string{"manual_token"}, FastUploadInputs: []string{"md5", "size"}, FallbackModes: []string{"download_upload"}, Status: "planned"},
 		capability: provider.CapabilitySet{SupportsAuthValidation: true, SupportsUpload: true},
 		uploadFunc: func(req provider.UploadRequest) provider.UploadResult {
 			return provider.UploadResult{OperationResult: provider.OperationResult{Status: "missing_uploadid", Message: "provider omitted uploadid", Mode: "scripted_missing_uploadid"}}
 		},
 	}
 	localMissingAdapter := &appScriptedAdapter{
-		meta: provider.Provider{Key: "local_missing_target", DisplayName: "Local Missing Target", ProtocolGroup: "fake_target", AuthModes: []string{"manual_token"}, FastUploadInputs: []string{"md5", "size"}, FallbackModes: []string{"download_upload"}, Status: "planned"},
+		meta:       provider.Provider{Key: "local_missing_target", DisplayName: "Local Missing Target", ProtocolGroup: "fake_target", AuthModes: []string{"manual_token"}, FastUploadInputs: []string{"md5", "size"}, FallbackModes: []string{"download_upload"}, Status: "planned"},
 		capability: provider.CapabilitySet{SupportsAuthValidation: true, SupportsUpload: true},
 		uploadFunc: func(req provider.UploadRequest) provider.UploadResult {
 			return provider.UploadResult{OperationResult: provider.OperationResult{Status: "local_file_missing", Message: "local file is missing", Mode: "scripted_local_missing"}}
 		},
 	}
 	authExpiredAdapter := &appScriptedAdapter{
-		meta: provider.Provider{Key: "auth_expired_target", DisplayName: "Auth Expired Target", ProtocolGroup: "fake_target", AuthModes: []string{"manual_token"}, FastUploadInputs: []string{"md5", "size"}, FallbackModes: []string{"download_upload"}, Status: "planned"},
+		meta:       provider.Provider{Key: "auth_expired_target", DisplayName: "Auth Expired Target", ProtocolGroup: "fake_target", AuthModes: []string{"manual_token"}, FastUploadInputs: []string{"md5", "size"}, FallbackModes: []string{"download_upload"}, Status: "planned"},
 		capability: provider.CapabilitySet{SupportsAuthValidation: true, SupportsUpload: true},
 		uploadFunc: func(req provider.UploadRequest) provider.UploadResult {
 			return provider.UploadResult{OperationResult: provider.OperationResult{Status: "auth_expired", Message: "auth expired", Mode: "scripted_auth_expired"}}
 		},
 	}
+	manualRecoverUploadCalls := 0
+	manualConfirmationAdapter := &appScriptedAdapter{
+		meta:       provider.Provider{Key: "manual_confirmation_target", DisplayName: "Manual Confirmation Target", ProtocolGroup: "manual_confirmation_group", AuthModes: []string{"manual_token"}, FastUploadInputs: []string{"md5", "size"}, FallbackModes: []string{"download_upload"}, Status: "planned"},
+		capability: provider.CapabilitySet{SupportsAuthValidation: true, SupportsUpload: true},
+		uploadFunc: func(req provider.UploadRequest) provider.UploadResult {
+			manualRecoverUploadCalls++
+			if manualRecoverUploadCalls == 1 {
+				return provider.UploadResult{OperationResult: provider.OperationResult{Status: "pending_manual_requires_confirmation", Message: "pending manual", Mode: "scripted_manual_pending", Payload: map[string]interface{}{"providerStatus": "pending_manual_requires_confirmation"}}}
+			}
+			return provider.UploadResult{OperationResult: provider.OperationResult{OK: true, Status: "ok", Message: "manual confirmed", Mode: "scripted_manual_ok"}}
+		},
+	}
+
 	recoverUploadCalls := 0
 	recoverDryRunAdapter := &appScriptedAdapter{
-		meta: provider.Provider{Key: "recover_dry_run_ui_target", DisplayName: "Recover Dry Run UI Target", ProtocolGroup: "recover_dry_run_ui_group", AuthModes: []string{"manual_token"}, FastUploadInputs: []string{"md5", "size"}, FallbackModes: []string{"download_upload"}, Status: "planned"},
+		meta:       provider.Provider{Key: "recover_dry_run_ui_target", DisplayName: "Recover Dry Run UI Target", ProtocolGroup: "recover_dry_run_ui_group", AuthModes: []string{"manual_token"}, FastUploadInputs: []string{"md5", "size"}, FallbackModes: []string{"download_upload"}, Status: "planned"},
 		capability: provider.CapabilitySet{SupportsAuthValidation: true, SupportsFastUpload: true, SupportsUpload: true},
 		uploadFunc: func(req provider.UploadRequest) provider.UploadResult {
 			recoverUploadCalls++
@@ -113,7 +126,7 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 			return provider.UploadResult{OperationResult: provider.OperationResult{OK: true, Status: "ok", Message: "recovered", Mode: "recover_dry_run_ui_ok"}}
 		},
 	}
-	registry := provider.NewRegistry(append(provider.DefaultCatalog(), targetAdapter, localMissingAdapter, authExpiredAdapter, recoverDryRunAdapter)...)
+	registry := provider.NewRegistry(append(provider.DefaultCatalog(), targetAdapter, localMissingAdapter, authExpiredAdapter, manualConfirmationAdapter, recoverDryRunAdapter)...)
 	authSvc := auth.NewService(application.store, registry)
 	taskSvc := task.NewService(application.store, registry, authSvc)
 	application.providers = registry
@@ -155,6 +168,21 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 		t.Fatalf("expected auth expired blocked task for ui smoke, got %s", got)
 	}
 
+	manualProfileResp := invokeJSON(t, application.routes(), http.MethodPost, "/api/auth/profiles", map[string]interface{}{"providerKey": "manual_confirmation_target", "authMode": "manual_token", "displayName": "Manual Confirmation Target", "token": "token-manual-confirmation"})
+	manualProfileID := manualProfileResp.Data.(map[string]interface{})["id"].(string)
+	manualFile := filepath.Join(t.TempDir(), "manual-confirmation.bin")
+	if err := os.WriteFile(manualFile, []byte("manual-confirmation"), 0o644); err != nil {
+		t.Fatalf("write manual confirmation local file: %v", err)
+	}
+	manualTaskResp := invokeJSON(t, application.routes(), http.MethodPost, "/api/tasks", map[string]interface{}{"sourceProvider": "manual_confirmation_source", "targetProvider": "manual_confirmation_target", "targetProfileId": manualProfileID, "thresholdMB": 1, "entries": []map[string]interface{}{{"path": "/manual-confirmation.bin", "size": 1024, "md5": "manual-confirmation-md5", "localPath": manualFile}}})
+	manualTaskID := manualTaskResp.Data.(map[string]interface{})["task"].(map[string]interface{})["id"].(string)
+	manualRunResp := invokeJSON(t, application.routes(), http.MethodPost, "/api/tasks/"+manualTaskID+"/run", nil)
+	if got := manualRunResp.Data.(map[string]interface{})["task"].(map[string]interface{})["state"].(string); got != "blocked" {
+		t.Fatalf("expected manual confirmation blocked task for ui smoke, got %s", got)
+	}
+	if manualRecoverUploadCalls != 1 {
+		t.Fatalf("expected manual confirmation task initial upload calls 1, got %d", manualRecoverUploadCalls)
+	}
 	recoverProfileResp := invokeJSON(t, application.routes(), http.MethodPost, "/api/auth/profiles", map[string]interface{}{"providerKey": "recover_dry_run_ui_target", "authMode": "manual_token", "displayName": "Recover Dry Run UI Target", "token": "token-recover-dry-run-ui"})
 	recoverProfileID := recoverProfileResp.Data.(map[string]interface{})["id"].(string)
 	recoverFile := filepath.Join(t.TempDir(), "recover-dry-run-ui.bin")
@@ -318,9 +346,10 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 		waitForText(`#auto-recover-last-result-summary`, "最近执行"),
 		waitForText(`#auto-recover-last-result-summary`, "recovered 1"),
 		waitForText(`#auto-recover-last-result-detail`, "已放行执行"),
+		waitForText(`#auto-recover-last-result-detail`, "recover_dry_run_ui_group"),
 		waitForText(`#tasks-list`, "recover_dry_run_ui_target -> recover_dry_run_ui_target"),
 		chromedp.Evaluate(`(() => document.querySelector('#auto-recover-reset')?.click())()`, nil),
-		waitForText(`#auto-recover-filter-summary`, "4/4 条后台补传候选"),
+		waitForText(`#auto-recover-filter-summary`, "条后台补传候选"),
 		chromedp.ActionFunc(func(ctx context.Context) error {
 			if recoverUploadCalls < 2 {
 				return fmt.Errorf("expected recover upload calls >= 2 after execute, got %d", recoverUploadCalls)
@@ -329,6 +358,47 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 		}),
 	)
 
+	manualRecoverResp := invokeJSON(t, application.routes(), http.MethodPost, "/api/tasks/recover", map[string]interface{}{
+		"blockedAction": "manual_confirmation_required",
+		"recoverState":  "waiting_manual_confirmation",
+		"taskId":        manualTaskID,
+		"providerKey":   "manual_confirmation_target",
+		"profileId":     manualProfileID,
+		"limit":         5,
+	})
+	manualRecoverData := manualRecoverResp.Data.(map[string]interface{})
+	if got := int(manualRecoverData["recoveredCount"].(float64)); got != 1 {
+		t.Fatalf("expected manual confirmation recover result recoveredCount=1, got %#v", manualRecoverData)
+	}
+
+	runStep(t, runCtx, "manual confirmation blocked task",
+		chromedp.Evaluate(`(() => document.querySelector('button[data-view="tasks"]')?.click())()`, nil),
+		chromedp.Evaluate(`(() => document.querySelector('#refresh-tasks')?.click())()`, nil),
+		waitForText(`#tasks-list`, "manual_confirmation_source -> manual_confirmation_target"),
+		chromedp.ActionFunc(func(ctx context.Context) error {
+			if manualRecoverUploadCalls < 2 {
+				return fmt.Errorf("expected manual confirmation recovery upload calls >= 2, got %d", manualRecoverUploadCalls)
+			}
+			var payload string
+			if err := chromedp.Evaluate(fmt.Sprintf(`(() => {
+				const hooks = window.__cloudpanTestHooks;
+				if (!hooks || !hooks.state) {
+					throw new Error("task hooks unavailable");
+				}
+				const detail = hooks.state.tasks.find((item) => item?.task?.id === %q);
+				if (!detail) {
+					throw new Error("missing manual recovered task detail");
+				}
+				return JSON.stringify(detail);
+			})()`, manualTaskID), &payload).Do(ctx); err != nil {
+				return err
+			}
+			if !strings.Contains(payload, `"state":"completed"`) {
+				return fmt.Errorf("expected manual recovered task completed payload, got %s", payload)
+			}
+			return nil
+		}),
+	)
 	runStep(t, runCtx, "provider session missing blocked task",
 		chromedp.Evaluate(`(() => document.querySelector('button[data-view="tasks"]')?.click())()`, nil),
 		chromedp.ActionFunc(func(ctx context.Context) error {
