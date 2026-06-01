@@ -450,6 +450,9 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "data-provider-smoke-draft") {
 		t.Fatalf("expected provider smoke matrix draft action in app.js, got %q", body)
 	}
+	if !strings.Contains(body, "data-provider-smoke-draft-action") {
+		t.Fatalf("expected provider smoke matrix draft-action in app.js, got %q", body)
+	}
 	if !strings.Contains(body, "data-provider-smoke-focus-group") {
 		t.Fatalf("expected provider smoke matrix focus-group action in app.js, got %q", body)
 	}
@@ -468,6 +471,21 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "draftProviderSmokeFromMatrix") {
 		t.Fatalf("expected provider smoke matrix draft helper in app.js, got %q", body)
 	}
+	if !strings.Contains(body, "providerSmokeDraftActionLabel") {
+		t.Fatalf("expected provider smoke draft action label helper in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "draftProviderSmokeActionFromMatrix") {
+		t.Fatalf("expected provider smoke draft action helper in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "draftProviderSmokeFromGap") {
+		t.Fatalf("expected provider smoke gap draft helper in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "openProviderSmokeRecordInMatrix") {
+		t.Fatalf("expected provider smoke open-record helper in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "focusProviderSmokeMatrixByStatus") {
+		t.Fatalf("expected provider smoke matrix status focus helper in app.js, got %q", body)
+	}
 	if !strings.Contains(body, "focusProviderSmokeRecordsByGroup") {
 		t.Fatalf("expected provider smoke matrix focus helper in app.js, got %q", body)
 	}
@@ -477,8 +495,14 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "已按验收矩阵预填 smoke 表单") {
 		t.Fatalf("expected provider smoke matrix draft flash text in app.js, got %q", body)
 	}
+	if !strings.Contains(body, "已按验收缺口预填 smoke 动作") {
+		t.Fatalf("expected provider smoke matrix gap draft flash text in app.js, got %q", body)
+	}
 	if !strings.Contains(body, "已打开 smoke 样本") {
 		t.Fatalf("expected provider smoke matrix open-record flash text in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "已打开 smoke 样本并回填表单") {
+		t.Fatalf("expected provider smoke matrix open-record hydrate flash text in app.js, got %q", body)
 	}
 	if !strings.Contains(body, "已打开 blocked 摘要对应的样本任务") {
 		t.Fatalf("expected provider smoke matrix open-task flash text in app.js, got %q", body)
