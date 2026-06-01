@@ -165,6 +165,15 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "风险档位") {
 		t.Fatalf("expected risk mode label in app.js, got %q", body)
 	}
+	if !strings.Contains(body, "推荐风控") {
+		t.Fatalf("expected recommended risk mode label in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "推荐风控原因") {
+		t.Fatalf("expected recommended risk mode reason label in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "激进风险提示") {
+		t.Fatalf("expected aggressive risk warning label in app.js, got %q", body)
+	}
 	if !strings.Contains(body, "风险节流") {
 		t.Fatalf("expected risk throttle label in app.js, got %q", body)
 	}

@@ -131,6 +131,15 @@ func TestAppWorkflowMainline(t *testing.T) {
 	if reasons, ok := riskResolution["calibrationReasons"].([]interface{}); !ok || len(reasons) == 0 {
 		t.Fatalf("expected preview calibrationReasons, got %#v", riskResolution["calibrationReasons"])
 	}
+	if got := metadata["recommendedRiskMode"].(string); got == "" {
+		t.Fatal("expected recommendedRiskMode in preview metadata")
+	}
+	if got := metadata["recommendedRiskModeReason"].(string); got == "" {
+		t.Fatal("expected recommendedRiskModeReason in preview metadata")
+	}
+	if got := metadata["aggressiveRiskWarning"].(string); got == "" {
+		t.Fatal("expected aggressiveRiskWarning in preview metadata")
+	}
 	overrideFields := riskResolution["overrideFields"].([]interface{})
 	if len(overrideFields) < 5 {
 		t.Fatalf("expected preview override fields, got %#v", overrideFields)
@@ -192,6 +201,15 @@ func TestAppWorkflowMainline(t *testing.T) {
 	createdResolution := createdMetadata["riskProfileResolution"].(map[string]interface{})
 	if got := createdResolution["providerKey"].(string); got != "123_open" {
 		t.Fatalf("expected task risk providerKey 123_open, got %s", got)
+	}
+	if got := createdMetadata["recommendedRiskMode"].(string); got == "" {
+		t.Fatal("expected task recommendedRiskMode")
+	}
+	if got := createdMetadata["recommendedRiskModeReason"].(string); got == "" {
+		t.Fatal("expected task recommendedRiskModeReason")
+	}
+	if got := createdMetadata["aggressiveRiskWarning"].(string); got == "" {
+		t.Fatal("expected task aggressiveRiskWarning")
 	}
 	if _, ok := createdResolution["base"].(map[string]interface{}); !ok {
 		t.Fatalf("expected task risk resolution base, got %#v", createdResolution["base"])
