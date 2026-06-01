@@ -3169,7 +3169,7 @@ function autoRecoverStateAdvice(recoverState) {
     case "waiting_local_restore":
       return "源文件缺失或本地路径不可读，需先补回源文件后再继续补传。";
     case "waiting_manual_confirmation":
-      return "该类失败仍需要人工确认或后续 fallback 能力，建议先缩小影响范围再处理。";
+      return "该类失败需要先人工确认，再按子集 retry 或后台补传继续处理。";
     case "waiting_retry_limit":
       return "当前任务已达到重试上限，先检查失败原因与重试策略，再决定是否重置额度。";
     case "waiting_other":
@@ -6024,3 +6024,4 @@ async function init() {
 }
 
 window.addEventListener("DOMContentLoaded", init);
+

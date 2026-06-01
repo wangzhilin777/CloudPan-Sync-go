@@ -837,7 +837,7 @@ func handleServiceError(w http.ResponseWriter, err error) {
 	case err != nil && err.Error() == "missing_gcid":
 		writeError(w, http.StatusBadRequest, "missing_gcid", "Fast upload requires gcid.")
 	case err != nil && err.Error() == "pending_manual_requires_confirmation":
-		writeError(w, http.StatusBadRequest, "pending_manual_requires_confirmation", "Pending-manual items cannot run until fallback runtime is implemented.")
+		writeError(w, http.StatusBadRequest, "pending_manual_requires_confirmation", "Pending-manual items require manual confirmation and can then be retried or recovered.")
 	case err != nil && strings.HasPrefix(err.Error(), "retry_cooldown_active:"):
 		writeError(w, http.StatusBadRequest, "retry_cooldown_active", "Retry queue is still cooling down for a rate-limited item.")
 	case err != nil && strings.HasPrefix(err.Error(), "retry_blocked:"):
@@ -870,3 +870,4 @@ func (a *App) resolveProviderProfile(ctx context.Context, profileID string) (pro
 		Extra:       profile.Extra,
 	}, nil
 }
+

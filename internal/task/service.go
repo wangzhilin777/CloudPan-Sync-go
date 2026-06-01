@@ -1600,7 +1600,7 @@ func autoRecoverStateAdviceFallback(recoverState string) string {
 	case "waiting_local_restore":
 		return "源文件缺失或本地路径不可读，需先补回源文件后再继续补传。"
 	case "waiting_manual_confirmation":
-		return "该类失败仍需要人工确认或后续 fallback 能力，建议先缩小影响范围再处理。"
+		return "该类失败需要先人工确认，再按子集 retry 或后台补传继续处理。"
 	case "waiting_retry_limit":
 		return "当前任务已达到重试上限，先检查失败原因与重试策略，再决定是否重置额度。"
 	case "waiting_other":
@@ -4428,7 +4428,7 @@ func blockedGuidance(reason string) (string, string) {
 	case "retry_queue_waiting_for_retry_window":
 		return "wait_for_retry_window", "当前已满足自动补传条件，但不在允许的自动补传时间窗内，等待 nextRetryAt 后系统会自动接管。"
 	case "retry_queue_pending_manual_confirmation":
-		return "manual_confirmation_required", "存在 pending_manual 项，需要人工确认或等待后续真实 fallback 运行时能力。"
+		return "manual_confirmation_required", "存在 pending_manual 项，需要人工确认后再通过 retry 或后台补传继续执行。"
 	case "retry_queue_requires_provider_session_rebuild":
 		return "manual_intervention_required", "provider 返回的上传会话信息不完整，请检查 uploadid / upload session / provider 返回体后再重新发起。"
 	default:
@@ -4445,7 +4445,7 @@ func autoRecoverGuidance(mode string) string {
 	case "local_restore_required":
 		return "当前队列主要受本地源文件缺失阻塞，需要先补回文件或调整执行策略。"
 	case "manual_confirmation_required":
-		return "当前队列存在 pending_manual 项，需要人工确认或等待后续真实 fallback 运行时能力。"
+		return "当前队列存在 pending_manual 项，需要人工确认后再通过 retry 或后台补传继续执行。"
 	case "retry_limit_blocked":
 		return "当前队列已经耗尽任务级 retryLimit，需要先复盘失败原因并重建策略。"
 	case "cooldown_elapsed_auto_retry":
@@ -5334,3 +5334,4 @@ func resumeUploadForPath(metadata map[string]interface{}, path string) *provider
 		ProviderData:      uploadCheckpointProviderData(checkpoint.ProviderData),
 	}
 }
+
