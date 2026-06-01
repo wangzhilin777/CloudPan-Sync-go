@@ -65,6 +65,7 @@ func BuildPreview(registry *provider.Registry, req PreviewRequest) (Plan, error)
 	riskResolution := resolveRiskProfile(target.Meta.Key, req.RiskMode, req.RiskOverride)
 	riskProfile := riskResolution.Applied
 	recommendedMode, recommendedReason := recommendExecutionMode(req, riskProfile)
+	recommendedRiskMode, recommendedRiskReason, aggressiveRiskWarning := recommendRiskMode(target.Meta.Key, req, riskResolution)
 	orderedEntries := orderEntriesByMode(req.Entries, executionMode)
 	deletedRecords := buildDeletedEntryMetadata(orderedEntries, req.SelectedRoots)
 
@@ -106,6 +107,9 @@ func BuildPreview(registry *provider.Registry, req PreviewRequest) (Plan, error)
 			"executionMode":                  executionMode,
 			"recommendedExecutionMode":       recommendedMode,
 			"recommendedExecutionModeReason": recommendedReason,
+			"recommendedRiskMode":            recommendedRiskMode,
+			"recommendedRiskModeReason":      recommendedRiskReason,
+			"aggressiveRiskWarning":          aggressiveRiskWarning,
 			"executionOrder":                 executionOrderForMode(executionMode),
 			"riskProfile":                    riskProfile,
 			"riskProfileResolution":          riskResolution,
@@ -563,6 +567,54 @@ func recommendExecutionMode(req PreviewRequest, riskProfile RiskProfile) (Execut
 		return ExecutionModeLeafFirstLazy, "Unknown full tree size should default to on-demand leaf-first scanning."
 	}
 	return ExecutionModeLeafFirstLazy, "Leaf-first lazy scan is the preferred default for large or risk-sensitive transfers."
+}
+
+func recommendRiskMode(providerKey string, req PreviewRequest, resolution RiskProfileResolution) (RiskMode, string, string) {
+	selectedMode := normalizeRiskMode(req.RiskMode)
+	entryCount := len(req.Entries)
+	rootCount := len(req.SelectedRoots)
+	recommended := RiskModeBalanced
+	reason := "Balanced keeps throughput and provider risk under control for the default transfer path."
+	warning := ""
+
+	switch {
+	case entryCount == 0:
+		recommended = RiskModeSafe
+		reason = "Unknown full tree size should start from a safer throttle profile until runtime evidence becomes clearer."
+	case rootCount > 1:
+		recommended = RiskModeBalanced
+		reason = "Multiple top-level roots benefit from balanced pacing to keep subtree progression and recoverability stable."
+	case isRiskSensitiveProvider(providerKey):
+		recommended = RiskModeSafe
+		reason = "This provider family is more risk-sensitive and should default to safe pacing before raising throughput."
+	case entryCount <= 20 && rootCount <= 1:
+		recommended = RiskModeFast
+		reason = "Known small input set can use a faster profile to finish validation and transfer with fewer long waits."
+	}
+
+	if selectedMode == RiskModeFast {
+		warning = "Fast mode may increase rate-limit, captcha, or provider risk-control hits for this provider or workload."
+	}
+	if selectedMode == RiskModeCustom {
+		warning = "Custom mode bypasses the default recommended throttle profile. Validate request pacing and retry budgets carefully."
+	}
+	if selectedMode == RiskModeFast && recommended != RiskModeFast {
+		warning = "Fast mode may increase rate-limit, captcha, or provider risk-control hits for this provider or workload."
+	}
+	if warning == "" && selectedMode != recommended && selectedMode != "" {
+		warning = "Current risk mode differs from the recommended profile. Review request interval, retry limit, and concurrency before large runs."
+	}
+	_ = resolution
+	return recommended, reason, warning
+}
+
+func isRiskSensitiveProvider(providerKey string) bool {
+	switch strings.TrimSpace(providerKey) {
+	case "baidu_netdisk", "quark", "uc", "189cloud", "115_open", "guangya":
+		return true
+	default:
+		return false
+	}
 }
 
 func providerRiskKeywords(providerKey string) []string {

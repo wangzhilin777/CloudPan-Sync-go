@@ -2691,6 +2691,18 @@ function renderSelectedTask() {
       <span>${stringifyValue(metadata.riskProfile?.requestIntervalMs, "0")}ms / dir ${stringifyValue(metadata.riskProfile?.directoryIntervalMs, "0")}ms / retry ${stringifyValue(metadata.riskProfile?.retryLimit, "0")} / conc ${stringifyValue(metadata.riskProfile?.maxConcurrent, "0")}</span>
     </div>
     <div class="insight-card">
+      <strong>推荐风控</strong>
+      <span>${stringifyValue(metadata.recommendedRiskMode, "-")}</span>
+    </div>
+    <div class="insight-card">
+      <strong>推荐风控原因</strong>
+      <span>${stringifyValue(metadata.recommendedRiskModeReason, "-")}</span>
+    </div>
+    <div class="insight-card">
+      <strong>激进风险提示</strong>
+      <span>${stringifyValue(metadata.aggressiveRiskWarning, "-")}</span>
+    </div>
+    <div class="insight-card">
       <strong>源端删除策略</strong>
       <span>${renderSourceDeletePolicy(metadata.sourceDeletePolicy)}</span>
     </div>
@@ -2792,6 +2804,18 @@ function renderPreview() {
     <div class="insight-card">
       <strong>风险节流</strong>
       <span>${stringifyValue(metadata.riskProfile?.requestIntervalMs, "0")}ms / dir ${stringifyValue(metadata.riskProfile?.directoryIntervalMs, "0")}ms / retry ${stringifyValue(metadata.riskProfile?.retryLimit, "0")} / conc ${stringifyValue(metadata.riskProfile?.maxConcurrent, "0")}</span>
+    </div>
+    <div class="insight-card">
+      <strong>推荐风控</strong>
+      <span>${stringifyValue(metadata.recommendedRiskMode, "-")}</span>
+    </div>
+    <div class="insight-card">
+      <strong>推荐风控原因</strong>
+      <span>${stringifyValue(metadata.recommendedRiskModeReason, "-")}</span>
+    </div>
+    <div class="insight-card">
+      <strong>激进风险提示</strong>
+      <span>${stringifyValue(metadata.aggressiveRiskWarning, "-")}</span>
     </div>
     <div class="insight-card">
       <strong>风险模板解释</strong>

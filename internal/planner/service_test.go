@@ -2,6 +2,7 @@ package planner
 
 import (
 	"errors"
+	"strings"
 	"testing"
 
 	"cloudpan-sync-go/internal/provider"
@@ -464,6 +465,34 @@ func TestBuildPreviewRejectsInvalidExecutionMode(t *testing.T) {
 	}
 	if !errors.Is(err, ErrInvalidExecutionMode) {
 		t.Fatalf("expected ErrInvalidExecutionMode, got %v", err)
+	}
+}
+
+func TestBuildPreviewIncludesRecommendedRiskSemantics(t *testing.T) {
+	registry := provider.NewRegistry(provider.DefaultCatalog()...)
+	plan, err := BuildPreview(registry, PreviewRequest{
+		SourceProvider: "guangya",
+		TargetProvider: "baidu_netdisk",
+		RiskMode:       RiskModeFast,
+		SelectedRoots:  []string{"/demo", "/more"},
+		Entries: []SourceEntry{
+			{Path: "/demo/a.bin", Size: 10, MD5: "md5-a"},
+			{Path: "/more/b.bin", Size: 10, MD5: "md5-b"},
+		},
+	})
+	if err != nil {
+		t.Fatalf("BuildPreview() error = %v", err)
+	}
+	if got, _ := plan.Metadata["recommendedRiskMode"].(RiskMode); got != RiskModeBalanced {
+		t.Fatalf("expected recommendedRiskMode balanced, got %v", plan.Metadata["recommendedRiskMode"])
+	}
+	reason, _ := plan.Metadata["recommendedRiskModeReason"].(string)
+	if reason == "" || !strings.Contains(reason, "top-level roots") {
+		t.Fatalf("expected recommendedRiskModeReason to mention multi-root pacing, got %#v", plan.Metadata["recommendedRiskModeReason"])
+	}
+	warning, _ := plan.Metadata["aggressiveRiskWarning"].(string)
+	if warning == "" || !strings.Contains(warning, "Fast mode") {
+		t.Fatalf("expected aggressiveRiskWarning to mention fast mode risk, got %#v", plan.Metadata["aggressiveRiskWarning"])
 	}
 }
 
