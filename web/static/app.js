@@ -3762,6 +3762,7 @@ function summarizeAutoRecoverVisibleItems(items) {
 }
 
 function renderAutoRecoverSummary(items) {
+  const autoRetryPolicy = state.evidence?.autoRetryPolicy && typeof state.evidence.autoRetryPolicy === "object" ? state.evidence.autoRetryPolicy : {};
   const visibleItems = filterAutoRecoverItems(items);
   if (!visibleItems.length) {
     if (Array.isArray(items) && items.length) {
@@ -6006,6 +6007,13 @@ async function init() {
   syncExecutionModeHint();
   renderPreview();
   renderStatus();
+  window.__cloudpanTestHooks = {
+    openTaskByID,
+    renderTasks,
+    renderSelectedTask,
+    focusBlockedActionSummary,
+    state,
+  };
   if (state.authenticated) {
     try {
       await bootstrapData();

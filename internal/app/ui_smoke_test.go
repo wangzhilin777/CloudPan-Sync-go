@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
@@ -11,6 +12,9 @@ import (
 	"testing"
 	"time"
 
+	"cloudpan-sync-go/internal/auth"
+	"cloudpan-sync-go/internal/provider"
+	"cloudpan-sync-go/internal/task"
 	"github.com/chromedp/chromedp"
 )
 
@@ -64,6 +68,33 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 		t.Fatalf("marshal ui smoke entries: %v", err)
 	}
 	entriesJSON := string(entriesBytes)
+
+	targetAdapter := &appScriptedAdapter{
+		meta: provider.Provider{Key: "missing_uploadid_target", DisplayName: "Missing UploadID Target", ProtocolGroup: "fake_target", AuthModes: []string{"manual_token"}, FastUploadInputs: []string{"md5", "size"}, FallbackModes: []string{"download_upload"}, Status: "planned"},
+		capability: provider.CapabilitySet{SupportsAuthValidation: true, SupportsUpload: true},
+		uploadFunc: func(req provider.UploadRequest) provider.UploadResult {
+			return provider.UploadResult{OperationResult: provider.OperationResult{Status: "missing_uploadid", Message: "provider omitted uploadid", Mode: "scripted_missing_uploadid"}}
+		},
+	}
+	registry := provider.NewRegistry(append(provider.DefaultCatalog(), targetAdapter)...)
+	authSvc := auth.NewService(application.store, registry)
+	taskSvc := task.NewService(application.store, registry, authSvc)
+	application.providers = registry
+	application.auth = authSvc
+	application.tasks = taskSvc
+
+	profileResp := invokeJSON(t, application.routes(), http.MethodPost, "/api/auth/profiles", map[string]interface{}{"providerKey": "missing_uploadid_target", "authMode": "manual_token", "displayName": "Missing UploadID Target", "token": "token-missing-uploadid"})
+	profileID := profileResp.Data.(map[string]interface{})["id"].(string)
+	blockedFile := filepath.Join(t.TempDir(), "missing-uploadid.bin")
+	if err := os.WriteFile(blockedFile, []byte("missing-uploadid"), 0o644); err != nil {
+		t.Fatalf("write missing uploadid local file: %v", err)
+	}
+	taskResp := invokeJSON(t, application.routes(), http.MethodPost, "/api/tasks", map[string]interface{}{"sourceProvider": "missing_uploadid_source", "targetProvider": "missing_uploadid_target", "targetProfileId": profileID, "thresholdMB": 1, "entries": []map[string]interface{}{{"path": "/missing-uploadid.bin", "size": 1024, "md5": "missing-md5", "localPath": blockedFile}}})
+	taskID := taskResp.Data.(map[string]interface{})["task"].(map[string]interface{})["id"].(string)
+	runResp := invokeJSON(t, application.routes(), http.MethodPost, "/api/tasks/"+taskID+"/run", nil)
+	if got := runResp.Data.(map[string]interface{})["task"].(map[string]interface{})["state"].(string); got != "blocked" {
+		t.Fatalf("expected blocked task for ui smoke, got %s", got)
+	}
 
 	runStep(t, runCtx, "login and bootstrap",
 		chromedp.Navigate(server.URL),
@@ -176,6 +207,40 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 		waitForText(`body`, "报告标题"),
 	)
 
+	runStep(t, runCtx, "provider session missing blocked task",
+		chromedp.Evaluate(`(() => document.querySelector('button[data-view="tasks"]')?.click())()`, nil),
+		waitForText(`#tasks-list`, "missing_uploadid_source -> missing_uploadid_target"),
+		chromedp.ActionFunc(func(ctx context.Context) error {
+			var payload string
+			if err := chromedp.Evaluate(fmt.Sprintf(`(() => {
+				const hooks = window.__cloudpanTestHooks;
+				if (!hooks || !hooks.state) {
+					throw new Error("task hooks unavailable");
+				}
+				const detail = hooks.state.tasks.find((item) => item?.task?.id === %q);
+				if (!detail) {
+					throw new Error("missing blocked task detail");
+				}
+				hooks.state.selectedTaskId = detail.task.id;
+				return JSON.stringify(detail);
+			})()`, taskID), &payload).Do(ctx); err != nil {
+				return err
+			}
+			if !strings.Contains(payload, `"sourceProvider":"missing_uploadid_source"`) {
+				return fmt.Errorf("blocked task source provider missing in payload: %s", payload)
+			}
+			if !strings.Contains(payload, `"retryClass":"provider_session_missing"`) {
+				return fmt.Errorf("blocked task retryClass missing in payload: %s", payload)
+			}
+			if !strings.Contains(payload, `"blockedAction":"manual_intervention_required"`) {
+				return fmt.Errorf("blocked task blockedAction missing in payload: %s", payload)
+			}
+			return nil
+		}),
+		chromedp.Evaluate(`(() => window.__cloudpanTestHooks?.focusBlockedActionSummary?.("manual_intervention_required"))()`, nil),
+		waitForValue(`#auto-recover-blocked-action`, "manual_intervention_required"),
+		waitForText(`#status-retry-filter-summary`, "当前显示"),
+	)
 	runStep(t, runCtx, "provider smoke matrix workflow",
 		waitForText(`#provider-smoke-matrix`, "aliyun_123_open"),
 		chromedp.Evaluate(`(() => document.querySelector('#provider-smoke-matrix [data-provider-smoke-draft="aliyun_123_open"]')?.click())()`, nil),
