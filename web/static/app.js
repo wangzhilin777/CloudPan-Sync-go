@@ -384,6 +384,41 @@ function syncTargetProviderInsight() {
   };
 }
 
+function syncTargetProfileInsight() {
+  const wrap = $("#plan-target-profile-insight");
+  if (!wrap) {
+    return;
+  }
+  const profileID = $("#plan-target-profile")?.value || "";
+  const profile = (state.profiles || []).find((item) => item?.id === profileID);
+  if (!profile) {
+    wrap.innerHTML = `<div class="muted">选择目标授权档案后，这里会显示账号默认风控模板。</div>`;
+    return;
+  }
+  const riskDefaults = parseProfileRiskDefaultsFromExtra(profile.extra);
+  const extraKeys = profile.extra && typeof profile.extra === "object" ? Object.keys(profile.extra).filter(Boolean) : [];
+  wrap.innerHTML = `
+    <div class="section-head">
+      <h3>${escapeHTML(stringifyValue(profile.displayName, profileID))}</h3>
+      <span class="muted">${escapeHTML(stringifyValue(profile.providerKey, "-"))} / ${escapeHTML(stringifyValue(profile.authMode, "-"))}</span>
+    </div>
+    <div class="insight-grid">
+      <div class="insight-card">
+        <strong>账号默认风控</strong>
+        <span>${escapeHTML(renderRiskProfileCompact(riskDefaults))}</span>
+      </div>
+      <div class="insight-card">
+        <strong>来源</strong>
+        <span>${riskDefaults ? "auth profile riskDefaults" : "未配置，使用 provider 默认模板"}</span>
+      </div>
+      <div class="insight-card">
+        <strong>Extra Keys</strong>
+        <span>${escapeHTML(extraKeys.join(", ") || "-")}</span>
+      </div>
+    </div>
+  `;
+}
+
 async function loadProviderCapabilityDetail(providerKey, { force = false } = {}) {
   const normalized = String(providerKey || "").trim();
   if (!normalized) {
@@ -2014,25 +2049,25 @@ function optionalNumberValue(selector) {
   return Number(value);
 }
 
-function collectRiskOverrideFromForm() {
+function collectRiskProfileFromForm(prefix) {
   const override = {};
   const numberFields = [
-    ["#risk-request-interval", "requestIntervalMs"],
-    ["#risk-directory-interval", "directoryIntervalMs"],
-    ["#risk-page-size", "pageSize"],
-    ["#risk-cooldown-seconds", "cooldownSeconds"],
-    ["#risk-retry-limit", "retryLimit"],
-    ["#risk-max-concurrent", "maxConcurrent"],
-    ["#risk-auto-retry-start-hour", "autoRetryStartHour"],
-    ["#risk-auto-retry-end-hour", "autoRetryEndHour"],
+    ["request-interval", "requestIntervalMs"],
+    ["directory-interval", "directoryIntervalMs"],
+    ["page-size", "pageSize"],
+    ["cooldown-seconds", "cooldownSeconds"],
+    ["retry-limit", "retryLimit"],
+    ["max-concurrent", "maxConcurrent"],
+    ["auto-retry-start-hour", "autoRetryStartHour"],
+    ["auto-retry-end-hour", "autoRetryEndHour"],
   ];
-  numberFields.forEach(([selector, key]) => {
-    const value = optionalNumberValue(selector);
+  numberFields.forEach(([suffix, key]) => {
+    const value = optionalNumberValue(`#${prefix}-${suffix}`);
     if (value !== null && Number.isFinite(value)) {
       override[key] = value;
     }
   });
-  const keywords = $("#risk-keywords").value
+  const keywords = $(`#${prefix}-keywords`).value
     .split(",")
     .map((item) => item.trim())
     .filter(Boolean);
@@ -2042,23 +2077,85 @@ function collectRiskOverrideFromForm() {
   return Object.keys(override).length > 0 ? override : null;
 }
 
-function hydrateRiskOverrideForm(value) {
+function hydrateRiskProfileForm(prefix, value) {
   const override = value && typeof value === "object" ? value : {};
-  $("#risk-request-interval").value = override.requestIntervalMs ?? "";
-  $("#risk-directory-interval").value = override.directoryIntervalMs ?? "";
-  $("#risk-page-size").value = override.pageSize ?? "";
-  $("#risk-cooldown-seconds").value = override.cooldownSeconds ?? "";
-  $("#risk-retry-limit").value = override.retryLimit ?? "";
-  $("#risk-max-concurrent").value = override.maxConcurrent ?? "";
-  $("#risk-auto-retry-start-hour").value = override.autoRetryStartHour ?? "";
-  $("#risk-auto-retry-end-hour").value = override.autoRetryEndHour ?? "";
-  $("#risk-keywords").value = Array.isArray(override.riskKeywords) ? override.riskKeywords.join(",") : "";
+  $(`#${prefix}-request-interval`).value = override.requestIntervalMs ?? "";
+  $(`#${prefix}-directory-interval`).value = override.directoryIntervalMs ?? "";
+  $(`#${prefix}-page-size`).value = override.pageSize ?? "";
+  $(`#${prefix}-cooldown-seconds`).value = override.cooldownSeconds ?? "";
+  $(`#${prefix}-retry-limit`).value = override.retryLimit ?? "";
+  $(`#${prefix}-max-concurrent`).value = override.maxConcurrent ?? "";
+  $(`#${prefix}-auto-retry-start-hour`).value = override.autoRetryStartHour ?? "";
+  $(`#${prefix}-auto-retry-end-hour`).value = override.autoRetryEndHour ?? "";
+  $(`#${prefix}-keywords`).value = Array.isArray(override.riskKeywords) ? override.riskKeywords.join(",") : "";
+}
+
+function collectRiskOverrideFromForm() {
+  return collectRiskProfileFromForm("risk");
+}
+
+function hydrateRiskOverrideForm(value) {
+  hydrateRiskProfileForm("risk", value);
 }
 
 function syncRiskOverrideJSON() {
   const override = collectRiskOverrideFromForm();
   $("#plan-risk-override").value = override ? JSON.stringify(override, null, 2) : "";
   return override;
+}
+
+function parseProfileRiskDefaultsFromExtra(extra) {
+  if (!extra || typeof extra !== "object") {
+    return null;
+  }
+  const raw = String(extra.riskDefaults || "").trim();
+  if (!raw) {
+    return null;
+  }
+  try {
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === "object" ? parsed : null;
+  } catch (error) {
+    return null;
+  }
+}
+
+function mergeProfileRiskDefaultsIntoExtra(extra, riskDefaults) {
+  const merged = extra && typeof extra === "object" ? { ...extra } : {};
+  if (riskDefaults && typeof riskDefaults === "object" && Object.keys(riskDefaults).length > 0) {
+    merged.riskDefaults = JSON.stringify(riskDefaults);
+  } else {
+    delete merged.riskDefaults;
+  }
+  return merged;
+}
+
+function resetProfileForm() {
+  const form = $("#profile-form");
+  form.reset();
+  $("#profile-id").value = "";
+  $("#profile-extra").value = "";
+  hydrateRiskProfileForm("profile-risk", null);
+  $("#profile-submit").textContent = "创建授权档案";
+  syncAuthModes();
+}
+
+function setProfileFormEditing(profile) {
+  if (!profile || typeof profile !== "object") {
+    resetProfileForm();
+    return;
+  }
+  $("#profile-id").value = profile.id || "";
+  setSelectValueIfPresent("#profile-provider", profile.providerKey || "");
+  syncAuthModes();
+  setSelectValueIfPresent("#profile-auth-mode", profile.authMode || "");
+  $("#profile-display-name").value = profile.displayName || "";
+  $("#profile-token").value = profile.token || "";
+  $("#profile-cookie").value = profile.cookie || "";
+  const extra = profile.extra && typeof profile.extra === "object" ? profile.extra : {};
+  $("#profile-extra").value = Object.keys(extra).length ? JSON.stringify(extra, null, 2) : "";
+  hydrateRiskProfileForm("profile-risk", parseProfileRiskDefaultsFromExtra(extra));
+  $("#profile-submit").textContent = "更新授权档案";
 }
 
 function showFlash(message, isError = false) {
@@ -2622,6 +2719,7 @@ function renderProfiles() {
     wrap.innerHTML = `<div class="provider-card">暂无授权档案。</div>`;
     syncSourceProfiles();
     syncTargetProfiles();
+    syncTargetProfileInsight();
     return;
   }
 
@@ -2632,6 +2730,7 @@ function renderProfiles() {
           <th>显示名称</th>
           <th>Provider</th>
           <th>Auth Mode</th>
+          <th>账号默认风控</th>
           <th>Status</th>
           <th>操作</th>
         </tr>
@@ -2644,9 +2743,11 @@ function renderProfiles() {
                 <td>${profile.displayName}</td>
                 <td>${profile.providerKey}</td>
                 <td>${profile.authMode}</td>
+                <td>${escapeHTML(renderRiskProfileCompact(parseProfileRiskDefaultsFromExtra(profile.extra)))}</td>
                 <td>${profile.status}</td>
                 <td>
                   <div class="actions compact">
+                    <button type="button" class="ghost" data-profile-edit="${profile.id}">Edit</button>
                     <button type="button" class="ghost" data-profile-validate="${profile.id}">Validate</button>
                     <button type="button" class="ghost" data-profile-delete="${profile.id}">Delete</button>
                   </div>
@@ -2658,6 +2759,19 @@ function renderProfiles() {
       </tbody>
     </table>
   `;
+
+  wrap.querySelectorAll("[data-profile-edit]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const profile = state.profiles.find((item) => item.id === button.dataset.profileEdit);
+      if (!profile) {
+        showFlash("未找到要编辑的授权档案", true);
+        return;
+      }
+      setProfileFormEditing(profile);
+      focusProfile(profile.id);
+      showFlash("已载入授权档案编辑表单");
+    });
+  });
 
   wrap.querySelectorAll("[data-profile-validate]").forEach((button) => {
     button.addEventListener("click", async () => {
@@ -2699,6 +2813,7 @@ function syncTargetProfiles() {
     select.value = current;
   }
   syncTargetProviderInsight();
+  syncTargetProfileInsight();
 }
 
 function syncSourceProfiles() {
@@ -5595,6 +5710,7 @@ function wireLogin() {
 function wireProfiles() {
   $("#profile-provider").addEventListener("change", syncAuthModes);
   $("#plan-source-provider").addEventListener("change", syncSourceProfiles);
+  $("#plan-target-profile").addEventListener("change", syncTargetProfileInsight);
   $("#plan-target-provider").addEventListener("change", async () => {
     syncTargetProfiles();
     const providerKey = $("#plan-target-provider").value;
@@ -5642,25 +5758,55 @@ function wireProfiles() {
     }
   });
 
+  $("#sync-profile-risk-defaults").addEventListener("click", () => {
+    try {
+      const extra = parseJSONInput($("#profile-extra").value, {});
+      const merged = mergeProfileRiskDefaultsIntoExtra(extra, collectRiskProfileFromForm("profile-risk"));
+      $("#profile-extra").value = Object.keys(merged).length ? JSON.stringify(merged, null, 2) : "";
+      showFlash("账号默认风控已同步到 Extra JSON");
+    } catch (error) {
+      showFlash(`Extra JSON 无法解析：${error.message}`, true);
+    }
+  });
+
+  $("#clear-profile-risk-defaults").addEventListener("click", () => {
+    try {
+      const extra = parseJSONInput($("#profile-extra").value, {});
+      const merged = mergeProfileRiskDefaultsIntoExtra(extra, null);
+      $("#profile-extra").value = Object.keys(merged).length ? JSON.stringify(merged, null, 2) : "";
+      hydrateRiskProfileForm("profile-risk", null);
+      showFlash("账号默认风控已清空");
+    } catch (error) {
+      showFlash(`Extra JSON 无法解析：${error.message}`, true);
+    }
+  });
+
+  $("#profile-cancel-edit").addEventListener("click", () => {
+    resetProfileForm();
+    focusProfile("");
+    showFlash("已退出授权档案编辑");
+  });
+
   $("#profile-form").addEventListener("submit", async (event) => {
     event.preventDefault();
     try {
+      const profileID = $("#profile-id").value.trim();
+      const extra = parseJSONInput($("#profile-extra").value, {});
       const payload = {
         providerKey: $("#profile-provider").value,
         authMode: $("#profile-auth-mode").value,
         displayName: $("#profile-display-name").value.trim(),
         token: $("#profile-token").value.trim(),
         cookie: $("#profile-cookie").value.trim(),
-        extra: parseJSONInput($("#profile-extra").value, {}),
+        extra: mergeProfileRiskDefaultsIntoExtra(extra, collectRiskProfileFromForm("profile-risk")),
       };
-      await api("/api/auth/profiles", {
-        method: "POST",
+      await api(profileID ? `/api/auth/profiles/${profileID}` : "/api/auth/profiles", {
+        method: profileID ? "PATCH" : "POST",
         body: payload,
       });
-      event.target.reset();
-      $("#profile-extra").value = "";
+      resetProfileForm();
       await loadProfiles();
-      showFlash("授权档案已创建");
+      showFlash(profileID ? "授权档案已更新" : "授权档案已创建");
     } catch (error) {
       showFlash(error.message, true);
     }
