@@ -181,6 +181,7 @@ type EvidenceSummary struct {
 	PendingSmokeGroups                  int                `json:"pendingSmokeGroups"`
 	UploadSuccessGroups                 int                `json:"uploadSuccessGroups"`
 	UploadSuccessSamples                int                `json:"uploadSuccessSamples"`
+	AcceptanceActionCounts              map[string]int     `json:"acceptanceActionCounts,omitempty"`
 	RecentResults                       []Result           `json:"recentResults"`
 	RecentProbes                        []ProviderProbe    `json:"recentProbes"`
 }
@@ -309,6 +310,7 @@ type ProviderSmokeMatrixRow struct {
 	Accepted                     bool     `json:"accepted"`
 	AcceptanceStatus             string   `json:"acceptanceStatus,omitempty"`
 	AcceptanceMissing            []string `json:"acceptanceMissing,omitempty"`
+	AcceptanceActions            []string `json:"acceptanceActions,omitempty"`
 	AcceptanceAdvice             string   `json:"acceptanceAdvice,omitempty"`
 }
 
@@ -3255,13 +3257,14 @@ func buildEvidenceReport(summary EvidenceSummary, statuses []StatusSummary, smok
 		fmt.Fprintf(&b, "- 进行中协议组: %d\n", inProgressCount)
 		fmt.Fprintf(&b, "- 待补齐协议组: %d\n", pendingCount)
 		b.WriteString("\n## 真实联调验收\n\n")
-		b.WriteString("| ProtocolGroup | Acceptance | Missing | Advice | Smoke | Upload Smoke | Coverage | Sample | Latest Smoke |\n")
-		b.WriteString("| --- | --- | --- | --- | --- | --- | --- | --- | --- |\n")
+		b.WriteString("| ProtocolGroup | Acceptance | Missing | Actions | Advice | Smoke | Upload Smoke | Coverage | Sample | Latest Smoke |\n")
+		b.WriteString("| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |\n")
 		for _, item := range smokeMatrix {
-			fmt.Fprintf(&b, "| %s | %s | %s | %s | %d/%d | %d (%s) | %d/%d/%d | %s / %s / %s | %s |\n",
+			fmt.Fprintf(&b, "| %s | %s | %s | %s | %s | %d/%d | %d (%s) | %d/%d/%d | %s / %s / %s | %s |\n",
 				markdownCell(firstNonEmpty(item.ProtocolGroup, "-")),
 				markdownCell(firstNonEmpty(item.AcceptanceStatus, "-")),
 				markdownCell(strings.Join(item.AcceptanceMissing, ", ")),
+				markdownCell(strings.Join(item.AcceptanceActions, "；")),
 				markdownCell(firstNonEmpty(item.AcceptanceAdvice, "-")),
 				item.SuccessCount,
 				item.FailureCount,
@@ -3371,12 +3374,26 @@ func enrichEvidenceSummaryWithSmoke(summary EvidenceSummary, smokeSummaries []Pr
 	summary.PendingSmokeGroups = 0
 	summary.UploadSuccessGroups = 0
 	summary.UploadSuccessSamples = 0
+	if summary.AcceptanceActionCounts == nil {
+		summary.AcceptanceActionCounts = make(map[string]int)
+	} else {
+		for key := range summary.AcceptanceActionCounts {
+			delete(summary.AcceptanceActionCounts, key)
+		}
+	}
 	smokeMatrix := buildProviderSmokeMatrix(summary, smokeSummaries)
 	for _, row := range smokeMatrix {
 		if row.HasUploadSuccessSample {
 			summary.UploadSuccessGroups++
 		}
 		summary.UploadSuccessSamples += row.UploadSuccessCount
+		for _, action := range row.AcceptanceActions {
+			action = strings.TrimSpace(action)
+			if action == "" {
+				continue
+			}
+			summary.AcceptanceActionCounts[action]++
+		}
 		if row.Accepted {
 			summary.AcceptedSmokeGroups++
 			continue
@@ -3625,10 +3642,12 @@ func buildProviderSmokeMatrix(summary EvidenceSummary, smokeSummaries []Provider
 		if state.row.CoverageTaskCount == 0 {
 			missing = append(missing, "task_coverage_missing")
 		}
+		state.row.AcceptanceActions = buildAcceptanceActions(missing)
 		switch {
 		case state.row.HasUploadSuccessSample && state.row.CoverageTaskCount > 0:
 			state.row.Accepted = true
 			state.row.AcceptanceStatus = "accepted"
+			state.row.AcceptanceActions = []string{"继续补充限流/风控/断点恢复等边界样本"}
 			state.row.AcceptanceAdvice = "已具备真实上传成功样本与任务覆盖，可继续补充更多边界样本。"
 		case state.row.HasRealSuccessSample || state.row.CoverageHasRealSuccessSample || state.row.HasUploadSuccessSample:
 			state.row.AcceptanceStatus = "in_progress"
@@ -3648,6 +3667,26 @@ func buildProviderSmokeMatrix(summary EvidenceSummary, smokeSummaries []Provider
 	return rows
 }
 
+func buildAcceptanceActions(missing []string) []string {
+	if len(missing) == 0 {
+		return nil
+	}
+	actions := make([]string, 0, len(missing))
+	for _, item := range missing {
+		switch item {
+		case "real_smoke_success_missing":
+			actions = append(actions, "补 1 条真实 smoke 成功样本")
+		case "upload_smoke_success_missing":
+			actions = append(actions, "补 1 条真实上传成功样本")
+		case "task_coverage_missing":
+			actions = append(actions, "补 1 条真实任务覆盖样本")
+		default:
+			actions = append(actions, item)
+		}
+	}
+	return actions
+}
+
 func buildAcceptanceAdvice(missing []string, partial bool) string {
 	if len(missing) == 0 {
 		if partial {
@@ -3655,19 +3694,7 @@ func buildAcceptanceAdvice(missing []string, partial bool) string {
 		}
 		return "当前协议组已具备验收条件。"
 	}
-	hints := make([]string, 0, len(missing))
-	for _, item := range missing {
-		switch item {
-		case "real_smoke_success_missing":
-			hints = append(hints, "补 1 条真实 smoke 成功样本")
-		case "upload_smoke_success_missing":
-			hints = append(hints, "补 1 条真实上传成功样本")
-		case "task_coverage_missing":
-			hints = append(hints, "补 1 条真实任务覆盖样本")
-		default:
-			hints = append(hints, item)
-		}
-	}
+	hints := buildAcceptanceActions(missing)
 	return "建议：" + strings.Join(hints, "；")
 }
 
@@ -5334,4 +5361,3 @@ func resumeUploadForPath(metadata map[string]interface{}, path string) *provider
 		ProviderData:      uploadCheckpointProviderData(checkpoint.ProviderData),
 	}
 }
-

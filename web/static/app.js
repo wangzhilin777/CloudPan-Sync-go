@@ -2849,6 +2849,11 @@ function renderStatus() {
   const inProgressSmokeGroups = Number.isFinite(evidence.inProgressSmokeGroups) ? evidence.inProgressSmokeGroups : providerSmokeMatrix.filter((item) => item?.acceptanceStatus === "in_progress").length;
   const pendingSmokeGroups = Number.isFinite(evidence.pendingSmokeGroups) ? evidence.pendingSmokeGroups : providerSmokeMatrix.filter((item) => item?.acceptanceStatus === "pending").length;
   const uploadSuccessSmokeGroups = Number.isFinite(evidence.uploadSuccessGroups) ? evidence.uploadSuccessGroups : providerSmokeMatrix.filter((item) => item?.hasUploadSuccessSample).length;
+  const acceptanceActionCounts = evidence.acceptanceActionCounts && typeof evidence.acceptanceActionCounts === "object" ? evidence.acceptanceActionCounts : {};
+  const acceptanceActionSummary = Object.entries(acceptanceActionCounts)
+    .sort((left, right) => Number(right[1] || 0) - Number(left[1] || 0) || String(left[0]).localeCompare(String(right[0])))
+    .map(([label, count]) => `${label} x${count}`)
+    .join(" / ");
   syncAutoRecoverProtocolGroups();
   syncAutoRecoverProfiles();
   syncAutoRecoverBlockedActions();
@@ -2884,6 +2889,7 @@ function renderStatus() {
     <div class="metric"><span>Pending Groups</span><strong>${pendingSmokeGroups}</strong></div>
     <div class="metric"><span>Upload Success Groups</span><strong>${stringifyValue(evidence.uploadSuccessGroups, String(uploadSuccessSmokeGroups))}</strong></div>
     <div class="metric"><span>Upload Success Samples</span><strong>${stringifyValue(evidence.uploadSuccessSamples, "0")}</strong></div>
+    <div class="metric"><span>Acceptance Actions</span><strong>${escapeHTML(acceptanceActionSummary || "-")}</strong></div>
   `;
   $("#blocked-actions-summary").innerHTML = renderBlockedActionsSummary(evidence.blockedActions || []);
   wireBlockedActionsSummary();
@@ -5125,6 +5131,7 @@ function renderProviderSmokeMatrix(items) {
           <div class="muted">smoke sample: ${escapeHTML(stringifyValue(item.sampleTitle, "-"))} / ${escapeHTML(stringifyValue(item.sampleProviderKey, "-"))} / ${escapeHTML(stringifyValue(item.sampleCategory, "-"))}</div>
           <div class="muted">coverage sample: ${escapeHTML(stringifyValue(item.coverageSampleProviderKey, "-"))} / ${escapeHTML(stringifyValue(item.coverageSampleTaskState, "-"))} / ${escapeHTML(stringifyValue(item.coverageSampleCompletionKind, "-"))}</div>
           ${Array.isArray(item.acceptanceMissing) && item.acceptanceMissing.length ? `<div class="muted">missing: ${escapeHTML(item.acceptanceMissing.join(", "))}</div>` : ""}
+          ${Array.isArray(item.acceptanceActions) && item.acceptanceActions.length ? `<div class="muted">actions: ${escapeHTML(item.acceptanceActions.join("；"))}</div>` : ""}
           ${item.acceptanceAdvice ? `<div class="muted">advice: ${escapeHTML(item.acceptanceAdvice)}</div>` : ""}
           <div class="actions compact">
             ${item.sampleRecordId ? `<button type="button" class="ghost" data-provider-smoke-open-record="${escapeHTML(stringifyValue(item.sampleRecordId))}">打开 smoke 样本</button>` : ""}
@@ -5193,10 +5200,12 @@ function draftProviderSmokeFromMatrix(item) {
   );
   const status = item?.accepted ? "accepted" : String(item?.acceptanceStatus || "pending");
   const missing = Array.isArray(item?.acceptanceMissing) ? item.acceptanceMissing.filter(Boolean) : [];
+  const actions = Array.isArray(item?.acceptanceActions) ? item.acceptanceActions.filter(Boolean) : [];
   const noteParts = [
     protocolGroup ? `协议组：${protocolGroup}` : "",
     providerKey ? `建议 provider：${providerKey}` : "",
     missing.length ? `缺口：${missing.join(", ")}` : "",
+    actions.length ? `动作：${actions.join("；")}` : "",
     item?.acceptanceAdvice ? `建议：${item.acceptanceAdvice}` : "",
   ].filter(Boolean);
   return {
