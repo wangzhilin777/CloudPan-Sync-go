@@ -816,6 +816,18 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "providers ") {
 		t.Fatalf("expected provider summary text in app.js, got %q", body)
 	}
+	if !strings.Contains(body, "risk hints:") {
+		t.Fatalf("expected provider risk hints text in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "risk traits:") {
+		t.Fatalf("expected provider risk traits text in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "fallback:") {
+		t.Fatalf("expected provider fallback text in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "conflict:") {
+		t.Fatalf("expected provider conflict text in app.js, got %q", body)
+	}
 	if !strings.Contains(body, "earliest ") {
 		t.Fatalf("expected earliest next retry summary text in app.js, got %q", body)
 	}

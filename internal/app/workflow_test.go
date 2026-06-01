@@ -40,6 +40,14 @@ func TestAppWorkflowMainline(t *testing.T) {
 	if len(providerItems) != 10 {
 		t.Fatalf("expected 10 providers, got %d", len(providerItems))
 	}
+	providerEntry := providerItems[0].(map[string]interface{})
+	providerMeta := providerEntry["meta"].(map[string]interface{})
+	if hints, ok := providerMeta["riskHints"].([]interface{}); !ok || len(hints) == 0 {
+		t.Fatalf("expected provider riskHints in providers list, got %#v", providerMeta["riskHints"])
+	}
+	if traits, ok := providerMeta["riskTraits"].([]interface{}); !ok || len(traits) == 0 {
+		t.Fatalf("expected provider riskTraits in providers list, got %#v", providerMeta["riskTraits"])
+	}
 
 	profileResp := invokeJSON(t, handler, http.MethodPost, "/api/auth/profiles", map[string]interface{}{
 		"providerKey": "123_open",
