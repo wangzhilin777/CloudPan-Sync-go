@@ -442,8 +442,16 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 			}
 			return nil
 		}),
-		chromedp.Evaluate(`(() => window.__cloudpanTestHooks?.focusBlockedActionSummary?.("manual_intervention_required"))()`, nil),
+		chromedp.ActionFunc(func(ctx context.Context) error {
+			if err := chromedp.Evaluate(`(() => window.__cloudpanTestHooks?.renderSelectedTask?.())()`, nil).Do(ctx); err != nil {
+				return err
+			}
+			return nil
+		}),
+		waitForText(`#task-resolution-guide`, "修复 provider 会话缺口"),
+		chromedp.Evaluate(`(() => document.querySelector('#task-resolution-guide [data-task-guide-intent="focus_status_blocked"]')?.click())()`, nil),
 		waitForValue(`#auto-recover-blocked-action`, "manual_intervention_required"),
+		waitForText(`#flash`, "已按 blocked action 收敛最近重试队列"),
 		waitForText(`#blocked-actions-summary`, "next-step: 修复 provider 会话后继续"),
 		waitForText(`#blocked-actions-summary`, "manual_intervention_required"),
 	)
