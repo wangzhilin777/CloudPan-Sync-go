@@ -687,7 +687,7 @@ Invoke-RestMethod `
 - 不传 `executionMode` 时，默认按 `leaf_first_lazy`。
 - 不传 `sourceDeletePolicy` 时，默认按 `record_only`。
 - `record_only` 的含义是只记录源端删除事件，不默认删除目标端文件。
-- `pending_manual_requires_confirmation` 目前仍代表需要后续真实 fallback 运行时补全。
+- `pending_manual_requires_confirmation` 当前表示需要人工确认后再通过 retry 或后台补传继续处理。
 - 当任务详情里出现 `metadata.retryPendingOnly=true` 时，表示这次重试已经缩成待补传子集。
 - 当 runtime / probe / snapshot 中出现 `retryQueue` 时，表示当前任务已经具备失败分类后的重试队列证据。
 - 当 runtime / retryQueue / probe / snapshot 中出现 `uploadCheckpoint` 时，表示当前任务已经具备上传恢复检查点证据。
@@ -696,3 +696,4 @@ Invoke-RestMethod `
 - 当 `retryQueue` item 出现 `attemptCount / retryLimit / remainingCount / exhausted` 时，表示当前任务已经具备累计重试次数证据。
 - 当任务状态为 `blocked` 且 `runtime.nextRetryAt` 已到时，单机 tick 调度器会尝试自动恢复仅受冷却影响的任务。
 - 当前很多 provider 仍是协议占位实现，适合联调内核、字段口径和控制台闭环，不代表真实外部平台已经完全打通。
+
