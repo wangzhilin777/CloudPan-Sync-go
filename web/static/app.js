@@ -5641,6 +5641,7 @@ function renderProviderSmokeMatrix(items) {
             ${item.coverageSampleTaskId ? `<button type="button" class="ghost" data-provider-smoke-open-task="${escapeHTML(stringifyValue(item.coverageSampleTaskId))}">打开任务样本</button>` : ""}
             <button type="button" class="ghost" data-provider-smoke-draft="${escapeHTML(stringifyValue(item.protocolGroup))}">预填 smoke 表单</button>
             <button type="button" class="ghost" data-provider-smoke-draft-action="${escapeHTML(stringifyValue(item.protocolGroup))}">${escapeHTML(providerSmokeDraftActionLabel(item))}</button>
+            <button type="button" class="ghost" data-provider-smoke-prefill-profile-risk="${escapeHTML(stringifyValue(item.protocolGroup))}">预填账号默认风控</button>
             <button type="button" class="ghost" data-provider-smoke-focus-group="${escapeHTML(stringifyValue(item.protocolGroup))}">只看该组记录</button>
             <button type="button" class="ghost" data-provider-smoke-filter-status="${escapeHTML(item.accepted ? "accepted" : item.acceptanceStatus || "pending")}">只看此类</button>
           </div>
@@ -5842,6 +5843,56 @@ function draftProviderSmokeAndOpenTask(taskID) {
   openTaskByID(taskID).catch((error) => {
     showFlash(error.message, true);
   });
+}
+
+function profileRiskDefaultsFromSmokeMatrix(item) {
+  const missing = providerSmokeMissingReasons(item);
+  const profile = {};
+  if (missing.includes("upload_smoke_success_missing")) {
+    profile.requestIntervalMs = 1600;
+    profile.directoryIntervalMs = 2200;
+    profile.retryLimit = 3;
+    profile.maxConcurrent = 1;
+    profile.riskKeywords = ["upload_sample", "profile_calibrated"];
+    return profile;
+  }
+  if (missing.includes("task_coverage_missing")) {
+    profile.requestIntervalMs = 1400;
+    profile.directoryIntervalMs = 2000;
+    profile.retryLimit = 3;
+    profile.riskKeywords = ["task_coverage", "profile_calibrated"];
+    return profile;
+  }
+  if (missing.includes("real_smoke_success_missing")) {
+    profile.requestIntervalMs = 1200;
+    profile.directoryIntervalMs = 1800;
+    profile.retryLimit = 2;
+    profile.riskKeywords = ["browse_sample", "profile_calibrated"];
+    return profile;
+  }
+  profile.requestIntervalMs = 1800;
+  profile.directoryIntervalMs = 2600;
+  profile.retryLimit = 3;
+  profile.maxConcurrent = 1;
+  profile.riskKeywords = ["accepted_group", "edge_sample"];
+  return profile;
+}
+
+function prefillProfileRiskDefaultsFromMatrix(item) {
+  const draft = draftProviderSmokeFromMatrix(item);
+  const defaults = profileRiskDefaultsFromSmokeMatrix(item);
+  activateTab("providers");
+  setSelectValueIfPresent("#profile-provider", draft.providerKey || "");
+  setInputValueIfPresent("#profile-display-name", draft.protocolGroup ? `${draft.protocolGroup} 风控模板` : "真实样本风控模板");
+  hydrateRiskProfileForm("profile-risk", defaults);
+  try {
+    const extra = parseJSONInput($("#profile-extra").value, {});
+    const merged = mergeProfileRiskDefaultsIntoExtra(extra, defaults);
+    $("#profile-extra").value = Object.keys(merged).length ? JSON.stringify(merged, null, 2) : "";
+  } catch (error) {
+    $("#profile-extra").value = JSON.stringify(mergeProfileRiskDefaultsIntoExtra({}, defaults), null, 2);
+  }
+  showFlash("已按真实样本预填账号默认风控");
 }
 
 function draftProviderSmokeFromAccepted(item) {
@@ -6558,6 +6609,17 @@ function wireStatus() {
     const draftActionButton = event.target.closest("[data-provider-smoke-draft-action]");
     if (draftActionButton) {
       buildProviderSmokeDraftByProtocolGroup(draftActionButton.dataset.providerSmokeDraftAction || "", { fromGap: true });
+      return;
+    }
+    const prefillProfileRiskButton = event.target.closest("[data-provider-smoke-prefill-profile-risk]");
+    if (prefillProfileRiskButton) {
+      const protocolGroup = prefillProfileRiskButton.dataset.providerSmokePrefillProfileRisk || "";
+      const row = (state.providerSmokeMatrix || []).find((item) => item.protocolGroup === protocolGroup);
+      if (!row) {
+        showFlash("未找到对应协议组的验收矩阵项", true);
+        return;
+      }
+      prefillProfileRiskDefaultsFromMatrix(row);
       return;
     }
     const focusGroupButton = event.target.closest("[data-provider-smoke-focus-group]");

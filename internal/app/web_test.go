@@ -453,6 +453,9 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "data-provider-smoke-draft-action") {
 		t.Fatalf("expected provider smoke matrix draft-action in app.js, got %q", body)
 	}
+	if !strings.Contains(body, "data-provider-smoke-prefill-profile-risk") {
+		t.Fatalf("expected provider smoke matrix prefill-profile-risk action in app.js, got %q", body)
+	}
 	if !strings.Contains(body, "data-provider-smoke-focus-group") {
 		t.Fatalf("expected provider smoke matrix focus-group action in app.js, got %q", body)
 	}
@@ -477,6 +480,12 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "draftProviderSmokeActionFromMatrix") {
 		t.Fatalf("expected provider smoke draft action helper in app.js, got %q", body)
 	}
+	if !strings.Contains(body, "profileRiskDefaultsFromSmokeMatrix") {
+		t.Fatalf("expected provider smoke to profile risk helper in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "prefillProfileRiskDefaultsFromMatrix") {
+		t.Fatalf("expected provider smoke profile risk prefill helper in app.js, got %q", body)
+	}
 	if !strings.Contains(body, "draftProviderSmokeFromGap") {
 		t.Fatalf("expected provider smoke gap draft helper in app.js, got %q", body)
 	}
@@ -497,6 +506,9 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	}
 	if !strings.Contains(body, "已按验收缺口预填 smoke 动作") {
 		t.Fatalf("expected provider smoke matrix gap draft flash text in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "已按真实样本预填账号默认风控") {
+		t.Fatalf("expected provider smoke matrix profile risk prefill flash text in app.js, got %q", body)
 	}
 	if !strings.Contains(body, "已打开 smoke 样本") {
 		t.Fatalf("expected provider smoke matrix open-record flash text in app.js, got %q", body)
