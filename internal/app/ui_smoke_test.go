@@ -376,6 +376,46 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 		}),
 	)
 
+	runStep(t, runCtx, "manual confirmation blocked task guide",
+		chromedp.Evaluate(`(() => document.querySelector('button[data-view="tasks"]')?.click())()`, nil),
+		chromedp.ActionFunc(func(ctx context.Context) error {
+			var payload string
+			if err := chromedp.Evaluate(fmt.Sprintf(`(() => {
+				const hooks = window.__cloudpanTestHooks;
+				if (!hooks || !hooks.state) {
+					throw new Error("task hooks unavailable");
+				}
+				const detail = hooks.state.tasks.find((item) => item?.task?.id === %q);
+				if (!detail) {
+					throw new Error("missing manual confirmation blocked task detail");
+				}
+				hooks.state.selectedTaskId = detail.task.id;
+				return JSON.stringify(detail);
+			})()`, manualTaskID), &payload).Do(ctx); err != nil {
+				return err
+			}
+			if !strings.Contains(payload, `"retryClass":"pending_manual"`) {
+				return fmt.Errorf("manual confirmation retryClass missing in payload: %s", payload)
+			}
+			if !strings.Contains(payload, `"blockedAction":"manual_confirmation_required"`) {
+				return fmt.Errorf("manual confirmation blockedAction missing in payload: %s", payload)
+			}
+			return nil
+		}),
+		chromedp.ActionFunc(func(ctx context.Context) error {
+			if err := chromedp.Evaluate(`(() => window.__cloudpanTestHooks?.renderSelectedTask?.())()`, nil).Do(ctx); err != nil {
+				return err
+			}
+			return nil
+		}),
+		waitForText(`#task-resolution-guide`, "等待人工确认"),
+		chromedp.Evaluate(`(() => document.querySelector('#task-resolution-guide [data-task-guide-intent="focus_status_blocked"]')?.click())()`, nil),
+		waitForValue(`#auto-recover-blocked-action`, "manual_confirmation_required"),
+		waitForText(`#flash`, "已按 blocked action 收敛最近重试队列"),
+		waitForText(`#blocked-actions-summary`, "next-step: 人工确认后继续"),
+		waitForText(`#blocked-actions-summary`, "manual_confirmation_required"),
+	)
+
 	manualRecoverResp := invokeJSON(t, application.routes(), http.MethodPost, "/api/tasks/recover", map[string]interface{}{
 		"blockedAction": "manual_confirmation_required",
 		"recoverState":  "waiting_manual_confirmation",
@@ -482,8 +522,16 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 			}
 			return nil
 		}),
-		chromedp.Evaluate(`(() => window.__cloudpanTestHooks?.focusBlockedActionSummary?.("restore_local_source_file"))()`, nil),
+		chromedp.ActionFunc(func(ctx context.Context) error {
+			if err := chromedp.Evaluate(`(() => window.__cloudpanTestHooks?.renderSelectedTask?.())()`, nil).Do(ctx); err != nil {
+				return err
+			}
+			return nil
+		}),
+		waitForText(`#task-resolution-guide`, "补回本地回退文件"),
+		chromedp.Evaluate(`(() => document.querySelector('#task-resolution-guide [data-task-guide-intent="focus_status_blocked"]')?.click())()`, nil),
 		waitForValue(`#auto-recover-blocked-action`, "restore_local_source_file"),
+		waitForText(`#flash`, "已按 blocked action 收敛最近重试队列"),
 		waitForText(`#blocked-actions-summary`, "next-step: 补回本地文件后继续"),
 		waitForText(`#blocked-actions-summary`, "restore_local_source_file"),
 	)
@@ -514,8 +562,16 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 			}
 			return nil
 		}),
-		chromedp.Evaluate(`(() => window.__cloudpanTestHooks?.focusBlockedActionSummary?.("refresh_auth_profile"))()`, nil),
+		chromedp.ActionFunc(func(ctx context.Context) error {
+			if err := chromedp.Evaluate(`(() => window.__cloudpanTestHooks?.renderSelectedTask?.())()`, nil).Do(ctx); err != nil {
+				return err
+			}
+			return nil
+		}),
+		waitForText(`#task-resolution-guide`, "刷新授权档案"),
+		chromedp.Evaluate(`(() => document.querySelector('#task-resolution-guide [data-task-guide-intent="focus_status_blocked"]')?.click())()`, nil),
 		waitForValue(`#auto-recover-blocked-action`, "refresh_auth_profile"),
+		waitForText(`#flash`, "已按 blocked action 收敛最近重试队列"),
 		waitForText(`#blocked-actions-summary`, "next-step: 刷新授权后继续"),
 		waitForText(`#blocked-actions-summary`, "refresh_auth_profile"),
 	)
