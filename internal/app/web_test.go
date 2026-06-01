@@ -348,6 +348,9 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "data-auto-recover-run-lane-strategy") {
 		t.Fatalf("expected auto recover summary lane strategy run wiring in app.js, got %q", body)
 	}
+	if !strings.Contains(body, "const autoRetryPolicy = state.evidence?.autoRetryPolicy") {
+		t.Fatalf("expected autoRetryPolicy guard in app.js, got %q", body)
+	}
 	if !strings.Contains(body, "data-auto-recover-preview-protocol-group") {
 		t.Fatalf("expected auto recover preview protocol group wiring in app.js, got %q", body)
 	}
