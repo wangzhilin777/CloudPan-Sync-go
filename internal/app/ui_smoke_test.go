@@ -531,6 +531,14 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 		waitForText(`#flash`, "已打开 smoke 样本并回填表单"),
 		chromedp.Evaluate(`(() => document.querySelector('#provider-smoke-matrix [data-provider-smoke-filter-status="accepted"]')?.click())()`, nil),
 		waitForText(`#flash`, "已按 accepted 收敛验收矩阵"),
+		chromedp.Evaluate(`(() => document.querySelector('#provider-smoke-matrix [data-provider-smoke-prefill-profile-risk="aliyun_123_open"]')?.click())()`, nil),
+		waitForText(`#flash`, "已按真实样本预填账号默认风控"),
+		waitForValue(`#profile-provider`, "123_open"),
+		waitForValueContains(`#profile-display-name`, "aliyun_123_open 风控模板"),
+		waitForValueContains(`#profile-extra`, `riskDefaults`),
+		waitForValueContains(`#profile-extra`, `accepted_group`),
+		waitForValue(`#profile-risk-request-interval`, "1800"),
+		waitForValue(`#profile-risk-directory-interval`, "2600"),
 	)
 }
 
