@@ -837,6 +837,15 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "risk traits:") {
 		t.Fatalf("expected provider risk traits text in app.js, got %q", body)
 	}
+	if !strings.Contains(body, "default risk:") {
+		t.Fatalf("expected provider default risk text in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "recommended risk:") {
+		t.Fatalf("expected provider recommended risk text in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "risk calibration:") {
+		t.Fatalf("expected provider risk calibration text in app.js, got %q", body)
+	}
 	if !strings.Contains(body, "fallback:") {
 		t.Fatalf("expected provider fallback text in app.js, got %q", body)
 	}
