@@ -95,12 +95,16 @@ jobs:
 
       - name: Build Docker image archive
         uses: docker/build-push-action@v6
+        env:
+          DOCKER_BUILD_RECORD_UPLOAD: "false"
         with:
           context: .
           file: ./Dockerfile
           push: false
           load: false
           tags: cloudpan-sync-go:release
+          provenance: false
+          sbom: false
           outputs: type=docker,dest=/tmp/cloudpan-sync-go-docker-image.tar
 
       - name: Compress Docker image archive
