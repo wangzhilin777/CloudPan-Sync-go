@@ -5733,7 +5733,7 @@ async function autoRecoverTaskPath(scope, path, panel = "directory") {
   });
   await Promise.all([loadTasks(), loadStatus()]);
   showFlash(
-    `后台补传子树已执行：${normalizedPath} / matched ${stringifyValue(result.matchedCount, "0")} / recovered ${stringifyValue(result.recoveredCount, "0")} / modeBudget ${stringifyValue(result.skippedByModeBudget, "0")} / laneBudget ${stringifyValue(result.skippedByLaneBudget, "0")} / providerBudget ${stringifyValue(result.skippedByProviderBudget, "0")}`,
+    `后台补传子树已执行：${normalizedPath} / ${selectionScopeLabel(autoRecoverScopeFromPanel(panel))} / matched ${stringifyValue(result.matchedCount, "0")} / recovered ${stringifyValue(result.recoveredCount, "0")} / modeBudget ${stringifyValue(result.skippedByModeBudget, "0")} / laneBudget ${stringifyValue(result.skippedByLaneBudget, "0")} / providerBudget ${stringifyValue(result.skippedByProviderBudget, "0")}`,
     result.recoveredCount <= 0,
   );
 }
@@ -6684,6 +6684,26 @@ function recoverScopeFromSource(source) {
   }
   return source === "pending_tree" || source === "selected_pending_subset" ? "selected_pending_subset" : "selected_retry_subset";
 }
+function selectionSourceLabel(source) {
+  if (source === "directory_tree" || source === "selected_directory_subset") {
+    return "目录子集";
+  }
+  if (source === "pending_tree" || source === "selected_pending_subset") {
+    return "待补传子集";
+  }
+  return "重试队列子集";
+}
+
+function selectionScopeLabel(scope) {
+  const normalized = String(scope || "").trim();
+  if (normalized === "selected_directory_subset") {
+    return "selected_directory_subset";
+  }
+  if (normalized === "selected_pending_subset") {
+    return "selected_pending_subset";
+  }
+  return normalized || "selected_retry_subset";
+}
 
 function taskContextByScope(scope) {
   return scope === "task"
@@ -6706,7 +6726,7 @@ function prefillWizardFromVisibleSelection(scope, source) {
     showFlash("当前筛选结果里没有可用于重建向导的路径", true);
     return;
   }
-  prefillWizardFromTaskPaths(context.detail, paths, "当前筛选");
+  prefillWizardFromTaskPaths(context.detail, paths, `${selectionSourceLabel(source)} / ${selectionScopeLabel(recoverScopeFromSource(source))}`);
 }
 
 async function retryVisibleSelection(scope, source) {
@@ -6722,7 +6742,7 @@ async function retryVisibleSelection(scope, source) {
   }
   const ok = await runTaskActionForTask(context.taskId, "retry", { paths, scope: recoverScopeFromSource(source) });
   if (ok) {
-    showFlash(`已按当前筛选重建 ${paths.length} 条路径的 retry 范围`);
+    showFlash(`已按${selectionSourceLabel(source)} (${selectionScopeLabel(recoverScopeFromSource(source))}) 重建 ${paths.length} 条路径的 retry 范围`);
   }
 }
 
@@ -6749,7 +6769,7 @@ async function autoRecoverVisibleSelection(scope, source) {
   });
   await Promise.all([loadTasks(), loadStatus()]);
   showFlash(
-    `后台补传筛选已执行：paths ${paths.length} / matched ${stringifyValue(result.matchedCount, "0")} / recovered ${stringifyValue(result.recoveredCount, "0")} / modeBudget ${stringifyValue(result.skippedByModeBudget, "0")} / laneBudget ${stringifyValue(result.skippedByLaneBudget, "0")} / providerBudget ${stringifyValue(result.skippedByProviderBudget, "0")}`,
+    `后台补传筛选已执行：${selectionSourceLabel(source)} / ${selectionScopeLabel(recoverScopeFromSource(source))} / paths ${paths.length} / matched ${stringifyValue(result.matchedCount, "0")} / recovered ${stringifyValue(result.recoveredCount, "0")} / modeBudget ${stringifyValue(result.skippedByModeBudget, "0")} / laneBudget ${stringifyValue(result.skippedByLaneBudget, "0")} / providerBudget ${stringifyValue(result.skippedByProviderBudget, "0")}`,
     result.recoveredCount <= 0,
   );
 }
@@ -6770,7 +6790,7 @@ async function retryTaskPath(scope, path) {
     scope: "selected_pending_subset",
   });
   if (ok) {
-    showFlash(`已按 ${normalizedPath} 重建 retry 范围`);
+    showFlash(`已按 ${normalizedPath} (${selectionScopeLabel("selected_pending_subset")}) 重建 retry 范围`);
   }
   return ok;
 }

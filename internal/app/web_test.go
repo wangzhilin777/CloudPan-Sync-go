@@ -1008,8 +1008,17 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "providerSmokeMatrixFilterLabel") {
 		t.Fatalf("expected provider smoke matrix filter label helper in app.js, got %q", body)
 	}
-	if !strings.Contains(body, "后台补传筛选已执行：paths") {
+	if !strings.Contains(body, "selectionSourceLabel") {
+		t.Fatalf("expected selection source label helper in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "selectionScopeLabel") {
+		t.Fatalf("expected selection scope label helper in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "后台补传筛选已执行：${selectionSourceLabel(source)} / ${selectionScopeLabel(recoverScopeFromSource(source))}") {
 		t.Fatalf("expected scoped auto recover selection flash text in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "selectionScopeLabel(\"selected_pending_subset\")") {
+		t.Fatalf("expected scoped selection label content in app.js, got %q", body)
 	}
 	if !strings.Contains(body, "后台补传子树已执行：") {
 		t.Fatalf("expected scoped auto recover subtree flash text in app.js, got %q", body)
