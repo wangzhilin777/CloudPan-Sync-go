@@ -706,6 +706,7 @@ type retryQueueSummary struct {
 	LocalMissingCount                   int
 	ProviderSessionMissingCount         int
 	ExhaustedCount                      int
+	AutoRecoverWaitingRetryWindowTasks  int
 	AutoRecoverWaitingAuthRefreshTasks  int
 	AutoRecoverWaitingLocalRestoreTasks int
 	AutoRecoverWaitingManualTasks       int
@@ -4719,6 +4720,7 @@ func applyRetryQueueSummary(runtime *RuntimeState, metadata map[string]interface
 		"autoRecoverWaitingLocalRestoreTasks": summary.AutoRecoverWaitingLocalRestoreTasks,
 		"autoRecoverWaitingManualTasks":       summary.AutoRecoverWaitingManualTasks,
 		"autoRecoverWaitingRetryLimitTasks":   summary.AutoRecoverWaitingRetryLimitTasks,
+		"autoRecoverWaitingRetryWindowTasks":  summary.AutoRecoverWaitingRetryWindowTasks,
 	}
 }
 
@@ -5011,6 +5013,7 @@ func summarizeRetryQueueWithRisk(queue []RetryQueueItem, riskProfile planner.Ris
 	summary.BlockedReason = "retry_queue_waiting_for_retry_window"
 	summary.BlockedAction, summary.BlockedAdvice = blockedGuidance(summary.BlockedReason)
 	summary.NextRetryAt = nextWindowAt
+	summary.AutoRecoverWaitingRetryWindowTasks = 1
 	summary.AutoRecoverEligible = true
 	summary.AutoRecoverMode = "retry_window_waiting_auto_retry"
 	summary.AutoRecoverAdvice = autoRecoverGuidance(summary.AutoRecoverMode)

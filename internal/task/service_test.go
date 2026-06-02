@@ -3814,6 +3814,9 @@ func TestServiceAutoRecoverPoolShowsRetryWindowWaitingAndSkipsExecutionUntilWind
 	if !boolValue(retrySummary["windowBlocked"]) {
 		t.Fatalf("expected windowBlocked true, got %#v", retrySummary)
 	}
+	if intNumber(retrySummary["autoRecoverWaitingRetryWindowTasks"]) != 1 {
+		t.Fatalf("expected autoRecoverWaitingRetryWindowTasks 1, got %#v", retrySummary)
+	}
 
 	evidence, err := svc.RuntimeEvidence(ctx)
 	if err != nil {

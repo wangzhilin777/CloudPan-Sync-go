@@ -1278,6 +1278,10 @@ function renderRuntimeCheckpoint(runtime, metadata = null, scope = "task") {
             <strong>恢复等待 - 限额超限</strong>
             <span>${stringifyValue(metadata.retrySummary.autoRecoverWaitingRetryLimitTasks, "0")}</span>
           </div>
+          <div class="insight-card checkpoint-card">
+            <strong>恢复等待 - 时间窗</strong>
+            <span>${stringifyValue(metadata.retrySummary.autoRecoverWaitingRetryWindowTasks, metadata.retrySummary.windowBlocked ? "1" : "0")}</span>
+          </div>
         `
         : ""
     }
