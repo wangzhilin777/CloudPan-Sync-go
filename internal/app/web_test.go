@@ -1074,6 +1074,12 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "recover budget:") {
 		t.Fatalf("expected provider recover budget text in app.js, got %q", body)
 	}
+	if !strings.Contains(body, "budget advice") {
+		t.Fatalf("expected provider budget advice text in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "账号恢复预算建议") {
+		t.Fatalf("expected profile recover budget advice text in app.js, got %q", body)
+	}
 	if !strings.Contains(body, "fallback:") {
 		t.Fatalf("expected provider fallback text in app.js, got %q", body)
 	}

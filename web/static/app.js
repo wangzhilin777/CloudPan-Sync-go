@@ -260,6 +260,28 @@ function renderRecoverBudgetCompact(policy) {
     `profile ${stringifyValue(policy.profileBudget, "0")}`,
   ].join(" / ");
 }
+function isSensitiveRecoverBudgetTemplate(policy, providerKey = "") {
+  if (!policy || typeof policy !== "object") {
+    return false;
+  }
+  const sensitiveProviders = Array.isArray(policy.sensitiveProviders) ? policy.sensitiveProviders.filter(Boolean) : [];
+  const normalized = String(providerKey || "").trim();
+  return sensitiveProviders.length > 0 && (!normalized || sensitiveProviders.includes(normalized));
+}
+
+function renderRecoverBudgetAdvice(policy, providerKey = "") {
+  if (!policy || typeof policy !== "object") {
+    return "未返回账号级预算建议。";
+  }
+  const reason = String(policy.reason || "").trim();
+  if (isSensitiveRecoverBudgetTemplate(policy, providerKey)) {
+    return `高风险 provider 建议单账号串行推进：${renderRecoverBudgetCompact(policy)}${reason ? `；${reason}` : ""}`;
+  }
+  if (Number(policy.profileBudget || 0) <= 1 && Number(policy.providerBudget || 0) > 0) {
+    return `建议按账号轮转控制补传并发：${renderRecoverBudgetCompact(policy)}${reason ? `；${reason}` : ""}`;
+  }
+  return `建议恢复预算：${renderRecoverBudgetCompact(policy)}${reason ? `；${reason}` : ""}`;
+}
 
 function findProviderEntry(providerKey) {
   const normalized = String(providerKey || "").trim();
@@ -301,6 +323,7 @@ function renderProviderRiskTemplateDetail(template, { title = "默认风控模�
     `<span>${escapeHTML(renderRiskProfileCompact(template.calibrated))}</span>`,
     `<div class="muted">recommended ${escapeHTML(stringifyValue(template.recommendedMode, "-"))}</div>`,
     `<div class="muted">recover budget ${escapeHTML(renderRecoverBudgetCompact(template.recoverBudget))}</div>`,
+    `<div class="muted">budget advice ${escapeHTML(renderRecoverBudgetAdvice(template.recoverBudget, template.providerKey || ""))}</div>`,
   ];
   if (!compact) {
     parts.push(`<div class="muted">base ${escapeHTML(renderRiskProfileCompact(template.base))}</div>`);
@@ -361,7 +384,7 @@ function renderProviderCapabilityDetail() {
         <strong>回退策略</strong>
         <span>${escapeHTML((provider.fallbackModes || []).join(", ") || "-")}</span>
       </div>
-      ${renderProviderRiskTemplateDetail(provider.defaultRiskTemplate, { title: "默认风控模板" })}
+      ${renderProviderRiskTemplateDetail({ ...(provider.defaultRiskTemplate || {}), providerKey: provider.key || providerKey }, { title: "默认风控模板" })}
     </div>
   `;
 }
@@ -391,7 +414,7 @@ function syncTargetProviderInsight() {
         <strong>能力摘要</strong>
         <span>${escapeHTML(renderProviderCapabilityCompact(entry.capability))}</span>
       </div>
-      ${renderProviderRiskTemplateDetail(entry.meta.defaultRiskTemplate, { title: "Provider 默认模板", compact: true })}
+      ${renderProviderRiskTemplateDetail({ ...(entry.meta.defaultRiskTemplate || {}), providerKey }, { title: "Provider 默认模板", compact: true })}
     </div>
     <div class="actions compact-actions">
       <button type="button" class="ghost" id="apply-provider-default-risk">采用 provider 推荐风控</button>
@@ -431,6 +454,8 @@ function syncTargetProfileInsight() {
   }
   const riskDefaults = parseProfileRiskDefaultsFromExtra(profile.extra);
   const riskDefaultSource = parseProfileRiskDefaultsSourceFromExtra(profile.extra);
+  const providerEntry = findProviderEntry(profile.providerKey || "");
+  const recoverBudget = providerEntry?.meta?.defaultRiskTemplate?.recoverBudget || null;
   const extraKeys = profile.extra && typeof profile.extra === "object" ? Object.keys(profile.extra).filter(Boolean) : [];
   const profileDefaultFields = riskDefaults && typeof riskDefaults === "object" ? Object.keys(riskDefaults).filter(Boolean) : [];
   wrap.innerHTML = `
@@ -455,6 +480,10 @@ function syncTargetProfileInsight() {
       <div class="insight-card">
         <strong>命中字段</strong>
         <span>${escapeHTML(profileDefaultFields.join(", ") || "-")}</span>
+      </div>
+      <div class="insight-card">
+        <strong>账号恢复预算建议</strong>
+        <span>${escapeHTML(renderRecoverBudgetAdvice(recoverBudget, profile.providerKey || ""))}</span>
       </div>
     </div>
     <div class="actions compact-actions">
