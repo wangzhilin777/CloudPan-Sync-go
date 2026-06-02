@@ -472,6 +472,7 @@ function syncTargetProfileInsight() {
       <div class="insight-card">
         <strong>来源</strong>
         <span>${riskDefaults ? escapeHTML(riskDefaultSource || "auth profile riskDefaults") : "未配置，使用 provider 默认模板"}</span>
+        <div class="muted">${escapeHTML(renderProfileRiskDefaultSourceAdvice(riskDefaultSource || ""))}</div>
       </div>
       <div class="insight-card">
         <strong>Extra Keys</strong>
@@ -583,6 +584,7 @@ function renderRiskResolutionMetaCards(resolution) {
     <div class="insight-card">
       <strong>账号默认来源</strong>
       <span>${escapeHTML(profileSource)}</span>
+      <div class="muted">${escapeHTML(renderProfileRiskDefaultSourceAdvice(profileSource))}</div>
     </div>
     <div class="insight-card">
       <strong>来源类型 / 偏向</strong>
@@ -2405,6 +2407,25 @@ function parseProfileRiskDefaultsSourceFromExtra(extra) {
     }
   }
   return raw;
+}
+function renderProfileRiskDefaultSourceAdvice(source) {
+  const normalized = String(source || "").trim();
+  if (!normalized) {
+    return "当前未附带真实样本来源说明，将沿用 provider 默认模板。";
+  }
+  const match = normalized.match(/^Smoke Matrix\s+(.+?)\s+\((accepted|in_progress|pending)\)$/i);
+  if (!match) {
+    return `当前账号默认模板来源：${normalized}`;
+  }
+  const protocolGroup = String(match[1] || "").trim() || "unknown";
+  const status = String(match[2] || "").trim().toLowerCase();
+  if (status === "accepted") {
+    return `真实样本矩阵显示 ${protocolGroup} 已验收，建议优先沿用这套账号默认模板。`;
+  }
+  if (status === "in_progress") {
+    return `真实样本矩阵显示 ${protocolGroup} 仍在补样中，建议沿用当前模板并继续补齐上传成功或异常样本。`;
+  }
+  return `真实样本矩阵显示 ${protocolGroup} 仍待补齐，建议先按保守模板试跑，再回填真实样本继续校准。`;
 }
 
 function mergeProfileRiskDefaultsIntoExtra(extra, riskDefaults) {

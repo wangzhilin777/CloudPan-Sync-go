@@ -240,6 +240,12 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "Smoke Matrix") {
 		t.Fatalf("expected Smoke Matrix source label in app.js, got %q", body)
 	}
+	if !strings.Contains(body, "renderProfileRiskDefaultSourceAdvice") {
+		t.Fatalf("expected profile risk default source advice helper in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "仍待补齐") {
+		t.Fatalf("expected smoke-matrix pending advice text in app.js, got %q", body)
+	}
 	if !strings.Contains(body, "已按真实样本预填账号默认风控") {
 		t.Fatalf("expected profile risk prefill flash text in app.js, got %q", body)
 	}
