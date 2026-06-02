@@ -3609,6 +3609,92 @@ func inferProviderSmokeCategory(record ProviderSmokeRecord) string {
 	}
 }
 
+func providerSmokeTemplateVersion() string {
+	return "phase2_smoke_template_v1"
+}
+
+func providerSmokeEnvironmentKeys(record ProviderSmokeRecord) []string {
+	if len(record.Environment) == 0 {
+		return nil
+	}
+	keys := make([]string, 0, len(record.Environment))
+	for key := range record.Environment {
+		if strings.TrimSpace(key) == "" {
+			continue
+		}
+		keys = append(keys, strings.TrimSpace(key))
+	}
+	sort.Strings(keys)
+	return keys
+}
+
+func providerSmokeSampleType(record ProviderSmokeRecord) string {
+	category := strings.TrimSpace(strings.ToLower(record.Category))
+	result := strings.TrimSpace(strings.ToLower(record.Result))
+	note := strings.TrimSpace(strings.ToLower(record.Note))
+	switch {
+	case result != "success" && strings.Contains(note, "rate"):
+		return "限流/风控异常样本"
+	case result != "success" && strings.Contains(note, "auth"):
+		return "授权失效异常样本"
+	case result != "success" && strings.Contains(note, "local"):
+		return "本地文件缺失异常样本"
+	case result != "success" && strings.Contains(note, "manual"):
+		return "人工确认异常样本"
+	case result != "success":
+		return "异常排障样本"
+	case category == "binary_upload_success":
+		return "真实上传成功样本"
+	case category == "fast_upload_success":
+		return "真实快传成功样本"
+	case category == "browse_only":
+		return "真实浏览成功样本"
+	case category == "auth_only":
+		return "真实鉴权成功样本"
+	default:
+		return "真实联调样本"
+	}
+}
+
+func providerSmokeReuseAdvice(record ProviderSmokeRecord) string {
+	category := strings.TrimSpace(strings.ToLower(record.Category))
+	result := strings.TrimSpace(strings.ToLower(record.Result))
+	switch {
+	case result == "success" && category == "binary_upload_success":
+		return "可直接复用为协议组上传成功回归样本，并继续补任务覆盖与大文件链路。"
+	case result == "success" && category == "fast_upload_success":
+		return "可复用为快传命中样本，后续重点补二进制上传与失败恢复。"
+	case result == "success":
+		return "可复用为基础成功样本，后续补齐上传成功、异常和恢复链路。"
+	case strings.Contains(strings.ToLower(record.Note), "rate"):
+		return "可复用为限流/风控回归样本，后续校准 request interval、directory interval 与 retry window。"
+	case strings.Contains(strings.ToLower(record.Note), "auth"):
+		return "可复用为授权失效回归样本，后续验证 refresh_auth_profile 闭环。"
+	case strings.Contains(strings.ToLower(record.Note), "local"):
+		return "可复用为本地文件缺失回归样本，后续验证 restore_local_source_file 闭环。"
+	case strings.Contains(strings.ToLower(record.Note), "manual"):
+		return "可复用为人工确认回归样本，后续验证 pending_manual 与覆盖降级闭环。"
+	default:
+		return "可复用为异常排障样本，后续补充具体请求/响应和恢复动作。"
+	}
+}
+
+func providerSmokeEvidenceCompleteness(record ProviderSmokeRecord) string {
+	hasOps := len(record.Operations) > 0
+	hasEnv := len(providerSmokeEnvironmentKeys(record)) > 0
+	hasNote := strings.TrimSpace(record.Note) != ""
+	switch {
+	case hasOps && hasEnv && hasNote:
+		return "完整"
+	case hasOps && (hasEnv || hasNote):
+		return "较完整"
+	case hasOps || hasEnv || hasNote:
+		return "基础"
+	default:
+		return "待补充"
+	}
+}
+
 func buildProviderSmokeMarkdown(record ProviderSmokeRecord) string {
 	var b strings.Builder
 	title := strings.TrimSpace(record.Title)
@@ -3628,6 +3714,22 @@ func buildProviderSmokeMarkdown(record ProviderSmokeRecord) string {
 	if record.Note != "" {
 		fmt.Fprintf(&b, "- 备注: %s\n", markdownCell(record.Note))
 	}
+	b.WriteString("\n## 固定记录模板\n\n")
+	fmt.Fprintf(&b, "- 模板版本: %s\n", markdownCell(providerSmokeTemplateVersion()))
+	fmt.Fprintf(&b, "- 样本类型: %s\n", markdownCell(providerSmokeSampleType(record)))
+	fmt.Fprintf(&b, "- 证据完整度: %s\n", markdownCell(providerSmokeEvidenceCompleteness(record)))
+	if len(record.Operations) == 0 {
+		b.WriteString("- 推荐回归入口: 待补充操作清单\n")
+	} else {
+		fmt.Fprintf(&b, "- 推荐回归入口: %s\n", markdownCell(strings.Join(record.Operations, " -> ")))
+	}
+	keys := providerSmokeEnvironmentKeys(record)
+	if len(keys) == 0 {
+		b.WriteString("- 环境键摘要: 未填写\n")
+	} else {
+		fmt.Fprintf(&b, "- 环境键摘要: %s\n", markdownCell(strings.Join(keys, ", ")))
+	}
+	fmt.Fprintf(&b, "- 复用建议: %s\n", markdownCell(providerSmokeReuseAdvice(record)))
 	b.WriteString("\n## 本次覆盖范围\n\n")
 	if len(record.Operations) == 0 {
 		b.WriteString("- 未记录具体操作。\n")
@@ -3659,6 +3761,7 @@ func buildProviderSmokeMarkdown(record ProviderSmokeRecord) string {
 	b.WriteString("\n## 对代码的反推结论\n\n")
 	b.WriteString("- 这条记录可以作为协议族或 provider 的真实联调样本。\n")
 	b.WriteString("- 需要时可继续补充更细的请求 / 响应片段。\n")
+	b.WriteString("- 固定记录模板已沉淀，可直接复用到后续回归和真实样本矩阵补齐。\n")
 	b.WriteString("\n## 验收结论\n\n")
 	if strings.EqualFold(record.Result, "success") {
 		b.WriteString("- 本次形成有效真实联调样本。\n")

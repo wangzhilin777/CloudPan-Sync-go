@@ -7637,6 +7637,21 @@ func TestServiceProviderSmokeRecords(t *testing.T) {
 	if !strings.Contains(fetched.Markdown, "123_open 真实 smoke") {
 		t.Fatalf("expected markdown title, got %s", fetched.Markdown)
 	}
+	if !strings.Contains(fetched.Markdown, "## 固定记录模板") {
+		t.Fatalf("expected fixed smoke template section, got %s", fetched.Markdown)
+	}
+	if !strings.Contains(fetched.Markdown, "phase2_smoke_template_v1") {
+		t.Fatalf("expected smoke template version, got %s", fetched.Markdown)
+	}
+	if !strings.Contains(fetched.Markdown, "真实浏览成功样本") {
+		t.Fatalf("expected browse sample type in markdown, got %s", fetched.Markdown)
+	}
+	if !strings.Contains(fetched.Markdown, "环境键") || !strings.Contains(fetched.Markdown, "os") {
+		t.Fatalf("expected environment keys summary in markdown, got %s", fetched.Markdown)
+	}
+	if !strings.Contains(fetched.Markdown, "基础成功样本") {
+		t.Fatalf("expected reuse advice in markdown, got %s", fetched.Markdown)
+	}
 
 	summary, err := svc.ProviderSmokeSummary(ctx)
 	if err != nil {
