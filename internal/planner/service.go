@@ -322,9 +322,11 @@ func DescribeProviderRiskDefaults(meta provider.Provider) ProviderRiskDefaults {
 	return ProviderRiskDefaults{
 		ProviderKey:           meta.Key,
 		ProviderDisplayName:   meta.DisplayName,
+		ProtocolGroup:         meta.ProtocolGroup,
 		DefaultMode:           RiskModeBalanced,
 		Profile:               resolution.Calibrated,
 		RecoverBudget:         resolution.RecoverBudget,
+		ProtocolGroupReasons:  append([]string(nil), resolution.ProtocolGroupReasons...),
 		CalibrationReasons:    append([]string(nil), resolution.CalibrationReasons...),
 		ProviderRiskHints:     append([]string(nil), meta.RiskHints...),
 		ProviderRiskTraits:    append([]string(nil), meta.RiskTraits...),
@@ -337,7 +339,10 @@ func DescribeProviderRiskDefaults(meta provider.Provider) ProviderRiskDefaults {
 func resolveRiskProfile(meta provider.Provider, mode RiskMode, profileDefaults *RiskProfileOverride, profileDefaultSource string, override *RiskProfileOverride) RiskProfileResolution {
 	normalizedMode := normalizeRiskMode(mode)
 	base := baseRiskProfile(normalizedMode, meta.Key)
-	calibrated, calibrationReasons := applyProviderRiskCalibrationWithReasons(meta.Key, base)
+	protocolCalibrated, protocolGroupReasons := applyProtocolGroupRiskCalibrationWithReasons(meta.ProtocolGroup, base)
+	calibrated, providerReasons := applyProviderRiskCalibrationWithReasons(meta.Key, protocolCalibrated)
+	calibrationReasons := append([]string(nil), protocolGroupReasons...)
+	calibrationReasons = append(calibrationReasons, providerReasons...)
 	profileApplied, profileDefaultFields := applyRiskProfileOverrideWithFields(calibrated, profileDefaults)
 	applied, overrideFields := applyRiskProfileOverrideWithFields(profileApplied, override)
 	profileDefaultSource = strings.TrimSpace(profileDefaultSource)
@@ -348,6 +353,7 @@ func resolveRiskProfile(meta provider.Provider, mode RiskMode, profileDefaults *
 	return RiskProfileResolution{
 		ProviderKey:              meta.Key,
 		ProviderDisplayName:      meta.DisplayName,
+		ProtocolGroup:            meta.ProtocolGroup,
 		ProviderRiskHints:        append([]string(nil), meta.RiskHints...),
 		ProviderRiskTraits:       append([]string(nil), meta.RiskTraits...),
 		ProfileDefaultSourceKind: profileDefaultSourceKind,
@@ -359,6 +365,7 @@ func resolveRiskProfile(meta provider.Provider, mode RiskMode, profileDefaults *
 		ProfileApplied:           profileApplied,
 		Applied:                  applied,
 		RecoverBudget:            recoverBudget,
+		ProtocolGroupReasons:     protocolGroupReasons,
 		CalibrationReasons:       calibrationReasons,
 		ProfileDefaults:          profileDefaults,
 		ProfileDefaultFields:     profileDefaultFields,
@@ -467,6 +474,33 @@ func applyProviderRiskCalibration(providerKey string, profile RiskProfile) RiskP
 	return profile
 }
 
+func applyProtocolGroupRiskCalibrationWithReasons(protocolGroup string, profile RiskProfile) (RiskProfile, []string) {
+	if profile.Mode == RiskModeCustom {
+		return profile, nil
+	}
+	reasons := make([]string, 0, 2)
+	switch strings.TrimSpace(protocolGroup) {
+	case "quark_uc":
+		profile.RequestIntervalMS = max(profile.RequestIntervalMS, 1400)
+		profile.PageSize = minPositive(profile.PageSize, 120)
+		profile.DirectoryIntervalMS = max(profile.DirectoryIntervalMS, 2200)
+		profile.CooldownSeconds = max(profile.CooldownSeconds, 40)
+		profile.MaxConcurrent = minPositive(profile.MaxConcurrent, 1)
+		reasons = append(reasons, "Quark / UC 协议族默认采用更保守的列表节奏、分页和并发预算。")
+	case "xunlei_pikpak":
+		profile.RequestIntervalMS = max(profile.RequestIntervalMS, 700)
+		profile.PageSize = minPositive(profile.PageSize, 250)
+		profile.DirectoryIntervalMS = max(profile.DirectoryIntervalMS, 1000)
+		profile.MaxConcurrent = minPositive(profile.MaxConcurrent, 2)
+		reasons = append(reasons, "迅雷 / PikPak 协议族保留较快节奏，但统一限制分页和目录切换频率。")
+	case "aliyun_123_open":
+		profile.PageSize = minPositive(profile.PageSize, 500)
+		profile.MaxConcurrent = minPositive(profile.MaxConcurrent, 3)
+		reasons = append(reasons, "阿里云盘 / 123 Open 协议族允许更大的分页预算，并保留中等并发能力。")
+	}
+	return profile, reasons
+}
+
 func applyProviderRiskCalibrationWithReasons(providerKey string, profile RiskProfile) (RiskProfile, []string) {
 	if profile.Mode == RiskModeCustom {
 		return profile, nil
@@ -482,12 +516,7 @@ func applyProviderRiskCalibrationWithReasons(providerKey string, profile RiskPro
 		profile.MaxConcurrent = minPositive(profile.MaxConcurrent, 1)
 		reasons = append(reasons, "百度网盘按更保守的请求/目录间隔收敛，并降低重试上限。")
 	case "quark", "uc":
-		profile.RequestIntervalMS = max(profile.RequestIntervalMS, 1400)
-		profile.PageSize = minPositive(profile.PageSize, 120)
-		profile.DirectoryIntervalMS = max(profile.DirectoryIntervalMS, 2200)
-		profile.CooldownSeconds = max(profile.CooldownSeconds, 40)
-		profile.MaxConcurrent = minPositive(profile.MaxConcurrent, 1)
-		reasons = append(reasons, "Quark / UC 风控更敏感，默认提高请求间隔并缩小分页。")
+		reasons = append(reasons, "Quark / UC 默认继承协议族级保守模板，并保留 share token 风险敏感语义。")
 	case "189cloud":
 		profile.RequestIntervalMS = max(profile.RequestIntervalMS, 1200)
 		profile.PageSize = minPositive(profile.PageSize, 150)
@@ -510,15 +539,9 @@ func applyProviderRiskCalibrationWithReasons(providerKey string, profile RiskPro
 		profile.MaxConcurrent = minPositive(profile.MaxConcurrent, 1)
 		reasons = append(reasons, "光鸭链路默认按中保守模板限制目录节奏。")
 	case "xunlei", "pikpak":
-		profile.RequestIntervalMS = max(profile.RequestIntervalMS, 700)
-		profile.PageSize = minPositive(profile.PageSize, 250)
-		profile.DirectoryIntervalMS = max(profile.DirectoryIntervalMS, 1000)
-		profile.MaxConcurrent = minPositive(profile.MaxConcurrent, 2)
-		reasons = append(reasons, "迅雷 / PikPak 保留较快节奏，但仍限制分页和目录切换频率。")
+		reasons = append(reasons, "迅雷 / PikPak 默认继承协议族级模板，并保留 GCID 快传链路的中风险节奏。")
 	case "aliyundrive_open", "123_open":
-		profile.PageSize = minPositive(profile.PageSize, 500)
-		profile.MaxConcurrent = minPositive(profile.MaxConcurrent, 3)
-		reasons = append(reasons, "阿里云盘 / 123Open 允许更大的分页预算，适合较平滑的列表推进。")
+		reasons = append(reasons, "阿里云盘 / 123 Open 默认继承协议族级模板，并保留开放接口链路的平滑分页策略。")
 	}
 	return profile, reasons
 }

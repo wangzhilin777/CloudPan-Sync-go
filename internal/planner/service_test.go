@@ -108,6 +108,9 @@ func TestBuildPreviewIncludesRiskProfileDefaults(t *testing.T) {
 	if len(resolution.ProviderRiskTraits) == 0 {
 		t.Fatalf("expected provider risk traits in resolution, got %+v", resolution)
 	}
+	if resolution.ProtocolGroup != "189cloud" {
+		t.Fatalf("expected protocol group 189cloud, got %+v", resolution)
+	}
 	if resolution.ProviderKey != "189cloud" || resolution.Mode != RiskModeSafe {
 		t.Fatalf("unexpected risk profile resolution: %+v", resolution)
 	}
@@ -160,6 +163,53 @@ func TestBuildPreviewDerivesRecoverBudgetPolicy(t *testing.T) {
 	}
 	if resolution.RecoverBudget.Reason == "" {
 		t.Fatalf("expected recover budget reason, got %+v", resolution.RecoverBudget)
+	}
+}
+
+func TestBuildPreviewCapturesProtocolGroupRiskCalibration(t *testing.T) {
+	registry := provider.NewRegistry(provider.DefaultCatalog()...)
+	plan, err := BuildPreview(registry, PreviewRequest{
+		SourceProvider: "guangya",
+		TargetProvider: "quark",
+		RiskMode:       RiskModeBalanced,
+		Entries:        []SourceEntry{{Path: "/a.bin", Size: 10, MD5: "md5-a"}},
+	})
+	if err != nil {
+		t.Fatalf("BuildPreview() error = %v", err)
+	}
+	resolution, ok := plan.Metadata["riskProfileResolution"].(RiskProfileResolution)
+	if !ok {
+		t.Fatalf("expected riskProfileResolution metadata, got %#v", plan.Metadata["riskProfileResolution"])
+	}
+	if resolution.ProtocolGroup != "quark_uc" {
+		t.Fatalf("expected protocolGroup quark_uc, got %+v", resolution)
+	}
+	if len(resolution.ProtocolGroupReasons) == 0 {
+		t.Fatalf("expected protocolGroupReasons, got %+v", resolution)
+	}
+	if !containsString(resolution.ProtocolGroupReasons, "Quark / UC 协议族默认采用更保守的列表节奏、分页和并发预算。") {
+		t.Fatalf("expected protocol group calibration reason, got %#v", resolution.ProtocolGroupReasons)
+	}
+	if len(resolution.CalibrationReasons) < len(resolution.ProtocolGroupReasons) {
+		t.Fatalf("expected calibrationReasons to include protocol group reasons, got %#v", resolution.CalibrationReasons)
+	}
+}
+
+func TestDescribeProviderRiskDefaultsIncludesProtocolGroupCalibration(t *testing.T) {
+	registry := provider.NewRegistry(provider.DefaultCatalog()...)
+	entry, ok := registry.Get("aliyundrive_open")
+	if !ok {
+		t.Fatal("expected aliyundrive_open in registry")
+	}
+	defaults := DescribeProviderRiskDefaults(entry.Meta)
+	if defaults.ProtocolGroup != "aliyun_123_open" {
+		t.Fatalf("expected protocolGroup aliyun_123_open, got %+v", defaults)
+	}
+	if len(defaults.ProtocolGroupReasons) == 0 {
+		t.Fatalf("expected protocolGroupReasons, got %+v", defaults)
+	}
+	if defaults.Profile.PageSize > 500 {
+		t.Fatalf("expected protocol group page size cap <= 500, got %+v", defaults.Profile)
 	}
 }
 

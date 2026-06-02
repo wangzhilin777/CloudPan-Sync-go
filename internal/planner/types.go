@@ -45,6 +45,7 @@ type RiskProfileOverride struct {
 type RiskProfileResolution struct {
 	ProviderKey              string               `json:"providerKey"`
 	ProviderDisplayName      string               `json:"providerDisplayName,omitempty"`
+	ProtocolGroup            string               `json:"protocolGroup,omitempty"`
 	ProviderRiskHints        []string             `json:"providerRiskHints,omitempty"`
 	ProviderRiskTraits       []string             `json:"providerRiskTraits,omitempty"`
 	ProfileDefaultSourceKind string               `json:"profileDefaultSourceKind,omitempty"`
@@ -56,6 +57,7 @@ type RiskProfileResolution struct {
 	ProfileApplied           RiskProfile          `json:"profileApplied"`
 	Applied                  RiskProfile          `json:"applied"`
 	RecoverBudget            RecoverBudgetPolicy  `json:"recoverBudget"`
+	ProtocolGroupReasons     []string             `json:"protocolGroupReasons,omitempty"`
 	CalibrationReasons       []string             `json:"calibrationReasons,omitempty"`
 	ProfileDefaults          *RiskProfileOverride `json:"profileDefaults,omitempty"`
 	ProfileDefaultFields     []string             `json:"profileDefaultFields,omitempty"`
@@ -66,9 +68,11 @@ type RiskProfileResolution struct {
 type ProviderRiskDefaults struct {
 	ProviderKey           string              `json:"providerKey"`
 	ProviderDisplayName   string              `json:"providerDisplayName,omitempty"`
+	ProtocolGroup         string              `json:"protocolGroup,omitempty"`
 	DefaultMode           RiskMode            `json:"defaultMode"`
 	Profile               RiskProfile         `json:"profile"`
 	RecoverBudget         RecoverBudgetPolicy `json:"recoverBudget"`
+	ProtocolGroupReasons  []string            `json:"protocolGroupReasons,omitempty"`
 	CalibrationReasons    []string            `json:"calibrationReasons,omitempty"`
 	ProviderRiskHints     []string            `json:"providerRiskHints,omitempty"`
 	ProviderRiskTraits    []string            `json:"providerRiskTraits,omitempty"`
