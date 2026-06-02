@@ -1,0 +1,11 @@
+.git
+.github
+.cloudpan-sync-go
+task.test.exe
+*.db
+*.log
+bin
+dist
+tmp
+smoke
+node_modules
