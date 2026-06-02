@@ -869,10 +869,13 @@ func TestServiceRuntimePreservesUploadFailureEvidence(t *testing.T) {
 						Message: "resumed multipart upload",
 						Mode:    "fake_upload_resume",
 						Payload: map[string]interface{}{
-							"fileId":        req.ResumeUpload.FileID,
-							"uploadId":      req.ResumeUpload.UploadID,
-							"resumedUpload": true,
-							"providerData":  req.ResumeUpload.ProviderData,
+							"itemPath":       req.ResumeUpload.ItemPath,
+							"providerStatus": req.ResumeUpload.ProviderStatus,
+							"updatedAt":      req.ResumeUpload.UpdatedAt,
+							"fileId":         req.ResumeUpload.FileID,
+							"uploadId":       req.ResumeUpload.UploadID,
+							"resumedUpload":  true,
+							"providerData":   req.ResumeUpload.ProviderData,
 						},
 					},
 				}
@@ -1009,6 +1012,15 @@ func TestServiceRuntimePreservesUploadFailureEvidence(t *testing.T) {
 	resumePayload, ok := resumed.Results[0].Payload["upload"].(map[string]interface{})
 	if !ok {
 		t.Fatalf("expected resumed upload payload, got %#v", resumed.Results[0].Payload["upload"])
+	}
+	if got, _ := resumePayload["itemPath"].(string); got != "/a.bin" {
+		t.Fatalf("expected resumed upload itemPath /a.bin, got %#v", resumePayload)
+	}
+	if got, _ := resumePayload["providerStatus"].(string); got != "provider_request_failed" {
+		t.Fatalf("expected resumed upload providerStatus provider_request_failed, got %#v", resumePayload)
+	}
+	if got, _ := resumePayload["updatedAt"].(string); got == "" {
+		t.Fatalf("expected resumed upload updatedAt, got %#v", resumePayload)
 	}
 	if got, _ := resumePayload["fileId"].(string); got != "file-fail-1" {
 		t.Fatalf("expected resumed upload fileId file-fail-1, got %#v", resumePayload)

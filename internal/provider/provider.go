@@ -132,6 +132,9 @@ type UploadResult struct {
 }
 
 type ResumeUpload struct {
+	ItemPath          string                   `json:"itemPath,omitempty"`
+	ProviderStatus    string                   `json:"providerStatus,omitempty"`
+	UpdatedAt         string                   `json:"updatedAt,omitempty"`
 	FileID            string                   `json:"fileId,omitempty"`
 	UploadID          string                   `json:"uploadId,omitempty"`
 	PartCount         int                      `json:"partCount,omitempty"`

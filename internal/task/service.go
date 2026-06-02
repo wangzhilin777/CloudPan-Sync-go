@@ -5718,6 +5718,9 @@ func resumeUploadForPath(metadata map[string]interface{}, path string) *provider
 		return nil
 	}
 	return &provider.ResumeUpload{
+		ItemPath:          checkpoint.ItemPath,
+		ProviderStatus:    checkpoint.ProviderStatus,
+		UpdatedAt:         checkpoint.UpdatedAt,
 		FileID:            checkpoint.FileID,
 		UploadID:          checkpoint.UploadID,
 		PartCount:         checkpoint.PartCount,
