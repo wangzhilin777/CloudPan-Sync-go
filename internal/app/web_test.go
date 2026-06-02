@@ -468,6 +468,18 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "采用建议预算") {
 		t.Fatalf("expected auto recover decision apply budgets label in app.js, got %q", body)
 	}
+	if !strings.Contains(body, "renderAutoRecoverDecisionBudgetHints") {
+		t.Fatalf("expected auto recover decision budget hint renderer in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "预算占用：") {
+		t.Fatalf("expected auto recover decision current budget hint text in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "item.currentProviderBudget") {
+		t.Fatalf("expected auto recover decision current provider budget wiring in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "-> suggest") {
+		t.Fatalf("expected auto recover decision current-to-suggest budget text in app.js, got %q", body)
+	}
 	if !strings.Contains(body, "预演该决策") {
 		t.Fatalf("expected auto recover decision preview label in app.js, got %q", body)
 	}

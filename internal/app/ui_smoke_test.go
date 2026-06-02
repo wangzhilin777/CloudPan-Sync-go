@@ -376,6 +376,7 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 		waitForText(`#auto-recover-last-result-summary`, "recover_dry_run_ui_target"),
 		waitForText(`#auto-recover-last-result-detail`, "等待态说明"),
 		waitForText(`#auto-recover-last-result-detail`, "recover_dry_run_ui_group"),
+		waitForText(`#auto-recover-last-result-detail`, "预算占用："),
 		chromedp.Evaluate(`(() => document.querySelector('#auto-recover-last-result-detail [data-auto-recover-decision-focus-state="runnable_now"]')?.click())()`, nil),
 		waitForValue(`#auto-recover-state`, "runnable_now"),
 		chromedp.Evaluate(`(() => document.querySelector('#auto-recover-last-result-detail [data-auto-recover-decision-apply-budgets]')?.click())()`, nil),

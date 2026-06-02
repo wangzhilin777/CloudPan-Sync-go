@@ -4266,6 +4266,32 @@ function renderAutoRecoverLastResultSummary() {
   return `${label}：matched ${stringifyValue(result.matchedCount, "0")} / ${recoveredLabel} ${stringifyValue(result.recoveredCount, "0")} / limit ${stringifyValue(result.skippedByLimit, "0")} / modeBudget ${stringifyValue(result.skippedByModeBudget, "0")} / laneBudget ${stringifyValue(result.skippedByLaneBudget, "0")} / protocolGroupBudget ${stringifyValue(result.skippedByProtocolGroupBudget, "0")} / providerBudget ${stringifyValue(result.skippedByProviderBudget, "0")} / profileBudget ${stringifyValue(result.skippedByProfileBudget, "0")} / cooldownWait ${stringifyValue(result.skippedByCooldownWait, "0")} / retryWindowWait ${stringifyValue(result.skippedByRetryWindowWait, "0")} / blocked ${stringifyValue(result.skippedByBlockedReason, "0")}${renderAutoRecoverOutcomeCounts(result)}${renderAutoRecoverRetryClassCounts(result)}${renderAutoRecoverRecoverStateCounts(result)}${renderAutoRecoverBlockedActionCounts(result)}${renderAutoRecoverProtocolGroupCounts(result)}${renderAutoRecoverProviderCounts(result)}${renderAutoRecoverStrategyCounts(result)}${renderAutoRecoverProfileCounts(result)}${renderAutoRecoverLaneCounts(result)}${renderAutoRecoverSuggestedBudgets(result)}${result.earliestNextRetryAt ? ` / earliest ${result.earliestNextRetryAt}` : ""}`;
 }
 
+function renderAutoRecoverDecisionBudgetHint(label, currentValue, suggestedValue) {
+  const currentNumeric = Number(currentValue || 0);
+  const suggestedNumeric = Number(suggestedValue || 0);
+  if (!Number.isFinite(currentNumeric) || currentNumeric <= 0 || !Number.isFinite(suggestedNumeric) || suggestedNumeric <= 0) {
+    return "";
+  }
+  return `${label} current ${stringifyValue(currentNumeric, "0")} -> suggest ${stringifyValue(suggestedNumeric, "0")}`;
+}
+
+function renderAutoRecoverDecisionBudgetHints(item) {
+  if (!item || typeof item !== "object") {
+    return "";
+  }
+  const hints = [
+    renderAutoRecoverDecisionBudgetHint("mode budget", item.currentModeBudget, item.suggestedModeBudget),
+    renderAutoRecoverDecisionBudgetHint("lane budget", item.currentLaneBudget, item.suggestedLaneBudget),
+    renderAutoRecoverDecisionBudgetHint("group budget", item.currentProtocolGroupBudget, item.suggestedProtocolGroupBudget),
+    renderAutoRecoverDecisionBudgetHint("provider budget", item.currentProviderBudget, item.suggestedProviderBudget),
+    renderAutoRecoverDecisionBudgetHint("profile budget", item.currentProfileBudget, item.suggestedProfileBudget),
+  ].filter(Boolean);
+  if (!hints.length) {
+    return "";
+  }
+  return `预算占用：${hints.join(" / ")}`;
+}
+
 function renderAutoRecoverLastResultDetail() {
   const result = state.autoRecoverLastResult;
   const decisions = Array.isArray(result?.decisions) ? result.decisions : [];
@@ -4295,6 +4321,7 @@ function renderAutoRecoverLastResultDetail() {
           <div class="muted">path: <code>${escapeHTML(stringifyValue(item.path, "-"))}</code> / protocolGroup: <code>${escapeHTML(stringifyValue(item.protocolGroup, "-"))}</code></div>
           <div class="muted">retryClass: <code>${escapeHTML(stringifyValue(item.retryClass, "-"))}</code> / blockedAction: <code>${escapeHTML(stringifyValue(item.blockedAction, "-"))}</code> / blockedReason: <code>${escapeHTML(stringifyValue(item.blockedReason, "-"))}</code> / nextRetryAt: <code>${escapeHTML(stringifyValue(item.nextRetryAt, "-"))}</code></div>
           <div class="muted">next-step: ${escapeHTML(renderBlockedSummary(item.blockedAction, item.message, item.nextRetryAt, autoRecoverDecisionAdvice(item)))}</div>
+          <div class="muted">${escapeHTML(renderAutoRecoverDecisionBudgetHints(item) || "预算占用：当前决策未返回可复用的预算占用信息。")}</div>
           <div class="muted">等待态说明：${escapeHTML(autoRecoverDecisionAdvice(item))}</div>
           <div class="muted">${escapeHTML(stringifyValue(item.message, "-"))}</div>
           <div class="tree-actions">
