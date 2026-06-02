@@ -1718,6 +1718,9 @@ func TestAppRecoverTasksEndpointReportsProviderBudgetSkips(t *testing.T) {
 		if skipped == nil {
 			t.Fatalf("expected skipped_provider_budget decision, got %#v", decisions)
 		}
+		if got := int(skipped["currentProviderBudget"].(float64)); got != 1 {
+			t.Fatalf("expected skipped decision currentProviderBudget 1, got %d", got)
+		}
 		if got := int(skipped["suggestedProviderBudget"].(float64)); got != 2 {
 			t.Fatalf("expected skipped decision suggestedProviderBudget 2, got %d", got)
 		}
@@ -2450,6 +2453,20 @@ func TestAppRecoverTasksEndpointFiltersTaskID(t *testing.T) {
 	}
 	if got := int(recoverData["limitPerLane"].(float64)); got != 1 {
 		t.Fatalf("expected limitPerLane 1, got %d", got)
+	}
+	if decisions, ok := recoverData["decisions"].([]interface{}); !ok || len(decisions) != 1 {
+		t.Fatalf("expected exactly one recover decision, got %#v", recoverData["decisions"])
+	} else {
+		decision := decisions[0].(map[string]interface{})
+		if got := decision["outcome"].(string); got != "recovered" {
+			t.Fatalf("expected recovered decision, got %s", got)
+		}
+		if got := int(decision["suggestedProviderBudget"].(float64)); got != 2 {
+			t.Fatalf("expected suggestedProviderBudget 2, got %d", got)
+		}
+		if got := int(decision["suggestedProfileBudget"].(float64)); got != 1 {
+			t.Fatalf("expected suggestedProfileBudget 1, got %d", got)
+		}
 	}
 
 	firstDetail := invokeJSON(t, handler, http.MethodGet, "/api/tasks/"+firstTaskID, nil)

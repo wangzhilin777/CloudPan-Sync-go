@@ -124,6 +124,11 @@ type RecoverDecision struct {
 	Outcome                      string `json:"outcome,omitempty"`
 	Message                      string `json:"message,omitempty"`
 	Advice                       string `json:"advice,omitempty"`
+	CurrentModeBudget            int    `json:"currentModeBudget,omitempty"`
+	CurrentLaneBudget            int    `json:"currentLaneBudget,omitempty"`
+	CurrentProtocolGroupBudget   int    `json:"currentProtocolGroupBudget,omitempty"`
+	CurrentProviderBudget        int    `json:"currentProviderBudget,omitempty"`
+	CurrentProfileBudget         int    `json:"currentProfileBudget,omitempty"`
 	SuggestedModeBudget          int    `json:"suggestedModeBudget,omitempty"`
 	SuggestedLaneBudget          int    `json:"suggestedLaneBudget,omitempty"`
 	SuggestedProtocolGroupBudget int    `json:"suggestedProtocolGroupBudget,omitempty"`
@@ -132,11 +137,16 @@ type RecoverDecision struct {
 }
 
 type recoverDecisionSuggestion struct {
-	ModeBudget          int
-	LaneBudget          int
-	ProtocolGroupBudget int
-	ProviderBudget      int
-	ProfileBudget       int
+	ModeBudget                 int
+	LaneBudget                 int
+	ProtocolGroupBudget        int
+	ProviderBudget             int
+	ProfileBudget              int
+	CurrentModeBudget          int
+	CurrentLaneBudget          int
+	CurrentProtocolGroupBudget int
+	CurrentProviderBudget      int
+	CurrentProfileBudget       int
 }
 
 type Detail struct {
@@ -1283,19 +1293,19 @@ func (s *Service) RecoverBlockedTasksWithOptions(ctx context.Context, opts Recov
 		modeKey := recoverModeBudgetKey(candidate.Mode)
 		if opts.LimitPerMode > 0 && recoveredByMode[modeKey] >= opts.LimitPerMode {
 			result.SkippedByModeBudget++
-			appendRecoverDecision(&result, buildRecoverDecision(candidate, "skipped_mode_budget", "超过模式预算", recoverDecisionSuggestion{ModeBudget: recoveredByMode[modeKey] + 1}))
+			appendRecoverDecision(&result, buildRecoverDecision(candidate, "skipped_mode_budget", "超过模式预算", recoverDecisionSuggestion{ModeBudget: recoveredByMode[modeKey] + 1, CurrentModeBudget: recoveredByMode[modeKey]}))
 			continue
 		}
 		laneKey := recoverLaneBudgetKey(candidate)
 		if opts.LimitPerLane > 0 && recoveredByLane[laneKey] >= opts.LimitPerLane {
 			result.SkippedByLaneBudget++
-			appendRecoverDecision(&result, buildRecoverDecision(candidate, "skipped_lane_budget", "超过 lane 预算", recoverDecisionSuggestion{LaneBudget: recoveredByLane[laneKey] + 1}))
+			appendRecoverDecision(&result, buildRecoverDecision(candidate, "skipped_lane_budget", "超过 lane 预算", recoverDecisionSuggestion{LaneBudget: recoveredByLane[laneKey] + 1, CurrentLaneBudget: recoveredByLane[laneKey]}))
 			continue
 		}
 		protocolGroupKey := recoverProtocolGroupBudgetKey(candidate.ProtocolGroup)
 		if opts.LimitPerProtocolGroup > 0 && recoveredByProtocolGroup[protocolGroupKey] >= opts.LimitPerProtocolGroup {
 			result.SkippedByProtocolGroupBudget++
-			appendRecoverDecision(&result, buildRecoverDecision(candidate, "skipped_protocol_group_budget", "超过协议族预算", recoverDecisionSuggestion{ProtocolGroupBudget: recoveredByProtocolGroup[protocolGroupKey] + 1}))
+			appendRecoverDecision(&result, buildRecoverDecision(candidate, "skipped_protocol_group_budget", "超过协议族预算", recoverDecisionSuggestion{ProtocolGroupBudget: recoveredByProtocolGroup[protocolGroupKey] + 1, CurrentProtocolGroupBudget: recoveredByProtocolGroup[protocolGroupKey]}))
 			continue
 		}
 		providerKey := strings.TrimSpace(detail.Task.TargetProvider)
@@ -1303,13 +1313,13 @@ func (s *Service) RecoverBlockedTasksWithOptions(ctx context.Context, opts Recov
 		providerBudget := recoverProviderBudgetWithOverride(detail, opts.LimitPerProvider)
 		if providerBudget > 0 && recoveredByProvider[providerKey] >= providerBudget {
 			result.SkippedByProviderBudget++
-			appendRecoverDecision(&result, buildRecoverDecision(candidate, "skipped_provider_budget", "超过 provider 预算", recoverDecisionSuggestion{ProviderBudget: recoveredByProvider[providerKey] + 1}))
+			appendRecoverDecision(&result, buildRecoverDecision(candidate, "skipped_provider_budget", "超过 provider 预算", recoverDecisionSuggestion{ProviderBudget: recoveredByProvider[providerKey] + 1, CurrentProviderBudget: recoveredByProvider[providerKey]}))
 			continue
 		}
 		profileBudget := recoverProfileBudgetWithOverride(detail, opts.LimitPerProfile)
 		if profileBudget > 0 && recoveredByProfile[recoverProfileBudgetKey(providerKey, profileID)] >= profileBudget {
 			result.SkippedByProfileBudget++
-			appendRecoverDecision(&result, buildRecoverDecision(candidate, "skipped_profile_budget", "超过账号预算", recoverDecisionSuggestion{ProfileBudget: recoveredByProfile[recoverProfileBudgetKey(providerKey, profileID)] + 1}))
+			appendRecoverDecision(&result, buildRecoverDecision(candidate, "skipped_profile_budget", "超过账号预算", recoverDecisionSuggestion{ProfileBudget: recoveredByProfile[recoverProfileBudgetKey(providerKey, profileID)] + 1, CurrentProfileBudget: recoveredByProfile[recoverProfileBudgetKey(providerKey, profileID)]}))
 			continue
 		}
 		if candidate.Summary.WindowBlocked {
@@ -1544,6 +1554,11 @@ func buildRecoverDecision(candidate recoverCandidate, outcome, message string, s
 		Outcome:                      outcome,
 		Message:                      message,
 		Advice:                       recoverDecisionAdvice(candidate, outcome, blockedReason, suggestion),
+		CurrentModeBudget:            suggestion.CurrentModeBudget,
+		CurrentLaneBudget:            suggestion.CurrentLaneBudget,
+		CurrentProtocolGroupBudget:   suggestion.CurrentProtocolGroupBudget,
+		CurrentProviderBudget:        suggestion.CurrentProviderBudget,
+		CurrentProfileBudget:         suggestion.CurrentProfileBudget,
 		SuggestedModeBudget:          modeBudget,
 		SuggestedLaneBudget:          laneBudget,
 		SuggestedProtocolGroupBudget: protocolGroupBudget,
