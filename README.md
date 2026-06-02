@@ -8,72 +8,52 @@ CloudPan Sync 多网盘互传控制台。
 ## 这是什么
 
 - 这是一个多 provider 互传项目，不是“固定从某个来源传到某个目标”的定向工具。
-- 当前仓库已经具备完整的主流程闭环：
-  - Go HTTP 服务
-  - SQLite 持久化
-  - provider registry
-  - auth / planner / task 核心链路
-  - runtime evidence / provider status 聚合
-  - 轻量控制台前端
 - 当前主要提供：
-  - 多 provider 之间的任务创建、运行、重试与状态查看
-  - 统一的授权档案、规划结果、运行证据和状态矩阵
-  - 面向日常联调、演示和持续补齐 provider 能力的控制台入口
+  - 多 provider 之间的任务创建、运行、暂停、恢复与重试
+  - 统一的授权档案、任务预览、运行证据和状态矩阵
+  - 基于 SQLite 的本地持久化与浏览器控制台操作入口
 
-## 先看文档
-
-- 项目实施计划：`docs/01-GO_REBUILD_PLAN.md`
-- 当前功能与进度：`docs/02-PROJECT_STATUS.md`
-- 开发与上手说明：`docs/03-DEVELOPER_GUIDE.md`
-- API 工作流示例：`docs/04-API_WORKFLOW_EXAMPLES.md`
-- Provider 接入指南：`docs/05-PROVIDER_INTEGRATION_GUIDE.md`
-- 真实联调记录模板：`docs/06-REAL_PROVIDER_SMOKE_TEMPLATE.md`
-- 功能清单与完成度矩阵：`docs/07-FEATURE_MATRIX.md`
-
-## 推荐阅读顺序
-
-如果这是第一次接手这个仓库，建议按下面顺序看：
-
-1. `docs/02-PROJECT_STATUS.md`
-2. `docs/07-FEATURE_MATRIX.md`
-3. `docs/03-DEVELOPER_GUIDE.md`
-4. `docs/04-API_WORKFLOW_EXAMPLES.md`
-5. `docs/05-PROVIDER_INTEGRATION_GUIDE.md`
-6. `docs/01-GO_REBUILD_PLAN.md`
-
-## 当前已完成的核心能力
+## 主要功能
 
 - 10 家目标 provider 的统一注册与能力声明
 - 授权档案 CRUD 与校验
 - 任务预览规划
 - 任务创建、运行、暂停、恢复、重试
-- 叶子目录优先的按需扫描执行骨架
-- 目标端 metadata 预检查后的 `create / overwrite / skip` 判定闭环
-- 任务级风控参数覆盖与风控命中证据
+- 叶子目录优先与 `pre_scan_flat` 两种执行模式
+- `create / overwrite / skip` 同步判定
+- 源端删除仅记录、不默认删除目标端
 - runtime evidence 与 provider 状态矩阵
-- 控制台页面：
-  - 登录
-  - Provider / 授权
-  - 任务向导
-  - 任务列表详情
-  - 状态矩阵 / 证据
-- Provider 辅助调试接口：
-  - `POST /api/providers/{key}/list`
-  - `POST /api/providers/{key}/metadata`
-  - `POST /api/providers/{key}/create_dir`
-  - `POST /api/providers/{key}/fast_check`
+- 后台自动补传与待补传树展示
+- 控制台页面：登录、Provider / 授权、任务向导、任务列表详情、状态矩阵 / 证据
 
-## 当前仍在继续的部分
+## 快速启动
 
-- provider 真实接口落地仍未全部完成
-- 叶子目录优先执行仍需继续补目录状态持久化、补传树和更完整的恢复能力
-- UI smoke 异常场景和多 provider 样本还可继续补强
-- 每个协议族至少一条真实成功样本仍待补齐
+```powershell
+go run ./cmd/cloudpan-sync
+```
 
-## 用一句话理解当前阶段
+- 默认地址：`http://127.0.0.1:8080`
+- 控制台入口：`/`
+- 默认管理员密码：`admin`
 
-- 当前仓库已经可以独立启动、独立测试、独立演示主流程。
-- 当前最主要的持续工作，是逐家补齐 provider 的真实联网能力和更多实战样本。
+## Docker 启动
+
+### 本地构建镜像
+
+```powershell
+docker build -t cloudpan-sync-go .
+```
+
+### 运行容器
+
+```powershell
+docker run --rm -p 8080:8080 -v ${PWD}/.cloudpan-sync-go:/data -e CLOUDPAN_ADMIN_PASSWORD=admin cloudpan-sync-go
+```
+
+- 容器默认监听 `8080`
+- 默认数据目录是 `/data`
+- 默认 SQLite 文件路径是 `/data/cloudpan-sync.db`
+- 可通过环境变量覆盖：`CLOUDPAN_ADDR`、`CLOUDPAN_DATA_DIR`、`CLOUDPAN_DB_PATH`
 
 ## 执行模式说明
 
@@ -128,11 +108,6 @@ CloudPan Sync 多网盘互传控制台。
   - 从状态页 blocked 聚合摘要一键跳到样本任务，或一键收敛到当前阻塞动作
   - 从任务详情 blocked 引导卡片一键收敛当前任务的重试队列或待补传树
   - 对待补传树切到“仅叶子节点”视角，快速收敛当前最需要处理的末端目录/文件
-- 当前还会继续补强的主要是：
-  - 更细粒度的目录树交互展示
-  - 真正异步 worker 下的运行中暂停
-  - 更完整的后台补传调度模型
-
 ## 待补传重试说明
 
 - 当前 `pending_manual` 结果已经不只是展示出来。
@@ -161,39 +136,19 @@ CloudPan Sync 多网盘互传控制台。
   - 直达入口会自动定位当前授权档案，或按当前任务预填任务向导参数
   - 当前任务向导预填会同步带上 provider/profile/risk/selectedRoots/entries
   - 任务详情还支持一键“按当前任务重建向导”和“复制任务创建参数”
-- 当前还没有接通的是：
-  - 更复杂的补传批量选择与筛选
-  - 更精细的后台补传策略编排
 - 当前状态页已经可以直接看到后台自动补传的默认五级预算，以及当前手动放行时实际生效的 `group / provider / profile` 预算摘要，便于做协议族级排障和分批联调
 - 当前 `POST /api/tasks/recover` 还支持 `dryRun=true` 预演；控制台可先预演当前筛选，或从候选 lane 一键套用建议预算后预演，再决定是否真正放行
 - 预演和实际放行现在都会返回并展示 `decisions` 明细，能直接看出每个样本任务是“可放行 / 已放行 / 超出预算 / 等冷却 / 等时间窗 / 其它阻塞”的哪一种
 
-## 快速启动
+## 相关文档
 
-```powershell
-go run ./cmd/cloudpan-sync
-```
-
-- 默认地址：`http://127.0.0.1:8080`
-- 控制台入口：`/`
-
-## Docker 启动
-
-### 本地构建镜像
-
-```powershell
-docker build -t cloudpan-sync-go .
-```
-
-### 运行容器
-
-```powershell
-docker run --rm -p 8080:8080 -v ${PWD}/.cloudpan-sync-go:/data -e CLOUDPAN_ADMIN_PASSWORD=admin cloudpan-sync-go
-```
-
-- 容器默认监听 `8080`。
-- 默认数据目录是容器内的 `/data`，SQLite 文件默认位于 `/data/cloudpan-sync.db`。
-- 如需改地址或数据库路径，可继续覆盖：`CLOUDPAN_ADDR`、`CLOUDPAN_DATA_DIR`、`CLOUDPAN_DB_PATH`。
+- 项目实施计划：`docs/01-GO_REBUILD_PLAN.md`
+- 当前功能与进度：`docs/02-PROJECT_STATUS.md`
+- 开发与上手说明：`docs/03-DEVELOPER_GUIDE.md`
+- API 工作流示例：`docs/04-API_WORKFLOW_EXAMPLES.md`
+- Provider 接入指南：`docs/05-PROVIDER_INTEGRATION_GUIDE.md`
+- 真实联调记录模板：`docs/06-REAL_PROVIDER_SMOKE_TEMPLATE.md`
+- 功能清单与完成度矩阵：`docs/07-FEATURE_MATRIX.md`
 
 ## GitHub 打包
 
