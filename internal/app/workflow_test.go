@@ -708,6 +708,27 @@ func TestAppWorkflowMainline(t *testing.T) {
 	if got := smokeMatrix[0].(map[string]interface{})["uploadSuccessCount"].(float64); got != 1 {
 		t.Fatalf("expected matrix uploadSuccessCount 1, got %v", got)
 	}
+	if got := smokeMatrix[0].(map[string]interface{})["hasAuthExpiredSample"].(bool); got {
+		t.Fatal("expected accepted smoke matrix row without auth expired anomaly sample")
+	}
+	if got := smokeMatrix[0].(map[string]interface{})["hasRateLimitedSample"].(bool); got {
+		t.Fatal("expected accepted smoke matrix row without rate limited anomaly sample")
+	}
+	if got := smokeMatrix[0].(map[string]interface{})["hasLocalFileMissingSample"].(bool); got {
+		t.Fatal("expected accepted smoke matrix row without local file missing anomaly sample")
+	}
+	if got := smokeMatrix[0].(map[string]interface{})["hasPendingManualSample"].(bool); got {
+		t.Fatal("expected accepted smoke matrix row without pending manual anomaly sample")
+	}
+	if got := len(smokeMatrix[0].(map[string]interface{})["anomalyMissing"].([]interface{})); got != 4 {
+		t.Fatalf("expected accepted smoke matrix anomalyMissing 4, got %d", got)
+	}
+	if got := len(smokeMatrix[0].(map[string]interface{})["anomalyActions"].([]interface{})); got != 4 {
+		t.Fatalf("expected accepted smoke matrix anomalyActions 4, got %d", got)
+	}
+	if got := smokeMatrix[0].(map[string]interface{})["anomalyAdvice"].(string); !strings.Contains(got, "异常样本建议") {
+		t.Fatalf("expected accepted smoke matrix anomalyAdvice, got %s", got)
+	}
 	if got := smokeMatrix[0].(map[string]interface{})["acceptanceStatus"].(string); got != "accepted" {
 		t.Fatalf("expected smoke matrix acceptanceStatus accepted, got %s", got)
 	}

@@ -273,21 +273,25 @@ type ProviderSmokeRecord struct {
 }
 
 type ProviderSmokeSummary struct {
-	ProtocolGroup          string   `json:"protocolGroup"`
-	SmokeCount             int      `json:"smokeCount"`
-	SuccessCount           int      `json:"successCount"`
-	FailureCount           int      `json:"failureCount"`
-	ProviderCount          int      `json:"providerCount"`
-	ProviderKeys           []string `json:"providerKeys,omitempty"`
-	SampleRecordID         string   `json:"sampleRecordId,omitempty"`
-	SampleTitle            string   `json:"sampleTitle,omitempty"`
-	SampleProviderKey      string   `json:"sampleProviderKey,omitempty"`
-	SampleResult           string   `json:"sampleResult,omitempty"`
-	SampleCategory         string   `json:"sampleCategory,omitempty"`
-	LatestSmokeAt          string   `json:"latestSmokeAt,omitempty"`
-	HasRealSuccessSample   bool     `json:"hasRealSuccessSample"`
-	UploadSuccessCount     int      `json:"uploadSuccessCount"`
-	HasUploadSuccessSample bool     `json:"hasUploadSuccessSample"`
+	ProtocolGroup             string   `json:"protocolGroup"`
+	SmokeCount                int      `json:"smokeCount"`
+	SuccessCount              int      `json:"successCount"`
+	FailureCount              int      `json:"failureCount"`
+	ProviderCount             int      `json:"providerCount"`
+	ProviderKeys              []string `json:"providerKeys,omitempty"`
+	SampleRecordID            string   `json:"sampleRecordId,omitempty"`
+	SampleTitle               string   `json:"sampleTitle,omitempty"`
+	SampleProviderKey         string   `json:"sampleProviderKey,omitempty"`
+	SampleResult              string   `json:"sampleResult,omitempty"`
+	SampleCategory            string   `json:"sampleCategory,omitempty"`
+	LatestSmokeAt             string   `json:"latestSmokeAt,omitempty"`
+	HasRealSuccessSample      bool     `json:"hasRealSuccessSample"`
+	UploadSuccessCount        int      `json:"uploadSuccessCount"`
+	HasUploadSuccessSample    bool     `json:"hasUploadSuccessSample"`
+	HasAuthExpiredSample      bool     `json:"hasAuthExpiredSample"`
+	HasRateLimitedSample      bool     `json:"hasRateLimitedSample"`
+	HasLocalFileMissingSample bool     `json:"hasLocalFileMissingSample"`
+	HasPendingManualSample    bool     `json:"hasPendingManualSample"`
 }
 
 type ProviderSmokeMatrixRow struct {
@@ -306,6 +310,13 @@ type ProviderSmokeMatrixRow struct {
 	HasRealSuccessSample         bool     `json:"hasRealSuccessSample"`
 	UploadSuccessCount           int      `json:"uploadSuccessCount"`
 	HasUploadSuccessSample       bool     `json:"hasUploadSuccessSample"`
+	HasAuthExpiredSample         bool     `json:"hasAuthExpiredSample"`
+	HasRateLimitedSample         bool     `json:"hasRateLimitedSample"`
+	HasLocalFileMissingSample    bool     `json:"hasLocalFileMissingSample"`
+	HasPendingManualSample       bool     `json:"hasPendingManualSample"`
+	AnomalyMissing               []string `json:"anomalyMissing,omitempty"`
+	AnomalyActions               []string `json:"anomalyActions,omitempty"`
+	AnomalyAdvice                string   `json:"anomalyAdvice,omitempty"`
 	CoverageTaskCount            int      `json:"coverageTaskCount"`
 	CoverageCompletedTaskCount   int      `json:"coverageCompletedTaskCount"`
 	CoverageRealSuccessTaskCount int      `json:"coverageRealSuccessTaskCount"`
@@ -3709,6 +3720,18 @@ func summarizeProviderSmokeRecords(records []ProviderSmokeRecord) []ProviderSmok
 				state.row.HasUploadSuccessSample = true
 			}
 		}
+		for _, anomaly := range smokeAnomalySampleKeys(record) {
+			switch anomaly {
+			case "auth_expired_sample_missing":
+				state.row.HasAuthExpiredSample = true
+			case "rate_limited_sample_missing":
+				state.row.HasRateLimitedSample = true
+			case "local_file_missing_sample_missing":
+				state.row.HasLocalFileMissingSample = true
+			case "pending_manual_sample_missing":
+				state.row.HasPendingManualSample = true
+			}
+		}
 		if record.CreatedAt != "" && (state.row.LatestSmokeAt == "" || record.CreatedAt > state.row.LatestSmokeAt) {
 			state.row.SampleRecordID = record.ID
 			state.row.SampleTitle = record.Title
@@ -3768,6 +3791,10 @@ func buildProviderSmokeMatrix(summary EvidenceSummary, smokeSummaries []Provider
 		state.row.HasRealSuccessSample = item.HasRealSuccessSample
 		state.row.UploadSuccessCount = item.UploadSuccessCount
 		state.row.HasUploadSuccessSample = item.HasUploadSuccessSample
+		state.row.HasAuthExpiredSample = item.HasAuthExpiredSample
+		state.row.HasRateLimitedSample = item.HasRateLimitedSample
+		state.row.HasLocalFileMissingSample = item.HasLocalFileMissingSample
+		state.row.HasPendingManualSample = item.HasPendingManualSample
 	}
 	for _, coverage := range summary.ProtocolCoverage {
 		state := ensure(coverage.ProtocolGroup)
@@ -3795,6 +3822,9 @@ func buildProviderSmokeMatrix(summary EvidenceSummary, smokeSummaries []Provider
 			missing = append(missing, "task_coverage_missing")
 		}
 		state.row.AcceptanceActions = buildAcceptanceActions(missing)
+		state.row.AnomalyMissing = buildSmokeAnomalyMissing(state.row)
+		state.row.AnomalyActions = buildSmokeAnomalyActions(state.row.AnomalyMissing)
+		state.row.AnomalyAdvice = buildSmokeAnomalyAdvice(state.row.AnomalyMissing)
 		switch {
 		case state.row.HasUploadSuccessSample && state.row.CoverageTaskCount > 0:
 			state.row.Accepted = true
@@ -3848,6 +3878,78 @@ func buildAcceptanceAdvice(missing []string, partial bool) string {
 	}
 	hints := buildAcceptanceActions(missing)
 	return "建议：" + strings.Join(hints, "；")
+}
+
+func smokeAnomalySampleKeys(record ProviderSmokeRecord) []string {
+	text := strings.ToLower(strings.Join(append(append([]string{}, record.Category, record.Result, record.Title, record.Note), record.Operations...), " "))
+	keys := make([]string, 0, 4)
+	appendKey := func(key string) {
+		for _, existing := range keys {
+			if existing == key {
+				return
+			}
+		}
+		keys = append(keys, key)
+	}
+	if strings.Contains(text, "auth_expired") || strings.Contains(text, "refresh_auth") {
+		appendKey("auth_expired_sample_missing")
+	}
+	if strings.Contains(text, "rate_limited") || strings.Contains(text, "cooldown") || strings.Contains(text, "risk") {
+		appendKey("rate_limited_sample_missing")
+	}
+	if strings.Contains(text, "local_file_missing") || strings.Contains(text, "restore_local") {
+		appendKey("local_file_missing_sample_missing")
+	}
+	if strings.Contains(text, "pending_manual") || strings.Contains(text, "manual_confirmation") || strings.Contains(text, "manual_intervention") || strings.Contains(text, "overwrite") {
+		appendKey("pending_manual_sample_missing")
+	}
+	return keys
+}
+
+func buildSmokeAnomalyMissing(row ProviderSmokeMatrixRow) []string {
+	missing := make([]string, 0, 4)
+	if !row.HasAuthExpiredSample {
+		missing = append(missing, "auth_expired_sample_missing")
+	}
+	if !row.HasRateLimitedSample {
+		missing = append(missing, "rate_limited_sample_missing")
+	}
+	if !row.HasLocalFileMissingSample {
+		missing = append(missing, "local_file_missing_sample_missing")
+	}
+	if !row.HasPendingManualSample {
+		missing = append(missing, "pending_manual_sample_missing")
+	}
+	return missing
+}
+
+func buildSmokeAnomalyActions(missing []string) []string {
+	if len(missing) == 0 {
+		return []string{"继续补充更大文件、更多层目录和更多 provider 边界异常。"}
+	}
+	actions := make([]string, 0, len(missing))
+	for _, item := range missing {
+		switch item {
+		case "auth_expired_sample_missing":
+			actions = append(actions, "补 1 条授权失效异常样本")
+		case "rate_limited_sample_missing":
+			actions = append(actions, "补 1 条限流或风控异常样本")
+		case "local_file_missing_sample_missing":
+			actions = append(actions, "补 1 条本地文件缺失异常样本")
+		case "pending_manual_sample_missing":
+			actions = append(actions, "补 1 条覆盖降级或 pending_manual 异常样本")
+		default:
+			actions = append(actions, item)
+		}
+	}
+	return actions
+}
+
+func buildSmokeAnomalyAdvice(missing []string) string {
+	if len(missing) == 0 {
+		return "关键异常样本已基本齐全，可继续补更复杂长链路或更细 provider 边界案例。"
+	}
+	return "异常样本建议：" + strings.Join(buildSmokeAnomalyActions(missing), "；")
 }
 
 func isUploadSuccessCategory(category string) bool {

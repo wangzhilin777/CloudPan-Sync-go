@@ -576,6 +576,18 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "data-provider-smoke-open-task") {
 		t.Fatalf("expected provider smoke matrix open-task action in app.js, got %q", body)
 	}
+	if !strings.Contains(body, "异常样本：auth") {
+		t.Fatalf("expected provider smoke matrix anomaly sample summary in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "anomaly missing") {
+		t.Fatalf("expected provider smoke matrix anomaly missing detail in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "anomaly actions") {
+		t.Fatalf("expected provider smoke matrix anomaly actions detail in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "anomaly advice") {
+		t.Fatalf("expected provider smoke matrix anomaly advice detail in app.js, got %q", body)
+	}
 	if !strings.Contains(body, "acceptanceActions") {
 		t.Fatalf("expected provider smoke matrix acceptance actions wiring in app.js, got %q", body)
 	}
