@@ -521,6 +521,48 @@ func TestBuildPreviewClassifiesProfileDefaultSourceAndBias(t *testing.T) {
 		t.Fatalf("expected recommendedRiskModeReason to mention smoke-matrix defaults, got %#v", reason)
 	}
 }
+func TestBuildPreviewPendingSmokeMatrixDefaultsStayProvisional(t *testing.T) {
+	registry := provider.NewRegistry(provider.DefaultCatalog()...)
+	plan, err := BuildPreview(registry, PreviewRequest{
+		SourceProvider:       "guangya",
+		TargetProvider:       "123_open",
+		RiskMode:             RiskModeFast,
+		ProfileDefaultSource: "Smoke Matrix aliyun_123_open (pending)",
+		ProfileRiskDefaults: &RiskProfileOverride{
+			RequestIntervalMS:   intPtr(1800),
+			DirectoryIntervalMS: intPtr(2600),
+			RetryLimit:          intPtr(3),
+			MaxConcurrent:       intPtr(1),
+		},
+		Entries: []SourceEntry{{Path: "/small.bin", Size: 10, MD5: "md5-a"}},
+	})
+	if err != nil {
+		t.Fatalf("BuildPreview() error = %v", err)
+	}
+	resolution, ok := plan.Metadata["riskProfileResolution"].(RiskProfileResolution)
+	if !ok {
+		t.Fatalf("expected riskProfileResolution metadata, got %#v", plan.Metadata["riskProfileResolution"])
+	}
+	if resolution.ProfileDefaultSourceKind != "smoke_matrix" {
+		t.Fatalf("expected smoke_matrix source kind, got %+v", resolution)
+	}
+	if resolution.ProfileDefaultBias != "more_conservative" {
+		t.Fatalf("expected more_conservative profile bias, got %+v", resolution)
+	}
+	if resolution.RecoverBudget.ProtocolGroupBudget != 1 || resolution.RecoverBudget.ProfileBudget != 1 {
+		t.Fatalf("expected pending smoke defaults to fall back to low-concurrency budget only, got %+v", resolution.RecoverBudget)
+	}
+	if strings.Contains(resolution.RecoverBudget.Reason, "smoke-matrix") {
+		t.Fatalf("expected pending smoke defaults not to use accepted smoke-matrix budget reason, got %+v", resolution.RecoverBudget)
+	}
+	if got, _ := plan.Metadata["recommendedRiskMode"].(RiskMode); got != RiskModeFast {
+		t.Fatalf("expected pending smoke defaults to keep fast recommendation for small inputs, got %v", plan.Metadata["recommendedRiskMode"])
+	}
+	reason, _ := plan.Metadata["recommendedRiskModeReason"].(string)
+	if strings.Contains(reason, "Accepted smoke-matrix") {
+		t.Fatalf("expected pending smoke defaults not to mention accepted smoke-matrix evidence, got %#v", reason)
+	}
+}
 
 func TestBuildPreviewWarnsWhenProfileDefaultsAreMoreAggressive(t *testing.T) {
 	registry := provider.NewRegistry(provider.DefaultCatalog()...)

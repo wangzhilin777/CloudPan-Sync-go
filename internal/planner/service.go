@@ -349,7 +349,7 @@ func resolveRiskProfile(meta provider.Provider, mode RiskMode, profileDefaults *
 	profileDefaultSourceKind := classifyProfileDefaultSourceKind(profileDefaultSource)
 	profileDefaultBias := classifyProfileDefaultBias(calibrated, profileApplied, profileDefaultFields)
 	// 根据最终的 RiskProfile 计算恢复预算策略，统一由 Planner 提供。
-	recoverBudget := deriveRecoverBudgetPolicy(meta.Key, calibrated, applied, profileDefaultSourceKind, profileDefaultBias)
+	recoverBudget := deriveRecoverBudgetPolicy(meta.Key, calibrated, applied, profileDefaultSourceKind, profileDefaultBias, profileDefaultSource)
 	return RiskProfileResolution{
 		ProviderKey:              meta.Key,
 		ProviderDisplayName:      meta.DisplayName,
@@ -556,7 +556,7 @@ func minPositive(current int, limit int) int {
 	return limit
 }
 
-func deriveRecoverBudgetPolicy(providerKey string, calibrated RiskProfile, profile RiskProfile, profileDefaultSourceKind string, profileDefaultBias string) RecoverBudgetPolicy {
+func deriveRecoverBudgetPolicy(providerKey string, calibrated RiskProfile, profile RiskProfile, profileDefaultSourceKind string, profileDefaultBias string, profileDefaultSource string) RecoverBudgetPolicy {
 	policy := RecoverBudgetPolicy{}
 	if profile.MaxConcurrent <= 0 {
 		return policy
@@ -568,7 +568,7 @@ func deriveRecoverBudgetPolicy(providerKey string, calibrated RiskProfile, profi
 		policy.ProtocolGroupBudget = minPositive(profile.MaxConcurrent, 2)
 	}
 	_ = calibrated
-	if profileDefaultSourceKind == "smoke_matrix" && profileDefaultBias == "more_conservative" {
+	if profileDefaultSourceKind == "smoke_matrix" && profileDefaultBias == "more_conservative" && classifySmokeMatrixEvidenceStatus(profileDefaultSource) == "accepted" {
 		policy.ProtocolGroupBudget = 1
 		policy.ProfileBudget = 1
 		policy.Reason = "Accepted smoke-matrix profile defaults are more conservative than provider baseline, so recover budget narrows to one protocol group/profile per round."
@@ -603,6 +603,23 @@ func classifyProfileDefaultSourceKind(source string) string {
 		return "smoke_matrix"
 	}
 	return "auth_profile"
+}
+func classifySmokeMatrixEvidenceStatus(source string) string {
+	source = strings.TrimSpace(source)
+	if source == "" {
+		return ""
+	}
+	lower := strings.ToLower(source)
+	switch {
+	case strings.HasSuffix(lower, "(accepted)"):
+		return "accepted"
+	case strings.HasSuffix(lower, "(in_progress)"):
+		return "in_progress"
+	case strings.HasSuffix(lower, "(pending)"):
+		return "pending"
+	default:
+		return ""
+	}
 }
 
 func classifyProfileDefaultBias(base RiskProfile, applied RiskProfile, fields []string) string {
@@ -796,7 +813,7 @@ func recommendRiskMode(meta provider.Provider, req PreviewRequest, resolution Ri
 		reason = "Known small input set can use a faster profile to finish validation and transfer with fewer long waits."
 	}
 
-	if resolution.ProfileDefaultSourceKind == "smoke_matrix" && resolution.ProfileDefaultBias == "more_conservative" {
+	if resolution.ProfileDefaultSourceKind == "smoke_matrix" && resolution.ProfileDefaultBias == "more_conservative" && classifySmokeMatrixEvidenceStatus(resolution.ProfileDefaultSource) == "accepted" {
 		if recommended == RiskModeFast {
 			recommended = RiskModeBalanced
 		}
