@@ -1,0 +1,47 @@
+name: docker-package
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - Dockerfile
+      - .dockerignore
+      - .github/workflows/docker-package.yml
+      - README.md
+      - cmd/**
+      - internal/**
+      - web/**
+      - go.mod
+      - go.sum
+
+jobs:
+  docker-build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build image archive
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: false
+          load: false
+          tags: cloudpan-sync-go:ci
+          outputs: type=docker,dest=/tmp/cloudpan-sync-go.tar
+
+      - name: Upload image artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cloudpan-sync-go-image
+          path: /tmp/cloudpan-sync-go.tar
+          if-no-files-found: error

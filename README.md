@@ -178,6 +178,31 @@ go run ./cmd/cloudpan-sync
 - 默认地址：`http://127.0.0.1:8080`
 - 控制台入口：`/`
 
+## Docker 启动
+
+### 本地构建镜像
+
+```powershell
+docker build -t cloudpan-sync-go .
+```
+
+### 运行容器
+
+```powershell
+docker run --rm -p 8080:8080 -v ${PWD}/.cloudpan-sync-go:/data -e CLOUDPAN_ADMIN_PASSWORD=admin cloudpan-sync-go
+```
+
+- 容器默认监听 `8080`。
+- 默认数据目录是容器内的 `/data`，SQLite 文件默认位于 `/data/cloudpan-sync.db`。
+- 如需改地址或数据库路径，可继续覆盖：`CLOUDPAN_ADDR`、`CLOUDPAN_DATA_DIR`、`CLOUDPAN_DB_PATH`。
+
+## GitHub 打包
+
+- 仓库已补充 `.github/workflows/docker-package.yml`。
+- 推送 `main` 上与 Docker / Go 构建相关的改动后，会自动执行一次 Docker 打包。
+- 也可以在 GitHub Actions 页面手动触发 `docker-package`。
+- 当前工作流会产出一个 Docker 镜像 tar 包 artifact：`cloudpan-sync-go-image`。
+
 ## 常用命令
 
 ```powershell
