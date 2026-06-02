@@ -1271,6 +1271,10 @@ function renderRuntimeCheckpoint(runtime, metadata = null, scope = "task") {
             <span>${stringifyValue(metadata.retrySummary.autoRecoverWaitingLocalRestoreTasks, "0")}</span>
           </div>
           <div class="insight-card checkpoint-card">
+            <strong>恢复等待 - Provider 会话</strong>
+            <span>${stringifyValue(metadata.retrySummary.autoRecoverWaitingProviderSessionTasks, "0")}</span>
+          </div>
+          <div class="insight-card checkpoint-card">
             <strong>恢复等待 - 手动确认</strong>
             <span>${stringifyValue(metadata.retrySummary.autoRecoverWaitingManualTasks, "0")}</span>
           </div>
@@ -3721,6 +3725,7 @@ function renderStatus() {
     autoRecoverWaitingRetryWindowTasks: 0,
     autoRecoverWaitingAuthRefreshTasks: 0,
     autoRecoverWaitingLocalRestoreTasks: 0,
+    autoRecoverWaitingProviderSessionTasks: 0,
     autoRecoverWaitingManualTasks: 0,
     autoRecoverWaitingRetryLimitTasks: 0,
     autoRecoverWaitingOtherTasks: 0,
@@ -3765,6 +3770,7 @@ function renderStatus() {
     <div class="metric"><span>Recover Window</span><strong>${stringifyValue(evidence.autoRecoverWaitingRetryWindowTasks, "0")}</strong></div>
     <div class="metric"><span>Recover Auth</span><strong>${stringifyValue(evidence.autoRecoverWaitingAuthRefreshTasks, "0")}</strong></div>
     <div class="metric"><span>Recover Local</span><strong>${stringifyValue(evidence.autoRecoverWaitingLocalRestoreTasks, "0")}</strong></div>
+    <div class="metric"><span>Recover Session</span><strong>${stringifyValue(evidence.autoRecoverWaitingProviderSessionTasks, "0")}</strong></div>
     <div class="metric"><span>Recover Manual</span><strong>${stringifyValue(evidence.autoRecoverWaitingManualTasks, "0")}</strong></div>
     <div class="metric"><span>Recover Limit</span><strong>${stringifyValue(evidence.autoRecoverWaitingRetryLimitTasks, "0")}</strong></div>
     <div class="metric"><span>Recover Other</span><strong>${stringifyValue(evidence.autoRecoverWaitingOtherTasks, "0")}</strong></div>
@@ -3999,6 +4005,8 @@ function filterAutoRecoverItems(items, filters = state.autoRecoverFilters) {
                 ? Number(item?.waitingAuthRefreshTaskCount || 0)
                 : recoverState === "waiting_local_restore"
                   ? Number(item?.waitingLocalRestoreTaskCount || 0)
+                  : recoverState === "waiting_provider_session"
+                    ? Number(item?.waitingProviderSessionTaskCount || 0)
                   : recoverState === "waiting_manual_confirmation"
                     ? Number(item?.waitingManualTaskCount || 0)
                     : recoverState === "waiting_retry_limit"
@@ -4048,6 +4056,8 @@ function autoRecoverStateLabel(recoverState) {
       return "等待授权刷新";
     case "waiting_local_restore":
       return "等待补回本地文件";
+    case "waiting_provider_session":
+      return "等待重建 Provider 会话";
     case "waiting_manual_confirmation":
       return "等待人工确认";
     case "waiting_retry_limit":
@@ -4071,6 +4081,8 @@ function autoRecoverStateAdvice(recoverState) {
       return "优先刷新或重新验证授权档案，再回到状态矩阵放行。";
     case "waiting_local_restore":
       return "源文件缺失或本地路径不可读，需先补回源文件后再继续补传。";
+    case "waiting_provider_session":
+      return "provider 返回体缺少 uploadid / upload session 等关键恢复线索，需先补齐会话信息。";
     case "waiting_manual_confirmation":
       return "该类失败需要先人工确认，再按子集 retry 或后台补传继续处理。";
     case "waiting_retry_limit":
@@ -5643,6 +5655,8 @@ function autoRecoverBlockedActionFromRecoverState(recoverState) {
       return "refresh_auth_profile";
     case "waiting_local_restore":
       return "restore_local_source_file";
+    case "waiting_provider_session":
+      return "manual_intervention_required";
     case "waiting_manual_confirmation":
       return "manual_confirmation_required";
     case "waiting_retry_limit":

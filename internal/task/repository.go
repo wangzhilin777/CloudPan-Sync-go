@@ -337,36 +337,37 @@ type blockedActionAccumulator struct {
 }
 
 type autoRecoverLaneAccumulator struct {
-	mode                         string
-	advice                       string
-	taskIDs                      map[string]struct{}
-	providers                    map[string]struct{}
-	profiles                     map[string]struct{}
-	protocolGroups               map[string]struct{}
-	retryClasses                 map[string]struct{}
-	blockedActions               map[string]struct{}
-	strategies                   map[string]struct{}
-	suggestedProtocolGroupBudget int
-	suggestedProviderBudget      int
-	suggestedProfileBudget       int
-	queueItemCount               int
-	retryableNowCount            int
-	cooldownCount                int
-	runnableTaskCount            int
-	waitingCooldownTaskCount     int
-	waitingRetryWindowTaskCount  int
-	waitingAuthRefreshTaskCount  int
-	waitingLocalRestoreTaskCount int
-	waitingManualTaskCount       int
-	waitingRetryLimitTaskCount   int
-	waitingOtherTaskCount        int
-	uploadCheckpointEligible     int
-	nextRetryAt                  string
-	sampleTaskID                 string
-	sampleProvider               string
-	sampleProtocolGroup          string
-	sampleProfileID              string
-	sampleStrategy               string
+	mode                            string
+	advice                          string
+	taskIDs                         map[string]struct{}
+	providers                       map[string]struct{}
+	profiles                        map[string]struct{}
+	protocolGroups                  map[string]struct{}
+	retryClasses                    map[string]struct{}
+	blockedActions                  map[string]struct{}
+	strategies                      map[string]struct{}
+	suggestedProtocolGroupBudget    int
+	suggestedProviderBudget         int
+	suggestedProfileBudget          int
+	queueItemCount                  int
+	retryableNowCount               int
+	cooldownCount                   int
+	runnableTaskCount               int
+	waitingCooldownTaskCount        int
+	waitingRetryWindowTaskCount     int
+	waitingAuthRefreshTaskCount     int
+	waitingLocalRestoreTaskCount    int
+	waitingProviderSessionTaskCount int
+	waitingManualTaskCount          int
+	waitingRetryLimitTaskCount      int
+	waitingOtherTaskCount           int
+	uploadCheckpointEligible        int
+	nextRetryAt                     string
+	sampleTaskID                    string
+	sampleProvider                  string
+	sampleProtocolGroup             string
+	sampleProfileID                 string
+	sampleStrategy                  string
 }
 
 func minPositiveBudget(current, next int) int {
@@ -468,6 +469,7 @@ type autoRecoverLaneState struct {
 	waitingRetryWindow        bool
 	waitingAuthRefresh        bool
 	waitingLocalRestore       bool
+	waitingProviderSession    bool
 	waitingManualConfirmation bool
 	waitingRetryLimit         bool
 	waitingOther              bool
@@ -486,6 +488,8 @@ func classifyAutoRecoverLaneState(detail Detail, summary retryQueueSummary) auto
 		state.waitingAuthRefresh = true
 	case "waiting_local_restore":
 		state.waitingLocalRestore = true
+	case "waiting_provider_session":
+		state.waitingProviderSession = true
 	case "waiting_manual_confirmation":
 		state.waitingManualConfirmation = true
 	case "waiting_retry_limit":
@@ -587,6 +591,9 @@ func summarizeAutoRecoverPool(details []Detail, providers []provider.Entry) ([]A
 		if laneState.waitingLocalRestore {
 			acc.waitingLocalRestoreTaskCount++
 		}
+		if laneState.waitingProviderSession {
+			acc.waitingProviderSessionTaskCount++
+		}
 		if laneState.waitingManualConfirmation {
 			acc.waitingManualTaskCount++
 		}
@@ -622,39 +629,40 @@ func summarizeAutoRecoverPool(details []Detail, providers []provider.Entry) ([]A
 			sampleProtocolGroup = firstStringValue(protocolGroups)
 		}
 		items = append(items, AutoRecoverLane{
-			Mode:                         acc.mode,
-			Advice:                       acc.advice,
-			TaskCount:                    len(acc.taskIDs),
-			ProviderCount:                len(acc.providers),
-			ProfileCount:                 len(acc.profiles),
-			SuggestedProtocolGroupBudget: acc.suggestedProtocolGroupBudget,
-			SuggestedProviderBudget:      acc.suggestedProviderBudget,
-			SuggestedProfileBudget:       acc.suggestedProfileBudget,
-			QueueItemCount:               acc.queueItemCount,
-			RetryableNowCount:            acc.retryableNowCount,
-			CooldownCount:                acc.cooldownCount,
-			RunnableTaskCount:            acc.runnableTaskCount,
-			WaitingCooldownTaskCount:     acc.waitingCooldownTaskCount,
-			WaitingRetryWindowTaskCount:  acc.waitingRetryWindowTaskCount,
-			WaitingAuthRefreshTaskCount:  acc.waitingAuthRefreshTaskCount,
-			WaitingLocalRestoreTaskCount: acc.waitingLocalRestoreTaskCount,
-			WaitingManualTaskCount:       acc.waitingManualTaskCount,
-			WaitingRetryLimitTaskCount:   acc.waitingRetryLimitTaskCount,
-			WaitingOtherTaskCount:        acc.waitingOtherTaskCount,
-			UploadCheckpointEligible:     acc.uploadCheckpointEligible,
-			ProtocolGroups:               protocolGroups,
-			RetryClasses:                 retryClasses,
-			BlockedActions:               blockedActions,
-			Strategies:                   strategies,
-			ProfileIDs:                   profileIDs,
-			PrimaryRetryClass:            firstStringValue(retryClasses),
-			PrimaryBlockedAction:         firstStringValue(blockedActions),
-			NextRetryAt:                  acc.nextRetryAt,
-			SampleTaskID:                 acc.sampleTaskID,
-			SampleProvider:               acc.sampleProvider,
-			SampleProtocolGroup:          sampleProtocolGroup,
-			SampleProfileID:              acc.sampleProfileID,
-			SampleStrategy:               acc.sampleStrategy,
+			Mode:                            acc.mode,
+			Advice:                          acc.advice,
+			TaskCount:                       len(acc.taskIDs),
+			ProviderCount:                   len(acc.providers),
+			ProfileCount:                    len(acc.profiles),
+			SuggestedProtocolGroupBudget:    acc.suggestedProtocolGroupBudget,
+			SuggestedProviderBudget:         acc.suggestedProviderBudget,
+			SuggestedProfileBudget:          acc.suggestedProfileBudget,
+			QueueItemCount:                  acc.queueItemCount,
+			RetryableNowCount:               acc.retryableNowCount,
+			CooldownCount:                   acc.cooldownCount,
+			RunnableTaskCount:               acc.runnableTaskCount,
+			WaitingCooldownTaskCount:        acc.waitingCooldownTaskCount,
+			WaitingRetryWindowTaskCount:     acc.waitingRetryWindowTaskCount,
+			WaitingAuthRefreshTaskCount:     acc.waitingAuthRefreshTaskCount,
+			WaitingLocalRestoreTaskCount:    acc.waitingLocalRestoreTaskCount,
+			WaitingProviderSessionTaskCount: acc.waitingProviderSessionTaskCount,
+			WaitingManualTaskCount:          acc.waitingManualTaskCount,
+			WaitingRetryLimitTaskCount:      acc.waitingRetryLimitTaskCount,
+			WaitingOtherTaskCount:           acc.waitingOtherTaskCount,
+			UploadCheckpointEligible:        acc.uploadCheckpointEligible,
+			ProtocolGroups:                  protocolGroups,
+			RetryClasses:                    retryClasses,
+			BlockedActions:                  blockedActions,
+			Strategies:                      strategies,
+			ProfileIDs:                      profileIDs,
+			PrimaryRetryClass:               firstStringValue(retryClasses),
+			PrimaryBlockedAction:            firstStringValue(blockedActions),
+			NextRetryAt:                     acc.nextRetryAt,
+			SampleTaskID:                    acc.sampleTaskID,
+			SampleProvider:                  acc.sampleProvider,
+			SampleProtocolGroup:             sampleProtocolGroup,
+			SampleProfileID:                 acc.sampleProfileID,
+			SampleStrategy:                  acc.sampleStrategy,
 		})
 	}
 	sort.SliceStable(items, func(i, j int) bool {
@@ -687,12 +695,13 @@ func summarizeAutoRecoverPool(details []Detail, providers []provider.Entry) ([]A
 	return items, totalTasks
 }
 
-func summarizeAutoRecoverStateCounts(items []AutoRecoverLane) (int, int, int, int, int, int, int, int) {
+func summarizeAutoRecoverStateCounts(items []AutoRecoverLane) (int, int, int, int, int, int, int, int, int) {
 	runnable := 0
 	waitingCooldown := 0
 	waitingRetryWindow := 0
 	waitingAuthRefresh := 0
 	waitingLocalRestore := 0
+	waitingProviderSession := 0
 	waitingManual := 0
 	waitingRetryLimit := 0
 	waitingOther := 0
@@ -702,11 +711,12 @@ func summarizeAutoRecoverStateCounts(items []AutoRecoverLane) (int, int, int, in
 		waitingRetryWindow += item.WaitingRetryWindowTaskCount
 		waitingAuthRefresh += item.WaitingAuthRefreshTaskCount
 		waitingLocalRestore += item.WaitingLocalRestoreTaskCount
+		waitingProviderSession += item.WaitingProviderSessionTaskCount
 		waitingManual += item.WaitingManualTaskCount
 		waitingRetryLimit += item.WaitingRetryLimitTaskCount
 		waitingOther += item.WaitingOtherTaskCount
 	}
-	return runnable, waitingCooldown, waitingRetryWindow, waitingAuthRefresh, waitingLocalRestore, waitingManual, waitingRetryLimit, waitingOther
+	return runnable, waitingCooldown, waitingRetryWindow, waitingAuthRefresh, waitingLocalRestore, waitingProviderSession, waitingManual, waitingRetryLimit, waitingOther
 }
 
 func taskEvidenceSummary(ctx context.Context, store *sqlitestore.Store, providers []provider.Entry) (EvidenceSummary, error) {
@@ -774,6 +784,7 @@ func taskEvidenceSummary(ctx context.Context, store *sqlitestore.Store, provider
 		summary.AutoRecoverWaitingRetryWindowTasks,
 		summary.AutoRecoverWaitingAuthRefreshTasks,
 		summary.AutoRecoverWaitingLocalRestoreTasks,
+		summary.AutoRecoverWaitingProviderSessionTasks,
 		summary.AutoRecoverWaitingManualTasks,
 		summary.AutoRecoverWaitingRetryLimitTasks,
 		summary.AutoRecoverWaitingOtherTasks = summarizeAutoRecoverStateCounts(summary.AutoRecoverPool)
@@ -885,12 +896,13 @@ func providerStatusSummary(ctx context.Context, store *sqlitestore.Store, provid
 		item.AutoRecoverCount = autoRecoverCount
 		item.SnapshotSummary["autoRecoverPool"] = autoRecoverPool
 		item.SnapshotSummary["autoRecoverCount"] = item.AutoRecoverCount
-		runnable, waitingCooldown, waitingRetryWindow, waitingAuthRefresh, waitingLocalRestore, waitingManual, waitingRetryLimit, waitingOther := summarizeAutoRecoverStateCounts(autoRecoverPool)
+		runnable, waitingCooldown, waitingRetryWindow, waitingAuthRefresh, waitingLocalRestore, waitingProviderSession, waitingManual, waitingRetryLimit, waitingOther := summarizeAutoRecoverStateCounts(autoRecoverPool)
 		item.SnapshotSummary["autoRecoverRunnableTasks"] = runnable
 		item.SnapshotSummary["autoRecoverWaitingCooldownTasks"] = waitingCooldown
 		item.SnapshotSummary["autoRecoverWaitingRetryWindowTasks"] = waitingRetryWindow
 		item.SnapshotSummary["autoRecoverWaitingAuthRefreshTasks"] = waitingAuthRefresh
 		item.SnapshotSummary["autoRecoverWaitingLocalRestoreTasks"] = waitingLocalRestore
+		item.SnapshotSummary["autoRecoverWaitingProviderSessionTasks"] = waitingProviderSession
 		item.SnapshotSummary["autoRecoverWaitingManualTasks"] = waitingManual
 		item.SnapshotSummary["autoRecoverWaitingRetryLimitTasks"] = waitingRetryLimit
 		item.SnapshotSummary["autoRecoverWaitingOtherTasks"] = waitingOther

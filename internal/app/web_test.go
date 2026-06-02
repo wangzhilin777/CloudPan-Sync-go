@@ -1131,6 +1131,9 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "waiting_manual_confirmation") {
 		t.Fatalf("expected waiting_manual_confirmation recoverState affordance in app.js, got %q", body)
 	}
+	if !strings.Contains(body, "waiting_provider_session") {
+		t.Fatalf("expected waiting_provider_session recoverState affordance in app.js, got %q", body)
+	}
 	if !strings.Contains(body, "waiting_retry_limit") {
 		t.Fatalf("expected waiting_retry_limit recoverState affordance in app.js, got %q", body)
 	}

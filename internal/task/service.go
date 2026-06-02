@@ -162,74 +162,76 @@ type Detail struct {
 }
 
 type EvidenceSummary struct {
-	TotalTasks                          int                `json:"totalTasks"`
-	CompletedTasks                      int                `json:"completedTasks"`
-	BlockedTasks                        int                `json:"blockedTasks"`
-	ExecutionMode                       string             `json:"executionMode,omitempty"`
-	ScanMode                            string             `json:"scanMode,omitempty"`
-	SourceDeletePolicy                  string             `json:"sourceDeletePolicy,omitempty"`
-	AutoRecoverTasks                    int                `json:"autoRecoverTasks"`
-	AutoRecoverRunnableTasks            int                `json:"autoRecoverRunnableTasks"`
-	AutoRecoverWaitingCooldownTasks     int                `json:"autoRecoverWaitingCooldownTasks"`
-	AutoRecoverWaitingRetryWindowTasks  int                `json:"autoRecoverWaitingRetryWindowTasks"`
-	AutoRecoverWaitingAuthRefreshTasks  int                `json:"autoRecoverWaitingAuthRefreshTasks"`
-	AutoRecoverWaitingLocalRestoreTasks int                `json:"autoRecoverWaitingLocalRestoreTasks"`
-	AutoRecoverWaitingManualTasks       int                `json:"autoRecoverWaitingManualTasks"`
-	AutoRecoverWaitingRetryLimitTasks   int                `json:"autoRecoverWaitingRetryLimitTasks"`
-	AutoRecoverWaitingOtherTasks        int                `json:"autoRecoverWaitingOtherTasks"`
-	FailedResultCount                   int                `json:"failedResultCount"`
-	DoneResultCount                     int                `json:"doneResultCount"`
-	SkippedResultCount                  int                `json:"skippedResultCount"`
-	PendingResultCount                  int                `json:"pendingResultCount"`
-	SourceDeletionCount                 int                `json:"sourceDeletionCount"`
-	RiskHitCount                        int                `json:"riskHitCount"`
-	BlockedActions                      []BlockedAction    `json:"blockedActions,omitempty"`
-	AutoRecoverPool                     []AutoRecoverLane  `json:"autoRecoverPool,omitempty"`
-	ProtocolCoverage                    []ProtocolCoverage `json:"protocolCoverage,omitempty"`
-	AcceptedSmokeGroups                 int                `json:"acceptedSmokeGroups"`
-	InProgressSmokeGroups               int                `json:"inProgressSmokeGroups"`
-	PendingSmokeGroups                  int                `json:"pendingSmokeGroups"`
-	UploadSuccessGroups                 int                `json:"uploadSuccessGroups"`
-	UploadSuccessSamples                int                `json:"uploadSuccessSamples"`
-	AcceptanceActionCounts              map[string]int     `json:"acceptanceActionCounts,omitempty"`
-	RecentResults                       []Result           `json:"recentResults"`
-	RecentProbes                        []ProviderProbe    `json:"recentProbes"`
+	TotalTasks                             int                `json:"totalTasks"`
+	CompletedTasks                         int                `json:"completedTasks"`
+	BlockedTasks                           int                `json:"blockedTasks"`
+	ExecutionMode                          string             `json:"executionMode,omitempty"`
+	ScanMode                               string             `json:"scanMode,omitempty"`
+	SourceDeletePolicy                     string             `json:"sourceDeletePolicy,omitempty"`
+	AutoRecoverTasks                       int                `json:"autoRecoverTasks"`
+	AutoRecoverRunnableTasks               int                `json:"autoRecoverRunnableTasks"`
+	AutoRecoverWaitingCooldownTasks        int                `json:"autoRecoverWaitingCooldownTasks"`
+	AutoRecoverWaitingRetryWindowTasks     int                `json:"autoRecoverWaitingRetryWindowTasks"`
+	AutoRecoverWaitingAuthRefreshTasks     int                `json:"autoRecoverWaitingAuthRefreshTasks"`
+	AutoRecoverWaitingLocalRestoreTasks    int                `json:"autoRecoverWaitingLocalRestoreTasks"`
+	AutoRecoverWaitingProviderSessionTasks int                `json:"autoRecoverWaitingProviderSessionTasks"`
+	AutoRecoverWaitingManualTasks          int                `json:"autoRecoverWaitingManualTasks"`
+	AutoRecoverWaitingRetryLimitTasks      int                `json:"autoRecoverWaitingRetryLimitTasks"`
+	AutoRecoverWaitingOtherTasks           int                `json:"autoRecoverWaitingOtherTasks"`
+	FailedResultCount                      int                `json:"failedResultCount"`
+	DoneResultCount                        int                `json:"doneResultCount"`
+	SkippedResultCount                     int                `json:"skippedResultCount"`
+	PendingResultCount                     int                `json:"pendingResultCount"`
+	SourceDeletionCount                    int                `json:"sourceDeletionCount"`
+	RiskHitCount                           int                `json:"riskHitCount"`
+	BlockedActions                         []BlockedAction    `json:"blockedActions,omitempty"`
+	AutoRecoverPool                        []AutoRecoverLane  `json:"autoRecoverPool,omitempty"`
+	ProtocolCoverage                       []ProtocolCoverage `json:"protocolCoverage,omitempty"`
+	AcceptedSmokeGroups                    int                `json:"acceptedSmokeGroups"`
+	InProgressSmokeGroups                  int                `json:"inProgressSmokeGroups"`
+	PendingSmokeGroups                     int                `json:"pendingSmokeGroups"`
+	UploadSuccessGroups                    int                `json:"uploadSuccessGroups"`
+	UploadSuccessSamples                   int                `json:"uploadSuccessSamples"`
+	AcceptanceActionCounts                 map[string]int     `json:"acceptanceActionCounts,omitempty"`
+	RecentResults                          []Result           `json:"recentResults"`
+	RecentProbes                           []ProviderProbe    `json:"recentProbes"`
 }
 
 type AutoRecoverLane struct {
-	Mode                         string   `json:"mode"`
-	Advice                       string   `json:"advice,omitempty"`
-	TaskCount                    int      `json:"taskCount"`
-	ProviderCount                int      `json:"providerCount"`
-	ProfileCount                 int      `json:"profileCount"`
-	SuggestedProtocolGroupBudget int      `json:"suggestedProtocolGroupBudget,omitempty"`
-	SuggestedProviderBudget      int      `json:"suggestedProviderBudget,omitempty"`
-	SuggestedProfileBudget       int      `json:"suggestedProfileBudget,omitempty"`
-	QueueItemCount               int      `json:"queueItemCount"`
-	RetryableNowCount            int      `json:"retryableNowCount"`
-	CooldownCount                int      `json:"cooldownCount"`
-	RunnableTaskCount            int      `json:"runnableTaskCount"`
-	WaitingCooldownTaskCount     int      `json:"waitingCooldownTaskCount"`
-	WaitingRetryWindowTaskCount  int      `json:"waitingRetryWindowTaskCount"`
-	WaitingAuthRefreshTaskCount  int      `json:"waitingAuthRefreshTaskCount"`
-	WaitingLocalRestoreTaskCount int      `json:"waitingLocalRestoreTaskCount"`
-	WaitingManualTaskCount       int      `json:"waitingManualTaskCount"`
-	WaitingRetryLimitTaskCount   int      `json:"waitingRetryLimitTaskCount"`
-	WaitingOtherTaskCount        int      `json:"waitingOtherTaskCount"`
-	UploadCheckpointEligible     int      `json:"uploadCheckpointEligible"`
-	ProtocolGroups               []string `json:"protocolGroups,omitempty"`
-	RetryClasses                 []string `json:"retryClasses,omitempty"`
-	BlockedActions               []string `json:"blockedActions,omitempty"`
-	Strategies                   []string `json:"strategies,omitempty"`
-	ProfileIDs                   []string `json:"profileIds,omitempty"`
-	PrimaryRetryClass            string   `json:"primaryRetryClass,omitempty"`
-	PrimaryBlockedAction         string   `json:"primaryBlockedAction,omitempty"`
-	NextRetryAt                  string   `json:"nextRetryAt,omitempty"`
-	SampleTaskID                 string   `json:"sampleTaskId,omitempty"`
-	SampleProvider               string   `json:"sampleProvider,omitempty"`
-	SampleProtocolGroup          string   `json:"sampleProtocolGroup,omitempty"`
-	SampleProfileID              string   `json:"sampleProfileId,omitempty"`
-	SampleStrategy               string   `json:"sampleStrategy,omitempty"`
+	Mode                            string   `json:"mode"`
+	Advice                          string   `json:"advice,omitempty"`
+	TaskCount                       int      `json:"taskCount"`
+	ProviderCount                   int      `json:"providerCount"`
+	ProfileCount                    int      `json:"profileCount"`
+	SuggestedProtocolGroupBudget    int      `json:"suggestedProtocolGroupBudget,omitempty"`
+	SuggestedProviderBudget         int      `json:"suggestedProviderBudget,omitempty"`
+	SuggestedProfileBudget          int      `json:"suggestedProfileBudget,omitempty"`
+	QueueItemCount                  int      `json:"queueItemCount"`
+	RetryableNowCount               int      `json:"retryableNowCount"`
+	CooldownCount                   int      `json:"cooldownCount"`
+	RunnableTaskCount               int      `json:"runnableTaskCount"`
+	WaitingCooldownTaskCount        int      `json:"waitingCooldownTaskCount"`
+	WaitingRetryWindowTaskCount     int      `json:"waitingRetryWindowTaskCount"`
+	WaitingAuthRefreshTaskCount     int      `json:"waitingAuthRefreshTaskCount"`
+	WaitingLocalRestoreTaskCount    int      `json:"waitingLocalRestoreTaskCount"`
+	WaitingProviderSessionTaskCount int      `json:"waitingProviderSessionTaskCount"`
+	WaitingManualTaskCount          int      `json:"waitingManualTaskCount"`
+	WaitingRetryLimitTaskCount      int      `json:"waitingRetryLimitTaskCount"`
+	WaitingOtherTaskCount           int      `json:"waitingOtherTaskCount"`
+	UploadCheckpointEligible        int      `json:"uploadCheckpointEligible"`
+	ProtocolGroups                  []string `json:"protocolGroups,omitempty"`
+	RetryClasses                    []string `json:"retryClasses,omitempty"`
+	BlockedActions                  []string `json:"blockedActions,omitempty"`
+	Strategies                      []string `json:"strategies,omitempty"`
+	ProfileIDs                      []string `json:"profileIds,omitempty"`
+	PrimaryRetryClass               string   `json:"primaryRetryClass,omitempty"`
+	PrimaryBlockedAction            string   `json:"primaryBlockedAction,omitempty"`
+	NextRetryAt                     string   `json:"nextRetryAt,omitempty"`
+	SampleTaskID                    string   `json:"sampleTaskId,omitempty"`
+	SampleProvider                  string   `json:"sampleProvider,omitempty"`
+	SampleProtocolGroup             string   `json:"sampleProtocolGroup,omitempty"`
+	SampleProfileID                 string   `json:"sampleProfileId,omitempty"`
+	SampleStrategy                  string   `json:"sampleStrategy,omitempty"`
 }
 
 type EvidenceReport struct {
@@ -692,29 +694,30 @@ type targetInspection struct {
 }
 
 type retryQueueSummary struct {
-	ShouldBlock                         bool
-	BlockedReason                       string
-	BlockedAction                       string
-	BlockedAdvice                       string
-	NextRetryAt                         string
-	WindowBlocked                       bool
-	CanAutoRetry                        bool
-	RetryableNowCount                   int
-	CooldownCount                       int
-	PendingManualCount                  int
-	AuthExpiredCount                    int
-	LocalMissingCount                   int
-	ProviderSessionMissingCount         int
-	ExhaustedCount                      int
-	AutoRecoverWaitingRetryWindowTasks  int
-	AutoRecoverWaitingAuthRefreshTasks  int
-	AutoRecoverWaitingLocalRestoreTasks int
-	AutoRecoverWaitingManualTasks       int
-	AutoRecoverWaitingRetryLimitTasks   int
-	UploadCheckpointEligible            int
-	AutoRecoverEligible                 bool
-	AutoRecoverMode                     string
-	AutoRecoverAdvice                   string
+	ShouldBlock                            bool
+	BlockedReason                          string
+	BlockedAction                          string
+	BlockedAdvice                          string
+	NextRetryAt                            string
+	WindowBlocked                          bool
+	CanAutoRetry                           bool
+	RetryableNowCount                      int
+	CooldownCount                          int
+	PendingManualCount                     int
+	AuthExpiredCount                       int
+	LocalMissingCount                      int
+	ProviderSessionMissingCount            int
+	ExhaustedCount                         int
+	AutoRecoverWaitingRetryWindowTasks     int
+	AutoRecoverWaitingAuthRefreshTasks     int
+	AutoRecoverWaitingLocalRestoreTasks    int
+	AutoRecoverWaitingProviderSessionTasks int
+	AutoRecoverWaitingManualTasks          int
+	AutoRecoverWaitingRetryLimitTasks      int
+	UploadCheckpointEligible               int
+	AutoRecoverEligible                    bool
+	AutoRecoverMode                        string
+	AutoRecoverAdvice                      string
 }
 
 type pendingTreeBuilderNode struct {
@@ -1411,6 +1414,7 @@ func recoverStateMatchesCandidate(detail Detail, summary retryQueueSummary, reco
 		return actualState == "waiting_other" ||
 			actualState == "waiting_auth_refresh" ||
 			actualState == "waiting_local_restore" ||
+			actualState == "waiting_provider_session" ||
 			actualState == "waiting_manual_confirmation" ||
 			actualState == "waiting_retry_limit"
 	default:
@@ -1436,9 +1440,11 @@ func recoverDecisionCategory(detail Detail, summary retryQueueSummary) string {
 		return "waiting_auth_refresh"
 	case blockedAction == "restore_local_source_file" || blockedAction == "restore_local_file" || blockedReason == "retry_queue_requires_local_file_restore":
 		return "waiting_local_restore"
+	case blockedAction == "manual_intervention_required" || blockedReason == "retry_queue_requires_provider_session_rebuild":
+		return "waiting_provider_session"
 	case blockedAction == "manual_confirmation_required" || blockedReason == "retry_queue_pending_manual_confirmation":
 		return "waiting_manual_confirmation"
-	case blockedAction == "review_and_reset_retry_strategy" || blockedAction == "manual_intervention_required" || blockedReason == "retry_queue_retry_limit_exhausted":
+	case blockedAction == "review_and_reset_retry_strategy" || blockedReason == "retry_queue_retry_limit_exhausted":
 		return "waiting_retry_limit"
 	}
 
@@ -1641,6 +1647,8 @@ func autoRecoverStateAdviceFallback(recoverState string) string {
 		return "优先刷新或重新验证授权档案，再回到状态矩阵放行。"
 	case "waiting_local_restore":
 		return "源文件缺失或本地路径不可读，需先补回源文件后再继续补传。"
+	case "waiting_provider_session":
+		return "provider 返回的上传会话线索不完整，需先补齐 uploadid / upload session 等关键字段后再继续。"
 	case "waiting_manual_confirmation":
 		return "该类失败需要先人工确认，再按子集 retry 或后台补传继续处理。"
 	case "waiting_retry_limit":
@@ -4698,29 +4706,30 @@ func applyRetryQueueSummary(runtime *RuntimeState, metadata map[string]interface
 		return
 	}
 	metadata["retrySummary"] = map[string]interface{}{
-		"shouldBlock":                         summary.ShouldBlock,
-		"blockedReason":                       summary.BlockedReason,
-		"blockedAction":                       summary.BlockedAction,
-		"blockedAdvice":                       summary.BlockedAdvice,
-		"nextRetryAt":                         summary.NextRetryAt,
-		"windowBlocked":                       summary.WindowBlocked,
-		"canAutoRetry":                        summary.CanAutoRetry,
-		"queueSize":                           len(runtime.RetryQueue),
-		"retryableNowCount":                   summary.RetryableNowCount,
-		"cooldownCount":                       summary.CooldownCount,
-		"pendingManualCount":                  summary.PendingManualCount,
-		"authExpiredCount":                    summary.AuthExpiredCount,
-		"localMissingCount":                   summary.LocalMissingCount,
-		"exhaustedCount":                      summary.ExhaustedCount,
-		"uploadCheckpointEligible":            summary.UploadCheckpointEligible,
-		"autoRecoverEligible":                 summary.AutoRecoverEligible,
-		"autoRecoverMode":                     summary.AutoRecoverMode,
-		"autoRecoverAdvice":                   summary.AutoRecoverAdvice,
-		"autoRecoverWaitingAuthRefreshTasks":  summary.AutoRecoverWaitingAuthRefreshTasks,
-		"autoRecoverWaitingLocalRestoreTasks": summary.AutoRecoverWaitingLocalRestoreTasks,
-		"autoRecoverWaitingManualTasks":       summary.AutoRecoverWaitingManualTasks,
-		"autoRecoverWaitingRetryLimitTasks":   summary.AutoRecoverWaitingRetryLimitTasks,
-		"autoRecoverWaitingRetryWindowTasks":  summary.AutoRecoverWaitingRetryWindowTasks,
+		"shouldBlock":                            summary.ShouldBlock,
+		"blockedReason":                          summary.BlockedReason,
+		"blockedAction":                          summary.BlockedAction,
+		"blockedAdvice":                          summary.BlockedAdvice,
+		"nextRetryAt":                            summary.NextRetryAt,
+		"windowBlocked":                          summary.WindowBlocked,
+		"canAutoRetry":                           summary.CanAutoRetry,
+		"queueSize":                              len(runtime.RetryQueue),
+		"retryableNowCount":                      summary.RetryableNowCount,
+		"cooldownCount":                          summary.CooldownCount,
+		"pendingManualCount":                     summary.PendingManualCount,
+		"authExpiredCount":                       summary.AuthExpiredCount,
+		"localMissingCount":                      summary.LocalMissingCount,
+		"exhaustedCount":                         summary.ExhaustedCount,
+		"uploadCheckpointEligible":               summary.UploadCheckpointEligible,
+		"autoRecoverEligible":                    summary.AutoRecoverEligible,
+		"autoRecoverMode":                        summary.AutoRecoverMode,
+		"autoRecoverAdvice":                      summary.AutoRecoverAdvice,
+		"autoRecoverWaitingAuthRefreshTasks":     summary.AutoRecoverWaitingAuthRefreshTasks,
+		"autoRecoverWaitingLocalRestoreTasks":    summary.AutoRecoverWaitingLocalRestoreTasks,
+		"autoRecoverWaitingProviderSessionTasks": summary.AutoRecoverWaitingProviderSessionTasks,
+		"autoRecoverWaitingManualTasks":          summary.AutoRecoverWaitingManualTasks,
+		"autoRecoverWaitingRetryLimitTasks":      summary.AutoRecoverWaitingRetryLimitTasks,
+		"autoRecoverWaitingRetryWindowTasks":     summary.AutoRecoverWaitingRetryWindowTasks,
 	}
 }
 
@@ -4938,7 +4947,8 @@ func summarizeRetryQueue(queue []RetryQueueItem) retryQueueSummary {
 	summary.ExhaustedCount = exhaustedCount
 	summary.AutoRecoverWaitingAuthRefreshTasks = authExpiredCount
 	summary.AutoRecoverWaitingLocalRestoreTasks = localMissingCount
-	summary.AutoRecoverWaitingManualTasks = pendingManualCount + providerSessionMissingCount
+	summary.AutoRecoverWaitingProviderSessionTasks = providerSessionMissingCount
+	summary.AutoRecoverWaitingManualTasks = pendingManualCount
 	summary.AutoRecoverWaitingRetryLimitTasks = exhaustedCount
 	summary.UploadCheckpointEligible = uploadCheckpointEligible
 	if immediateRetry > 0 {

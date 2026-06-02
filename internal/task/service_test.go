@@ -4946,6 +4946,7 @@ func TestServiceRecoverBlockedTasksWithOptionsFiltersRecoverState(t *testing.T) 
 		newAdapter("recover_state_cooldown_target"),
 		newAdapter("recover_state_auth_target"),
 		newAdapter("recover_state_local_target"),
+		newAdapter("recover_state_provider_session_target"),
 		newAdapter("recover_state_manual_target"),
 		newAdapter("recover_state_retry_limit_target"),
 	)
@@ -5043,6 +5044,7 @@ func TestServiceRecoverBlockedTasksWithOptionsFiltersRecoverState(t *testing.T) 
 
 	authProfile := createProfile("recover_state_auth_target")
 	localProfile := createProfile("recover_state_local_target")
+	providerSessionProfile := createProfile("recover_state_provider_session_target")
 	manualProfile := createProfile("recover_state_manual_target")
 	retryLimitProfile := createProfile("recover_state_retry_limit_target")
 	injectedTimestamp := time.Now().Add(-90 * time.Minute).UTC().Format(time.RFC3339)
@@ -5051,6 +5053,9 @@ func TestServiceRecoverBlockedTasksWithOptionsFiltersRecoverState(t *testing.T) 
 	}, injectedTimestamp)
 	_ = createInjectedBlockedTask("recover_state_local_target", localProfile, "/local.bin", []RetryQueueItem{
 		{Path: "/local.bin", RetryClass: "local_file_missing", RetryAction: "restore_local", Retryable: false, Blocked: true, RemainingCount: 1},
+	}, injectedTimestamp)
+	_ = createInjectedBlockedTask("recover_state_provider_session_target", providerSessionProfile, "/provider-session.bin", []RetryQueueItem{
+		{Path: "/provider-session.bin", RetryClass: "provider_session_missing", RetryAction: "manual_intervention_required", Retryable: false, Blocked: true, RemainingCount: 1},
 	}, injectedTimestamp)
 	_ = createInjectedBlockedTask("recover_state_manual_target", manualProfile, "/manual.bin", []RetryQueueItem{
 		{Path: "/manual.bin", RetryClass: "pending_manual", RetryAction: "manual_confirm", Retryable: false, Blocked: true, RemainingCount: 1},
@@ -5071,6 +5076,10 @@ func TestServiceRecoverBlockedTasksWithOptionsFiltersRecoverState(t *testing.T) 
 	if localLane.Mode == "" || localLane.WaitingLocalRestoreTaskCount != 1 {
 		t.Fatalf("expected local_restore_required lane with count 1, got %#v", localLane)
 	}
+	providerSessionLane := autoRecoverLaneByMode(evidence.AutoRecoverPool, "auto_retry")
+	if providerSessionLane.Mode != "auto_retry" || providerSessionLane.WaitingProviderSessionTaskCount != 1 {
+		t.Fatalf("expected auto_retry lane with waiting provider session count 1, got %#v", providerSessionLane)
+	}
 	manualLane := autoRecoverLaneByMode(evidence.AutoRecoverPool, "manual_confirmation_required")
 	if manualLane.Mode == "" || manualLane.WaitingManualTaskCount != 1 {
 		t.Fatalf("expected manual_confirmation_required lane with count 1, got %#v", manualLane)
@@ -5081,11 +5090,13 @@ func TestServiceRecoverBlockedTasksWithOptionsFiltersRecoverState(t *testing.T) 
 	}
 	if evidence.AutoRecoverWaitingAuthRefreshTasks != 1 ||
 		evidence.AutoRecoverWaitingLocalRestoreTasks != 1 ||
+		evidence.AutoRecoverWaitingProviderSessionTasks != 1 ||
 		evidence.AutoRecoverWaitingManualTasks != 1 ||
 		evidence.AutoRecoverWaitingRetryLimitTasks != 1 {
-		t.Fatalf("expected global detailed waiting counts 1/1/1/1, got auth=%d local=%d manual=%d retryLimit=%d",
+		t.Fatalf("expected global detailed waiting counts 1/1/1/1/1, got auth=%d local=%d providerSession=%d manual=%d retryLimit=%d",
 			evidence.AutoRecoverWaitingAuthRefreshTasks,
 			evidence.AutoRecoverWaitingLocalRestoreTasks,
+			evidence.AutoRecoverWaitingProviderSessionTasks,
 			evidence.AutoRecoverWaitingManualTasks,
 			evidence.AutoRecoverWaitingRetryLimitTasks,
 		)
@@ -5111,6 +5122,17 @@ func TestServiceRecoverBlockedTasksWithOptionsFiltersRecoverState(t *testing.T) 
 	}
 	if len(localResult.Decisions) == 0 || localResult.Decisions[0].RecoverState != "waiting_local_restore" {
 		t.Fatalf("expected local restore decision state, got %#v", localResult.Decisions)
+	}
+
+	providerSessionResult, err := svc.RecoverBlockedTasksWithOptions(ctx, RecoverOptions{RecoverState: "waiting_provider_session", Limit: 5, IncludeNonRunnable: true, DryRun: true})
+	if err != nil {
+		t.Fatalf("RecoverBlockedTasksWithOptions(waiting_provider_session) error = %v", err)
+	}
+	if providerSessionResult.MatchedCount != 1 || providerSessionResult.RecoveredCount != 0 || providerSessionResult.SkippedByBlockedReason != 1 {
+		t.Fatalf("unexpected provider session recover result: %#v", providerSessionResult)
+	}
+	if len(providerSessionResult.Decisions) == 0 || providerSessionResult.Decisions[0].RecoverState != "waiting_provider_session" {
+		t.Fatalf("expected provider session decision state, got %#v", providerSessionResult.Decisions)
 	}
 
 	manualResult, err := svc.RecoverBlockedTasksWithOptions(ctx, RecoverOptions{RecoverState: "waiting_manual_confirmation", Limit: 5, IncludeNonRunnable: true, DryRun: true})
