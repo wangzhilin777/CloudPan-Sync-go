@@ -36,7 +36,7 @@ GitHub Releases 会提供现成安装包；如果你不想自己编译，直接�
 - Releases 页面：<https://github.com/wangzhilin777/CloudPan-Sync-go/releases>
 - Actions 页面：<https://github.com/wangzhilin777/CloudPan-Sync-go/actions>
 
-当前 Release 计划包含这些资产：
+当前 Release 提供这些资产：
 
 - 服务端 Windows 包：`cloudpan-sync-go-windows-amd64.zip`
 - 服务端 Linux 包：`cloudpan-sync-go-linux-amd64.tar.gz`
@@ -47,7 +47,7 @@ GitHub Releases 会提供现成安装包；如果你不想自己编译，直接�
 - 桌面客户端 Windows 包：`cloud-clipboard-desktop-windows-amd64.zip`
 - 校验文件：`SHA256SUMS.txt`
 
-如果你不想自己编译，优先下载 Release 包使用。
+如果你不想自己编译，直接下载 Release 包即可。
 
 ## 最快启动
 
@@ -223,7 +223,7 @@ Release 中附带一个 Windows 桌面客户端包：`cloud-clipboard-desktop-wi
 
 ## GitHub 打包与 Releases
 
-仓库支持 GitHub 自动打包与发布，不需要每次都本地手工打包再上传。
+仓库支持 GitHub 自动打包与发布，不需要每次都在本地手工打包再上传。
 
 - `docker-package`：打 Docker 镜像归档
 - `release-package`：打服务端多平台包、桌面客户端包，并发布到 GitHub Releases
@@ -233,7 +233,7 @@ Release 中附带一个 Windows 桌面客户端包：`cloud-clipboard-desktop-wi
 - 推送版本标签，例如 `v0.1.0`
 - 在 GitHub Actions 页面手动触发 `release-package`
 
-也就是说，不是只能本地打包上传，GitHub Actions 可以直接完成构建并发布到 Releases。
+也就是说，这个项目不是只能本地打包上传，GitHub Actions 可以直接完成构建并发布到 Releases。
 
 `release-package` 成功后，Release 中会自动带上：
 
@@ -241,6 +241,15 @@ Release 中附带一个 Windows 桌面客户端包：`cloud-clipboard-desktop-wi
 - Docker 镜像归档包
 - Windows 桌面客户端包
 - `SHA256SUMS.txt` 校验文件
+
+建议后续统一使用正式版本号标签：
+
+- `v1.0.0`：首个正式稳定版
+- `v1.0.1`：仅修复问题，不改主要功能
+- `v1.1.0`：增加功能，但保持兼容
+- `v2.0.0`：存在明显不兼容变更
+
+如果只是日常试包，建议不要长期复用同一个标签，避免 Releases 里版本含义混乱。
 
 ## 常用命令
 

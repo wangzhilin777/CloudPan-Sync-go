@@ -134,6 +134,7 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: '1.23.9'
+          cache: false
 
       - name: Build desktop client
         shell: powershell
@@ -182,9 +183,20 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.event_name == 'workflow_dispatch' && inputs.tag_name || github.ref_name }}
-          name: ${{ github.event_name == 'workflow_dispatch' && (inputs.release_name || inputs.tag_name) || github.ref_name }}
+          name: ${{ github.event_name == 'workflow_dispatch' && (inputs.release_name || format('{0} 正式发布', inputs.tag_name)) || format('{0} 正式发布', github.ref_name) }}
           target_commitish: ${{ github.sha }}
-          generate_release_notes: true
+          generate_release_notes: false
+          body: |
+            CloudPan Sync Go 正式发布版本。
+
+            本次发布包含：
+            - Windows / Linux / macOS 服务端包
+            - Docker 镜像归档包
+            - Windows 桌面客户端包
+            - SHA256 校验文件
+
+            使用说明请参考 README：
+            https://github.com/wangzhilin777/CloudPan-Sync-go/blob/main/README.md
           files: |
             dist/cloudpan-sync-go-windows-amd64.zip
             dist/cloudpan-sync-go-linux-amd64.tar.gz
