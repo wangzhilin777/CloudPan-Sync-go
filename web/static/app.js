@@ -1327,6 +1327,54 @@ function renderSourceDeletionSummary(records, count = 0, scope = "task", prefill
   `;
 }
 
+function renderUploadCheckpointPartSummary(uploadedParts) {
+  if (!Array.isArray(uploadedParts) || !uploadedParts.length) {
+    return "-";
+  }
+  return uploadedParts
+    .slice(0, 3)
+    .map((item) => {
+      if (!item || typeof item !== "object") {
+        return "?";
+      }
+      const partNumber = stringifyValue(item.partNumber, item.part_index ?? "?");
+      const etag = firstNonEmpty(item.etag, item.eTag, item.partEtag, item.partETag);
+      return etag ? `${partNumber}:${etag}` : String(partNumber);
+    })
+    .join(" / ");
+}
+
+function renderUploadCheckpointProviderDataSummary(providerData) {
+  if (!providerData || typeof providerData !== "object") {
+    return "-";
+  }
+  const entries = Object.entries(providerData)
+    .filter(([key]) => String(key || "").trim() !== "")
+    .slice(0, 4)
+    .map(([key, value]) => {
+      if (value && typeof value === "object") {
+        const nestedKeys = Object.keys(value).filter(Boolean).slice(0, 3);
+        return `${key}{${nestedKeys.join(", ") || "..."}}`;
+      }
+      return `${key}=${stringifyValue(value, "-")}`;
+    });
+  return entries.length ? entries.join(" / ") : "-";
+}
+
+function renderUploadCheckpointResumeState(checkpoint) {
+  if (!checkpoint || typeof checkpoint !== "object") {
+    return "-";
+  }
+  const resumable =
+    firstNonEmpty(checkpoint.uploadId, checkpoint.fileId) ||
+    Number(checkpoint.partCount || 0) > 0 ||
+    Number(checkpoint.nextPartNumber || 0) > 0 ||
+    Number(checkpoint.uploadedPartCount || 0) > 0 ||
+    (Array.isArray(checkpoint.uploadedParts) && checkpoint.uploadedParts.length > 0) ||
+    (checkpoint.providerData && Object.keys(checkpoint.providerData).length > 0);
+  return resumable ? "可继续续传" : "仍需重新建会话";
+}
+
 function renderUploadCheckpoint(checkpoint) {
   if (!checkpoint || typeof checkpoint !== "object") {
     return "";
@@ -1344,8 +1392,16 @@ function renderUploadCheckpoint(checkpoint) {
       <span>${stringifyValue(checkpoint.uploadId, "-")}</span>
     </div>
     <div class="insight-card checkpoint-card">
+      <strong>续传就绪</strong>
+      <span>${escapeHTML(renderUploadCheckpointResumeState(checkpoint))}</span>
+    </div>
+    <div class="insight-card checkpoint-card">
       <strong>上传分片进度</strong>
       <span>${uploadedPartCount} / ${partCount}，证据 ${uploadedPartsLen} 段</span>
+    </div>
+    <div class="insight-card checkpoint-card">
+      <strong>已传分片摘要</strong>
+      <span>${escapeHTML(renderUploadCheckpointPartSummary(checkpoint.uploadedParts))}</span>
     </div>
     <div class="insight-card checkpoint-card">
       <strong>失败分片</strong>
@@ -1354,6 +1410,10 @@ function renderUploadCheckpoint(checkpoint) {
     <div class="insight-card checkpoint-card">
       <strong>下一个分片</strong>
       <span>${stringifyValue(checkpoint.nextPartNumber, "-")}</span>
+    </div>
+    <div class="insight-card checkpoint-card">
+      <strong>Provider 恢复线索</strong>
+      <span>${escapeHTML(renderUploadCheckpointProviderDataSummary(checkpoint.providerData))}</span>
     </div>
     <div class="insight-card checkpoint-card">
       <strong>上传状态</strong>

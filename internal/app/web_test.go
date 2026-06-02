@@ -180,6 +180,24 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "retrySelectedPaths") {
 		t.Fatalf("expected retrySelectedPaths evidence in app.js, got %q", body)
 	}
+	if !strings.Contains(body, "renderUploadCheckpointResumeState") {
+		t.Fatalf("expected upload checkpoint resumable-state renderer in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "renderUploadCheckpointPartSummary") {
+		t.Fatalf("expected upload checkpoint uploaded-parts summary renderer in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "renderUploadCheckpointProviderDataSummary") {
+		t.Fatalf("expected upload checkpoint provider-data summary renderer in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "续传就绪") {
+		t.Fatalf("expected upload checkpoint resumable label in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "已传分片摘要") {
+		t.Fatalf("expected upload checkpoint part summary label in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "Provider 恢复线索") {
+		t.Fatalf("expected upload checkpoint provider data label in app.js, got %q", body)
+	}
 	if !strings.Contains(body, "CALIBRATED") {
 		t.Fatalf("expected CALIBRATED risk resolution detail in app.js, got %q", body)
 	}
