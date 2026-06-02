@@ -6084,6 +6084,55 @@ function providerSmokeMissingReasons(item) {
   return Array.isArray(item?.acceptanceMissing) ? item.acceptanceMissing.filter(Boolean) : [];
 }
 
+function providerSmokeAnomalyMissingReasons(item) {
+  return Array.isArray(item?.anomalyMissing) ? item.anomalyMissing.filter(Boolean) : [];
+}
+
+function providerSmokeDraftSpecFromAnomaly(item) {
+  const missing = providerSmokeAnomalyMissingReasons(item);
+  if (missing.includes("auth_expired_sample_missing")) {
+    return {
+      label: "补授权失效样本",
+      category: "failed",
+      result: "failure",
+      operations: ["ValidateAuth", "Upload"],
+      focusResult: "failure",
+      note: "目标异常：auth_expired",
+    };
+  }
+  if (missing.includes("rate_limited_sample_missing")) {
+    return {
+      label: "补限流样本",
+      category: "partial_blocked",
+      result: "failure",
+      operations: ["ValidateAuth", "List", "Metadata", "Upload"],
+      focusResult: "failure",
+      note: "目标异常：rate_limited / risk_control",
+    };
+  }
+  if (missing.includes("local_file_missing_sample_missing")) {
+    return {
+      label: "补本地文件缺失样本",
+      category: "failed",
+      result: "failure",
+      operations: ["ValidateAuth", "Upload"],
+      focusResult: "failure",
+      note: "目标异常：local_file_missing",
+    };
+  }
+  if (missing.includes("pending_manual_sample_missing")) {
+    return {
+      label: "补人工确认样本",
+      category: "partial_blocked",
+      result: "failure",
+      operations: ["ValidateAuth", "List", "Metadata", "Upload"],
+      focusResult: "failure",
+      note: "目标异常：pending_manual / overwrite downgrade",
+    };
+  }
+  return null;
+}
+
 function draftProviderSmokeFromMatrix(item) {
   const protocolGroup = String(item?.protocolGroup || "").trim();
   const providerKey = firstNonEmpty(
@@ -6135,7 +6184,17 @@ function draftProviderSmokeFromMatrix(item) {
 
 function draftProviderSmokeActionFromMatrix(item) {
   const draft = draftProviderSmokeFromMatrix(item);
+  const anomalySpec = providerSmokeDraftSpecFromAnomaly(item);
   const actions = Array.isArray(item?.acceptanceActions) ? item.acceptanceActions.filter(Boolean) : [];
+  if (anomalySpec) {
+    draft.category = anomalySpec.category;
+    draft.result = anomalySpec.result;
+    draft.operations = Array.isArray(anomalySpec.operations) ? anomalySpec.operations.slice() : draft.operations;
+    draft.title = draft.protocolGroup ? `${draft.protocolGroup} ${anomalySpec.label}` : anomalySpec.label;
+    draft.note = [draft.note, anomalySpec.note, item?.anomalyAdvice || ""].filter(Boolean).join("；");
+    draft.focusResult = anomalySpec.focusResult || draft.result;
+    return draft;
+  }
   if (actions.length) {
     draft.title = `${draft.title} action`;
     draft.note = [draft.note, `本次目标：${actions.join("；")}`].filter(Boolean).join("；");
@@ -6143,10 +6202,15 @@ function draftProviderSmokeActionFromMatrix(item) {
   if (!draft.operations.length) {
     draft.operations = ["ValidateAuth"];
   }
+  draft.focusResult = draft.result;
   return draft;
 }
 
 function providerSmokeDraftActionLabel(item) {
+  const anomalySpec = providerSmokeDraftSpecFromAnomaly(item);
+  if (anomalySpec) {
+    return anomalySpec.label;
+  }
   const missing = providerSmokeMissingReasons(item);
   if (missing.includes("upload_smoke_success_missing")) {
     return "补上传 smoke";
@@ -6188,10 +6252,12 @@ function openProviderSmokeRecordInMatrix(id) {
 function draftProviderSmokeFromGap(item) {
   const draft = draftProviderSmokeActionFromMatrix(item);
   const label = providerSmokeDraftActionLabel(item);
-  if (draft.protocolGroup) {
-    draft.title = `${draft.protocolGroup} ${label}`;
-  } else {
-    draft.title = label;
+  if (!String(draft.title || "").trim()) {
+    if (draft.protocolGroup) {
+      draft.title = `${draft.protocolGroup} ${label}`;
+    } else {
+      draft.title = label;
+    }
   }
   return draft;
 }
@@ -6200,8 +6266,8 @@ function draftProviderSmokeAndFocus(item, { fromGap = false } = {}) {
   const draft = fromGap ? draftProviderSmokeFromGap(item) : draftProviderSmokeFromMatrix(item);
   hydrateProviderSmokeForm(draft);
   focusProviderSmokeRecordsByGroup(draft.protocolGroup || "");
-  if (String(draft.result || "").trim()) {
-    focusProviderSmokeRecordsByResult(draft.result || "");
+  if (String(draft.focusResult || draft.result || "").trim()) {
+    focusProviderSmokeRecordsByResult(draft.focusResult || draft.result || "");
   }
   if (fromGap) {
     showFlash("已按验收缺口预填 smoke 动作");

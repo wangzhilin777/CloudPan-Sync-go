@@ -631,17 +631,23 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 		waitForText(`#provider-smoke-records-filter-summary`, "当前没有 smoke 记录。"),
 		chromedp.Evaluate(`(() => document.querySelector('#provider-smoke-matrix [data-provider-smoke-draft-action="aliyun_123_open"]')?.click())()`, nil),
 		waitForText(`#flash`, "已按验收缺口预填 smoke 动作"),
-		waitForValueContains(`#provider-smoke-title`, "补上传 smoke"),
+		waitForValueContains(`#provider-smoke-title`, "补授权失效样本"),
+		waitForValue(`#provider-smoke-category`, "failed"),
+		waitForValue(`#provider-smoke-result`, "failure"),
 		chromedp.Evaluate(`(() => document.querySelector('#save-provider-smoke')?.click())()`, nil),
 		waitForText(`#flash`, "Provider smoke 记录已保存"),
-		waitForText(`#provider-smoke-records-filter-summary`, "1 / 1 条 smoke 记录"),
-		waitForText(`#provider-smoke-records`, "binary_upload_success"),
-		waitForText(`#provider-smoke-markdown`, "aliyun_123_open 补上传 smoke"),
-		waitForText(`#provider-smoke-markdown`, "Upload"),
-		chromedp.Evaluate(`(() => document.querySelector('#provider-smoke-matrix [data-provider-smoke-open-record]')?.click())()`, nil),
+		waitForText(`#provider-smoke-records-filter-summary`, "当前显示 1 /"),
+		waitForText(`#provider-smoke-records`, "补授权失效样本"),
+		chromedp.Evaluate(`(() => {
+		  const rows = Array.from(document.querySelectorAll('#provider-smoke-matrix .directory-row'));
+		  const row = rows.find((item) => item.textContent?.includes('aliyun_123_open'));
+		  row?.querySelector('[data-provider-smoke-open-record]')?.click();
+		})()`, nil),
 		waitForText(`#flash`, "已打开 smoke 样本并回填表单"),
-		chromedp.Evaluate(`(() => document.querySelector('#provider-smoke-matrix [data-provider-smoke-filter-status="accepted"]')?.click())()`, nil),
-		waitForText(`#flash`, "已按 accepted 收敛验收矩阵"),
+		waitForText(`#provider-smoke-markdown`, "aliyun_123_open 补授权失效样本"),
+		waitForText(`#provider-smoke-markdown`, "ValidateAuth"),
+		chromedp.Evaluate(`(() => document.querySelector('#provider-smoke-matrix [data-provider-smoke-filter-status="pending"]')?.click())()`, nil),
+		waitForText(`#flash`, "已按 pending 收敛验收矩阵"),
 	)
 
 	runStep(t, runCtx, "provider smoke matrix prefill profile risk",
@@ -651,10 +657,10 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 		waitForValueContains(`#profile-display-name`, "aliyun_123_open 风控模板"),
 		waitForValueContains(`#profile-extra`, `riskDefaults`),
 		waitForValueContains(`#profile-extra`, `riskDefaultsSourceDisplay`),
-		waitForValueContains(`#profile-extra`, `Smoke Matrix aliyun_123_open (accepted)`),
-		waitForValueContains(`#profile-extra`, `accepted_group`),
-		waitForValue(`#profile-risk-request-interval`, "1800"),
-		waitForValue(`#profile-risk-directory-interval`, "2600"),
+		waitForValueContains(`#profile-extra`, `Smoke Matrix aliyun_123_open (pending)`),
+		waitForValueContains(`#profile-extra`, `upload_sample`),
+		waitForValue(`#profile-risk-request-interval`, "1600"),
+		waitForValue(`#profile-risk-directory-interval`, "2200"),
 	)
 
 	runStep(t, runCtx, "provider smoke save auth profile",
@@ -695,8 +701,8 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 			}
 			return true;
 		})()`),
-		waitForTextContent(`#plan-target-profile-insight`, "Smoke Matrix aliyun_123_open (accepted)"),
-		waitForTextContent(`#plan-target-profile-insight`, "req 1800ms"),
+		waitForTextContent(`#plan-target-profile-insight`, "Smoke Matrix aliyun_123_open (pending)"),
+		waitForTextContent(`#plan-target-profile-insight`, "req 1600ms"),
 	)
 }
 
