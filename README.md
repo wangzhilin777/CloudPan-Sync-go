@@ -1,13 +1,12 @@
 # CloudPan-Sync-go
 
-CloudPan Sync 的 Go 重构版工作区。
+CloudPan Sync 多网盘互传控制台。
 
 - 当前仓库 README 仅保留项目、开发和测试信息。
 - 赞助商展示、收款码、打赏二维码和类似入口已从仓库说明中移除。
 
 ## 这是什么
 
-- 这是从 Python 单体迁移到 Go 的重构工程。
 - 这是一个多 provider 互传项目，不是“固定从某个来源传到某个目标”的定向工具。
 - 当前仓库已经具备完整的主流程闭环：
   - Go HTTP 服务
@@ -16,14 +15,14 @@ CloudPan Sync 的 Go 重构版工作区。
   - auth / planner / task 核心链路
   - runtime evidence / provider status 聚合
   - 轻量控制台前端
-- 当前更准确的定位是：
-  - “可运行、可测试、可继续落地 provider 真实实现的重构基座”
-  - 不是只停留在空骨架
-  - 也还不是全部 provider 已真实联网打通的最终版
+- 当前主要提供：
+  - 多 provider 之间的任务创建、运行、重试与状态查看
+  - 统一的授权档案、规划结果、运行证据和状态矩阵
+  - 面向日常联调、演示和持续补齐 provider 能力的控制台入口
 
 ## 先看文档
 
-- 重构实施计划：`docs/01-GO_REBUILD_PLAN.md`
+- 项目实施计划：`docs/01-GO_REBUILD_PLAN.md`
 - 当前功能与进度：`docs/02-PROJECT_STATUS.md`
 - 开发与上手说明：`docs/03-DEVELOPER_GUIDE.md`
 - API 工作流示例：`docs/04-API_WORKFLOW_EXAMPLES.md`
@@ -74,7 +73,7 @@ CloudPan Sync 的 Go 重构版工作区。
 ## 用一句话理解当前阶段
 
 - 当前仓库已经可以独立启动、独立测试、独立演示主流程。
-- 当前最主要的未完成项，不是“项目框架没搭完”，而是“各 provider 的真实联网能力还在逐家替换占位实现”。
+- 当前最主要的持续工作，是逐家补齐 provider 的真实联网能力和更多实战样本。
 
 ## 执行模式说明
 
