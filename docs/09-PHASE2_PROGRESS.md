@@ -81,6 +81,7 @@
 - 已补账号级恢复预算建议展示。
 - 已将样本结论继续同步回控制台推荐语义。
 - 已区分 smoke matrix 已验收与待补齐样本对推荐语义的影响。
+- 已把当前代码中的 provider / protocol group 默认风控模板整理成可核对清单，并补了契约测试锁定关键默认值与默认无时间窗语义。
 
 ### 对应提交
 
@@ -88,16 +89,18 @@
 - `f243023` 二期：展示账号级恢复预算建议
 - `494cd9a` 二期：细化样本来源推荐语义
 - `d8572ac` 二期：区分已验收与待补齐样本推荐
+- 当前轮次已新增 provider 风控模板清单与默认值契约测试，便于核对 `request interval / directory interval / retry limit / risk keywords` 当前到底落成了什么。
 
 ### 仍未完成
 
 - 还不能证明“各 provider 的默认节流建议已经根据真实联调样本完整回收”。
-- `request interval / directory interval / retry limit / auto retry window / risk keywords` 这套按协议族整理的结果，目前更像逐步内化到代码里，不是一份完整可核对的清单。
+- `request interval / directory interval / retry limit / risk keywords` 已经整理成可核对清单，但 `auto retry window` 仍主要依赖账号默认或任务级覆盖，尚未沉淀成一份真实样本驱动的完整默认表。
 - 高风险 provider 的账号级建议虽然已有一部分，但未看到一份“全部补齐完成”的验收结果。
 
 ### 当前判断
 
 - 这一主线属于“推荐语义和默认模板已经明显进步，但离‘按真实样本完整校准完毕’还有文档化和补齐工作”。
+- 相比上一轮，这条主线已经从“代码里有但难核对”推进到“仓库内可直接核对当前默认模板”，但真实样本驱动的最终校准还没完全闭环。
 
 ## 建议的进度理解
 

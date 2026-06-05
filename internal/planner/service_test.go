@@ -213,6 +213,146 @@ func TestDescribeProviderRiskDefaultsIncludesProtocolGroupCalibration(t *testing
 	}
 }
 
+func TestDescribeProviderRiskDefaultsCatalogContract(t *testing.T) {
+	registry := provider.NewRegistry(provider.DefaultCatalog()...)
+	tests := []struct {
+		providerKey        string
+		wantProtocolGroup  string
+		wantRecommended    RiskMode
+		wantRequest        int
+		wantPage           int
+		wantDirectory      int
+		wantCooldown       int
+		wantRetryLimit     int
+		wantMaxConcurrent  int
+		wantKeyword        string
+	}{
+		{
+			providerKey:       "aliyundrive_open",
+			wantProtocolGroup: "aliyun_123_open",
+			wantRecommended:   RiskModeBalanced,
+			wantRequest:       800,
+			wantPage:          300,
+			wantDirectory:     1000,
+			wantCooldown:      15,
+			wantRetryLimit:    3,
+			wantMaxConcurrent: 2,
+			wantKeyword:       "flow_limit",
+		},
+		{
+			providerKey:       "quark",
+			wantProtocolGroup: "quark_uc",
+			wantRecommended:   RiskModeSafe,
+			wantRequest:       1400,
+			wantPage:          120,
+			wantDirectory:     2200,
+			wantCooldown:      40,
+			wantRetryLimit:    3,
+			wantMaxConcurrent: 1,
+			wantKeyword:       "captcha",
+		},
+		{
+			providerKey:       "xunlei",
+			wantProtocolGroup: "xunlei_pikpak",
+			wantRecommended:   RiskModeBalanced,
+			wantRequest:       800,
+			wantPage:          250,
+			wantDirectory:     1000,
+			wantCooldown:      15,
+			wantRetryLimit:    3,
+			wantMaxConcurrent: 2,
+			wantKeyword:       "risk_detected",
+		},
+		{
+			providerKey:       "baidu_netdisk",
+			wantProtocolGroup: "baidu_netdisk",
+			wantRecommended:   RiskModeSafe,
+			wantRequest:       1800,
+			wantPage:          100,
+			wantDirectory:     3000,
+			wantCooldown:      45,
+			wantRetryLimit:    2,
+			wantMaxConcurrent: 1,
+			wantKeyword:       "hit_risk_control",
+		},
+		{
+			providerKey:       "189cloud",
+			wantProtocolGroup: "189cloud",
+			wantRecommended:   RiskModeSafe,
+			wantRequest:       1200,
+			wantPage:          150,
+			wantDirectory:     2000,
+			wantCooldown:      35,
+			wantRetryLimit:    3,
+			wantMaxConcurrent: 1,
+			wantKeyword:       "token_expired",
+		},
+		{
+			providerKey:       "115_open",
+			wantProtocolGroup: "115_open",
+			wantRecommended:   RiskModeSafe,
+			wantRequest:       1000,
+			wantPage:          200,
+			wantDirectory:     1800,
+			wantCooldown:      30,
+			wantRetryLimit:    3,
+			wantMaxConcurrent: 1,
+			wantKeyword:       "rate_limit",
+		},
+		{
+			providerKey:       "guangya",
+			wantProtocolGroup: "guangya",
+			wantRecommended:   RiskModeSafe,
+			wantRequest:       900,
+			wantPage:          180,
+			wantDirectory:     1600,
+			wantCooldown:      25,
+			wantRetryLimit:    3,
+			wantMaxConcurrent: 1,
+			wantKeyword:       "rate_limit",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.providerKey, func(t *testing.T) {
+			entry, ok := registry.Get(tt.providerKey)
+			if !ok {
+				t.Fatalf("expected provider %s in registry", tt.providerKey)
+			}
+			defaults := DescribeProviderRiskDefaults(entry.Meta)
+			if defaults.ProtocolGroup != tt.wantProtocolGroup {
+				t.Fatalf("expected protocolGroup %s, got %+v", tt.wantProtocolGroup, defaults)
+			}
+			if defaults.RecommendedRiskMode != tt.wantRecommended {
+				t.Fatalf("expected recommended risk mode %s, got %+v", tt.wantRecommended, defaults)
+			}
+			if defaults.Profile.RequestIntervalMS != tt.wantRequest {
+				t.Fatalf("expected requestIntervalMs %d, got %+v", tt.wantRequest, defaults.Profile)
+			}
+			if defaults.Profile.PageSize != tt.wantPage {
+				t.Fatalf("expected pageSize %d, got %+v", tt.wantPage, defaults.Profile)
+			}
+			if defaults.Profile.DirectoryIntervalMS != tt.wantDirectory {
+				t.Fatalf("expected directoryIntervalMs %d, got %+v", tt.wantDirectory, defaults.Profile)
+			}
+			if defaults.Profile.CooldownSeconds != tt.wantCooldown {
+				t.Fatalf("expected cooldownSeconds %d, got %+v", tt.wantCooldown, defaults.Profile)
+			}
+			if defaults.Profile.RetryLimit != tt.wantRetryLimit {
+				t.Fatalf("expected retryLimit %d, got %+v", tt.wantRetryLimit, defaults.Profile)
+			}
+			if defaults.Profile.MaxConcurrent != tt.wantMaxConcurrent {
+				t.Fatalf("expected maxConcurrent %d, got %+v", tt.wantMaxConcurrent, defaults.Profile)
+			}
+			if defaults.Profile.AutoRetryStartHour != 0 || defaults.Profile.AutoRetryEndHour != 0 {
+				t.Fatalf("expected default auto retry window to stay empty, got %+v", defaults.Profile)
+			}
+			if !containsString(defaults.Profile.RiskKeywords, tt.wantKeyword) {
+				t.Fatalf("expected risk keyword %q in %#v", tt.wantKeyword, defaults.Profile.RiskKeywords)
+			}
+		})
+	}
+}
+
 func TestBuildPreviewCalibratesRiskProfileByProvider(t *testing.T) {
 	registry := provider.NewRegistry(provider.DefaultCatalog()...)
 	tests := []struct {
