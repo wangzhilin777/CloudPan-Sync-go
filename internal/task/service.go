@@ -3396,6 +3396,24 @@ func buildEvidenceReport(summary EvidenceSummary, statuses []StatusSummary, smok
 			)
 		}
 	}
+	b.WriteString("\n## 自动补传公平性摘要\n\n")
+	if len(summary.AutoRecoverPool) == 0 {
+		b.WriteString("- 当前没有自动补传候选池数据。\n")
+	} else {
+		b.WriteString("| Mode | Tasks | Providers | Profiles | ProtocolGroups | Suggested Budgets | Advice |\n")
+		b.WriteString("| --- | ---: | ---: | ---: | ---: | --- | --- |\n")
+		for _, item := range summary.AutoRecoverPool {
+			fmt.Fprintf(&b, "| %s | %d | %d | %d | %d | %s | %s |\n",
+				markdownCell(firstNonEmpty(item.Mode, "-")),
+				item.TaskCount,
+				item.ProviderCount,
+				item.ProfileCount,
+				len(item.ProtocolGroups),
+				markdownCell(fmt.Sprintf("group %d / provider %d / profile %d", item.SuggestedProtocolGroupBudget, item.SuggestedProviderBudget, item.SuggestedProfileBudget)),
+				markdownCell(firstNonEmpty(item.Advice, "-")),
+			)
+		}
+	}
 	b.WriteString("\n## Provider 样本矩阵\n\n")
 	if len(statuses) == 0 {
 		b.WriteString("- 当前没有 provider 状态样本。\n")

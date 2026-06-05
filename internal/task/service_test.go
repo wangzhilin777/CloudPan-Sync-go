@@ -531,6 +531,13 @@ func TestServiceProtocolCoverageSummary(t *testing.T) {
 	if !strings.Contains(report.Markdown, "## 代表任务样本") {
 		t.Fatalf("expected sample section in report markdown, got %s", report.Markdown)
 	}
+	if !strings.Contains(report.Markdown, "## 自动补传公平性摘要") {
+		t.Fatalf("expected auto recover fairness section in report markdown, got %s", report.Markdown)
+	}
+	if !strings.Contains(report.Markdown, "| Mode | Tasks | Providers | Profiles | ProtocolGroups | Suggested Budgets | Advice |") &&
+		!strings.Contains(report.Markdown, "- 当前没有自动补传候选池数据。") {
+		t.Fatalf("expected auto recover fairness table or empty-state in report markdown, got %s", report.Markdown)
+	}
 	if !strings.Contains(report.Markdown, "RetryMode") || !strings.Contains(report.Markdown, "RetryScope") || !strings.Contains(report.Markdown, "RetryPaths") {
 		t.Fatalf("expected retry evidence headers in report markdown, got %s", report.Markdown)
 	}

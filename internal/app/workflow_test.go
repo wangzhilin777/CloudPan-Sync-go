@@ -610,6 +610,13 @@ func TestAppWorkflowMainline(t *testing.T) {
 	if got := reportData["markdown"].(string); !strings.Contains(got, "## 代表任务样本") {
 		t.Fatalf("expected sample section in report markdown, got %s", got)
 	}
+	if got := reportData["markdown"].(string); !strings.Contains(got, "## 自动补传公平性摘要") {
+		t.Fatalf("expected auto recover fairness section in report markdown, got %s", got)
+	}
+	if got := reportData["markdown"].(string); !strings.Contains(got, "| Mode | Tasks | Providers | Profiles | ProtocolGroups | Suggested Budgets | Advice |") &&
+		!strings.Contains(got, "- 当前没有自动补传候选池数据。") {
+		t.Fatalf("expected auto recover fairness table or empty-state in report markdown, got %s", got)
+	}
 
 	savedReportResp := invokeJSON(t, handler, http.MethodPost, "/api/evidence/report", map[string]interface{}{
 		"title": "工作流验收报告",
