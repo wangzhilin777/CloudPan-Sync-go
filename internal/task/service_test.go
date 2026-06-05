@@ -7848,7 +7848,7 @@ func TestServiceProviderSmokeRecords(t *testing.T) {
 	if !strings.Contains(fetched.Markdown, "## 固定记录模板") {
 		t.Fatalf("expected fixed smoke template section, got %s", fetched.Markdown)
 	}
-	if !strings.Contains(fetched.Markdown, "phase2_smoke_template_v1") {
+	if !strings.Contains(fetched.Markdown, "phase2_smoke_template_v2") {
 		t.Fatalf("expected smoke template version, got %s", fetched.Markdown)
 	}
 	if !strings.Contains(fetched.Markdown, "真实浏览成功样本") {
@@ -7859,6 +7859,12 @@ func TestServiceProviderSmokeRecords(t *testing.T) {
 	}
 	if !strings.Contains(fetched.Markdown, "基础成功样本") {
 		t.Fatalf("expected reuse advice in markdown, got %s", fetched.Markdown)
+	}
+	if !strings.Contains(fetched.Markdown, "代表性样本维度") || !strings.Contains(fetched.Markdown, "未标记") {
+		t.Fatalf("expected representative dimension line in markdown, got %s", fetched.Markdown)
+	}
+	if !strings.Contains(fetched.Markdown, "自动补传/公平性关注点") {
+		t.Fatalf("expected auto recover focus line in markdown, got %s", fetched.Markdown)
 	}
 
 	summary, err := svc.ProviderSmokeSummary(ctx)
@@ -8120,6 +8126,19 @@ func TestServiceProviderSmokeMatrixTracksRepresentativeSamples(t *testing.T) {
 	}
 	if !strings.Contains(matrix[0].RepresentativeAdvice, "代表性样本已覆盖") {
 		t.Fatalf("expected representative complete advice, got %s", matrix[0].RepresentativeAdvice)
+	}
+	fetched, ok, err := svc.GetProviderSmokeRecord(ctx, summary[0].SampleRecordID)
+	if err != nil {
+		t.Fatalf("GetProviderSmokeRecord(representative) error = %v", err)
+	}
+	if !ok {
+		t.Fatal("expected representative smoke record to exist")
+	}
+	if !strings.Contains(fetched.Markdown, "代表性样本维度: 大文件 / 多层目录 / 重试恢复/续传") {
+		t.Fatalf("expected representative labels in markdown, got %s", fetched.Markdown)
+	}
+	if !strings.Contains(fetched.Markdown, "自动补传/公平性关注点") {
+		t.Fatalf("expected auto recover focus in representative markdown, got %s", fetched.Markdown)
 	}
 }
 

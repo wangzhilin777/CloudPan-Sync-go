@@ -3646,7 +3646,7 @@ func inferProviderSmokeCategory(record ProviderSmokeRecord) string {
 }
 
 func providerSmokeTemplateVersion() string {
-	return "phase2_smoke_template_v1"
+	return "phase2_smoke_template_v2"
 }
 
 func providerSmokeEnvironmentKeys(record ProviderSmokeRecord) []string {
@@ -3731,6 +3731,36 @@ func providerSmokeEvidenceCompleteness(record ProviderSmokeRecord) string {
 	}
 }
 
+func providerSmokeRepresentativeLabels(record ProviderSmokeRecord) []string {
+	keys := smokeRepresentativeSampleKeys(record)
+	if len(keys) == 0 {
+		return nil
+	}
+	labels := make([]string, 0, len(keys))
+	for _, key := range keys {
+		switch key {
+		case "large_file_sample_missing":
+			labels = append(labels, "大文件")
+		case "nested_directory_sample_missing":
+			labels = append(labels, "多层目录")
+		case "retry_recovery_sample_missing":
+			labels = append(labels, "重试恢复/续传")
+		}
+	}
+	return labels
+}
+
+func providerSmokeAutoRecoverFocus(record ProviderSmokeRecord) string {
+	labels := providerSmokeRepresentativeLabels(record)
+	if len(labels) > 0 {
+		return "建议同步关注自动补传、公平预算与续传链路，当前样本涉及：" + strings.Join(labels, " / ")
+	}
+	if strings.EqualFold(record.Result, "success") {
+		return "建议继续补任务覆盖、异常样本与自动补传证据，避免只有一次性成功记录。"
+	}
+	return "建议补充 blocked reason、重试动作与预算影响，便于后续归档到自动补传公平性证据。"
+}
+
 func buildProviderSmokeMarkdown(record ProviderSmokeRecord) string {
 	var b strings.Builder
 	title := strings.TrimSpace(record.Title)
@@ -3766,6 +3796,13 @@ func buildProviderSmokeMarkdown(record ProviderSmokeRecord) string {
 		fmt.Fprintf(&b, "- 环境键摘要: %s\n", markdownCell(strings.Join(keys, ", ")))
 	}
 	fmt.Fprintf(&b, "- 复用建议: %s\n", markdownCell(providerSmokeReuseAdvice(record)))
+	representative := providerSmokeRepresentativeLabels(record)
+	if len(representative) == 0 {
+		b.WriteString("- 代表性样本维度: 未标记\n")
+	} else {
+		fmt.Fprintf(&b, "- 代表性样本维度: %s\n", markdownCell(strings.Join(representative, " / ")))
+	}
+	fmt.Fprintf(&b, "- 自动补传/公平性关注点: %s\n", markdownCell(providerSmokeAutoRecoverFocus(record)))
 	b.WriteString("\n## 本次覆盖范围\n\n")
 	if len(record.Operations) == 0 {
 		b.WriteString("- 未记录具体操作。\n")
