@@ -615,6 +615,18 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "draftProviderSmokeActionFromMatrix") {
 		t.Fatalf("expected provider smoke draft action helper in app.js, got %q", body)
 	}
+	if !strings.Contains(body, "providerSmokeDraftSpecFromRepresentative") {
+		t.Fatalf("expected representative smoke draft helper in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "补大文件样本") {
+		t.Fatalf("expected representative large-file draft label in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "补多层目录样本") {
+		t.Fatalf("expected representative nested-directory draft label in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "补重试恢复样本") {
+		t.Fatalf("expected representative retry-recovery draft label in app.js, got %q", body)
+	}
 	if !strings.Contains(body, "profileRiskDefaultsFromSmokeMatrix") {
 		t.Fatalf("expected provider smoke to profile risk helper in app.js, got %q", body)
 	}

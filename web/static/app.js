@@ -6219,6 +6219,41 @@ function providerSmokeDraftSpecFromAnomaly(item) {
   return null;
 }
 
+function providerSmokeDraftSpecFromRepresentative(item) {
+  const missing = Array.isArray(item?.representativeMissing) ? item.representativeMissing : [];
+  if (missing.includes("large_file_sample_missing")) {
+    return {
+      label: "补大文件样本",
+      category: "binary_upload_success",
+      result: "success",
+      operations: ["ValidateAuth", "List", "Metadata", "CreateDir", "Upload", "checkpoint"],
+      focusResult: "success",
+      note: "目标代表样本：large_file / multipart / 大文件上传恢复",
+    };
+  }
+  if (missing.includes("nested_directory_sample_missing")) {
+    return {
+      label: "补多层目录样本",
+      category: "browse_only",
+      result: "success",
+      operations: ["ValidateAuth", "List", "Metadata", "CreateDir", "leaf_first"],
+      focusResult: "success",
+      note: "目标代表样本：nested_directory / 多层目录 / subtree",
+    };
+  }
+  if (missing.includes("retry_recovery_sample_missing")) {
+    return {
+      label: "补重试恢复样本",
+      category: "binary_upload_success",
+      result: "success",
+      operations: ["ValidateAuth", "List", "Metadata", "Upload", "checkpoint"],
+      focusResult: "success",
+      note: "目标代表样本：retry_recovery / checkpoint / resume / 续传",
+    };
+  }
+  return null;
+}
+
 function draftProviderSmokeFromMatrix(item) {
   const protocolGroup = String(item?.protocolGroup || "").trim();
   const providerKey = firstNonEmpty(
@@ -6271,6 +6306,7 @@ function draftProviderSmokeFromMatrix(item) {
 function draftProviderSmokeActionFromMatrix(item) {
   const draft = draftProviderSmokeFromMatrix(item);
   const anomalySpec = providerSmokeDraftSpecFromAnomaly(item);
+  const representativeSpec = providerSmokeDraftSpecFromRepresentative(item);
   const actions = Array.isArray(item?.acceptanceActions) ? item.acceptanceActions.filter(Boolean) : [];
   if (anomalySpec) {
     draft.category = anomalySpec.category;
@@ -6279,6 +6315,15 @@ function draftProviderSmokeActionFromMatrix(item) {
     draft.title = draft.protocolGroup ? `${draft.protocolGroup} ${anomalySpec.label}` : anomalySpec.label;
     draft.note = [draft.note, anomalySpec.note, item?.anomalyAdvice || ""].filter(Boolean).join("；");
     draft.focusResult = anomalySpec.focusResult || draft.result;
+    return draft;
+  }
+  if (representativeSpec) {
+    draft.category = representativeSpec.category;
+    draft.result = representativeSpec.result;
+    draft.operations = Array.isArray(representativeSpec.operations) ? representativeSpec.operations.slice() : draft.operations;
+    draft.title = draft.protocolGroup ? `${draft.protocolGroup} ${representativeSpec.label}` : representativeSpec.label;
+    draft.note = [draft.note, representativeSpec.note, item?.representativeAdvice || ""].filter(Boolean).join("；");
+    draft.focusResult = representativeSpec.focusResult || draft.result;
     return draft;
   }
   if (actions.length) {
@@ -6296,6 +6341,10 @@ function providerSmokeDraftActionLabel(item) {
   const anomalySpec = providerSmokeDraftSpecFromAnomaly(item);
   if (anomalySpec) {
     return anomalySpec.label;
+  }
+  const representativeSpec = providerSmokeDraftSpecFromRepresentative(item);
+  if (representativeSpec) {
+    return representativeSpec.label;
   }
   const missing = providerSmokeMissingReasons(item);
   if (missing.includes("upload_smoke_success_missing")) {
