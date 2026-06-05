@@ -321,6 +321,8 @@ function renderProviderRiskTemplateDetail(template, { title = "默认风控模�
     `<div class="insight-card">`,
     `<strong>${escapeHTML(title)}</strong>`,
     `<span>${escapeHTML(renderRiskProfileCompact(template.calibrated))}</span>`,
+    `<div class="muted">auto retry window ${escapeHTML(renderRiskWindow(template.calibrated))}</div>`,
+    `<div class="muted">window source ${escapeHTML(renderAutoRetryWindowSource(template.autoRetryWindowSource))}</div>`,
     `<div class="muted">recommended ${escapeHTML(stringifyValue(template.recommendedMode, "-"))}</div>`,
     `<div class="muted">recover budget ${escapeHTML(renderRecoverBudgetCompact(template.recoverBudget))}</div>`,
     `<div class="muted">budget advice ${escapeHTML(renderRecoverBudgetAdvice(template.recoverBudget, template.providerKey || ""))}</div>`,
@@ -330,6 +332,7 @@ function renderProviderRiskTemplateDetail(template, { title = "默认风控模�
     parts.push(`<div class="muted">reasons ${escapeHTML(reasons.join(" / ") || "-")}</div>`);
     parts.push(`<div class="muted">risk hints ${escapeHTML(providerHints.join(" / ") || "-")}</div>`);
     parts.push(`<div class="muted">risk traits ${escapeHTML(providerTraits.join(", ") || "-")}</div>`);
+    parts.push(`<div class="muted">window advice ${escapeHTML(stringifyValue(template.autoRetryWindowAdvice, "-"))}</div>`);
     parts.push(`<div class="muted">advice ${escapeHTML(stringifyValue(template.recommendedReason, "-"))}</div>`);
     parts.push(`<div class="muted">warning ${escapeHTML(stringifyValue(template.aggressiveRiskWarning, "-"))}</div>`);
   }
@@ -611,6 +614,17 @@ function renderRiskWindow(profile) {
     return "always_on";
   }
   return `${start}:00-${end}:00 UTC`;
+}
+
+function renderAutoRetryWindowSource(source) {
+  switch (String(source || "").trim()) {
+    case "provider_default":
+      return "provider default";
+    case "empty_until_profile_or_override":
+      return "provider default empty";
+    default:
+      return stringifyValue(source, "-");
+  }
 }
 
 function escapeHTML(value) {

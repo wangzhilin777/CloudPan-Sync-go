@@ -67,6 +67,12 @@ func TestAppWorkflowMainline(t *testing.T) {
 	if _, ok := defaultRiskTemplate["recoverBudget"].(map[string]interface{}); !ok {
 		t.Fatalf("expected provider recoverBudget in defaultRiskTemplate, got %#v", defaultRiskTemplate["recoverBudget"])
 	}
+	if got := defaultRiskTemplate["autoRetryWindowSource"].(string); got != "empty_until_profile_or_override" {
+		t.Fatalf("expected provider autoRetryWindowSource empty_until_profile_or_override, got %#v", got)
+	}
+	if got := defaultRiskTemplate["autoRetryWindowAdvice"].(string); !strings.Contains(got, "always_on") {
+		t.Fatalf("expected provider autoRetryWindowAdvice to mention always_on, got %#v", got)
+	}
 	if hints, ok := defaultRiskTemplate["providerRiskHints"].([]interface{}); !ok || len(hints) == 0 {
 		t.Fatalf("expected providerRiskHints in defaultRiskTemplate, got %#v", defaultRiskTemplate["providerRiskHints"])
 	}
@@ -86,6 +92,12 @@ func TestAppWorkflowMainline(t *testing.T) {
 	}
 	if _, ok := capabilityRiskTemplate["recoverBudget"].(map[string]interface{}); !ok {
 		t.Fatalf("expected provider defaultRiskTemplate recoverBudget, got %#v", capabilityRiskTemplate["recoverBudget"])
+	}
+	if got := capabilityRiskTemplate["autoRetryWindowSource"].(string); got != "empty_until_profile_or_override" {
+		t.Fatalf("expected capability defaultRiskTemplate autoRetryWindowSource empty_until_profile_or_override, got %#v", got)
+	}
+	if got := capabilityRiskTemplate["autoRetryWindowAdvice"].(string); !strings.Contains(got, "always_on") {
+		t.Fatalf("expected capability defaultRiskTemplate autoRetryWindowAdvice to mention always_on, got %#v", got)
 	}
 
 	profileResp := invokeJSON(t, handler, http.MethodPost, "/api/auth/profiles", map[string]interface{}{

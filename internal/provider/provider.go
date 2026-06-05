@@ -7,6 +7,8 @@ type RiskTemplateSummary struct {
 	Base                  any      `json:"base,omitempty"`
 	Calibrated            any      `json:"calibrated,omitempty"`
 	RecoverBudget         any      `json:"recoverBudget,omitempty"`
+	AutoRetryWindowSource string   `json:"autoRetryWindowSource,omitempty"`
+	AutoRetryWindowAdvice string   `json:"autoRetryWindowAdvice,omitempty"`
 	CalibrationReasons    []string `json:"calibrationReasons,omitempty"`
 	ProviderRiskHints     []string `json:"providerRiskHints,omitempty"`
 	ProviderRiskTraits    []string `json:"providerRiskTraits,omitempty"`

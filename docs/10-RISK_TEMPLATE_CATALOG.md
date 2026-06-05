@@ -85,6 +85,7 @@
   - auth profile 默认覆盖
   - 任务级 `riskOverride`
   - 后续真实联调样本校准
+- 当前 provider 默认模板摘要已显式返回 `autoRetryWindowSource / autoRetryWindowAdvice`，用于区分“代码默认空窗口”与“后续由账号默认或任务覆盖注入”的来源语义。
 
 ## 对二期主线三的意义
 

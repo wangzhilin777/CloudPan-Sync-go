@@ -299,12 +299,28 @@ func ProviderDefaultRiskTemplate(meta provider.Provider) provider.RiskTemplateSu
 		Base:                  resolution.Base,
 		Calibrated:            resolution.Calibrated,
 		RecoverBudget:         resolution.RecoverBudget,
+		AutoRetryWindowSource: defaultRiskAutoRetryWindowSource(resolution.Calibrated),
+		AutoRetryWindowAdvice: defaultRiskAutoRetryWindowAdvice(resolution.Calibrated),
 		CalibrationReasons:    append([]string(nil), defaults.CalibrationReasons...),
 		ProviderRiskHints:     append([]string(nil), defaults.ProviderRiskHints...),
 		ProviderRiskTraits:    append([]string(nil), defaults.ProviderRiskTraits...),
 		RecommendedReason:     defaults.RecommendedRiskReason,
 		AggressiveRiskWarning: defaults.AggressiveRiskWarning,
 	}
+}
+
+func defaultRiskAutoRetryWindowSource(profile RiskProfile) string {
+	if profile.AutoRetryStartHour > 0 || profile.AutoRetryEndHour > 0 {
+		return "provider_default"
+	}
+	return "empty_until_profile_or_override"
+}
+
+func defaultRiskAutoRetryWindowAdvice(profile RiskProfile) string {
+	if profile.AutoRetryStartHour > 0 || profile.AutoRetryEndHour > 0 {
+		return "当前 provider 默认模板已内建自动补传时间窗，可直接按该窗口评估后台恢复时段。"
+	}
+	return "当前 provider 默认模板未内建自动补传时间窗，默认按 always_on 解释；如需限时恢复，请通过账号默认或任务级覆盖补充。"
 }
 
 func DescribeProviderRiskDefaults(meta provider.Provider) ProviderRiskDefaults {

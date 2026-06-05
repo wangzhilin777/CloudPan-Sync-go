@@ -213,6 +213,21 @@ func TestDescribeProviderRiskDefaultsIncludesProtocolGroupCalibration(t *testing
 	}
 }
 
+func TestProviderDefaultRiskTemplateIncludesAutoRetryWindowSummary(t *testing.T) {
+	registry := provider.NewRegistry(provider.DefaultCatalog()...)
+	entry, ok := registry.Get("aliyundrive_open")
+	if !ok {
+		t.Fatal("expected aliyundrive_open in registry")
+	}
+	template := ProviderDefaultRiskTemplate(entry.Meta)
+	if template.AutoRetryWindowSource != "empty_until_profile_or_override" {
+		t.Fatalf("expected auto retry window source empty_until_profile_or_override, got %+v", template)
+	}
+	if !strings.Contains(template.AutoRetryWindowAdvice, "always_on") {
+		t.Fatalf("expected auto retry window advice to mention always_on, got %+v", template)
+	}
+}
+
 func TestDescribeProviderRiskDefaultsCatalogContract(t *testing.T) {
 	registry := provider.NewRegistry(provider.DefaultCatalog()...)
 	tests := []struct {

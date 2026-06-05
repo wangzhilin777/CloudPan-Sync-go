@@ -270,6 +270,15 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "恢复预算理由") {
 		t.Fatalf("expected recover budget reason insight card label in app.js, got %q", body)
 	}
+	if !strings.Contains(body, "renderAutoRetryWindowSource") {
+		t.Fatalf("expected renderAutoRetryWindowSource helper in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "window source") {
+		t.Fatalf("expected auto retry window source text in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "window advice") {
+		t.Fatalf("expected auto retry window advice text in app.js, got %q", body)
+	}
 	if !strings.Contains(body, "profileDefaultKindBias") {
 		t.Fatalf("expected snapshot summary profileDefaultKindBias field in app.js, got %q", body)
 	}
