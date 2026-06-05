@@ -2387,6 +2387,170 @@ func TestServiceRetryWithOptionsSelectedRetrySubsetKeepsOnlyChosenPaths(t *testi
 	}
 }
 
+func TestServiceRetryWithOptionsSelectedRetrySubsetKeepsCheckpointContext(t *testing.T) {
+	ctx := context.Background()
+	store, err := sqlitestore.New(ctx, filepath.Join(t.TempDir(), "retry-selected-checkpoint.db"))
+	if err != nil {
+		t.Fatalf("new store: %v", err)
+	}
+	defer func() { _ = store.Close() }()
+
+	type uploadCall struct {
+		path   string
+		resume *provider.ResumeUpload
+	}
+	uploadCalls := make([]uploadCall, 0, 4)
+	adapter := &scriptedAdapter{
+		meta: provider.Provider{
+			Key:              "retry_selected_checkpoint_target",
+			DisplayName:      "Retry Selected Checkpoint Target",
+			ProtocolGroup:    "fake",
+			AuthModes:        []string{"manual_token"},
+			FastUploadInputs: []string{"md5", "size"},
+			FallbackModes:    []string{"download_upload"},
+			Status:           "planned",
+		},
+		capability: provider.CapabilitySet{
+			SupportsAuthValidation: true,
+			SupportsUpload:         true,
+		},
+		uploadFunc: func(req provider.UploadRequest) provider.UploadResult {
+			var resumeCopy *provider.ResumeUpload
+			if req.ResumeUpload != nil {
+				copied := *req.ResumeUpload
+				resumeCopy = &copied
+			}
+			uploadCalls = append(uploadCalls, uploadCall{path: req.Path, resume: resumeCopy})
+			if len(uploadCalls) <= 2 {
+				return provider.UploadResult{
+					OperationResult: provider.OperationResult{
+						Status:  "provider_request_failed",
+						Message: "checkpoint interrupted",
+						Mode:    "fake_checkpoint_failed",
+						Payload: map[string]interface{}{
+							"fileId":           "file-" + strings.TrimPrefix(req.Path, "/"),
+							"uploadId":         "upload-" + strings.TrimPrefix(req.Path, "/"),
+							"nextPartNumber":   2,
+							"failedPartNumber": 2,
+							"providerData": map[string]interface{}{
+								"resumable": map[string]interface{}{
+									"path": req.Path,
+								},
+							},
+						},
+					},
+				}
+			}
+			return provider.UploadResult{
+				OperationResult: provider.OperationResult{
+					OK:      true,
+					Status:  "ok",
+					Message: "selected checkpoint resolved",
+					Mode:    "fake_checkpoint_resume_ok",
+				},
+			}
+		},
+	}
+
+	registry := provider.NewRegistry(adapter)
+	authSvc := auth.NewService(store, registry)
+	svc := NewService(store, registry, authSvc)
+	profile, err := authSvc.CreateProfile(ctx, auth.CreateProfileInput{
+		ProviderKey: "retry_selected_checkpoint_target",
+		AuthMode:    "manual_token",
+		DisplayName: "retry selected checkpoint target",
+		Token:       "token-1",
+	})
+	if err != nil {
+		t.Fatalf("CreateProfile() error = %v", err)
+	}
+
+	fileA := filepath.Join(t.TempDir(), "retry-checkpoint-a.bin")
+	fileB := filepath.Join(t.TempDir(), "retry-checkpoint-b.bin")
+	if err := os.WriteFile(fileA, []byte("a"), 0o644); err != nil {
+		t.Fatalf("WriteFile(fileA) error = %v", err)
+	}
+	if err := os.WriteFile(fileB, []byte("b"), 0o644); err != nil {
+		t.Fatalf("WriteFile(fileB) error = %v", err)
+	}
+
+	detail, err := svc.Create(ctx, CreateRequest{
+		SourceProvider:  "guangya",
+		TargetProvider:  "retry_selected_checkpoint_target",
+		TargetProfileID: profile.ID,
+		ThresholdMB:     1,
+		Entries: []planner.SourceEntry{
+			{Path: "/retry-a.bin", Size: 1024, MD5: "md5-a", LocalPath: fileA},
+			{Path: "/retry-b.bin", Size: 2048, MD5: "md5-b", LocalPath: fileB},
+		},
+	})
+	if err != nil {
+		t.Fatalf("Create() error = %v", err)
+	}
+
+	firstRun, ok, err := svc.Run(ctx, detail.Task.ID)
+	if err != nil || !ok {
+		t.Fatalf("Run() error=%v ok=%v", err, ok)
+	}
+	if firstRun.Task.State != StateCompletedWithErrors {
+		t.Fatalf("expected completed_with_errors, got %s", firstRun.Task.State)
+	}
+	if len(firstRun.Runtime.RetryQueue) != 2 {
+		t.Fatalf("expected retry queue len 2, got %#v", firstRun.Runtime.RetryQueue)
+	}
+
+	retried, ok, err := svc.RetryWithOptions(ctx, detail.Task.ID, RetryOptions{
+		Paths: []string{"/retry-b.bin"},
+		Scope: "selected_retry_subset",
+	})
+	if err != nil || !ok {
+		t.Fatalf("RetryWithOptions() error=%v ok=%v", err, ok)
+	}
+	if len(retried.Plan.Items) != 1 || retried.Plan.Items[0].Path != "/retry-b.bin" {
+		t.Fatalf("expected selected queue retry to keep only /retry-b.bin, got %#v", retried.Plan.Items)
+	}
+	checkpoints, ok := retried.Plan.Metadata["retryUploadCheckpoints"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("expected retryUploadCheckpoints metadata, got %#v", retried.Plan.Metadata["retryUploadCheckpoints"])
+	}
+	if len(checkpoints) != 1 {
+		t.Fatalf("expected one filtered checkpoint, got %#v", checkpoints)
+	}
+	if _, exists := checkpoints["/retry-a.bin"]; exists {
+		t.Fatalf("expected /retry-a.bin checkpoint to be excluded, got %#v", checkpoints)
+	}
+	checkpoint := uploadCheckpointFromMetadata(checkpoints["/retry-b.bin"])
+	if checkpoint == nil || checkpoint.ItemPath != "/retry-b.bin" {
+		t.Fatalf("expected /retry-b.bin checkpoint metadata, got %#v", checkpoints["/retry-b.bin"])
+	}
+	if retried.Runtime.UploadCheckpoint == nil || retried.Runtime.UploadCheckpoint.ItemPath != "/retry-b.bin" {
+		t.Fatalf("expected runtime upload checkpoint for /retry-b.bin, got %#v", retried.Runtime.UploadCheckpoint)
+	}
+
+	secondRun, ok, err := svc.Run(ctx, detail.Task.ID)
+	if err != nil || !ok {
+		t.Fatalf("Run() retried error=%v ok=%v", err, ok)
+	}
+	if len(secondRun.Results) != 1 || stringValue(secondRun.Results[0].Payload["path"]) != "/retry-b.bin" {
+		t.Fatalf("expected second run to execute only /retry-b.bin, got %#v", secondRun.Results)
+	}
+	if secondRun.Task.State != StateCompleted {
+		t.Fatalf("expected completed after selected retry queue retry, got %s", secondRun.Task.State)
+	}
+	if len(uploadCalls) != 3 {
+		t.Fatalf("expected exactly 3 upload calls, got %#v", uploadCalls)
+	}
+	if uploadCalls[2].path != "/retry-b.bin" {
+		t.Fatalf("expected resumed call for /retry-b.bin, got %#v", uploadCalls[2])
+	}
+	if uploadCalls[2].resume == nil {
+		t.Fatalf("expected resumed call to carry checkpoint context, got %#v", uploadCalls[2])
+	}
+	if uploadCalls[2].resume.ItemPath != "/retry-b.bin" || uploadCalls[2].resume.UploadID != "upload-retry-b.bin" {
+		t.Fatalf("expected resumed call to target /retry-b.bin checkpoint, got %#v", uploadCalls[2].resume)
+	}
+}
+
 func TestServiceAppliesRiskProfileRuntimeThrottle(t *testing.T) {
 	ctx := context.Background()
 	store, err := sqlitestore.New(ctx, filepath.Join(t.TempDir(), "runtime-throttle.db"))
