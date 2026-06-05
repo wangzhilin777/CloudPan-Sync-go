@@ -7905,6 +7905,15 @@ func TestServiceProviderSmokeRecords(t *testing.T) {
 	if !strings.Contains(matrix[0].AcceptanceAdvice, "真实上传成功样本") {
 		t.Fatalf("expected advice to mention upload sample, got %s", matrix[0].AcceptanceAdvice)
 	}
+	if len(matrix[0].RepresentativeMissing) != 3 {
+		t.Fatalf("expected representative missing 3, got %#v", matrix[0].RepresentativeMissing)
+	}
+	if len(matrix[0].RepresentativeActions) != 3 {
+		t.Fatalf("expected representative actions 3, got %#v", matrix[0].RepresentativeActions)
+	}
+	if !strings.Contains(matrix[0].RepresentativeAdvice, "代表性样本建议") {
+		t.Fatalf("expected representative advice, got %s", matrix[0].RepresentativeAdvice)
+	}
 
 	evidence, err := svc.RuntimeEvidence(ctx)
 	if err != nil {
@@ -8046,6 +8055,64 @@ func TestServiceProviderSmokeMatrixTracksUploadSuccessSample(t *testing.T) {
 	}
 	if !strings.Contains(report.Markdown, "上传成功样本数: 1") {
 		t.Fatalf("expected upload success samples line in report markdown, got %s", report.Markdown)
+	}
+}
+
+func TestServiceProviderSmokeMatrixTracksRepresentativeSamples(t *testing.T) {
+	ctx := context.Background()
+	store, err := sqlitestore.New(ctx, filepath.Join(t.TempDir(), "provider-smoke-representative.db"))
+	if err != nil {
+		t.Fatalf("new store: %v", err)
+	}
+	defer func() { _ = store.Close() }()
+
+	registry := provider.NewRegistry(provider.DefaultCatalog()...)
+	authSvc := auth.NewService(store, registry)
+	svc := NewService(store, registry, authSvc)
+
+	_, err = svc.SaveProviderSmokeRecord(ctx, ProviderSmokeRecord{
+		ProviderKey:   "guangya",
+		ProtocolGroup: "guangya",
+		AuthMode:      "manual_token",
+		Category:      "binary_upload_success",
+		Result:        "success",
+		Title:         "guangya 大文件 多层目录 checkpoint smoke",
+		Note:          "大文件 multipart 多层目录 leaf_first checkpoint 重试恢复 续传",
+		Operations:    []string{"ValidateAuth", "List", "Metadata", "Upload", "leaf_first", "checkpoint"},
+	})
+	if err != nil {
+		t.Fatalf("SaveProviderSmokeRecord(representative) error = %v", err)
+	}
+
+	summary, err := svc.ProviderSmokeSummary(ctx)
+	if err != nil {
+		t.Fatalf("ProviderSmokeSummary() error = %v", err)
+	}
+	if len(summary) == 0 {
+		t.Fatal("expected smoke summary")
+	}
+	if !summary[0].HasLargeFileSample || !summary[0].HasNestedDirectorySample || !summary[0].HasRetryRecoverySample {
+		t.Fatalf("expected representative sample flags true, got %#v", summary[0])
+	}
+
+	matrix, err := svc.ProviderSmokeMatrix(ctx)
+	if err != nil {
+		t.Fatalf("ProviderSmokeMatrix() error = %v", err)
+	}
+	if len(matrix) == 0 {
+		t.Fatal("expected smoke matrix")
+	}
+	if !matrix[0].HasLargeFileSample || !matrix[0].HasNestedDirectorySample || !matrix[0].HasRetryRecoverySample {
+		t.Fatalf("expected matrix representative sample flags true, got %#v", matrix[0])
+	}
+	if len(matrix[0].RepresentativeMissing) != 0 {
+		t.Fatalf("expected representative missing empty, got %#v", matrix[0].RepresentativeMissing)
+	}
+	if len(matrix[0].RepresentativeActions) != 1 {
+		t.Fatalf("expected representative actions len 1 when complete, got %#v", matrix[0].RepresentativeActions)
+	}
+	if !strings.Contains(matrix[0].RepresentativeAdvice, "代表性样本已覆盖") {
+		t.Fatalf("expected representative complete advice, got %s", matrix[0].RepresentativeAdvice)
 	}
 }
 

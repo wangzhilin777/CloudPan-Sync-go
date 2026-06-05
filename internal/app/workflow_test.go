@@ -729,6 +729,24 @@ func TestAppWorkflowMainline(t *testing.T) {
 	if got := smokeMatrix[0].(map[string]interface{})["anomalyAdvice"].(string); !strings.Contains(got, "异常样本建议") {
 		t.Fatalf("expected accepted smoke matrix anomalyAdvice, got %s", got)
 	}
+	if got := smokeMatrix[0].(map[string]interface{})["hasLargeFileSample"].(bool); got {
+		t.Fatal("expected accepted smoke matrix row without large file representative sample")
+	}
+	if got := smokeMatrix[0].(map[string]interface{})["hasNestedDirectorySample"].(bool); got {
+		t.Fatal("expected accepted smoke matrix row without nested directory representative sample")
+	}
+	if got := smokeMatrix[0].(map[string]interface{})["hasRetryRecoverySample"].(bool); got {
+		t.Fatal("expected accepted smoke matrix row without retry recovery representative sample")
+	}
+	if got := len(smokeMatrix[0].(map[string]interface{})["representativeMissing"].([]interface{})); got != 3 {
+		t.Fatalf("expected accepted smoke matrix representativeMissing 3, got %d", got)
+	}
+	if got := len(smokeMatrix[0].(map[string]interface{})["representativeActions"].([]interface{})); got != 3 {
+		t.Fatalf("expected accepted smoke matrix representativeActions 3, got %d", got)
+	}
+	if got := smokeMatrix[0].(map[string]interface{})["representativeAdvice"].(string); !strings.Contains(got, "代表性样本建议") {
+		t.Fatalf("expected accepted smoke matrix representativeAdvice, got %s", got)
+	}
 	if got := smokeMatrix[0].(map[string]interface{})["acceptanceStatus"].(string); got != "accepted" {
 		t.Fatalf("expected smoke matrix acceptanceStatus accepted, got %s", got)
 	}

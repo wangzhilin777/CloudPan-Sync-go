@@ -6083,9 +6083,13 @@ function renderProviderSmokeMatrix(items) {
           <div class="muted">smoke sample: ${escapeHTML(stringifyValue(item.sampleTitle, "-"))} / ${escapeHTML(stringifyValue(item.sampleProviderKey, "-"))} / ${escapeHTML(stringifyValue(item.sampleCategory, "-"))}</div>
           <div class="muted">coverage sample: ${escapeHTML(stringifyValue(item.coverageSampleProviderKey, "-"))} / ${escapeHTML(stringifyValue(item.coverageSampleTaskState, "-"))} / ${escapeHTML(stringifyValue(item.coverageSampleCompletionKind, "-"))}</div>
           <div class="muted">异常样本：auth ${item.hasAuthExpiredSample ? "ready" : "pending"} / rate ${item.hasRateLimitedSample ? "ready" : "pending"} / local ${item.hasLocalFileMissingSample ? "ready" : "pending"} / manual ${item.hasPendingManualSample ? "ready" : "pending"}</div>
+          <div class="muted">代表样本：large ${item.hasLargeFileSample ? "ready" : "pending"} / nested ${item.hasNestedDirectorySample ? "ready" : "pending"} / retry ${item.hasRetryRecoverySample ? "ready" : "pending"}</div>
           ${Array.isArray(item.anomalyMissing) && item.anomalyMissing.length ? `<div class="muted">anomaly missing: ${escapeHTML(item.anomalyMissing.join(", "))}</div>` : ""}
           ${Array.isArray(item.anomalyActions) && item.anomalyActions.length ? `<div class="muted">anomaly actions: ${escapeHTML(item.anomalyActions.join("；"))}</div>` : ""}
           ${item.anomalyAdvice ? `<div class="muted">anomaly advice: ${escapeHTML(item.anomalyAdvice)}</div>` : ""}
+          ${Array.isArray(item.representativeMissing) && item.representativeMissing.length ? `<div class="muted">representative missing: ${escapeHTML(item.representativeMissing.join(", "))}</div>` : ""}
+          ${Array.isArray(item.representativeActions) && item.representativeActions.length ? `<div class="muted">representative actions: ${escapeHTML(item.representativeActions.join("；"))}</div>` : ""}
+          ${item.representativeAdvice ? `<div class="muted">representative advice: ${escapeHTML(item.representativeAdvice)}</div>` : ""}
           ${Array.isArray(item.acceptanceMissing) && item.acceptanceMissing.length ? `<div class="muted">missing: ${escapeHTML(item.acceptanceMissing.join(", "))}</div>` : ""}
           ${Array.isArray(item.acceptanceActions) && item.acceptanceActions.length ? `<div class="muted">actions: ${escapeHTML(item.acceptanceActions.join("；"))}</div>` : ""}
           ${item.acceptanceAdvice ? `<div class="muted">advice: ${escapeHTML(item.acceptanceAdvice)}</div>` : ""}

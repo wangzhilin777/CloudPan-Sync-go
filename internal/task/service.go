@@ -294,6 +294,9 @@ type ProviderSmokeSummary struct {
 	HasRateLimitedSample      bool     `json:"hasRateLimitedSample"`
 	HasLocalFileMissingSample bool     `json:"hasLocalFileMissingSample"`
 	HasPendingManualSample    bool     `json:"hasPendingManualSample"`
+	HasLargeFileSample        bool     `json:"hasLargeFileSample"`
+	HasNestedDirectorySample  bool     `json:"hasNestedDirectorySample"`
+	HasRetryRecoverySample    bool     `json:"hasRetryRecoverySample"`
 }
 
 type ProviderSmokeMatrixRow struct {
@@ -316,9 +319,15 @@ type ProviderSmokeMatrixRow struct {
 	HasRateLimitedSample         bool     `json:"hasRateLimitedSample"`
 	HasLocalFileMissingSample    bool     `json:"hasLocalFileMissingSample"`
 	HasPendingManualSample       bool     `json:"hasPendingManualSample"`
+	HasLargeFileSample           bool     `json:"hasLargeFileSample"`
+	HasNestedDirectorySample     bool     `json:"hasNestedDirectorySample"`
+	HasRetryRecoverySample       bool     `json:"hasRetryRecoverySample"`
 	AnomalyMissing               []string `json:"anomalyMissing,omitempty"`
 	AnomalyActions               []string `json:"anomalyActions,omitempty"`
 	AnomalyAdvice                string   `json:"anomalyAdvice,omitempty"`
+	RepresentativeMissing        []string `json:"representativeMissing,omitempty"`
+	RepresentativeActions        []string `json:"representativeActions,omitempty"`
+	RepresentativeAdvice         string   `json:"representativeAdvice,omitempty"`
 	CoverageTaskCount            int      `json:"coverageTaskCount"`
 	CoverageCompletedTaskCount   int      `json:"coverageCompletedTaskCount"`
 	CoverageRealSuccessTaskCount int      `json:"coverageRealSuccessTaskCount"`
@@ -3844,6 +3853,16 @@ func summarizeProviderSmokeRecords(records []ProviderSmokeRecord) []ProviderSmok
 				state.row.HasPendingManualSample = true
 			}
 		}
+		for _, representative := range smokeRepresentativeSampleKeys(record) {
+			switch representative {
+			case "large_file_sample_missing":
+				state.row.HasLargeFileSample = true
+			case "nested_directory_sample_missing":
+				state.row.HasNestedDirectorySample = true
+			case "retry_recovery_sample_missing":
+				state.row.HasRetryRecoverySample = true
+			}
+		}
 		if record.CreatedAt != "" && (state.row.LatestSmokeAt == "" || record.CreatedAt > state.row.LatestSmokeAt) {
 			state.row.SampleRecordID = record.ID
 			state.row.SampleTitle = record.Title
@@ -3907,6 +3926,9 @@ func buildProviderSmokeMatrix(summary EvidenceSummary, smokeSummaries []Provider
 		state.row.HasRateLimitedSample = item.HasRateLimitedSample
 		state.row.HasLocalFileMissingSample = item.HasLocalFileMissingSample
 		state.row.HasPendingManualSample = item.HasPendingManualSample
+		state.row.HasLargeFileSample = item.HasLargeFileSample
+		state.row.HasNestedDirectorySample = item.HasNestedDirectorySample
+		state.row.HasRetryRecoverySample = item.HasRetryRecoverySample
 	}
 	for _, coverage := range summary.ProtocolCoverage {
 		state := ensure(coverage.ProtocolGroup)
@@ -3937,6 +3959,9 @@ func buildProviderSmokeMatrix(summary EvidenceSummary, smokeSummaries []Provider
 		state.row.AnomalyMissing = buildSmokeAnomalyMissing(state.row)
 		state.row.AnomalyActions = buildSmokeAnomalyActions(state.row.AnomalyMissing)
 		state.row.AnomalyAdvice = buildSmokeAnomalyAdvice(state.row.AnomalyMissing)
+		state.row.RepresentativeMissing = buildRepresentativeSampleMissing(state.row)
+		state.row.RepresentativeActions = buildRepresentativeSampleActions(state.row.RepresentativeMissing)
+		state.row.RepresentativeAdvice = buildRepresentativeSampleAdvice(state.row.RepresentativeMissing)
 		switch {
 		case state.row.HasUploadSuccessSample && state.row.CoverageTaskCount > 0:
 			state.row.Accepted = true
@@ -4018,6 +4043,29 @@ func smokeAnomalySampleKeys(record ProviderSmokeRecord) []string {
 	return keys
 }
 
+func smokeRepresentativeSampleKeys(record ProviderSmokeRecord) []string {
+	text := strings.ToLower(strings.Join(append(append([]string{}, record.Category, record.Result, record.Title, record.Note), record.Operations...), " "))
+	keys := make([]string, 0, 3)
+	appendKey := func(key string) {
+		for _, existing := range keys {
+			if existing == key {
+				return
+			}
+		}
+		keys = append(keys, key)
+	}
+	if strings.Contains(text, "large_file") || strings.Contains(text, "大文件") || strings.Contains(text, "multipart") || strings.Contains(text, "oss put") {
+		appendKey("large_file_sample_missing")
+	}
+	if strings.Contains(text, "nested_directory") || strings.Contains(text, "多层目录") || strings.Contains(text, "deep_tree") || strings.Contains(text, "leaf_first") || strings.Contains(text, "subtree") {
+		appendKey("nested_directory_sample_missing")
+	}
+	if strings.Contains(text, "retry_recovery") || strings.Contains(text, "重试恢复") || strings.Contains(text, "checkpoint") || strings.Contains(text, "resume") || strings.Contains(text, "续传") {
+		appendKey("retry_recovery_sample_missing")
+	}
+	return keys
+}
+
 func buildSmokeAnomalyMissing(row ProviderSmokeMatrixRow) []string {
 	missing := make([]string, 0, 4)
 	if !row.HasAuthExpiredSample {
@@ -4062,6 +4110,47 @@ func buildSmokeAnomalyAdvice(missing []string) string {
 		return "关键异常样本已基本齐全，可继续补更复杂长链路或更细 provider 边界案例。"
 	}
 	return "异常样本建议：" + strings.Join(buildSmokeAnomalyActions(missing), "；")
+}
+
+func buildRepresentativeSampleMissing(row ProviderSmokeMatrixRow) []string {
+	missing := make([]string, 0, 3)
+	if !row.HasLargeFileSample {
+		missing = append(missing, "large_file_sample_missing")
+	}
+	if !row.HasNestedDirectorySample {
+		missing = append(missing, "nested_directory_sample_missing")
+	}
+	if !row.HasRetryRecoverySample {
+		missing = append(missing, "retry_recovery_sample_missing")
+	}
+	return missing
+}
+
+func buildRepresentativeSampleActions(missing []string) []string {
+	if len(missing) == 0 {
+		return []string{"继续补更细 provider 边界案例，或用同协议组扩展更多账号真实样本。"}
+	}
+	actions := make([]string, 0, len(missing))
+	for _, item := range missing {
+		switch item {
+		case "large_file_sample_missing":
+			actions = append(actions, "补 1 条大文件上传或恢复样本")
+		case "nested_directory_sample_missing":
+			actions = append(actions, "补 1 条多层目录样本")
+		case "retry_recovery_sample_missing":
+			actions = append(actions, "补 1 条重试恢复或 checkpoint 续传样本")
+		default:
+			actions = append(actions, item)
+		}
+	}
+	return actions
+}
+
+func buildRepresentativeSampleAdvice(missing []string) string {
+	if len(missing) == 0 {
+		return "代表性样本已覆盖大文件、多层目录与重试恢复，可继续补更细粒度边界。"
+	}
+	return "代表性样本建议：" + strings.Join(buildRepresentativeSampleActions(missing), "；")
 }
 
 func isUploadSuccessCategory(category string) bool {
