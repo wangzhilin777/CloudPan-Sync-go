@@ -56,6 +56,7 @@
 - 已补路径子集重试下的 upload checkpoint 过滤与续传上下文回归覆盖，可证明大文件/长链路在子树级补传时不会把未选路径一并重跑，也不会丢掉既有 checkpoint。
 - 已把自动补传候选池的协议族 / provider / profile 覆盖范围与建议预算写入证据报告，便于直接核对公平性收敛情况。
 - 已把自动补传公平性摘要补上 sample provider / protocol group / profile / strategy 上下文，便于直接核对每条 lane 的真实样本落点。
+- 已把自动补传公平性摘要补成可读完成判断，直接说明当前候选池是否已出现多 provider / 多账号 / 多协议组分散证据。
 - 已把 upload checkpoint 任务数、自动续传任务数和样本路径写入运行证据与报告，便于直接核对续传恢复是否形成稳定证据。
 - 已把 upload checkpoint 自动续传样本的 provider / protocol group / task / profile 上下文写入运行证据与报告，便于直接回看具体续传样本落点。
 - 已把 upload checkpoint 自动续传样本的 uploadId / nextPart / uploadedParts 进度写入运行证据与报告，便于直接核对是否从既有分片状态继续恢复。

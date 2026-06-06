@@ -3380,6 +3380,34 @@ func renderUploadCheckpointResumeEvidenceSummary(summary EvidenceSummary) string
 	}
 }
 
+func renderAutoRecoverFairnessSummary(pool []AutoRecoverLane) string {
+	if len(pool) == 0 {
+		return "当前还没有可用于判断公平性的自动补传候选池样本。"
+	}
+	multiProviderLanes := 0
+	multiProfileLanes := 0
+	multiProtocolGroupLanes := 0
+	for _, item := range pool {
+		if item.ProviderCount > 1 {
+			multiProviderLanes++
+		}
+		if item.ProfileCount > 1 {
+			multiProfileLanes++
+		}
+		if len(item.ProtocolGroups) > 1 {
+			multiProtocolGroupLanes++
+		}
+	}
+	switch {
+	case multiProviderLanes > 0 && multiProfileLanes > 0:
+		return fmt.Sprintf("当前候选池共 %d 条 lane，其中多 provider lane %d 条、多账号 lane %d 条、多协议组 lane %d 条，已具备基础公平性分散证据。", len(pool), multiProviderLanes, multiProfileLanes, multiProtocolGroupLanes)
+	case multiProviderLanes > 0 || multiProfileLanes > 0 || multiProtocolGroupLanes > 0:
+		return fmt.Sprintf("当前候选池共 %d 条 lane，已出现多 provider / 多账号 / 多协议组中的部分分散证据：provider %d 条、profile %d 条、protocol group %d 条。", len(pool), multiProviderLanes, multiProfileLanes, multiProtocolGroupLanes)
+	default:
+		return fmt.Sprintf("当前候选池共 %d 条 lane，但各 lane 仍主要集中在单 provider / 单账号 / 单协议组，公平性证据还需要继续补齐。", len(pool))
+	}
+}
+
 func buildEvidenceReport(summary EvidenceSummary, statuses []StatusSummary, smokeSummaries []ProviderSmokeSummary, smokeMatrix []ProviderSmokeMatrixRow, samples []EvidenceSample, generatedAt string, title string, note string) EvidenceReport {
 	title = normalizeEvidenceReportTitle(title)
 	note = strings.TrimSpace(note)
@@ -3455,6 +3483,7 @@ func buildEvidenceReport(summary EvidenceSummary, statuses []StatusSummary, smok
 	if len(summary.AutoRecoverPool) == 0 {
 		b.WriteString("- 当前没有自动补传候选池数据。\n")
 	} else {
+		fmt.Fprintf(&b, "- %s\n\n", renderAutoRecoverFairnessSummary(summary.AutoRecoverPool))
 		b.WriteString("| Mode | Tasks | Providers | Profiles | ProtocolGroups | Suggested Budgets | Sample Context | Advice |\n")
 		b.WriteString("| --- | ---: | ---: | ---: | ---: | --- | --- | --- |\n")
 		for _, item := range summary.AutoRecoverPool {

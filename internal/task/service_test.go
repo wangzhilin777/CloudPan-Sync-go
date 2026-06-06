@@ -534,6 +534,9 @@ func TestServiceProtocolCoverageSummary(t *testing.T) {
 	if !strings.Contains(report.Markdown, "## 自动补传公平性摘要") {
 		t.Fatalf("expected auto recover fairness section in report markdown, got %s", report.Markdown)
 	}
+	if !strings.Contains(report.Markdown, "当前还没有可用于判断公平性的自动补传候选池样本") && !strings.Contains(report.Markdown, "当前没有自动补传候选池数据") && (!strings.Contains(report.Markdown, "公平性") || !strings.Contains(report.Markdown, "lane")) {
+		t.Fatalf("expected fairness completion summary in report markdown, got %s", report.Markdown)
+	}
 	if !strings.Contains(report.Markdown, "Upload checkpoint 任务数") {
 		t.Fatalf("expected upload checkpoint summary in report markdown, got %s", report.Markdown)
 	}
@@ -3158,6 +3161,9 @@ func TestServiceRecoverBlockedTasksAutoResumesUploadCheckpointQueue(t *testing.T
 	}
 	if !strings.Contains(report.Markdown, "已具备从既有 upload checkpoint 继续恢复的关键证据") {
 		t.Fatalf("expected upload checkpoint stability summary to mention resumable evidence, got %s", report.Markdown)
+	}
+	if !strings.Contains(report.Markdown, "当前还没有可用于判断公平性的自动补传候选池样本") && !strings.Contains(report.Markdown, "当前没有自动补传候选池数据") && (!strings.Contains(report.Markdown, "公平性") || !strings.Contains(report.Markdown, "lane")) {
+		t.Fatalf("expected fairness completion summary in report markdown, got %s", report.Markdown)
 	}
 	if stringValue(evidence.RecentProbes[0].Payload["autoRecoverReason"]) != "upload_checkpoint_auto_resume" {
 		t.Fatalf("expected probe auto recovery reason, got %#v", evidence.RecentProbes[0].Payload)
