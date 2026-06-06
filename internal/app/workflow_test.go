@@ -745,6 +745,21 @@ func TestAppWorkflowMainline(t *testing.T) {
 	if got := smokeList[0].(map[string]interface{})["id"].(string); got != smokeID {
 		t.Fatalf("expected latest smoke id %s, got %s", smokeID, got)
 	}
+	if got := smokeList[0].(map[string]interface{})["templateVersion"].(string); got != "phase2_smoke_template_v2" {
+		t.Fatalf("expected smoke list templateVersion phase2_smoke_template_v2, got %s", got)
+	}
+	if got := smokeList[0].(map[string]interface{})["sampleType"].(string); got == "" {
+		t.Fatal("expected smoke list sampleType")
+	}
+	if got := smokeList[0].(map[string]interface{})["evidenceCompleteness"].(string); got == "" {
+		t.Fatal("expected smoke list evidenceCompleteness")
+	}
+	if got := smokeList[0].(map[string]interface{})["reuseAdvice"].(string); got == "" {
+		t.Fatal("expected smoke list reuseAdvice")
+	}
+	if got := smokeList[0].(map[string]interface{})["autoRecoverFocus"].(string); got == "" {
+		t.Fatal("expected smoke list autoRecoverFocus")
+	}
 
 	smokeSummaryResp := invokeJSON(t, handler, http.MethodGet, "/api/provider-smokes/summary", nil)
 	smokeSummary := smokeSummaryResp.Data.(map[string]interface{})["items"].([]interface{})

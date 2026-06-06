@@ -6317,6 +6317,9 @@ function renderProviderSmokeRecords(items) {
             <span class="pill">${escapeHTML(stringifyValue(item.result, "-"))}</span>
           </div>
           ${item.note ? `<div class="muted">${escapeHTML(item.note)}</div>` : ""}
+          <div class="muted">template: ${escapeHTML(stringifyValue(item.templateVersion, "-"))} / type ${escapeHTML(stringifyValue(item.sampleType, "-"))} / completeness ${escapeHTML(stringifyValue(item.evidenceCompleteness, "-"))}</div>
+          <div class="muted">reuse: ${escapeHTML(stringifyValue(item.reuseAdvice, "-"))}</div>
+          <div class="muted">representative: ${escapeHTML((item.representativeLabels || []).join(" / ") || "-")} / auto recover focus: ${escapeHTML(stringifyValue(item.autoRecoverFocus, "-"))}</div>
           <div class="muted">operations: ${escapeHTML((item.operations || []).join(", ") || "-")}</div>
           <div class="muted">createdAt: <code>${escapeHTML(stringifyValue(item.createdAt, "-"))}</code></div>
           <div class="actions compact">

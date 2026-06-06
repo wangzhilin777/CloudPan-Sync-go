@@ -283,6 +283,12 @@ type ProviderSmokeRecord struct {
 	Note          string            `json:"note,omitempty"`
 	Operations    []string          `json:"operations,omitempty"`
 	Environment   map[string]string `json:"environment,omitempty"`
+	TemplateVersion      string   `json:"templateVersion,omitempty"`
+	SampleType           string   `json:"sampleType,omitempty"`
+	EvidenceCompleteness string   `json:"evidenceCompleteness,omitempty"`
+	ReuseAdvice          string   `json:"reuseAdvice,omitempty"`
+	RepresentativeLabels []string `json:"representativeLabels,omitempty"`
+	AutoRecoverFocus     string   `json:"autoRecoverFocus,omitempty"`
 	Markdown      string            `json:"markdown,omitempty"`
 	CreatedAt     string            `json:"createdAt"`
 }
@@ -1228,15 +1234,27 @@ func (s *Service) SaveProviderSmokeRecord(ctx context.Context, record ProviderSm
 		record.Environment = map[string]string{}
 	}
 	record.Markdown = buildProviderSmokeMarkdown(record)
+	record = enrichProviderSmokeRecord(record)
 	return saveProviderSmokeRecord(ctx, s.store, record)
 }
 
 func (s *Service) ListProviderSmokeRecords(ctx context.Context) ([]ProviderSmokeRecord, error) {
-	return listProviderSmokeRecords(ctx, s.store)
+	items, err := listProviderSmokeRecords(ctx, s.store)
+	if err != nil {
+		return nil, err
+	}
+	for i := range items {
+		items[i] = enrichProviderSmokeRecord(items[i])
+	}
+	return items, nil
 }
 
 func (s *Service) GetProviderSmokeRecord(ctx context.Context, id string) (ProviderSmokeRecord, bool, error) {
-	return getProviderSmokeRecord(ctx, s.store, id)
+	record, ok, err := getProviderSmokeRecord(ctx, s.store, id)
+	if err != nil || !ok {
+		return record, ok, err
+	}
+	return enrichProviderSmokeRecord(record), true, nil
 }
 
 func (s *Service) RecoverBlockedTasks(ctx context.Context) (int, error) {
@@ -4072,6 +4090,16 @@ func inferProviderSmokeCategory(record ProviderSmokeRecord) string {
 
 func providerSmokeTemplateVersion() string {
 	return "phase2_smoke_template_v2"
+}
+
+func enrichProviderSmokeRecord(record ProviderSmokeRecord) ProviderSmokeRecord {
+	record.TemplateVersion = providerSmokeTemplateVersion()
+	record.SampleType = providerSmokeSampleType(record)
+	record.EvidenceCompleteness = providerSmokeEvidenceCompleteness(record)
+	record.ReuseAdvice = providerSmokeReuseAdvice(record)
+	record.RepresentativeLabels = providerSmokeRepresentativeLabels(record)
+	record.AutoRecoverFocus = providerSmokeAutoRecoverFocus(record)
+	return record
 }
 
 func providerSmokeEnvironmentKeys(record ProviderSmokeRecord) []string {

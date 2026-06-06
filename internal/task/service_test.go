@@ -7907,6 +7907,18 @@ func TestServiceProviderSmokeRecords(t *testing.T) {
 	if got := items[0].ID; got != record.ID {
 		t.Fatalf("expected latest smoke record id %s, got %s", record.ID, got)
 	}
+	if got := items[0].TemplateVersion; got != "phase2_smoke_template_v2" {
+		t.Fatalf("expected list template version phase2_smoke_template_v2, got %s", got)
+	}
+	if got := items[0].SampleType; got != "真实浏览成功样本" {
+		t.Fatalf("expected list sample type 真实浏览成功样本, got %s", got)
+	}
+	if got := items[0].EvidenceCompleteness; got == "" {
+		t.Fatal("expected list evidence completeness")
+	}
+	if got := items[0].ReuseAdvice; !strings.Contains(got, "基础成功样本") {
+		t.Fatalf("expected list reuse advice to mention 基础成功样本, got %s", got)
+	}
 
 	fetched, ok, err := svc.GetProviderSmokeRecord(ctx, record.ID)
 	if err != nil {
@@ -7920,6 +7932,21 @@ func TestServiceProviderSmokeRecords(t *testing.T) {
 	}
 	if fetched.Category != "browse_only" {
 		t.Fatalf("expected fetched smoke category browse_only, got %s", fetched.Category)
+	}
+	if fetched.TemplateVersion != "phase2_smoke_template_v2" {
+		t.Fatalf("expected fetched template version phase2_smoke_template_v2, got %s", fetched.TemplateVersion)
+	}
+	if fetched.SampleType != "真实浏览成功样本" {
+		t.Fatalf("expected fetched sample type 真实浏览成功样本, got %s", fetched.SampleType)
+	}
+	if fetched.EvidenceCompleteness == "" {
+		t.Fatal("expected fetched evidence completeness")
+	}
+	if !strings.Contains(fetched.ReuseAdvice, "基础成功样本") {
+		t.Fatalf("expected fetched reuse advice to mention 基础成功样本, got %s", fetched.ReuseAdvice)
+	}
+	if fetched.AutoRecoverFocus == "" {
+		t.Fatal("expected fetched auto recover focus")
 	}
 	if len(fetched.Operations) != 3 {
 		t.Fatalf("expected 3 operations, got %#v", fetched.Operations)

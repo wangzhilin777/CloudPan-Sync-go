@@ -936,6 +936,18 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "provider-smoke-records-filter-clear") {
 		t.Fatalf("expected provider smoke filter clear action in app.js, got %q", body)
 	}
+	if !strings.Contains(body, "template:") {
+		t.Fatalf("expected provider smoke template summary in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "completeness") {
+		t.Fatalf("expected provider smoke evidence completeness summary in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "reuse:") {
+		t.Fatalf("expected provider smoke reuse advice summary in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "auto recover focus:") {
+		t.Fatalf("expected provider smoke auto recover focus summary in app.js, got %q", body)
+	}
 	if !strings.Contains(body, "已切换 smoke Markdown") {
 		t.Fatalf("expected provider smoke markdown switch flash text in app.js, got %q", body)
 	}
