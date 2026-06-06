@@ -613,6 +613,9 @@ func TestAppWorkflowMainline(t *testing.T) {
 	if got := reportData["markdown"].(string); !strings.Contains(got, "## 自动补传公平性摘要") {
 		t.Fatalf("expected auto recover fairness section in report markdown, got %s", got)
 	}
+	if got := reportData["markdown"].(string); !strings.Contains(got, "Upload checkpoint 任务数") {
+		t.Fatalf("expected upload checkpoint summary in report markdown, got %s", got)
+	}
 	if got := reportData["markdown"].(string); !strings.Contains(got, "| Mode | Tasks | Providers | Profiles | ProtocolGroups | Suggested Budgets | Advice |") &&
 		!strings.Contains(got, "- 当前没有自动补传候选池数据。") {
 		t.Fatalf("expected auto recover fairness table or empty-state in report markdown, got %s", got)

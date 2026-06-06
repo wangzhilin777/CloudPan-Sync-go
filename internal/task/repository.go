@@ -771,6 +771,19 @@ func taskEvidenceSummary(ctx context.Context, store *sqlitestore.Store, provider
 	for _, detail := range details {
 		ensureRuntimeState(&detail)
 		summary.SourceDeletionCount += detail.Runtime.SourceDeletionCount
+		if (detail.Runtime.UploadCheckpoint != nil && uploadCheckpointCanResume(detail.Runtime.UploadCheckpoint)) || detailHasUploadCheckpointEvidence(detail.Results) || detail.Runtime.AutoRecoverReason == "upload_checkpoint_auto_resume" {
+			summary.UploadCheckpointTaskCount++
+		}
+		if detail.Runtime.AutoRecovered && detail.Runtime.AutoRecoverReason == "upload_checkpoint_auto_resume" {
+			summary.UploadCheckpointResumeTaskCount++
+			if detail.Runtime.UploadCheckpoint != nil {
+				if path := normalizeScanPath(detail.Runtime.UploadCheckpoint.ItemPath); path != "" {
+					summary.UploadCheckpointResumeSamplePaths = appendUniqueString(summary.UploadCheckpointResumeSamplePaths, path)
+				}
+			} else if path := normalizeScanPath(lastCompletedResultPath(detail.Results)); path != "" {
+				summary.UploadCheckpointResumeSamplePaths = appendUniqueString(summary.UploadCheckpointResumeSamplePaths, path)
+			}
+		}
 		if detail.Task.State != StateBlocked {
 			continue
 		}
@@ -836,6 +849,37 @@ func taskEvidenceSummary(ctx context.Context, store *sqlitestore.Store, provider
 	}
 	summary.ProtocolCoverage = coverage
 	return summary, nil
+}
+
+func lastCompletedResultPath(results []Result) string {
+	for idx := len(results) - 1; idx >= 0; idx-- {
+		if path := strings.TrimSpace(stringValue(results[idx].Payload["path"])); path != "" {
+			return path
+		}
+	}
+	return ""
+}
+
+func detailHasUploadCheckpointEvidence(results []Result) bool {
+	for _, result := range results {
+		if uploadCheckpointFromResult(result) != nil {
+			return true
+		}
+	}
+	return false
+}
+
+func appendUniqueString(items []string, value string) []string {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return items
+	}
+	for _, item := range items {
+		if item == value {
+			return items
+		}
+	}
+	return append(items, value)
 }
 
 func providerStatusSummary(ctx context.Context, store *sqlitestore.Store, providers []provider.Entry) ([]StatusSummary, error) {

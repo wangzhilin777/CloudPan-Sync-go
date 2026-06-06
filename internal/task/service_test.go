@@ -534,6 +534,9 @@ func TestServiceProtocolCoverageSummary(t *testing.T) {
 	if !strings.Contains(report.Markdown, "## 自动补传公平性摘要") {
 		t.Fatalf("expected auto recover fairness section in report markdown, got %s", report.Markdown)
 	}
+	if !strings.Contains(report.Markdown, "Upload checkpoint 任务数") {
+		t.Fatalf("expected upload checkpoint summary in report markdown, got %s", report.Markdown)
+	}
 	if !strings.Contains(report.Markdown, "| Mode | Tasks | Providers | Profiles | ProtocolGroups | Suggested Budgets | Advice |") &&
 		!strings.Contains(report.Markdown, "- 当前没有自动补传候选池数据。") {
 		t.Fatalf("expected auto recover fairness table or empty-state in report markdown, got %s", report.Markdown)
@@ -3112,6 +3115,15 @@ func TestServiceRecoverBlockedTasksAutoResumesUploadCheckpointQueue(t *testing.T
 	}
 	if len(evidence.RecentProbes) == 0 {
 		t.Fatal("expected recent provider probe after auto recovery")
+	}
+	if evidence.UploadCheckpointTaskCount != 1 {
+		t.Fatalf("expected upload checkpoint task count 1, got %d", evidence.UploadCheckpointTaskCount)
+	}
+	if evidence.UploadCheckpointResumeTaskCount != 1 {
+		t.Fatalf("expected upload checkpoint resume task count 1, got %d", evidence.UploadCheckpointResumeTaskCount)
+	}
+	if len(evidence.UploadCheckpointResumeSamplePaths) != 1 || evidence.UploadCheckpointResumeSamplePaths[0] != "/resume.bin" {
+		t.Fatalf("expected upload checkpoint resume sample path /resume.bin, got %#v", evidence.UploadCheckpointResumeSamplePaths)
 	}
 	if stringValue(evidence.RecentProbes[0].Payload["autoRecoverReason"]) != "upload_checkpoint_auto_resume" {
 		t.Fatalf("expected probe auto recovery reason, got %#v", evidence.RecentProbes[0].Payload)

@@ -192,6 +192,9 @@ type EvidenceSummary struct {
 	PendingSmokeGroups                     int                `json:"pendingSmokeGroups"`
 	UploadSuccessGroups                    int                `json:"uploadSuccessGroups"`
 	UploadSuccessSamples                   int                `json:"uploadSuccessSamples"`
+	UploadCheckpointTaskCount              int                `json:"uploadCheckpointTaskCount"`
+	UploadCheckpointResumeTaskCount        int                `json:"uploadCheckpointResumeTaskCount"`
+	UploadCheckpointResumeSamplePaths      []string           `json:"uploadCheckpointResumeSamplePaths,omitempty"`
 	AcceptanceActionCounts                 map[string]int     `json:"acceptanceActionCounts,omitempty"`
 	RecentResults                          []Result           `json:"recentResults"`
 	RecentProbes                           []ProviderProbe    `json:"recentProbes"`
@@ -3380,6 +3383,11 @@ func buildEvidenceReport(summary EvidenceSummary, statuses []StatusSummary, smok
 	fmt.Fprintf(&b, "- 待补齐协议组: %d\n", summary.PendingSmokeGroups)
 	fmt.Fprintf(&b, "- 上传成功协议组: %d\n", summary.UploadSuccessGroups)
 	fmt.Fprintf(&b, "- 上传成功样本数: %d\n", summary.UploadSuccessSamples)
+	fmt.Fprintf(&b, "- Upload checkpoint 任务数: %d\n", summary.UploadCheckpointTaskCount)
+	fmt.Fprintf(&b, "- Upload checkpoint 自动续传任务数: %d\n", summary.UploadCheckpointResumeTaskCount)
+	if len(summary.UploadCheckpointResumeSamplePaths) > 0 {
+		fmt.Fprintf(&b, "- Upload checkpoint 样本路径: %s\n", strings.Join(summary.UploadCheckpointResumeSamplePaths, " -> "))
+	}
 	b.WriteString("\n## 阻塞动作\n\n")
 	if len(summary.BlockedActions) == 0 {
 		b.WriteString("- 当前没有需要人工处理的阻塞动作。\n")
