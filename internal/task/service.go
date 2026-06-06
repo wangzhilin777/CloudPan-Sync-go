@@ -3408,6 +3408,16 @@ func renderAutoRecoverFairnessSummary(pool []AutoRecoverLane) string {
 	}
 }
 
+func renderSmokeChecklistSummary(row ProviderSmokeMatrixRow) string {
+	parts := []string{
+		fmt.Sprintf("upload %s", boolLabel(row.HasUploadSuccessSample, "ready", "pending")),
+		fmt.Sprintf("coverage %d/%d", row.CoverageRealSuccessTaskCount, row.CoverageTaskCount),
+		fmt.Sprintf("anomaly %d/%d", row.AnomalyCompletedCount, row.AnomalyTargetCount),
+		fmt.Sprintf("representative %d/%d", row.RepresentativeCompletedCount, row.RepresentativeTargetCount),
+	}
+	return strings.Join(parts, " / ")
+}
+
 func buildEvidenceReport(summary EvidenceSummary, statuses []StatusSummary, smokeSummaries []ProviderSmokeSummary, smokeMatrix []ProviderSmokeMatrixRow, samples []EvidenceSample, generatedAt string, title string, note string) EvidenceReport {
 	title = normalizeEvidenceReportTitle(title)
 	note = strings.TrimSpace(note)
@@ -3547,6 +3557,7 @@ func buildEvidenceReport(summary EvidenceSummary, statuses []StatusSummary, smok
 		fmt.Fprintf(&b, "- 进行中协议组: %d\n", inProgressCount)
 		fmt.Fprintf(&b, "- 待补齐协议组: %d\n", pendingCount)
 		b.WriteString("\n### 样本补齐总览\n\n")
+		b.WriteString("- 说明：upload=真实上传成功样本，coverage=真实任务覆盖，anomaly=最小异常样本，representative=大文件/多层目录/重试恢复代表样本。\n\n")
 		b.WriteString("| ProtocolGroup | Upload Success | Task Coverage | Anomaly Coverage | Representative Coverage |\n")
 		b.WriteString("| --- | --- | --- | --- | --- |\n")
 		for _, item := range smokeMatrix {
@@ -3560,6 +3571,13 @@ func buildEvidenceReport(summary EvidenceSummary, statuses []StatusSummary, smok
 				item.AnomalyTargetCount,
 				item.RepresentativeCompletedCount,
 				item.RepresentativeTargetCount,
+			)
+		}
+		b.WriteString("\n### 样本完成清单\n\n")
+		for _, item := range smokeMatrix {
+			fmt.Fprintf(&b, "- %s: %s\n",
+				markdownCell(firstNonEmpty(item.ProtocolGroup, "-")),
+				markdownCell(renderSmokeChecklistSummary(item)),
 			)
 		}
 		b.WriteString("\n## 真实联调验收\n\n")

@@ -8133,6 +8133,9 @@ func TestServiceProviderSmokeMatrixTracksUploadSuccessSample(t *testing.T) {
 	if !strings.Contains(report.Markdown, "| ProtocolGroup | Upload Success | Task Coverage | Anomaly Coverage | Representative Coverage |") {
 		t.Fatalf("expected smoke completion summary table in report markdown, got %s", report.Markdown)
 	}
+	if !strings.Contains(report.Markdown, "### 样本完成清单") || !strings.Contains(report.Markdown, "upload ready / coverage 0/0 / anomaly 0/4 / representative 0/3") {
+		t.Fatalf("expected smoke checklist summary in report markdown, got %s", report.Markdown)
+	}
 }
 
 func TestServiceProviderSmokeMatrixTracksRepresentativeSamples(t *testing.T) {

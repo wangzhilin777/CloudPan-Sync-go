@@ -6099,6 +6099,15 @@ function renderProviderSmokeMatrixControls(items) {
   `;
 }
 
+function renderProviderSmokeChecklist(item) {
+  return [
+    `upload ${item?.hasUploadSuccessSample ? "ready" : "pending"}`,
+    `coverage ${stringifyValue(item?.coverageRealSuccessTaskCount, "0")}/${stringifyValue(item?.coverageTaskCount, "0")}`,
+    `anomaly ${stringifyValue(item?.anomalyCompletedCount, "0")}/${stringifyValue(item?.anomalyTargetCount, "0")}`,
+    `representative ${stringifyValue(item?.representativeCompletedCount, "0")}/${stringifyValue(item?.representativeTargetCount, "0")}`,
+  ].join(" / ");
+}
+
 function renderProviderSmokeMatrix(items) {
   const visibleItems = filteredProviderSmokeMatrix(items);
   if (!Array.isArray(visibleItems) || !visibleItems.length) {
@@ -6120,6 +6129,7 @@ function renderProviderSmokeMatrix(items) {
           </div>
           <div class="muted">smoke sample: ${escapeHTML(stringifyValue(item.sampleTitle, "-"))} / ${escapeHTML(stringifyValue(item.sampleProviderKey, "-"))} / ${escapeHTML(stringifyValue(item.sampleCategory, "-"))}</div>
           <div class="muted">coverage sample: ${escapeHTML(stringifyValue(item.coverageSampleProviderKey, "-"))} / ${escapeHTML(stringifyValue(item.coverageSampleTaskState, "-"))} / ${escapeHTML(stringifyValue(item.coverageSampleCompletionKind, "-"))}</div>
+          <div class="muted">checklist: ${escapeHTML(renderProviderSmokeChecklist(item))}</div>
           <div class="muted">异常样本：auth ${item.hasAuthExpiredSample ? "ready" : "pending"} / rate ${item.hasRateLimitedSample ? "ready" : "pending"} / local ${item.hasLocalFileMissingSample ? "ready" : "pending"} / manual ${item.hasPendingManualSample ? "ready" : "pending"}</div>
           <div class="muted">代表样本：large ${item.hasLargeFileSample ? "ready" : "pending"} / nested ${item.hasNestedDirectorySample ? "ready" : "pending"} / retry ${item.hasRetryRecoverySample ? "ready" : "pending"}</div>
           ${Array.isArray(item.anomalyMissing) && item.anomalyMissing.length ? `<div class="muted">anomaly missing: ${escapeHTML(item.anomalyMissing.join(", "))}</div>` : ""}
