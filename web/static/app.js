@@ -2430,6 +2430,18 @@ function parseProfileRiskDefaultsSourceFromExtra(extra) {
   }
   return raw;
 }
+
+function renderRiskDefaultsSourceBadge(source) {
+  const normalized = String(source || "").trim();
+  if (!normalized) {
+    return "provider_default_only";
+  }
+  const match = normalized.match(/^Smoke Matrix\s+(.+?)\s+\((accepted|in_progress|pending)\)$/i);
+  if (!match) {
+    return normalized;
+  }
+  return `smoke ${String(match[1] || "").trim()} ${String(match[2] || "").trim().toLowerCase()}`;
+}
 function renderProfileRiskDefaultSourceAdvice(source) {
   const normalized = String(source || "").trim();
   if (!normalized) {
@@ -3000,6 +3012,7 @@ function renderProviders() {
           entry.meta.defaultRiskTemplate && typeof entry.meta.defaultRiskTemplate === "object"
             ? entry.meta.defaultRiskTemplate
             : null;
+        const profileSource = parseProfileRiskDefaultsSourceFromExtra(entry.profile?.extra || {});
         const fallbackModes = Array.isArray(entry.meta.fallbackModes) ? entry.meta.fallbackModes.filter(Boolean) : [];
         const conflictPolicies = Array.isArray(entry.meta.conflictPolicies) ? entry.meta.conflictPolicies.filter(Boolean) : [];
         const active = entry.meta.key === state.selectedProviderCapabilityKey;
@@ -3022,6 +3035,8 @@ function renderProviders() {
           <div class="muted">recommended risk: ${escapeHTML(stringifyValue(defaultRiskTemplate?.recommendedMode, "-"))}</div>
           <div class="muted">risk calibration: ${escapeHTML((defaultRiskTemplate?.calibrationReasons || []).join(" / ") || "-")}</div>
           <div class="muted">recover budget: ${escapeHTML(renderRecoverBudgetCompact(defaultRiskTemplate?.recoverBudget))}</div>
+          <div class="muted">profile risk source: ${escapeHTML(renderRiskDefaultsSourceBadge(profileSource))}</div>
+          <div class="muted">profile risk advice: ${escapeHTML(renderProfileRiskDefaultSourceAdvice(profileSource))}</div>
           <div class="actions compact">
             <button type="button" class="ghost" data-provider-detail-open="${escapeHTML(entry.meta.key)}">查看能力详情</button>
           </div>

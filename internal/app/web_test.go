@@ -1101,6 +1101,15 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "recover budget:") {
 		t.Fatalf("expected provider recover budget text in app.js, got %q", body)
 	}
+	if !strings.Contains(body, "profile risk source:") {
+		t.Fatalf("expected provider profile risk source text in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "profile risk advice:") {
+		t.Fatalf("expected provider profile risk advice text in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "renderRiskDefaultsSourceBadge") {
+		t.Fatalf("expected provider risk source badge helper in app.js, got %q", body)
+	}
 	if !strings.Contains(body, "budget advice") {
 		t.Fatalf("expected provider budget advice text in app.js, got %q", body)
 	}
