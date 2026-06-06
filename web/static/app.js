@@ -6108,6 +6108,22 @@ function renderProviderSmokeChecklist(item) {
   ].join(" / ");
 }
 
+function renderProviderSmokeGaps(item) {
+  const gaps = [];
+  if (!item?.hasUploadSuccessSample) {
+    gaps.push("upload");
+  }
+  const anomalyMissing = Array.isArray(item?.anomalyMissing) ? item.anomalyMissing.filter(Boolean) : [];
+  if (anomalyMissing.length) {
+    gaps.push(`anomaly(${anomalyMissing.join(",")})`);
+  }
+  const representativeMissing = Array.isArray(item?.representativeMissing) ? item.representativeMissing.filter(Boolean) : [];
+  if (representativeMissing.length) {
+    gaps.push(`representative(${representativeMissing.join(",")})`);
+  }
+  return gaps.length ? gaps.join(" / ") : "complete";
+}
+
 function renderProviderSmokeMatrix(items) {
   const visibleItems = filteredProviderSmokeMatrix(items);
   if (!Array.isArray(visibleItems) || !visibleItems.length) {
@@ -6130,6 +6146,7 @@ function renderProviderSmokeMatrix(items) {
           <div class="muted">smoke sample: ${escapeHTML(stringifyValue(item.sampleTitle, "-"))} / ${escapeHTML(stringifyValue(item.sampleProviderKey, "-"))} / ${escapeHTML(stringifyValue(item.sampleCategory, "-"))}</div>
           <div class="muted">coverage sample: ${escapeHTML(stringifyValue(item.coverageSampleProviderKey, "-"))} / ${escapeHTML(stringifyValue(item.coverageSampleTaskState, "-"))} / ${escapeHTML(stringifyValue(item.coverageSampleCompletionKind, "-"))}</div>
           <div class="muted">checklist: ${escapeHTML(renderProviderSmokeChecklist(item))}</div>
+          <div class="muted">gaps: ${escapeHTML(renderProviderSmokeGaps(item))}</div>
           <div class="muted">异常样本：auth ${item.hasAuthExpiredSample ? "ready" : "pending"} / rate ${item.hasRateLimitedSample ? "ready" : "pending"} / local ${item.hasLocalFileMissingSample ? "ready" : "pending"} / manual ${item.hasPendingManualSample ? "ready" : "pending"}</div>
           <div class="muted">代表样本：large ${item.hasLargeFileSample ? "ready" : "pending"} / nested ${item.hasNestedDirectorySample ? "ready" : "pending"} / retry ${item.hasRetryRecoverySample ? "ready" : "pending"}</div>
           ${Array.isArray(item.anomalyMissing) && item.anomalyMissing.length ? `<div class="muted">anomaly missing: ${escapeHTML(item.anomalyMissing.join(", "))}</div>` : ""}

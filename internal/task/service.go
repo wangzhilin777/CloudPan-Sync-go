@@ -3418,6 +3418,23 @@ func renderSmokeChecklistSummary(row ProviderSmokeMatrixRow) string {
 	return strings.Join(parts, " / ")
 }
 
+func renderSmokeGapSummary(row ProviderSmokeMatrixRow) string {
+	gaps := make([]string, 0, 3)
+	if !row.HasUploadSuccessSample {
+		gaps = append(gaps, "upload")
+	}
+	if len(row.AnomalyMissing) > 0 {
+		gaps = append(gaps, fmt.Sprintf("anomaly(%s)", strings.Join(row.AnomalyMissing, ",")))
+	}
+	if len(row.RepresentativeMissing) > 0 {
+		gaps = append(gaps, fmt.Sprintf("representative(%s)", strings.Join(row.RepresentativeMissing, ",")))
+	}
+	if len(gaps) == 0 {
+		return "complete"
+	}
+	return strings.Join(gaps, " / ")
+}
+
 func buildEvidenceReport(summary EvidenceSummary, statuses []StatusSummary, smokeSummaries []ProviderSmokeSummary, smokeMatrix []ProviderSmokeMatrixRow, samples []EvidenceSample, generatedAt string, title string, note string) EvidenceReport {
 	title = normalizeEvidenceReportTitle(title)
 	note = strings.TrimSpace(note)
@@ -3578,6 +3595,14 @@ func buildEvidenceReport(summary EvidenceSummary, statuses []StatusSummary, smok
 			fmt.Fprintf(&b, "- %s: %s\n",
 				markdownCell(firstNonEmpty(item.ProtocolGroup, "-")),
 				markdownCell(renderSmokeChecklistSummary(item)),
+			)
+		}
+		b.WriteString("\n### 样本缺口速览\n\n")
+		b.WriteString("- 说明：complete=当前协议组 upload + anomaly + representative 三类样本已无缺口；否则直接列出仍缺的具体项。\n\n")
+		for _, item := range smokeMatrix {
+			fmt.Fprintf(&b, "- %s: %s\n",
+				markdownCell(firstNonEmpty(item.ProtocolGroup, "-")),
+				markdownCell(renderSmokeGapSummary(item)),
 			)
 		}
 		b.WriteString("\n## 真实联调验收\n\n")

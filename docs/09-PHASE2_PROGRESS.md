@@ -25,6 +25,7 @@
 - 已优化控制台里的样本来源语义，并区分 `accepted / in_progress / pending`。
 - 已把真实样本矩阵补成可量化的补齐总览，直接显示各协议组异常样本与代表性样本已完成数量，便于更快判断还差哪些证据。
 - 已把真实样本矩阵补成可读 checklist 摘要，直接归并显示 upload / coverage / anomaly / representative 四类样本完成状态。
+- 已把真实样本矩阵补成缺口速览，直接压缩显示每个协议组还缺哪些 upload / anomaly / representative 具体样本类型。
 
 ### 对应提交
 

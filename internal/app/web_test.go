@@ -600,6 +600,12 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "renderProviderSmokeChecklist") {
 		t.Fatalf("expected provider smoke checklist helper in app.js, got %q", body)
 	}
+	if !strings.Contains(body, "renderProviderSmokeGaps") {
+		t.Fatalf("expected provider smoke gap helper in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "gaps:") {
+		t.Fatalf("expected provider smoke gap summary in app.js, got %q", body)
+	}
 	if !strings.Contains(body, "anomaly missing") {
 		t.Fatalf("expected provider smoke matrix anomaly missing detail in app.js, got %q", body)
 	}
