@@ -747,6 +747,24 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "selectedEvidenceReport") {
 		t.Fatalf("expected selectedEvidenceReport helper in app.js, got %q", body)
 	}
+	if !strings.Contains(body, "renderEvidenceProviderSmokeProviders") {
+		t.Fatalf("expected evidence provider smoke provider renderer in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "providerSmokeProviderCounts") {
+		t.Fatalf("expected evidence provider smoke provider counts helper in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "Provider 级真实样本验收") {
+		t.Fatalf("expected provider-level smoke acceptance title in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "Provider Ready") {
+		t.Fatalf("expected provider-level smoke readiness metric in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "providerSmokeProviders") {
+		t.Fatalf("expected providerSmokeProviders report wiring in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "provider priority action") {
+		t.Fatalf("expected provider-level smoke priority action summary in app.js, got %q", body)
+	}
 	if !strings.Contains(body, "item.id === state.selectedReportId ? \"active\" : \"\"") {
 		t.Fatalf("expected report history selected-row state in app.js, got %q", body)
 	}

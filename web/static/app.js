@@ -5571,6 +5571,91 @@ function renderReportHistory(items) {
     .join("");
 }
 
+function providerSmokeProviderCounts(items) {
+  const counts = {
+    total: 0,
+    ready: 0,
+    partial: 0,
+    pending: 0,
+  };
+  for (const item of Array.isArray(items) ? items : []) {
+    counts.total += 1;
+    const readiness = String(item?.readiness || "").trim().toLowerCase();
+    if (readiness === "ready") {
+      counts.ready += 1;
+      continue;
+    }
+    if (readiness === "partial") {
+      counts.partial += 1;
+      continue;
+    }
+    counts.pending += 1;
+  }
+  return counts;
+}
+
+function renderProviderSmokeProviderReadinessLabel(value) {
+  const readiness = String(value || "").trim().toLowerCase();
+  if (readiness === "ready") {
+    return "ready（基础与异常样本齐）";
+  }
+  if (readiness === "partial") {
+    return "partial（已有样本，仍缺验收项）";
+  }
+  return "pending（待补 provider 真实样本）";
+}
+
+function renderEvidenceProviderSmokeProviders(report) {
+  const items = Array.isArray(report?.providerSmokeProviders) ? report.providerSmokeProviders : [];
+  if (!items.length) {
+    return `
+      <div class="insight-card">
+        <strong>Provider 级真实样本验收</strong>
+        <span>暂无 providerSmokeProviders 数据，请先刷新或保存新版验收报告。</span>
+      </div>
+    `;
+  }
+  const counts = providerSmokeProviderCounts(items);
+  const focusItems = items
+    .filter((item) => String(item?.readiness || "").toLowerCase() !== "ready")
+    .slice(0, 6);
+  return `
+    <div class="insight-card">
+      <strong>Provider 级真实样本验收</strong>
+      <span>Provider Ready ${counts.ready} / ${counts.total}</span>
+    </div>
+    <div class="directory-row tree-node">
+      <div class="directory-row-header">
+        <strong>Provider 验收缺口速览</strong>
+        <code>providerSmokeProviders</code>
+      </div>
+      <div class="directory-metrics">
+        <span class="pill">ready ${counts.ready}</span>
+        <span class="pill">partial ${counts.partial}</span>
+        <span class="pill">pending ${counts.pending}</span>
+      </div>
+      ${
+        focusItems.length
+          ? focusItems
+              .map(
+                (item) => `
+                  <div class="muted">
+                    ${escapeHTML(stringifyValue(item.providerKey, "-"))}:
+                    ${escapeHTML(renderProviderSmokeProviderReadinessLabel(item.readiness))}
+                    / basic ${item.hasBasicSuccessSample ? "ready" : "pending"}
+                    / upload ${item.hasUploadSuccessSample ? "ready" : "pending"}
+                    / anomaly ${escapeHTML(stringifyValue(item.anomalyCompletedCount, "0"))}/${escapeHTML(stringifyValue(item.anomalyTargetCount, "0"))}
+                    / priority ${escapeHTML(stringifyValue(item.priorityAction, "complete"))}
+                  </div>
+                `,
+              )
+              .join("")
+          : `<div class="muted">provider priority action: complete</div>`
+      }
+    </div>
+  `;
+}
+
 function renderEvidenceReport(report) {
   if (!report || typeof report !== "object") {
     return `<div class="directory-empty">暂无验收报告，请先刷新或保存一份报告。</div>`;
@@ -5590,6 +5675,7 @@ function renderEvidenceReport(report) {
         <span>${escapeHTML(report.note)}</span>
       </div>
     ` : ""}
+    ${renderEvidenceProviderSmokeProviders(report)}
     <pre class="result-box">${escapeHTML(report.markdown || "")}</pre>
   `;
 }
