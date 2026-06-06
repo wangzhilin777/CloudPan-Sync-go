@@ -3125,6 +3125,18 @@ func TestServiceRecoverBlockedTasksAutoResumesUploadCheckpointQueue(t *testing.T
 	if len(evidence.UploadCheckpointResumeSamplePaths) != 1 || evidence.UploadCheckpointResumeSamplePaths[0] != "/resume.bin" {
 		t.Fatalf("expected upload checkpoint resume sample path /resume.bin, got %#v", evidence.UploadCheckpointResumeSamplePaths)
 	}
+	if evidence.UploadCheckpointResumeSampleProvider != "recover_upload_session_target" {
+		t.Fatalf("expected upload checkpoint resume sample provider recover_upload_session_target, got %q", evidence.UploadCheckpointResumeSampleProvider)
+	}
+	if evidence.UploadCheckpointResumeSampleProtocol != "fake" {
+		t.Fatalf("expected upload checkpoint resume sample protocol fake, got %q", evidence.UploadCheckpointResumeSampleProtocol)
+	}
+	if evidence.UploadCheckpointResumeSampleTaskID != finalDetail.Task.ID {
+		t.Fatalf("expected upload checkpoint resume sample task %s, got %q", finalDetail.Task.ID, evidence.UploadCheckpointResumeSampleTaskID)
+	}
+	if evidence.UploadCheckpointResumeSampleProfileID != profile.ID {
+		t.Fatalf("expected upload checkpoint resume sample profile %s, got %q", profile.ID, evidence.UploadCheckpointResumeSampleProfileID)
+	}
 	if stringValue(evidence.RecentProbes[0].Payload["autoRecoverReason"]) != "upload_checkpoint_auto_resume" {
 		t.Fatalf("expected probe auto recovery reason, got %#v", evidence.RecentProbes[0].Payload)
 	}

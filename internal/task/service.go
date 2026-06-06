@@ -195,6 +195,10 @@ type EvidenceSummary struct {
 	UploadCheckpointTaskCount              int                `json:"uploadCheckpointTaskCount"`
 	UploadCheckpointResumeTaskCount        int                `json:"uploadCheckpointResumeTaskCount"`
 	UploadCheckpointResumeSamplePaths      []string           `json:"uploadCheckpointResumeSamplePaths,omitempty"`
+	UploadCheckpointResumeSampleProvider   string             `json:"uploadCheckpointResumeSampleProvider,omitempty"`
+	UploadCheckpointResumeSampleProtocol   string             `json:"uploadCheckpointResumeSampleProtocol,omitempty"`
+	UploadCheckpointResumeSampleTaskID     string             `json:"uploadCheckpointResumeSampleTaskId,omitempty"`
+	UploadCheckpointResumeSampleProfileID  string             `json:"uploadCheckpointResumeSampleProfileId,omitempty"`
 	AcceptanceActionCounts                 map[string]int     `json:"acceptanceActionCounts,omitempty"`
 	RecentResults                          []Result           `json:"recentResults"`
 	RecentProbes                           []ProviderProbe    `json:"recentProbes"`
@@ -3391,6 +3395,14 @@ func buildEvidenceReport(summary EvidenceSummary, statuses []StatusSummary, smok
 	fmt.Fprintf(&b, "- Upload checkpoint 自动续传任务数: %d\n", summary.UploadCheckpointResumeTaskCount)
 	if len(summary.UploadCheckpointResumeSamplePaths) > 0 {
 		fmt.Fprintf(&b, "- Upload checkpoint 样本路径: %s\n", strings.Join(summary.UploadCheckpointResumeSamplePaths, " -> "))
+	}
+	if summary.UploadCheckpointResumeSampleProvider != "" || summary.UploadCheckpointResumeSampleProtocol != "" || summary.UploadCheckpointResumeSampleTaskID != "" || summary.UploadCheckpointResumeSampleProfileID != "" {
+		fmt.Fprintf(&b, "- Upload checkpoint 样本上下文: provider %s / group %s / task %s / profile %s\n",
+			firstNonEmpty(summary.UploadCheckpointResumeSampleProvider, "-"),
+			firstNonEmpty(summary.UploadCheckpointResumeSampleProtocol, "-"),
+			firstNonEmpty(summary.UploadCheckpointResumeSampleTaskID, "-"),
+			firstNonEmpty(summary.UploadCheckpointResumeSampleProfileID, "-"),
+		)
 	}
 	b.WriteString("\n## 阻塞动作\n\n")
 	if len(summary.BlockedActions) == 0 {

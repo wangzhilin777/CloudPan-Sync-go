@@ -721,6 +721,10 @@ func summarizeAutoRecoverStateCounts(items []AutoRecoverLane) (int, int, int, in
 
 func taskEvidenceSummary(ctx context.Context, store *sqlitestore.Store, providers []provider.Entry) (EvidenceSummary, error) {
 	var summary EvidenceSummary
+	protocolGroups := make(map[string]string, len(providers))
+	for _, entry := range providers {
+		protocolGroups[entry.Meta.Key] = strings.TrimSpace(entry.Meta.ProtocolGroup)
+	}
 	if err := store.DB().QueryRowContext(ctx, `SELECT COUNT(1) FROM tasks`).Scan(&summary.TotalTasks); err != nil {
 		return summary, err
 	}
@@ -782,6 +786,12 @@ func taskEvidenceSummary(ctx context.Context, store *sqlitestore.Store, provider
 				}
 			} else if path := normalizeScanPath(lastCompletedResultPath(detail.Results)); path != "" {
 				summary.UploadCheckpointResumeSamplePaths = appendUniqueString(summary.UploadCheckpointResumeSamplePaths, path)
+			}
+			if summary.UploadCheckpointResumeSampleTaskID == "" {
+				summary.UploadCheckpointResumeSampleTaskID = detail.Task.ID
+				summary.UploadCheckpointResumeSampleProvider = detail.Task.TargetProvider
+				summary.UploadCheckpointResumeSampleProtocol = firstNonEmpty(protocolGroups[detail.Task.TargetProvider], strings.TrimSpace(detail.Task.TargetProvider))
+				summary.UploadCheckpointResumeSampleProfileID = detail.TargetProfileID
 			}
 		}
 		if detail.Task.State != StateBlocked {
