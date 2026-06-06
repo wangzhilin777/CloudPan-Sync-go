@@ -625,6 +625,9 @@ func TestAppWorkflowMainline(t *testing.T) {
 	if got := reportData["markdown"].(string); !strings.Contains(got, "Upload checkpoint 稳定性摘要") {
 		t.Fatalf("expected upload checkpoint stability summary in report markdown, got %s", got)
 	}
+	if got := reportData["markdown"].(string); !strings.Contains(got, "Upload checkpoint 默认恢复 readiness") {
+		t.Fatalf("expected upload checkpoint readiness in report markdown, got %s", got)
+	}
 	if got := reportData["markdown"].(string); !strings.Contains(got, "当前还没有可用于判断公平性的自动补传候选池样本") && !strings.Contains(got, "当前没有自动补传候选池数据") && (!strings.Contains(got, "公平性") || !strings.Contains(got, "lane")) {
 		t.Fatalf("expected fairness completion summary in report markdown, got %s", got)
 	}

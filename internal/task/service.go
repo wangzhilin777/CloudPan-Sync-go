@@ -3380,6 +3380,18 @@ func renderUploadCheckpointResumeEvidenceSummary(summary EvidenceSummary) string
 	}
 }
 
+func renderUploadCheckpointResumeReadiness(summary EvidenceSummary) string {
+	if summary.UploadCheckpointResumeTaskCount == 0 {
+		return "pending"
+	}
+	hasUploadID := strings.TrimSpace(summary.UploadCheckpointResumeSampleUploadID) != ""
+	hasPartEvidence := summary.UploadCheckpointResumeSampleNextPart > 0 || summary.UploadCheckpointResumeSampleUploaded > 0 || summary.UploadCheckpointResumeSamplePartCount > 0
+	if hasUploadID && hasPartEvidence {
+		return "ready"
+	}
+	return "partial"
+}
+
 func renderAutoRecoverFairnessSummary(pool []AutoRecoverLane) string {
 	if len(pool) == 0 {
 		return "当前还没有可用于判断公平性的自动补传候选池样本。"
@@ -3489,6 +3501,7 @@ func buildEvidenceReport(summary EvidenceSummary, statuses []StatusSummary, smok
 			summary.UploadCheckpointResumeSamplePartCount,
 		)
 	}
+	fmt.Fprintf(&b, "- Upload checkpoint 默认恢复 readiness: %s\n", renderUploadCheckpointResumeReadiness(summary))
 	fmt.Fprintf(&b, "- Upload checkpoint 稳定性摘要: %s\n", renderUploadCheckpointResumeEvidenceSummary(summary))
 	b.WriteString("\n## 阻塞动作\n\n")
 	if len(summary.BlockedActions) == 0 {

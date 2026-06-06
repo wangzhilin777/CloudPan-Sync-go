@@ -603,6 +603,12 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "renderProviderSmokeGaps") {
 		t.Fatalf("expected provider smoke gap helper in app.js, got %q", body)
 	}
+	if !strings.Contains(body, "renderUploadCheckpointReadiness") {
+		t.Fatalf("expected upload checkpoint readiness helper in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "Checkpoint Ready") {
+		t.Fatalf("expected upload checkpoint readiness metric in app.js, got %q", body)
+	}
 	if !strings.Contains(body, "gaps:") {
 		t.Fatalf("expected provider smoke gap summary in app.js, got %q", body)
 	}

@@ -1428,6 +1428,18 @@ function renderUploadCheckpointResumeState(checkpoint) {
   return resumable ? "可继续续传" : "仍需重新建会话";
 }
 
+function renderUploadCheckpointReadiness(evidence) {
+  const resumeCount = Number(evidence?.uploadCheckpointResumeTaskCount || 0);
+  if (resumeCount <= 0) {
+    return "pending";
+  }
+  const hasUploadID = Boolean(String(evidence?.uploadCheckpointResumeSampleUploadId || "").trim());
+  const hasPartEvidence = Number(evidence?.uploadCheckpointResumeSampleNextPart || 0) > 0
+    || Number(evidence?.uploadCheckpointResumeSampleUploaded || 0) > 0
+    || Number(evidence?.uploadCheckpointResumeSamplePartCount || 0) > 0;
+  return hasUploadID && hasPartEvidence ? "ready" : "partial";
+}
+
 function renderUploadCheckpoint(checkpoint) {
   if (!checkpoint || typeof checkpoint !== "object") {
     return "";
@@ -3828,6 +3840,7 @@ function renderStatus() {
     <div class="metric"><span>Pending Groups</span><strong>${pendingSmokeGroups}</strong></div>
     <div class="metric"><span>Upload Success Groups</span><strong>${stringifyValue(evidence.uploadSuccessGroups, String(uploadSuccessSmokeGroups))}</strong></div>
     <div class="metric"><span>Upload Success Samples</span><strong>${stringifyValue(evidence.uploadSuccessSamples, "0")}</strong></div>
+    <div class="metric"><span>Checkpoint Ready</span><strong>${escapeHTML(renderUploadCheckpointReadiness(evidence))}</strong></div>
     <div class="metric"><span>Acceptance Actions</span><strong>${escapeHTML(acceptanceActionSummary || "-")}</strong></div>
   `;
   $("#blocked-actions-summary").innerHTML = renderBlockedActionsSummary(evidence.blockedActions || []);

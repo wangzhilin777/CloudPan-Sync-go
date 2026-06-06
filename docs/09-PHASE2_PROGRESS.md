@@ -63,6 +63,7 @@
 - 已把 upload checkpoint 自动续传样本的 provider / protocol group / task / profile 上下文写入运行证据与报告，便于直接回看具体续传样本落点。
 - 已把 upload checkpoint 自动续传样本的 uploadId / nextPart / uploadedParts 进度写入运行证据与报告，便于直接核对是否从既有分片状态继续恢复。
 - 已把 upload checkpoint 自动续传样本补成稳定性摘要，直接说明当前是否已经具备“从既有 checkpoint 继续恢复”的关键证据。
+- 已把 upload checkpoint 自动续传证据补成 `pending / partial / ready` readiness 判断，报告和状态摘要都能直接看出离“默认恢复能力”还差多远。
 
 ### 对应提交
 
