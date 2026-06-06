@@ -5656,6 +5656,38 @@ function renderEvidenceProviderSmokeProviders(report) {
   `;
 }
 
+function renderEvidenceUploadCheckpointSummary(report) {
+  const summary = report?.summary && typeof report.summary === "object" ? report.summary : {};
+  const resumeCount = Number(summary.uploadCheckpointResumeTaskCount || 0);
+  const checkpointCount = Number(summary.uploadCheckpointTaskCount || 0);
+  const paths = Array.isArray(summary.uploadCheckpointResumeSamplePaths)
+    ? summary.uploadCheckpointResumeSamplePaths.filter(Boolean)
+    : [];
+  const readiness = renderUploadCheckpointReadiness(summary);
+  const priorityAction = renderAutoRecoverPriorityAction(summary);
+  return `
+    <div class="insight-card">
+      <strong>Upload checkpoint 默认恢复验收</strong>
+      <span>Checkpoint Resume Ready: ${escapeHTML(readiness)}</span>
+    </div>
+    <div class="directory-row tree-node">
+      <div class="directory-row-header">
+        <strong>大文件/长链路恢复摘要</strong>
+        <code>uploadCheckpointResume</code>
+      </div>
+      <div class="directory-metrics">
+        <span class="pill">checkpoint ${checkpointCount}</span>
+        <span class="pill">auto-resume ${resumeCount}</span>
+        <span class="pill">readiness ${escapeHTML(readiness)}</span>
+      </div>
+      <div class="muted">sample context: provider ${escapeHTML(stringifyValue(summary.uploadCheckpointResumeSampleProvider, "-"))} / group ${escapeHTML(stringifyValue(summary.uploadCheckpointResumeSampleProtocol, "-"))} / task ${escapeHTML(stringifyValue(summary.uploadCheckpointResumeSampleTaskId, "-"))} / profile ${escapeHTML(stringifyValue(summary.uploadCheckpointResumeSampleProfileId, "-"))}</div>
+      <div class="muted">resume detail: upload ${escapeHTML(stringifyValue(summary.uploadCheckpointResumeSampleUploadId, "-"))} / next part ${escapeHTML(stringifyValue(summary.uploadCheckpointResumeSampleNextPart, "0"))} / uploaded ${escapeHTML(stringifyValue(summary.uploadCheckpointResumeSampleUploaded, "0"))}/${escapeHTML(stringifyValue(summary.uploadCheckpointResumeSamplePartCount, "0"))}</div>
+      <div class="muted">sample path: ${escapeHTML(paths.length ? paths.join(" -> ") : "-")}</div>
+      <div class="muted">recover priority action: ${escapeHTML(priorityAction)}</div>
+    </div>
+  `;
+}
+
 function renderEvidenceReport(report) {
   if (!report || typeof report !== "object") {
     return `<div class="directory-empty">暂无验收报告，请先刷新或保存一份报告。</div>`;
@@ -5675,6 +5707,7 @@ function renderEvidenceReport(report) {
         <span>${escapeHTML(report.note)}</span>
       </div>
     ` : ""}
+    ${renderEvidenceUploadCheckpointSummary(report)}
     ${renderEvidenceProviderSmokeProviders(report)}
     <pre class="result-box">${escapeHTML(report.markdown || "")}</pre>
   `;

@@ -71,6 +71,7 @@
 - 已把 upload checkpoint 自动续传样本的 uploadId / nextPart / uploadedParts 进度写入运行证据与报告，便于直接核对是否从既有分片状态继续恢复。
 - 已把 upload checkpoint 自动续传样本补成稳定性摘要，直接说明当前是否已经具备“从既有 checkpoint 继续恢复”的关键证据。
 - 已把 upload checkpoint 自动续传证据补成 `pending / partial / ready` readiness 判断，报告和状态摘要都能直接看出离“默认恢复能力”还差多远。
+- 已把 upload checkpoint 默认恢复 readiness 接入验收报告页摘要，直接展示 `Checkpoint Resume Ready`、自动续传任务数、样本上下文、分片进度和首要恢复动作，便于不用翻 Markdown 就能核对大文件/长链路恢复证据。
 - 已把运行证据补成“自动补传首要动作”摘要，直接指出当前最该先处理的恢复阻塞或补样方向，便于继续减少人工介入。
 - 已把运行证据补成“自动补传恢复完成度”摘要，直接给出 `pending / partial / ready` 单值判断，便于更快评估离默认稳定恢复还有多远。
 - 已把自动补传公平性补成“完成度单值摘要”，直接给出 `pending / partial / ready` 判断，便于更快核对多 provider / 多账号候选池是否形成分散证据。
@@ -86,6 +87,7 @@
 - `5efc7e3` 二期：细化自动补传时间窗等待态
 - `d9611bc` 二期：拆分 provider 会话重建等待态
 - 当前轮次已新增“selected retry subset 保留 checkpoint context”专项回归测试，用于补强子树级补传与 upload checkpoint 续传组合边界的稳定性证明。
+- 当前轮次已新增 upload checkpoint 默认恢复验收报告页摘要，用于把大文件/长链路恢复 readiness、样本上下文和首要动作从 Markdown 提升到页面可视摘要。
 
 ### 仍未完成
 
