@@ -534,6 +534,15 @@ func TestServiceProtocolCoverageSummary(t *testing.T) {
 	if !strings.Contains(report.Markdown, "## 自动补传公平性摘要") {
 		t.Fatalf("expected auto recover fairness section in report markdown, got %s", report.Markdown)
 	}
+	if !strings.Contains(report.Markdown, "## Provider 真实样本验收") {
+		t.Fatalf("expected provider smoke provider acceptance section in report markdown, got %s", report.Markdown)
+	}
+	if !strings.Contains(report.Markdown, "Provider ready") || !strings.Contains(report.Markdown, "Provider pending") {
+		t.Fatalf("expected provider smoke provider acceptance counters in report markdown, got %s", report.Markdown)
+	}
+	if len(report.ProviderSmokeProviders) == 0 {
+		t.Fatal("expected provider smoke provider acceptance rows")
+	}
 	if !strings.Contains(report.Markdown, "当前还没有可用于判断公平性的自动补传候选池样本") && !strings.Contains(report.Markdown, "当前没有自动补传候选池数据") && (!strings.Contains(report.Markdown, "公平性") || !strings.Contains(report.Markdown, "lane")) {
 		t.Fatalf("expected fairness completion summary in report markdown, got %s", report.Markdown)
 	}
@@ -573,6 +582,9 @@ func TestServiceProtocolCoverageSummary(t *testing.T) {
 	if savedReport.Note != "验收备注" {
 		t.Fatalf("expected saved report note 验收备注, got %s", savedReport.Note)
 	}
+	if len(savedReport.ProviderSmokeProviders) == 0 {
+		t.Fatal("expected saved report providerSmokeProviders")
+	}
 
 	listedReports, err := svc.ListEvidenceReports(ctx)
 	if err != nil {
@@ -594,6 +606,9 @@ func TestServiceProtocolCoverageSummary(t *testing.T) {
 	}
 	if fetchedReport.Markdown == "" || !strings.Contains(fetchedReport.Markdown, "里程碑报告") {
 		t.Fatalf("expected custom title in saved report markdown, got %s", fetchedReport.Markdown)
+	}
+	if len(fetchedReport.ProviderSmokeProviders) == 0 {
+		t.Fatal("expected fetched report providerSmokeProviders")
 	}
 }
 
@@ -8022,6 +8037,42 @@ func TestServiceProviderSmokeRecords(t *testing.T) {
 	}
 	if got := evidence.AcceptanceActionCounts["补 1 条真实上传成功样本"]; got < 1 {
 		t.Fatalf("expected acceptance action count for upload success sample >= 1, got %d", got)
+	}
+
+	report, err := svc.EvidenceReport(ctx)
+	if err != nil {
+		t.Fatalf("EvidenceReport() error = %v", err)
+	}
+	if !strings.Contains(report.Markdown, "## Provider 真实样本验收") {
+		t.Fatalf("expected provider smoke provider acceptance section, got %s", report.Markdown)
+	}
+	if len(report.ProviderSmokeProviders) != len(registry.List()) {
+		t.Fatalf("expected provider smoke provider matrix to cover all catalog providers, got %d want %d", len(report.ProviderSmokeProviders), len(registry.List()))
+	}
+	var found123 bool
+	var foundPending bool
+	for _, row := range report.ProviderSmokeProviders {
+		if row.ProviderKey == "123_open" {
+			found123 = true
+			if row.Readiness != "partial" {
+				t.Fatalf("expected 123_open provider readiness partial, got %#v", row)
+			}
+			if !row.HasBasicSuccessSample || row.BasicSuccessCount != 1 {
+				t.Fatalf("expected 123_open provider basic success evidence, got %#v", row)
+			}
+			if row.HasUploadSuccessSample {
+				t.Fatalf("expected browse-only provider row to keep upload success pending, got %#v", row)
+			}
+		}
+		if row.ProviderKey != "123_open" && row.SmokeCount == 0 && row.Readiness == "pending" {
+			foundPending = true
+		}
+	}
+	if !found123 {
+		t.Fatalf("expected 123_open provider smoke provider row in %#v", report.ProviderSmokeProviders)
+	}
+	if !foundPending {
+		t.Fatalf("expected provider smoke provider matrix to include pending catalog provider rows, got %#v", report.ProviderSmokeProviders)
 	}
 }
 

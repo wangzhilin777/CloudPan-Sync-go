@@ -708,6 +708,9 @@ func TestAppWorkflowMainline(t *testing.T) {
 	if got := len(reportByID["smokeMatrix"].([]interface{})); got == 0 {
 		t.Fatal("expected saved report to persist smokeMatrix")
 	}
+	if got := len(reportByID["providerSmokeProviders"].([]interface{})); got == 0 {
+		t.Fatal("expected saved report to persist providerSmokeProviders")
+	}
 
 	smokeResp := invokeJSON(t, handler, http.MethodPost, "/api/provider-smokes", map[string]interface{}{
 		"providerKey":   "123_open",
@@ -867,6 +870,12 @@ func TestAppWorkflowMainline(t *testing.T) {
 	smokeMarkdown := invokeText(t, handler, http.MethodGet, "/api/provider-smokes/"+smokeID+"?format=markdown", nil)
 	if !strings.Contains(smokeMarkdown, "工作流真实 upload smoke") {
 		t.Fatalf("expected smoke markdown title, got %s", smokeMarkdown)
+	}
+	if !strings.Contains(reportData["markdown"].(string), "## Provider 真实样本验收") {
+		t.Fatalf("expected report markdown to include provider smoke provider acceptance section, got %s", reportData["markdown"].(string))
+	}
+	if !strings.Contains(reportData["markdown"].(string), "Provider ready") || !strings.Contains(reportData["markdown"].(string), "Provider pending") {
+		t.Fatalf("expected report markdown to include provider smoke provider acceptance counters, got %s", reportData["markdown"].(string))
 	}
 	if !strings.Contains(reportData["markdown"].(string), "## 真实样本矩阵") {
 		t.Fatalf("expected report markdown to include smoke matrix section, got %s", reportData["markdown"].(string))

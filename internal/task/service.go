@@ -246,28 +246,30 @@ type AutoRecoverLane struct {
 }
 
 type EvidenceReport struct {
-	GeneratedAt    string                   `json:"generatedAt"`
-	Title          string                   `json:"title"`
-	Note           string                   `json:"note,omitempty"`
-	Markdown       string                   `json:"markdown"`
-	Summary        EvidenceSummary          `json:"summary"`
-	Statuses       []StatusSummary          `json:"statuses"`
-	SmokeSummaries []ProviderSmokeSummary   `json:"smokeSummaries,omitempty"`
-	SmokeMatrix    []ProviderSmokeMatrixRow `json:"smokeMatrix,omitempty"`
-	Samples        []EvidenceSample         `json:"samples"`
+	GeneratedAt            string                     `json:"generatedAt"`
+	Title                  string                     `json:"title"`
+	Note                   string                     `json:"note,omitempty"`
+	Markdown               string                     `json:"markdown"`
+	Summary                EvidenceSummary            `json:"summary"`
+	Statuses               []StatusSummary            `json:"statuses"`
+	SmokeSummaries         []ProviderSmokeSummary     `json:"smokeSummaries,omitempty"`
+	SmokeMatrix            []ProviderSmokeMatrixRow   `json:"smokeMatrix,omitempty"`
+	ProviderSmokeProviders []ProviderSmokeProviderRow `json:"providerSmokeProviders,omitempty"`
+	Samples                []EvidenceSample           `json:"samples"`
 }
 
 type EvidenceReportRecord struct {
-	ID             string                   `json:"id"`
-	GeneratedAt    string                   `json:"generatedAt"`
-	Title          string                   `json:"title"`
-	Note           string                   `json:"note,omitempty"`
-	Markdown       string                   `json:"markdown"`
-	Summary        EvidenceSummary          `json:"summary"`
-	Statuses       []StatusSummary          `json:"statuses"`
-	SmokeSummaries []ProviderSmokeSummary   `json:"smokeSummaries,omitempty"`
-	SmokeMatrix    []ProviderSmokeMatrixRow `json:"smokeMatrix,omitempty"`
-	Samples        []EvidenceSample         `json:"samples"`
+	ID                     string                     `json:"id"`
+	GeneratedAt            string                     `json:"generatedAt"`
+	Title                  string                     `json:"title"`
+	Note                   string                     `json:"note,omitempty"`
+	Markdown               string                     `json:"markdown"`
+	Summary                EvidenceSummary            `json:"summary"`
+	Statuses               []StatusSummary            `json:"statuses"`
+	SmokeSummaries         []ProviderSmokeSummary     `json:"smokeSummaries,omitempty"`
+	SmokeMatrix            []ProviderSmokeMatrixRow   `json:"smokeMatrix,omitempty"`
+	ProviderSmokeProviders []ProviderSmokeProviderRow `json:"providerSmokeProviders,omitempty"`
+	Samples                []EvidenceSample           `json:"samples"`
 }
 
 type ProviderSmokeRecord struct {
@@ -308,6 +310,32 @@ type ProviderSmokeSummary struct {
 	HasLargeFileSample        bool     `json:"hasLargeFileSample"`
 	HasNestedDirectorySample  bool     `json:"hasNestedDirectorySample"`
 	HasRetryRecoverySample    bool     `json:"hasRetryRecoverySample"`
+}
+
+type ProviderSmokeProviderRow struct {
+	ProviderKey               string   `json:"providerKey"`
+	Readiness                 string   `json:"readiness"`
+	SmokeCount                int      `json:"smokeCount"`
+	SuccessCount              int      `json:"successCount"`
+	FailureCount              int      `json:"failureCount"`
+	BasicSuccessCount         int      `json:"basicSuccessCount"`
+	HasBasicSuccessSample     bool     `json:"hasBasicSuccessSample"`
+	UploadSuccessCount        int      `json:"uploadSuccessCount"`
+	HasUploadSuccessSample    bool     `json:"hasUploadSuccessSample"`
+	AnomalyCompletedCount     int      `json:"anomalyCompletedCount"`
+	AnomalyTargetCount        int      `json:"anomalyTargetCount"`
+	AnomalyMissing            []string `json:"anomalyMissing,omitempty"`
+	AnomalyActions            []string `json:"anomalyActions,omitempty"`
+	PriorityAction            string   `json:"priorityAction,omitempty"`
+	SampleRecordID            string   `json:"sampleRecordId,omitempty"`
+	SampleTitle               string   `json:"sampleTitle,omitempty"`
+	SampleCategory            string   `json:"sampleCategory,omitempty"`
+	SampleResult              string   `json:"sampleResult,omitempty"`
+	LatestSmokeAt             string   `json:"latestSmokeAt,omitempty"`
+	HasAuthExpiredSample      bool     `json:"hasAuthExpiredSample"`
+	HasRateLimitedSample      bool     `json:"hasRateLimitedSample"`
+	HasLocalFileMissingSample bool     `json:"hasLocalFileMissingSample"`
+	HasPendingManualSample    bool     `json:"hasPendingManualSample"`
 }
 
 type ProviderSmokeMatrixRow struct {
@@ -1139,17 +1167,19 @@ func (s *Service) EvidenceReport(ctx context.Context) (EvidenceReport, error) {
 	if err != nil {
 		return EvidenceReport{}, err
 	}
-	smokeSummaries, err := s.ProviderSmokeSummary(ctx)
+	records, err := s.ListProviderSmokeRecords(ctx)
 	if err != nil {
 		return EvidenceReport{}, err
 	}
+	smokeSummaries := summarizeProviderSmokeRecords(records)
 	summary = enrichEvidenceSummaryWithSmoke(summary, smokeSummaries)
 	smokeMatrix := buildProviderSmokeMatrix(summary, smokeSummaries)
+	providerSmokeProviders := buildProviderSmokeProviderMatrix(records, s.registry.List())
 	details, err := s.List(ctx)
 	if err != nil {
 		return EvidenceReport{}, err
 	}
-	return buildEvidenceReport(summary, statuses, smokeSummaries, smokeMatrix, buildEvidenceSamples(details, 12), time.Now().UTC().Format(time.RFC3339), "", ""), nil
+	return buildEvidenceReport(summary, statuses, smokeSummaries, smokeMatrix, providerSmokeProviders, buildEvidenceSamples(details, 12), time.Now().UTC().Format(time.RFC3339), "", ""), nil
 }
 
 func (s *Service) SaveEvidenceReport(ctx context.Context, title, note string) (EvidenceReportRecord, error) {
@@ -1157,7 +1187,7 @@ func (s *Service) SaveEvidenceReport(ctx context.Context, title, note string) (E
 	if err != nil {
 		return EvidenceReportRecord{}, err
 	}
-	return saveEvidenceReport(ctx, s.store, buildEvidenceReport(report.Summary, report.Statuses, report.SmokeSummaries, report.SmokeMatrix, report.Samples, report.GeneratedAt, title, note))
+	return saveEvidenceReport(ctx, s.store, buildEvidenceReport(report.Summary, report.Statuses, report.SmokeSummaries, report.SmokeMatrix, report.ProviderSmokeProviders, report.Samples, report.GeneratedAt, title, note))
 }
 
 func (s *Service) ListEvidenceReports(ctx context.Context) ([]EvidenceReportRecord, error) {
@@ -3616,7 +3646,7 @@ func renderSmokePriorityAction(row ProviderSmokeMatrixRow) string {
 	return "complete"
 }
 
-func buildEvidenceReport(summary EvidenceSummary, statuses []StatusSummary, smokeSummaries []ProviderSmokeSummary, smokeMatrix []ProviderSmokeMatrixRow, samples []EvidenceSample, generatedAt string, title string, note string) EvidenceReport {
+func buildEvidenceReport(summary EvidenceSummary, statuses []StatusSummary, smokeSummaries []ProviderSmokeSummary, smokeMatrix []ProviderSmokeMatrixRow, providerSmokeProviders []ProviderSmokeProviderRow, samples []EvidenceSample, generatedAt string, title string, note string) EvidenceReport {
 	title = normalizeEvidenceReportTitle(title)
 	note = strings.TrimSpace(note)
 	var b strings.Builder
@@ -3734,6 +3764,47 @@ func buildEvidenceReport(summary EvidenceSummary, statuses []StatusSummary, smok
 				markdownCell(firstNonEmpty(item.LatestProbe, "-")),
 				markdownCell(firstNonEmpty(item.LastTaskState, "-")),
 				markdownCell(firstNonEmpty(item.LastObservedAt, "-")),
+			)
+		}
+	}
+	b.WriteString("\n## Provider 真实样本验收\n\n")
+	if len(providerSmokeProviders) == 0 {
+		b.WriteString("- 当前没有 provider 级真实样本验收数据。\n")
+	} else {
+		readyCount := 0
+		partialCount := 0
+		pendingCount := 0
+		for _, item := range providerSmokeProviders {
+			switch item.Readiness {
+			case "ready":
+				readyCount++
+			case "partial":
+				partialCount++
+			default:
+				pendingCount++
+			}
+		}
+		fmt.Fprintf(&b, "- Provider ready: %d / %d\n", readyCount, len(providerSmokeProviders))
+		fmt.Fprintf(&b, "- Provider partial: %d\n", partialCount)
+		fmt.Fprintf(&b, "- Provider pending: %d\n", pendingCount)
+		b.WriteString("\n| Provider | Readiness | Basic Success | Upload Success | Anomaly Coverage | Missing | Priority Action | Sample | Latest Smoke |\n")
+		b.WriteString("| --- | --- | --- | --- | --- | --- | --- | --- | --- |\n")
+		for _, item := range providerSmokeProviders {
+			fmt.Fprintf(&b, "| %s | %s | %d (%s) | %d (%s) | %d/%d | %s | %s | %s / %s / %s | %s |\n",
+				markdownCell(firstNonEmpty(item.ProviderKey, "-")),
+				markdownCell(firstNonEmpty(item.Readiness, "pending")),
+				item.BasicSuccessCount,
+				markdownCell(boolLabel(item.HasBasicSuccessSample, "ready", "pending")),
+				item.UploadSuccessCount,
+				markdownCell(boolLabel(item.HasUploadSuccessSample, "ready", "pending")),
+				item.AnomalyCompletedCount,
+				item.AnomalyTargetCount,
+				markdownCell(strings.Join(item.AnomalyMissing, ", ")),
+				markdownCell(firstNonEmpty(item.PriorityAction, "complete")),
+				markdownCell(firstNonEmpty(item.SampleRecordID, "-")),
+				markdownCell(firstNonEmpty(item.SampleCategory, "-")),
+				markdownCell(firstNonEmpty(item.SampleResult, "-")),
+				markdownCell(firstNonEmpty(item.LatestSmokeAt, "-")),
 			)
 		}
 	}
@@ -3873,15 +3944,16 @@ func buildEvidenceReport(summary EvidenceSummary, statuses []StatusSummary, smok
 		}
 	}
 	return EvidenceReport{
-		GeneratedAt:    generatedAt,
-		Title:          title,
-		Note:           note,
-		Markdown:       strings.TrimSpace(b.String()),
-		Summary:        summary,
-		Statuses:       statuses,
-		SmokeSummaries: smokeSummaries,
-		SmokeMatrix:    smokeMatrix,
-		Samples:        samples,
+		GeneratedAt:            generatedAt,
+		Title:                  title,
+		Note:                   note,
+		Markdown:               strings.TrimSpace(b.String()),
+		Summary:                summary,
+		Statuses:               statuses,
+		SmokeSummaries:         smokeSummaries,
+		SmokeMatrix:            smokeMatrix,
+		ProviderSmokeProviders: providerSmokeProviders,
+		Samples:                samples,
 	}
 }
 
@@ -4291,6 +4363,113 @@ func summarizeProviderSmokeRecords(records []ProviderSmokeRecord) []ProviderSmok
 	return rows
 }
 
+func buildProviderSmokeProviderMatrix(records []ProviderSmokeRecord, providers []provider.Entry) []ProviderSmokeProviderRow {
+	type providerState struct {
+		row ProviderSmokeProviderRow
+	}
+	states := make(map[string]*providerState)
+	order := make([]string, 0, len(providers)+len(records))
+	ensure := func(providerKey string) *providerState {
+		providerKey = strings.TrimSpace(providerKey)
+		if providerKey == "" {
+			providerKey = "unknown"
+		}
+		state, ok := states[providerKey]
+		if ok {
+			return state
+		}
+		state = &providerState{row: ProviderSmokeProviderRow{ProviderKey: providerKey}}
+		states[providerKey] = state
+		order = append(order, providerKey)
+		return state
+	}
+	for _, item := range providers {
+		ensure(item.Meta.Key)
+	}
+	for _, record := range records {
+		state := ensure(record.ProviderKey)
+		state.row.SmokeCount++
+		if strings.EqualFold(record.Result, "success") {
+			state.row.SuccessCount++
+			state.row.BasicSuccessCount++
+			state.row.HasBasicSuccessSample = true
+			if isUploadSuccessCategory(record.Category) {
+				state.row.UploadSuccessCount++
+				state.row.HasUploadSuccessSample = true
+			}
+		} else {
+			state.row.FailureCount++
+		}
+		for _, anomaly := range smokeAnomalySampleKeys(record) {
+			switch anomaly {
+			case "auth_expired_sample_missing":
+				state.row.HasAuthExpiredSample = true
+			case "rate_limited_sample_missing":
+				state.row.HasRateLimitedSample = true
+			case "local_file_missing_sample_missing":
+				state.row.HasLocalFileMissingSample = true
+			case "pending_manual_sample_missing":
+				state.row.HasPendingManualSample = true
+			}
+		}
+		if state.row.SampleRecordID == "" || (record.CreatedAt != "" && record.CreatedAt > state.row.LatestSmokeAt) {
+			state.row.SampleRecordID = record.ID
+			state.row.SampleTitle = record.Title
+			state.row.SampleCategory = record.Category
+			state.row.SampleResult = record.Result
+			state.row.LatestSmokeAt = record.CreatedAt
+		}
+	}
+	rows := make([]ProviderSmokeProviderRow, 0, len(order))
+	for _, providerKey := range order {
+		row := states[providerKey].row
+		row.AnomalyMissing = buildProviderSmokeAnomalyMissing(row)
+		row.AnomalyTargetCount = 4
+		row.AnomalyCompletedCount = maxInt(0, row.AnomalyTargetCount-len(row.AnomalyMissing))
+		row.AnomalyActions = buildSmokeAnomalyActions(row.AnomalyMissing)
+		row.Readiness = renderProviderSmokeProviderReadiness(row)
+		row.PriorityAction = renderProviderSmokeProviderPriorityAction(row)
+		rows = append(rows, row)
+	}
+	return rows
+}
+
+func buildProviderSmokeAnomalyMissing(row ProviderSmokeProviderRow) []string {
+	missing := make([]string, 0, 4)
+	if !row.HasAuthExpiredSample {
+		missing = append(missing, "auth_expired_sample_missing")
+	}
+	if !row.HasRateLimitedSample {
+		missing = append(missing, "rate_limited_sample_missing")
+	}
+	if !row.HasLocalFileMissingSample {
+		missing = append(missing, "local_file_missing_sample_missing")
+	}
+	if !row.HasPendingManualSample {
+		missing = append(missing, "pending_manual_sample_missing")
+	}
+	return missing
+}
+
+func renderProviderSmokeProviderReadiness(row ProviderSmokeProviderRow) string {
+	if row.HasBasicSuccessSample && len(row.AnomalyMissing) == 0 {
+		return "ready"
+	}
+	if row.HasBasicSuccessSample || row.AnomalyCompletedCount > 0 || row.SmokeCount > 0 {
+		return "partial"
+	}
+	return "pending"
+}
+
+func renderProviderSmokeProviderPriorityAction(row ProviderSmokeProviderRow) string {
+	if !row.HasBasicSuccessSample {
+		return "补 1 条 provider 基础成功样本"
+	}
+	if len(row.AnomalyActions) > 0 {
+		return row.AnomalyActions[0]
+	}
+	return "complete"
+}
 func buildProviderSmokeMatrix(summary EvidenceSummary, smokeSummaries []ProviderSmokeSummary) []ProviderSmokeMatrixRow {
 	if len(smokeSummaries) == 0 && len(summary.ProtocolCoverage) == 0 {
 		return nil
