@@ -624,6 +624,9 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "priority action:") {
 		t.Fatalf("expected provider smoke priority-action summary in app.js, got %q", body)
 	}
+	if !strings.Contains(body, "priority calibration:") {
+		t.Fatalf("expected provider default risk priority-calibration summary in app.js, got %q", body)
+	}
 	if !strings.Contains(body, "anomaly missing") {
 		t.Fatalf("expected provider smoke matrix anomaly missing detail in app.js, got %q", body)
 	}

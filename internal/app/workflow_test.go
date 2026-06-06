@@ -79,6 +79,9 @@ func TestAppWorkflowMainline(t *testing.T) {
 	if missing, ok := defaultRiskTemplate["calibrationMissing"].([]interface{}); !ok || len(missing) == 0 {
 		t.Fatalf("expected provider calibrationMissing in defaultRiskTemplate, got %#v", defaultRiskTemplate["calibrationMissing"])
 	}
+	if got := defaultRiskTemplate["calibrationPriorityAction"].(string); got == "" {
+		t.Fatalf("expected provider calibrationPriorityAction in defaultRiskTemplate, got %#v", defaultRiskTemplate["calibrationPriorityAction"])
+	}
 	if hints, ok := defaultRiskTemplate["providerRiskHints"].([]interface{}); !ok || len(hints) == 0 {
 		t.Fatalf("expected providerRiskHints in defaultRiskTemplate, got %#v", defaultRiskTemplate["providerRiskHints"])
 	}
@@ -110,6 +113,9 @@ func TestAppWorkflowMainline(t *testing.T) {
 	}
 	if missing, ok := capabilityRiskTemplate["calibrationMissing"].([]interface{}); !ok || len(missing) == 0 {
 		t.Fatalf("expected capability defaultRiskTemplate calibrationMissing, got %#v", capabilityRiskTemplate["calibrationMissing"])
+	}
+	if got := capabilityRiskTemplate["calibrationPriorityAction"].(string); got == "" {
+		t.Fatalf("expected capability defaultRiskTemplate calibrationPriorityAction, got %#v", capabilityRiskTemplate["calibrationPriorityAction"])
 	}
 
 	profileResp := invokeJSON(t, handler, http.MethodPost, "/api/auth/profiles", map[string]interface{}{

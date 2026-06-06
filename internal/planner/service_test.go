@@ -237,16 +237,16 @@ func TestProviderDefaultRiskTemplateIncludesAutoRetryWindowSummary(t *testing.T)
 func TestDescribeProviderRiskDefaultsCatalogContract(t *testing.T) {
 	registry := provider.NewRegistry(provider.DefaultCatalog()...)
 	tests := []struct {
-		providerKey        string
-		wantProtocolGroup  string
-		wantRecommended    RiskMode
-		wantRequest        int
-		wantPage           int
-		wantDirectory      int
-		wantCooldown       int
-		wantRetryLimit     int
-		wantMaxConcurrent  int
-		wantKeyword        string
+		providerKey       string
+		wantProtocolGroup string
+		wantRecommended   RiskMode
+		wantRequest       int
+		wantPage          int
+		wantDirectory     int
+		wantCooldown      int
+		wantRetryLimit    int
+		wantMaxConcurrent int
+		wantKeyword       string
 	}{
 		{
 			providerKey:       "aliyundrive_open",

@@ -296,20 +296,22 @@ func ProviderDefaultRiskTemplate(meta provider.Provider) provider.RiskTemplateSu
 	resolution := resolveRiskProfile(meta, RiskModeBalanced, nil, "", nil)
 	defaults := DescribeProviderRiskDefaults(meta)
 	calibrationMissing := defaultRiskCalibrationMissing(resolution.Calibrated)
+	calibrationPriorityAction := defaultRiskCalibrationPriorityAction(calibrationMissing)
 	return provider.RiskTemplateSummary{
-		RecommendedMode:       string(defaults.RecommendedRiskMode),
-		Base:                  resolution.Base,
-		Calibrated:            resolution.Calibrated,
-		RecoverBudget:         resolution.RecoverBudget,
-		AutoRetryWindowSource: defaultRiskAutoRetryWindowSource(resolution.Calibrated),
-		AutoRetryWindowAdvice: defaultRiskAutoRetryWindowAdvice(resolution.Calibrated),
-		CalibrationCoverage:   defaultRiskCalibrationCoverage(resolution.Calibrated, calibrationMissing),
-		CalibrationMissing:    calibrationMissing,
-		CalibrationReasons:    append([]string(nil), defaults.CalibrationReasons...),
-		ProviderRiskHints:     append([]string(nil), defaults.ProviderRiskHints...),
-		ProviderRiskTraits:    append([]string(nil), defaults.ProviderRiskTraits...),
-		RecommendedReason:     defaults.RecommendedRiskReason,
-		AggressiveRiskWarning: defaults.AggressiveRiskWarning,
+		RecommendedMode:           string(defaults.RecommendedRiskMode),
+		Base:                      resolution.Base,
+		Calibrated:                resolution.Calibrated,
+		RecoverBudget:             resolution.RecoverBudget,
+		AutoRetryWindowSource:     defaultRiskAutoRetryWindowSource(resolution.Calibrated),
+		AutoRetryWindowAdvice:     defaultRiskAutoRetryWindowAdvice(resolution.Calibrated),
+		CalibrationCoverage:       defaultRiskCalibrationCoverage(resolution.Calibrated, calibrationMissing),
+		CalibrationMissing:        calibrationMissing,
+		CalibrationReasons:        append([]string(nil), defaults.CalibrationReasons...),
+		CalibrationPriorityAction: calibrationPriorityAction,
+		ProviderRiskHints:         append([]string(nil), defaults.ProviderRiskHints...),
+		ProviderRiskTraits:        append([]string(nil), defaults.ProviderRiskTraits...),
+		RecommendedReason:         defaults.RecommendedRiskReason,
+		AggressiveRiskWarning:     defaults.AggressiveRiskWarning,
 	}
 }
 
@@ -336,6 +338,20 @@ func defaultRiskCalibrationMissing(profile RiskProfile) []string {
 		missing = append(missing, "risk_keywords")
 	}
 	return missing
+}
+
+func defaultRiskCalibrationPriorityAction(missing []string) string {
+	if len(missing) == 0 {
+		return "complete"
+	}
+	switch missing[0] {
+	case "auto_retry_window":
+		return "补 provider 默认 auto retry window"
+	case "risk_keywords":
+		return "补 provider 默认 risk keywords"
+	default:
+		return fmt.Sprintf("补 provider 默认 %s", missing[0])
+	}
 }
 
 func defaultRiskCalibrationCoverage(profile RiskProfile, missing []string) string {

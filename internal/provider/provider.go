@@ -3,19 +3,20 @@ package provider
 import "strings"
 
 type RiskTemplateSummary struct {
-	RecommendedMode       string   `json:"recommendedMode,omitempty"`
-	Base                  any      `json:"base,omitempty"`
-	Calibrated            any      `json:"calibrated,omitempty"`
-	RecoverBudget         any      `json:"recoverBudget,omitempty"`
-	AutoRetryWindowSource string   `json:"autoRetryWindowSource,omitempty"`
-	AutoRetryWindowAdvice string   `json:"autoRetryWindowAdvice,omitempty"`
-	CalibrationCoverage   string   `json:"calibrationCoverage,omitempty"`
-	CalibrationMissing    []string `json:"calibrationMissing,omitempty"`
-	CalibrationReasons    []string `json:"calibrationReasons,omitempty"`
-	ProviderRiskHints     []string `json:"providerRiskHints,omitempty"`
-	ProviderRiskTraits    []string `json:"providerRiskTraits,omitempty"`
-	RecommendedReason     string   `json:"recommendedReason,omitempty"`
-	AggressiveRiskWarning string   `json:"aggressiveRiskWarning,omitempty"`
+	RecommendedMode           string   `json:"recommendedMode,omitempty"`
+	Base                      any      `json:"base,omitempty"`
+	Calibrated                any      `json:"calibrated,omitempty"`
+	RecoverBudget             any      `json:"recoverBudget,omitempty"`
+	AutoRetryWindowSource     string   `json:"autoRetryWindowSource,omitempty"`
+	AutoRetryWindowAdvice     string   `json:"autoRetryWindowAdvice,omitempty"`
+	CalibrationCoverage       string   `json:"calibrationCoverage,omitempty"`
+	CalibrationMissing        []string `json:"calibrationMissing,omitempty"`
+	CalibrationPriorityAction string   `json:"calibrationPriorityAction,omitempty"`
+	CalibrationReasons        []string `json:"calibrationReasons,omitempty"`
+	ProviderRiskHints         []string `json:"providerRiskHints,omitempty"`
+	ProviderRiskTraits        []string `json:"providerRiskTraits,omitempty"`
+	RecommendedReason         string   `json:"recommendedReason,omitempty"`
+	AggressiveRiskWarning     string   `json:"aggressiveRiskWarning,omitempty"`
 }
 
 type ConflictPolicy string

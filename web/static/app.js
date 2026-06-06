@@ -334,6 +334,7 @@ function renderProviderRiskTemplateDetail(template, { title = "默认风控模�
     parts.push(`<div class="muted">risk hints ${escapeHTML(providerHints.join(" / ") || "-")}</div>`);
     parts.push(`<div class="muted">risk traits ${escapeHTML(providerTraits.join(", ") || "-")}</div>`);
     parts.push(`<div class="muted">calibration missing ${escapeHTML((template.calibrationMissing || []).join(", ") || "-")}</div>`);
+    parts.push(`<div class="muted">priority calibration: ${escapeHTML(stringifyValue(template.calibrationPriorityAction, "-"))}</div>`);
     parts.push(`<div class="muted">window advice ${escapeHTML(stringifyValue(template.autoRetryWindowAdvice, "-"))}</div>`);
     parts.push(`<div class="muted">advice ${escapeHTML(stringifyValue(template.recommendedReason, "-"))}</div>`);
     parts.push(`<div class="muted">warning ${escapeHTML(stringifyValue(template.aggressiveRiskWarning, "-"))}</div>`);
@@ -3048,6 +3049,7 @@ function renderProviders() {
           <div class="muted">default risk: ${escapeHTML(renderRiskProfileCompact(defaultRiskTemplate?.calibrated))}</div>
           <div class="muted">recommended risk: ${escapeHTML(stringifyValue(defaultRiskTemplate?.recommendedMode, "-"))}</div>
           <div class="muted">risk calibration: ${escapeHTML((defaultRiskTemplate?.calibrationReasons || []).join(" / ") || "-")}</div>
+          <div class="muted">priority calibration: ${escapeHTML(stringifyValue(defaultRiskTemplate?.calibrationPriorityAction, "-"))}</div>
           <div class="muted">recover budget: ${escapeHTML(renderRecoverBudgetCompact(defaultRiskTemplate?.recoverBudget))}</div>
           <div class="muted">profile risk source: ${escapeHTML(renderRiskDefaultsSourceBadge(profileSource))}</div>
           <div class="muted">profile risk advice: ${escapeHTML(renderProfileRiskDefaultSourceAdvice(profileSource))}</div>
