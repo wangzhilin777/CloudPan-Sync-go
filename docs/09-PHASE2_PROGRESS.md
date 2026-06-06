@@ -58,6 +58,7 @@
 - 已把自动补传公平性摘要补上 sample provider / protocol group / profile / strategy 上下文，便于直接核对每条 lane 的真实样本落点。
 - 已把 upload checkpoint 任务数、自动续传任务数和样本路径写入运行证据与报告，便于直接核对续传恢复是否形成稳定证据。
 - 已把 upload checkpoint 自动续传样本的 provider / protocol group / task / profile 上下文写入运行证据与报告，便于直接回看具体续传样本落点。
+- 已把 upload checkpoint 自动续传样本的 uploadId / nextPart / uploadedParts 进度写入运行证据与报告，便于直接核对是否从既有分片状态继续恢复。
 
 ### 对应提交
 

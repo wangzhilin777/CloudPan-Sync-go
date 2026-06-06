@@ -199,6 +199,10 @@ type EvidenceSummary struct {
 	UploadCheckpointResumeSampleProtocol   string             `json:"uploadCheckpointResumeSampleProtocol,omitempty"`
 	UploadCheckpointResumeSampleTaskID     string             `json:"uploadCheckpointResumeSampleTaskId,omitempty"`
 	UploadCheckpointResumeSampleProfileID  string             `json:"uploadCheckpointResumeSampleProfileId,omitempty"`
+	UploadCheckpointResumeSampleUploadID   string             `json:"uploadCheckpointResumeSampleUploadId,omitempty"`
+	UploadCheckpointResumeSampleNextPart   int                `json:"uploadCheckpointResumeSampleNextPart,omitempty"`
+	UploadCheckpointResumeSamplePartCount  int                `json:"uploadCheckpointResumeSamplePartCount,omitempty"`
+	UploadCheckpointResumeSampleUploaded   int                `json:"uploadCheckpointResumeSampleUploaded,omitempty"`
 	AcceptanceActionCounts                 map[string]int     `json:"acceptanceActionCounts,omitempty"`
 	RecentResults                          []Result           `json:"recentResults"`
 	RecentProbes                           []ProviderProbe    `json:"recentProbes"`
@@ -3402,6 +3406,14 @@ func buildEvidenceReport(summary EvidenceSummary, statuses []StatusSummary, smok
 			firstNonEmpty(summary.UploadCheckpointResumeSampleProtocol, "-"),
 			firstNonEmpty(summary.UploadCheckpointResumeSampleTaskID, "-"),
 			firstNonEmpty(summary.UploadCheckpointResumeSampleProfileID, "-"),
+		)
+	}
+	if summary.UploadCheckpointResumeSampleUploadID != "" || summary.UploadCheckpointResumeSampleNextPart > 0 || summary.UploadCheckpointResumeSamplePartCount > 0 || summary.UploadCheckpointResumeSampleUploaded > 0 {
+		fmt.Fprintf(&b, "- Upload checkpoint 恢复细节: upload %s / next part %d / uploaded %d/%d\n",
+			firstNonEmpty(summary.UploadCheckpointResumeSampleUploadID, "-"),
+			summary.UploadCheckpointResumeSampleNextPart,
+			summary.UploadCheckpointResumeSampleUploaded,
+			summary.UploadCheckpointResumeSamplePartCount,
 		)
 	}
 	b.WriteString("\n## 阻塞动作\n\n")

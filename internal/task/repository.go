@@ -780,6 +780,25 @@ func taskEvidenceSummary(ctx context.Context, store *sqlitestore.Store, provider
 		}
 		if detail.Runtime.AutoRecovered && detail.Runtime.AutoRecoverReason == "upload_checkpoint_auto_resume" {
 			summary.UploadCheckpointResumeTaskCount++
+			checkpoint := detail.Runtime.UploadCheckpoint
+			if checkpoint == nil {
+				retryPaths := []string{}
+				if path := normalizeScanPath(lastCompletedResultPath(detail.Results)); path != "" {
+					retryPaths = append(retryPaths, path)
+				}
+				if len(retryPaths) == 0 {
+					retryPaths = metadataStringSlice(detail.Plan.Metadata, "retrySelectedPaths")
+				}
+				checkpoint = firstRetryUploadCheckpoint(detail.Plan.Metadata, retryPaths)
+			}
+			if checkpoint == nil {
+				for idx := len(detail.Results) - 1; idx >= 0; idx-- {
+					if candidate := uploadCheckpointFromResult(detail.Results[idx]); candidate != nil {
+						checkpoint = candidate
+						break
+					}
+				}
+			}
 			if detail.Runtime.UploadCheckpoint != nil {
 				if path := normalizeScanPath(detail.Runtime.UploadCheckpoint.ItemPath); path != "" {
 					summary.UploadCheckpointResumeSamplePaths = appendUniqueString(summary.UploadCheckpointResumeSamplePaths, path)
@@ -792,6 +811,12 @@ func taskEvidenceSummary(ctx context.Context, store *sqlitestore.Store, provider
 				summary.UploadCheckpointResumeSampleProvider = detail.Task.TargetProvider
 				summary.UploadCheckpointResumeSampleProtocol = firstNonEmpty(protocolGroups[detail.Task.TargetProvider], strings.TrimSpace(detail.Task.TargetProvider))
 				summary.UploadCheckpointResumeSampleProfileID = detail.TargetProfileID
+				if checkpoint != nil {
+					summary.UploadCheckpointResumeSampleUploadID = strings.TrimSpace(checkpoint.UploadID)
+					summary.UploadCheckpointResumeSampleNextPart = checkpoint.NextPartNumber
+					summary.UploadCheckpointResumeSamplePartCount = checkpoint.PartCount
+					summary.UploadCheckpointResumeSampleUploaded = checkpoint.UploadedPartCount
+				}
 			}
 		}
 		if detail.Task.State != StateBlocked {
