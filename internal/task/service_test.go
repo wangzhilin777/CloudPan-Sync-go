@@ -3165,6 +3165,9 @@ func TestServiceRecoverBlockedTasksAutoResumesUploadCheckpointQueue(t *testing.T
 	if !strings.Contains(report.Markdown, "自动补传首要动作") {
 		t.Fatalf("expected auto recover priority action in report markdown, got %s", report.Markdown)
 	}
+	if !strings.Contains(report.Markdown, "自动补传恢复完成度") {
+		t.Fatalf("expected auto recover readiness in report markdown, got %s", report.Markdown)
+	}
 	if !strings.Contains(report.Markdown, "已具备从既有 upload checkpoint 继续恢复的关键证据") {
 		t.Fatalf("expected upload checkpoint stability summary to mention resumable evidence, got %s", report.Markdown)
 	}

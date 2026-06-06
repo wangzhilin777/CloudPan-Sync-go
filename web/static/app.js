@@ -1443,6 +1443,30 @@ function renderUploadCheckpointReadiness(evidence) {
   return hasUploadID && hasPartEvidence ? "ready" : "partial";
 }
 
+function renderAutoRecoverReadiness(evidence) {
+  const hasRunnable = Number(evidence?.autoRecoverRunnableTasks || 0) > 0;
+  const hasBlockingWait = Number(evidence?.autoRecoverWaitingProviderSessionTasks || 0) > 0
+    || Number(evidence?.autoRecoverWaitingAuthRefreshTasks || 0) > 0
+    || Number(evidence?.autoRecoverWaitingLocalRestoreTasks || 0) > 0
+    || Number(evidence?.autoRecoverWaitingManualTasks || 0) > 0
+    || Number(evidence?.autoRecoverWaitingRetryLimitTasks || 0) > 0;
+  const hasSoftWait = Number(evidence?.autoRecoverWaitingRetryWindowTasks || 0) > 0
+    || Number(evidence?.autoRecoverWaitingCooldownTasks || 0) > 0;
+  const hasEvidenceGap = Number(evidence?.uploadCheckpointTaskCount || 0) > 0
+    && Number(evidence?.uploadCheckpointResumeTaskCount || 0) <= 0;
+  const hasFairnessGap = Array.isArray(evidence?.autoRecoverPool) && evidence.autoRecoverPool.length > 0;
+  if (!hasRunnable && !hasBlockingWait && !hasSoftWait && !hasEvidenceGap && !hasFairnessGap) {
+    return "ready";
+  }
+  if (hasRunnable && !hasBlockingWait && !hasEvidenceGap) {
+    return "ready";
+  }
+  if (hasBlockingWait || hasEvidenceGap) {
+    return "pending";
+  }
+  return "partial";
+}
+
 function renderAutoRecoverPriorityAction(evidence) {
   if (Number(evidence?.autoRecoverWaitingProviderSessionTasks || 0) > 0) {
     return "优先重建 provider 会话缺口";
@@ -3881,6 +3905,7 @@ function renderStatus() {
     <div class="metric"><span>Upload Success Samples</span><strong>${stringifyValue(evidence.uploadSuccessSamples, "0")}</strong></div>
     <div class="metric"><span>Checkpoint Ready</span><strong>${escapeHTML(renderUploadCheckpointReadiness(evidence))}</strong></div>
     <div class="metric"><span>Recover Priority</span><strong>${escapeHTML(renderAutoRecoverPriorityAction(evidence))}</strong></div>
+    <div class="metric"><span>Recover Ready</span><strong>${escapeHTML(renderAutoRecoverReadiness(evidence))}</strong></div>
     <div class="metric"><span>Acceptance Actions</span><strong>${escapeHTML(acceptanceActionSummary || "-")}</strong></div>
   `;
   $("#blocked-actions-summary").innerHTML = renderBlockedActionsSummary(evidence.blockedActions || []);

@@ -649,6 +649,9 @@ func TestAppWorkflowMainline(t *testing.T) {
 	if got := reportData["markdown"].(string); !strings.Contains(got, "自动补传首要动作") {
 		t.Fatalf("expected auto recover priority action in report markdown, got %s", got)
 	}
+	if got := reportData["markdown"].(string); !strings.Contains(got, "自动补传恢复完成度") {
+		t.Fatalf("expected auto recover readiness in report markdown, got %s", got)
+	}
 	if got := reportData["markdown"].(string); !strings.Contains(got, "当前还没有可用于判断公平性的自动补传候选池样本") && !strings.Contains(got, "当前没有自动补传候选池数据") && (!strings.Contains(got, "公平性") || !strings.Contains(got, "lane")) {
 		t.Fatalf("expected fairness completion summary in report markdown, got %s", got)
 	}

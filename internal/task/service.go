@@ -3392,6 +3392,28 @@ func renderUploadCheckpointResumeReadiness(summary EvidenceSummary) string {
 	return "partial"
 }
 
+func renderAutoRecoverReadiness(summary EvidenceSummary) string {
+	hasRunnable := summary.AutoRecoverRunnableTasks > 0
+	hasBlockingWait := summary.AutoRecoverWaitingProviderSessionTasks > 0 ||
+		summary.AutoRecoverWaitingAuthRefreshTasks > 0 ||
+		summary.AutoRecoverWaitingLocalRestoreTasks > 0 ||
+		summary.AutoRecoverWaitingManualTasks > 0 ||
+		summary.AutoRecoverWaitingRetryLimitTasks > 0
+	hasSoftWait := summary.AutoRecoverWaitingRetryWindowTasks > 0 || summary.AutoRecoverWaitingCooldownTasks > 0
+	hasEvidenceGap := summary.UploadCheckpointTaskCount > 0 && summary.UploadCheckpointResumeTaskCount == 0
+	hasFairnessGap := len(summary.AutoRecoverPool) > 0
+	switch {
+	case !hasRunnable && !hasBlockingWait && !hasSoftWait && !hasEvidenceGap && !hasFairnessGap:
+		return "ready"
+	case hasRunnable && !hasBlockingWait && !hasEvidenceGap:
+		return "ready"
+	case hasBlockingWait || hasEvidenceGap:
+		return "pending"
+	default:
+		return "partial"
+	}
+}
+
 func renderAutoRecoverPriorityAction(summary EvidenceSummary) string {
 	switch {
 	case summary.AutoRecoverWaitingProviderSessionTasks > 0:
@@ -3582,6 +3604,7 @@ func buildEvidenceReport(summary EvidenceSummary, statuses []StatusSummary, smok
 	}
 	fmt.Fprintf(&b, "- Upload checkpoint 默认恢复 readiness: %s\n", renderUploadCheckpointResumeReadiness(summary))
 	fmt.Fprintf(&b, "- Upload checkpoint 稳定性摘要: %s\n", renderUploadCheckpointResumeEvidenceSummary(summary))
+	fmt.Fprintf(&b, "- 自动补传恢复完成度: %s\n", renderAutoRecoverReadiness(summary))
 	fmt.Fprintf(&b, "- 自动补传首要动作: %s\n", renderAutoRecoverPriorityAction(summary))
 	b.WriteString("\n## 阻塞动作\n\n")
 	if len(summary.BlockedActions) == 0 {
