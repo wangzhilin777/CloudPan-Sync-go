@@ -622,6 +622,9 @@ func TestAppWorkflowMainline(t *testing.T) {
 	if got := reportData["markdown"].(string); strings.Contains(got, "Upload checkpoint 自动续传任务数: 1") && !strings.Contains(got, "Upload checkpoint 恢复细节") {
 		t.Fatalf("expected upload checkpoint resume detail in report markdown when auto resume sample exists, got %s", got)
 	}
+	if got := reportData["markdown"].(string); !strings.Contains(got, "Upload checkpoint 稳定性摘要") {
+		t.Fatalf("expected upload checkpoint stability summary in report markdown, got %s", got)
+	}
 	if got := reportData["markdown"].(string); !strings.Contains(got, "| Mode | Tasks | Providers | Profiles | ProtocolGroups | Suggested Budgets | Sample Context | Advice |") &&
 		!strings.Contains(got, "- 当前没有自动补传候选池数据。") {
 		t.Fatalf("expected auto recover fairness table or empty-state in report markdown, got %s", got)

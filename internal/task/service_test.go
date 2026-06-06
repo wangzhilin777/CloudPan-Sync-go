@@ -3149,6 +3149,16 @@ func TestServiceRecoverBlockedTasksAutoResumesUploadCheckpointQueue(t *testing.T
 	if evidence.UploadCheckpointResumeSampleUploaded != 0 {
 		t.Fatalf("expected upload checkpoint resume sample uploaded count 0, got %d", evidence.UploadCheckpointResumeSampleUploaded)
 	}
+	report, err := svc.EvidenceReport(ctx)
+	if err != nil {
+		t.Fatalf("EvidenceReport() error = %v", err)
+	}
+	if !strings.Contains(report.Markdown, "Upload checkpoint 稳定性摘要") {
+		t.Fatalf("expected upload checkpoint stability summary in report markdown, got %s", report.Markdown)
+	}
+	if !strings.Contains(report.Markdown, "已具备从既有 upload checkpoint 继续恢复的关键证据") {
+		t.Fatalf("expected upload checkpoint stability summary to mention resumable evidence, got %s", report.Markdown)
+	}
 	if stringValue(evidence.RecentProbes[0].Payload["autoRecoverReason"]) != "upload_checkpoint_auto_resume" {
 		t.Fatalf("expected probe auto recovery reason, got %#v", evidence.RecentProbes[0].Payload)
 	}

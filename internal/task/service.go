@@ -3362,6 +3362,24 @@ func formatSourceDeletePolicyLabel(value string) string {
 	}
 }
 
+func renderUploadCheckpointResumeEvidenceSummary(summary EvidenceSummary) string {
+	if summary.UploadCheckpointResumeTaskCount == 0 {
+		return "当前还没有形成 upload checkpoint 自动续传成功样本。"
+	}
+	hasUploadID := strings.TrimSpace(summary.UploadCheckpointResumeSampleUploadID) != ""
+	hasPartEvidence := summary.UploadCheckpointResumeSampleNextPart > 0 || summary.UploadCheckpointResumeSampleUploaded > 0 || summary.UploadCheckpointResumeSamplePartCount > 0
+	switch {
+	case hasUploadID && hasPartEvidence:
+		return "已具备从既有 upload checkpoint 继续恢复的关键证据，可直接回看 uploadId 与分片进度。"
+	case hasUploadID:
+		return "已具备 uploadId 级续传证据，但分片进度线索仍偏少，建议继续补 uploadedParts / nextPart 细节。"
+	case hasPartEvidence:
+		return "已具备分片进度级续传证据，但 uploadId 线索仍偏少，建议继续补 upload session 细节。"
+	default:
+		return "已有自动续传成功样本，但恢复关键线索仍不完整，建议继续补 uploadId、nextPart 和 uploadedParts 证据。"
+	}
+}
+
 func buildEvidenceReport(summary EvidenceSummary, statuses []StatusSummary, smokeSummaries []ProviderSmokeSummary, smokeMatrix []ProviderSmokeMatrixRow, samples []EvidenceSample, generatedAt string, title string, note string) EvidenceReport {
 	title = normalizeEvidenceReportTitle(title)
 	note = strings.TrimSpace(note)
@@ -3416,6 +3434,7 @@ func buildEvidenceReport(summary EvidenceSummary, statuses []StatusSummary, smok
 			summary.UploadCheckpointResumeSamplePartCount,
 		)
 	}
+	fmt.Fprintf(&b, "- Upload checkpoint 稳定性摘要: %s\n", renderUploadCheckpointResumeEvidenceSummary(summary))
 	b.WriteString("\n## 阻塞动作\n\n")
 	if len(summary.BlockedActions) == 0 {
 		b.WriteString("- 当前没有需要人工处理的阻塞动作。\n")
