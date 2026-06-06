@@ -7933,6 +7933,12 @@ func TestServiceProviderSmokeRecords(t *testing.T) {
 	if len(matrix[0].RepresentativeMissing) != 3 {
 		t.Fatalf("expected representative missing 3, got %#v", matrix[0].RepresentativeMissing)
 	}
+	if matrix[0].AnomalyCompletedCount != 0 || matrix[0].AnomalyTargetCount != 4 {
+		t.Fatalf("expected anomaly coverage 0/4, got %d/%d", matrix[0].AnomalyCompletedCount, matrix[0].AnomalyTargetCount)
+	}
+	if matrix[0].RepresentativeCompletedCount != 0 || matrix[0].RepresentativeTargetCount != 3 {
+		t.Fatalf("expected representative coverage 0/3, got %d/%d", matrix[0].RepresentativeCompletedCount, matrix[0].RepresentativeTargetCount)
+	}
 	if len(matrix[0].RepresentativeActions) != 3 {
 		t.Fatalf("expected representative actions 3, got %#v", matrix[0].RepresentativeActions)
 	}
@@ -8081,6 +8087,12 @@ func TestServiceProviderSmokeMatrixTracksUploadSuccessSample(t *testing.T) {
 	if !strings.Contains(report.Markdown, "上传成功样本数: 1") {
 		t.Fatalf("expected upload success samples line in report markdown, got %s", report.Markdown)
 	}
+	if !strings.Contains(report.Markdown, "### 样本补齐总览") {
+		t.Fatalf("expected smoke completion summary heading in report markdown, got %s", report.Markdown)
+	}
+	if !strings.Contains(report.Markdown, "| ProtocolGroup | Upload Success | Task Coverage | Anomaly Coverage | Representative Coverage |") {
+		t.Fatalf("expected smoke completion summary table in report markdown, got %s", report.Markdown)
+	}
 }
 
 func TestServiceProviderSmokeMatrixTracksRepresentativeSamples(t *testing.T) {
@@ -8132,6 +8144,9 @@ func TestServiceProviderSmokeMatrixTracksRepresentativeSamples(t *testing.T) {
 	}
 	if len(matrix[0].RepresentativeMissing) != 0 {
 		t.Fatalf("expected representative missing empty, got %#v", matrix[0].RepresentativeMissing)
+	}
+	if matrix[0].RepresentativeCompletedCount != 3 || matrix[0].RepresentativeTargetCount != 3 {
+		t.Fatalf("expected representative coverage 3/3, got %d/%d", matrix[0].RepresentativeCompletedCount, matrix[0].RepresentativeTargetCount)
 	}
 	if len(matrix[0].RepresentativeActions) != 1 {
 		t.Fatalf("expected representative actions len 1 when complete, got %#v", matrix[0].RepresentativeActions)

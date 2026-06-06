@@ -322,9 +322,13 @@ type ProviderSmokeMatrixRow struct {
 	HasRateLimitedSample         bool     `json:"hasRateLimitedSample"`
 	HasLocalFileMissingSample    bool     `json:"hasLocalFileMissingSample"`
 	HasPendingManualSample       bool     `json:"hasPendingManualSample"`
+	AnomalyCompletedCount        int      `json:"anomalyCompletedCount"`
+	AnomalyTargetCount           int      `json:"anomalyTargetCount"`
 	HasLargeFileSample           bool     `json:"hasLargeFileSample"`
 	HasNestedDirectorySample     bool     `json:"hasNestedDirectorySample"`
 	HasRetryRecoverySample       bool     `json:"hasRetryRecoverySample"`
+	RepresentativeCompletedCount int      `json:"representativeCompletedCount"`
+	RepresentativeTargetCount    int      `json:"representativeTargetCount"`
 	AnomalyMissing               []string `json:"anomalyMissing,omitempty"`
 	AnomalyActions               []string `json:"anomalyActions,omitempty"`
 	AnomalyAdvice                string   `json:"anomalyAdvice,omitempty"`
@@ -3463,6 +3467,22 @@ func buildEvidenceReport(summary EvidenceSummary, statuses []StatusSummary, smok
 		fmt.Fprintf(&b, "- 已验收协议组: %d / %d\n", acceptedCount, len(smokeMatrix))
 		fmt.Fprintf(&b, "- 进行中协议组: %d\n", inProgressCount)
 		fmt.Fprintf(&b, "- 待补齐协议组: %d\n", pendingCount)
+		b.WriteString("\n### 样本补齐总览\n\n")
+		b.WriteString("| ProtocolGroup | Upload Success | Task Coverage | Anomaly Coverage | Representative Coverage |\n")
+		b.WriteString("| --- | --- | --- | --- | --- |\n")
+		for _, item := range smokeMatrix {
+			fmt.Fprintf(&b, "| %s | %d (%s) | %d/%d | %d/%d | %d/%d |\n",
+				markdownCell(firstNonEmpty(item.ProtocolGroup, "-")),
+				item.UploadSuccessCount,
+				markdownCell(boolLabel(item.HasUploadSuccessSample, "ready", "pending")),
+				item.CoverageRealSuccessTaskCount,
+				item.CoverageTaskCount,
+				item.AnomalyCompletedCount,
+				item.AnomalyTargetCount,
+				item.RepresentativeCompletedCount,
+				item.RepresentativeTargetCount,
+			)
+		}
 		b.WriteString("\n## 真实联调验收\n\n")
 		b.WriteString("| ProtocolGroup | Acceptance | Missing | Actions | Advice | Smoke | Upload Smoke | Coverage | Sample | Latest Smoke |\n")
 		b.WriteString("| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |\n")
@@ -4020,9 +4040,13 @@ func buildProviderSmokeMatrix(summary EvidenceSummary, smokeSummaries []Provider
 		}
 		state.row.AcceptanceActions = buildAcceptanceActions(missing)
 		state.row.AnomalyMissing = buildSmokeAnomalyMissing(state.row)
+		state.row.AnomalyTargetCount = 4
+		state.row.AnomalyCompletedCount = maxInt(0, state.row.AnomalyTargetCount-len(state.row.AnomalyMissing))
 		state.row.AnomalyActions = buildSmokeAnomalyActions(state.row.AnomalyMissing)
 		state.row.AnomalyAdvice = buildSmokeAnomalyAdvice(state.row.AnomalyMissing)
 		state.row.RepresentativeMissing = buildRepresentativeSampleMissing(state.row)
+		state.row.RepresentativeTargetCount = 3
+		state.row.RepresentativeCompletedCount = maxInt(0, state.row.RepresentativeTargetCount-len(state.row.RepresentativeMissing))
 		state.row.RepresentativeActions = buildRepresentativeSampleActions(state.row.RepresentativeMissing)
 		state.row.RepresentativeAdvice = buildRepresentativeSampleAdvice(state.row.RepresentativeMissing)
 		switch {

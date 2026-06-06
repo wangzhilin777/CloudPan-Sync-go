@@ -745,6 +745,12 @@ func TestAppWorkflowMainline(t *testing.T) {
 	if got := len(smokeMatrix[0].(map[string]interface{})["anomalyMissing"].([]interface{})); got != 4 {
 		t.Fatalf("expected accepted smoke matrix anomalyMissing 4, got %d", got)
 	}
+	if got := smokeMatrix[0].(map[string]interface{})["anomalyCompletedCount"].(float64); got != 0 {
+		t.Fatalf("expected accepted smoke matrix anomalyCompletedCount 0, got %v", got)
+	}
+	if got := smokeMatrix[0].(map[string]interface{})["anomalyTargetCount"].(float64); got != 4 {
+		t.Fatalf("expected accepted smoke matrix anomalyTargetCount 4, got %v", got)
+	}
 	if got := len(smokeMatrix[0].(map[string]interface{})["anomalyActions"].([]interface{})); got != 4 {
 		t.Fatalf("expected accepted smoke matrix anomalyActions 4, got %d", got)
 	}
@@ -762,6 +768,12 @@ func TestAppWorkflowMainline(t *testing.T) {
 	}
 	if got := len(smokeMatrix[0].(map[string]interface{})["representativeMissing"].([]interface{})); got != 3 {
 		t.Fatalf("expected accepted smoke matrix representativeMissing 3, got %d", got)
+	}
+	if got := smokeMatrix[0].(map[string]interface{})["representativeCompletedCount"].(float64); got != 0 {
+		t.Fatalf("expected accepted smoke matrix representativeCompletedCount 0, got %v", got)
+	}
+	if got := smokeMatrix[0].(map[string]interface{})["representativeTargetCount"].(float64); got != 3 {
+		t.Fatalf("expected accepted smoke matrix representativeTargetCount 3, got %v", got)
 	}
 	if got := len(smokeMatrix[0].(map[string]interface{})["representativeActions"].([]interface{})); got != 3 {
 		t.Fatalf("expected accepted smoke matrix representativeActions 3, got %d", got)
@@ -822,6 +834,12 @@ func TestAppWorkflowMainline(t *testing.T) {
 	}
 	if !strings.Contains(reportData["markdown"].(string), "已验收协议组") || !strings.Contains(reportData["markdown"].(string), "进行中协议组") || !strings.Contains(reportData["markdown"].(string), "待补齐协议组") {
 		t.Fatalf("expected report markdown to include acceptance counters, got %s", reportData["markdown"].(string))
+	}
+	if !strings.Contains(reportData["markdown"].(string), "### 样本补齐总览") {
+		t.Fatalf("expected report markdown to include smoke completion summary heading, got %s", reportData["markdown"].(string))
+	}
+	if !strings.Contains(reportData["markdown"].(string), "Anomaly Coverage") || !strings.Contains(reportData["markdown"].(string), "Representative Coverage") {
+		t.Fatalf("expected report markdown to include smoke completion summary columns, got %s", reportData["markdown"].(string))
 	}
 
 	retryResp := invokeJSON(t, handler, http.MethodPost, "/api/tasks/"+taskID+"/retry", map[string]interface{}{
