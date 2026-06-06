@@ -1468,6 +1468,22 @@ function renderAutoRecoverReadiness(evidence) {
   return "partial";
 }
 
+function renderAutoRecoverFairnessReadiness(evidence) {
+  const pool = Array.isArray(evidence?.autoRecoverPool) ? evidence.autoRecoverPool : [];
+  if (!pool.length) {
+    return "pending";
+  }
+  const hasMultiProvider = pool.some((item) => Number(item?.providerCount || 0) > 1);
+  const hasMultiProfile = pool.some((item) => Number(item?.profileCount || 0) > 1);
+  const hasMultiProtocolGroup = pool.some((item) => Array.isArray(item?.protocolGroups) && item.protocolGroups.length > 1);
+  if (hasMultiProvider && hasMultiProfile) {
+    return "ready";
+  }
+  if (hasMultiProvider || hasMultiProfile || hasMultiProtocolGroup) {
+    return "partial";
+  }
+  return "pending";
+}
 function renderAutoRecoverPriorityAction(evidence) {
   if (Number(evidence?.autoRecoverWaitingProviderSessionTasks || 0) > 0) {
     return "优先重建 provider 会话缺口";
@@ -3908,6 +3924,7 @@ function renderStatus() {
     <div class="metric"><span>Checkpoint Ready</span><strong>${escapeHTML(renderUploadCheckpointReadiness(evidence))}</strong></div>
     <div class="metric"><span>Recover Priority</span><strong>${escapeHTML(renderAutoRecoverPriorityAction(evidence))}</strong></div>
     <div class="metric"><span>Recover Ready</span><strong>${escapeHTML(renderAutoRecoverReadiness(evidence))}</strong></div>
+    <div class="metric"><span>Fairness Ready</span><strong>${escapeHTML(renderAutoRecoverFairnessReadiness(evidence))}</strong></div>
     <div class="metric"><span>Acceptance Actions</span><strong>${escapeHTML(acceptanceActionSummary || "-")}</strong></div>
   `;
   $("#blocked-actions-summary").innerHTML = renderBlockedActionsSummary(evidence.blockedActions || []);

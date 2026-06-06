@@ -537,6 +537,9 @@ func TestServiceProtocolCoverageSummary(t *testing.T) {
 	if !strings.Contains(report.Markdown, "当前还没有可用于判断公平性的自动补传候选池样本") && !strings.Contains(report.Markdown, "当前没有自动补传候选池数据") && (!strings.Contains(report.Markdown, "公平性") || !strings.Contains(report.Markdown, "lane")) {
 		t.Fatalf("expected fairness completion summary in report markdown, got %s", report.Markdown)
 	}
+	if !strings.Contains(report.Markdown, "自动补传公平性完成度") {
+		t.Fatalf("expected auto recover fairness readiness in report markdown, got %s", report.Markdown)
+	}
 	if !strings.Contains(report.Markdown, "Upload checkpoint 任务数") {
 		t.Fatalf("expected upload checkpoint summary in report markdown, got %s", report.Markdown)
 	}
