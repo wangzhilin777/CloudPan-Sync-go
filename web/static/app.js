@@ -6204,6 +6204,23 @@ function renderProviderSmokeGaps(item) {
   return gaps.length ? gaps.join(" / ") : "complete";
 }
 
+function renderProviderSmokeReadiness(item) {
+  const hasUpload = Boolean(item?.hasUploadSuccessSample);
+  const coverageDone = Number(item?.coverageRealSuccessTaskCount || 0);
+  const coverageTotal = Number(item?.coverageTaskCount || 0);
+  const anomalyDone = Number(item?.anomalyCompletedCount || 0);
+  const anomalyTotal = Number(item?.anomalyTargetCount || 0);
+  const representativeDone = Number(item?.representativeCompletedCount || 0);
+  const representativeTotal = Number(item?.representativeTargetCount || 0);
+  if (hasUpload && coverageDone >= coverageTotal && anomalyDone >= anomalyTotal && representativeDone >= representativeTotal) {
+    return "ready";
+  }
+  if (hasUpload || coverageDone > 0 || anomalyDone > 0 || representativeDone > 0) {
+    return "partial";
+  }
+  return "pending";
+}
+
 function renderProviderSmokeNextAction(item) {
   const actions = [];
   if (!item?.hasUploadSuccessSample) {
@@ -6261,6 +6278,7 @@ function renderProviderSmokeMatrix(items) {
           </div>
           <div class="muted">smoke sample: ${escapeHTML(stringifyValue(item.sampleTitle, "-"))} / ${escapeHTML(stringifyValue(item.sampleProviderKey, "-"))} / ${escapeHTML(stringifyValue(item.sampleCategory, "-"))}</div>
           <div class="muted">coverage sample: ${escapeHTML(stringifyValue(item.coverageSampleProviderKey, "-"))} / ${escapeHTML(stringifyValue(item.coverageSampleTaskState, "-"))} / ${escapeHTML(stringifyValue(item.coverageSampleCompletionKind, "-"))}</div>
+          <div class="muted">readiness: ${escapeHTML(renderProviderSmokeReadiness(item))}</div>
           <div class="muted">checklist: ${escapeHTML(renderProviderSmokeChecklist(item))}</div>
           <div class="muted">gaps: ${escapeHTML(renderProviderSmokeGaps(item))}</div>
           <div class="muted">next action: ${escapeHTML(renderProviderSmokeNextAction(item))}</div>

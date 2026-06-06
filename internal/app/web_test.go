@@ -600,6 +600,9 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "renderProviderSmokeChecklist") {
 		t.Fatalf("expected provider smoke checklist helper in app.js, got %q", body)
 	}
+	if !strings.Contains(body, "renderProviderSmokeReadiness") {
+		t.Fatalf("expected provider smoke readiness helper in app.js, got %q", body)
+	}
 	if !strings.Contains(body, "renderProviderSmokeGaps") {
 		t.Fatalf("expected provider smoke gap helper in app.js, got %q", body)
 	}
@@ -620,6 +623,9 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	}
 	if !strings.Contains(body, "Recover Ready") {
 		t.Fatalf("expected auto recover readiness metric in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "readiness:") {
+		t.Fatalf("expected provider smoke readiness summary in app.js, got %q", body)
 	}
 	if !strings.Contains(body, "gaps:") {
 		t.Fatalf("expected provider smoke gap summary in app.js, got %q", body)

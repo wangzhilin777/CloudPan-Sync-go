@@ -3479,6 +3479,19 @@ func renderSmokeChecklistSummary(row ProviderSmokeMatrixRow) string {
 	return strings.Join(parts, " / ")
 }
 
+func renderSmokeReadiness(row ProviderSmokeMatrixRow) string {
+	if row.HasUploadSuccessSample &&
+		row.CoverageRealSuccessTaskCount >= row.CoverageTaskCount &&
+		row.AnomalyCompletedCount >= row.AnomalyTargetCount &&
+		row.RepresentativeCompletedCount >= row.RepresentativeTargetCount {
+		return "ready"
+	}
+	if row.HasUploadSuccessSample || row.CoverageRealSuccessTaskCount > 0 || row.AnomalyCompletedCount > 0 || row.RepresentativeCompletedCount > 0 {
+		return "partial"
+	}
+	return "pending"
+}
+
 func renderSmokeGapSummary(row ProviderSmokeMatrixRow) string {
 	gaps := make([]string, 0, 3)
 	if !row.HasUploadSuccessSample {
@@ -3691,11 +3704,12 @@ func buildEvidenceReport(summary EvidenceSummary, statuses []StatusSummary, smok
 		fmt.Fprintf(&b, "- 待补齐协议组: %d\n", pendingCount)
 		b.WriteString("\n### 样本补齐总览\n\n")
 		b.WriteString("- 说明：upload=真实上传成功样本，coverage=真实任务覆盖，anomaly=最小异常样本，representative=大文件/多层目录/重试恢复代表样本。\n\n")
-		b.WriteString("| ProtocolGroup | Upload Success | Task Coverage | Anomaly Coverage | Representative Coverage |\n")
-		b.WriteString("| --- | --- | --- | --- | --- |\n")
+		b.WriteString("| ProtocolGroup | Readiness | Upload Success | Task Coverage | Anomaly Coverage | Representative Coverage |\n")
+		b.WriteString("| --- | --- | --- | --- | --- | --- |\n")
 		for _, item := range smokeMatrix {
-			fmt.Fprintf(&b, "| %s | %d (%s) | %d/%d | %d/%d | %d/%d |\n",
+			fmt.Fprintf(&b, "| %s | %s | %d (%s) | %d/%d | %d/%d | %d/%d |\n",
 				markdownCell(firstNonEmpty(item.ProtocolGroup, "-")),
+				markdownCell(renderSmokeReadiness(item)),
 				item.UploadSuccessCount,
 				markdownCell(boolLabel(item.HasUploadSuccessSample, "ready", "pending")),
 				item.CoverageRealSuccessTaskCount,

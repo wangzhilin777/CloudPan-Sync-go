@@ -883,6 +883,9 @@ func TestAppWorkflowMainline(t *testing.T) {
 	if !strings.Contains(reportData["markdown"].(string), "### 样本补齐总览") {
 		t.Fatalf("expected report markdown to include smoke completion summary heading, got %s", reportData["markdown"].(string))
 	}
+	if !strings.Contains(reportData["markdown"].(string), "| ProtocolGroup | Readiness | Upload Success | Task Coverage | Anomaly Coverage | Representative Coverage |") {
+		t.Fatalf("expected report markdown to include smoke readiness summary table, got %s", reportData["markdown"].(string))
+	}
 	if !strings.Contains(reportData["markdown"].(string), "### 样本完成清单") || !strings.Contains(reportData["markdown"].(string), "upload pending / coverage 1/1 / anomaly 0/4 / representative 0/3") {
 		t.Fatalf("expected report markdown to include smoke checklist summary, got %s", reportData["markdown"].(string))
 	}
