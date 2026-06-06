@@ -3213,12 +3213,20 @@ function renderProfiles() {
       <tbody>
         ${state.profiles
           .map(
-            (profile) => `
+            (profile) => {
+              const profileRisk = renderRiskProfileCompact(parseProfileRiskDefaultsFromExtra(profile.extra));
+              const profileSource = parseProfileRiskDefaultsSourceFromExtra(profile.extra || {});
+              const profileAdvice = renderProfileRiskDefaultSourceAdvice(profileSource);
+              return `
               <tr class="${profile.id === state.focusedProfileId ? "active" : ""}" data-profile-row="${profile.id}">
                 <td>${profile.displayName}</td>
                 <td>${profile.providerKey}</td>
                 <td>${profile.authMode}</td>
-                <td>${escapeHTML(renderRiskProfileCompact(parseProfileRiskDefaultsFromExtra(profile.extra)))}</td>
+                <td>
+                  <div>${escapeHTML(profileRisk)}</div>
+                  <div class="muted">账号默认来源: ${escapeHTML(renderRiskDefaultsSourceBadge(profileSource))}</div>
+                  <div class="muted">账号默认建议: ${escapeHTML(profileAdvice)}</div>
+                </td>
                 <td>${profile.status}</td>
                 <td>
                   <div class="actions compact">
@@ -3228,7 +3236,8 @@ function renderProfiles() {
                   </div>
                 </td>
               </tr>
-            `,
+            `;
+            },
           )
           .join("")}
       </tbody>
