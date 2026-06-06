@@ -3412,16 +3412,23 @@ func buildEvidenceReport(summary EvidenceSummary, statuses []StatusSummary, smok
 	if len(summary.AutoRecoverPool) == 0 {
 		b.WriteString("- 当前没有自动补传候选池数据。\n")
 	} else {
-		b.WriteString("| Mode | Tasks | Providers | Profiles | ProtocolGroups | Suggested Budgets | Advice |\n")
-		b.WriteString("| --- | ---: | ---: | ---: | ---: | --- | --- |\n")
+		b.WriteString("| Mode | Tasks | Providers | Profiles | ProtocolGroups | Suggested Budgets | Sample Context | Advice |\n")
+		b.WriteString("| --- | ---: | ---: | ---: | ---: | --- | --- | --- |\n")
 		for _, item := range summary.AutoRecoverPool {
-			fmt.Fprintf(&b, "| %s | %d | %d | %d | %d | %s | %s |\n",
+			sampleContext := fmt.Sprintf("provider %s / group %s / profile %s / strategy %s",
+				firstNonEmpty(item.SampleProvider, "-"),
+				firstNonEmpty(item.SampleProtocolGroup, "-"),
+				firstNonEmpty(item.SampleProfileID, "-"),
+				firstNonEmpty(item.SampleStrategy, "-"),
+			)
+			fmt.Fprintf(&b, "| %s | %d | %d | %d | %d | %s | %s | %s |\n",
 				markdownCell(firstNonEmpty(item.Mode, "-")),
 				item.TaskCount,
 				item.ProviderCount,
 				item.ProfileCount,
 				len(item.ProtocolGroups),
 				markdownCell(fmt.Sprintf("group %d / provider %d / profile %d", item.SuggestedProtocolGroupBudget, item.SuggestedProviderBudget, item.SuggestedProfileBudget)),
+				markdownCell(sampleContext),
 				markdownCell(firstNonEmpty(item.Advice, "-")),
 			)
 		}

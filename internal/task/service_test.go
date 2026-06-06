@@ -537,7 +537,7 @@ func TestServiceProtocolCoverageSummary(t *testing.T) {
 	if !strings.Contains(report.Markdown, "Upload checkpoint 任务数") {
 		t.Fatalf("expected upload checkpoint summary in report markdown, got %s", report.Markdown)
 	}
-	if !strings.Contains(report.Markdown, "| Mode | Tasks | Providers | Profiles | ProtocolGroups | Suggested Budgets | Advice |") &&
+	if !strings.Contains(report.Markdown, "| Mode | Tasks | Providers | Profiles | ProtocolGroups | Suggested Budgets | Sample Context | Advice |") &&
 		!strings.Contains(report.Markdown, "- 当前没有自动补传候选池数据。") {
 		t.Fatalf("expected auto recover fairness table or empty-state in report markdown, got %s", report.Markdown)
 	}
