@@ -27,6 +27,7 @@
 - 已把真实样本矩阵补成可读 checklist 摘要，直接归并显示 upload / coverage / anomaly / representative 四类样本完成状态。
 - 已把真实样本矩阵补成缺口速览，直接压缩显示每个协议组还缺哪些 upload / anomaly / representative 具体样本类型。
 - 已把真实样本矩阵补成“下一步补样动作”摘要，直接提示每个协议组此刻最值得优先补的 upload / anomaly / representative 动作。
+- 已把真实样本矩阵补成“首要补样项”摘要，只保留当前最应该先补的一项，方便先补最关键验收证据。
 
 ### 对应提交
 

@@ -6159,6 +6159,22 @@ function renderProviderSmokeNextAction(item) {
   return Array.from(new Set(actions.filter(Boolean))).join("；") || "complete";
 }
 
+function renderProviderSmokePriorityAction(item) {
+  if (!item?.hasUploadSuccessSample) {
+    return "补 1 条真实上传成功样本";
+  }
+  if (Number(item?.coverageRealSuccessTaskCount || 0) < Number(item?.coverageTaskCount || 0)) {
+    return "补 1 条真实任务覆盖样本";
+  }
+  if (Array.isArray(item?.anomalyActions) && item.anomalyActions.length) {
+    return item.anomalyActions[0];
+  }
+  if (Array.isArray(item?.representativeActions) && item.representativeActions.length) {
+    return item.representativeActions[0];
+  }
+  return "complete";
+}
+
 function renderProviderSmokeMatrix(items) {
   const visibleItems = filteredProviderSmokeMatrix(items);
   if (!Array.isArray(visibleItems) || !visibleItems.length) {
@@ -6183,6 +6199,7 @@ function renderProviderSmokeMatrix(items) {
           <div class="muted">checklist: ${escapeHTML(renderProviderSmokeChecklist(item))}</div>
           <div class="muted">gaps: ${escapeHTML(renderProviderSmokeGaps(item))}</div>
           <div class="muted">next action: ${escapeHTML(renderProviderSmokeNextAction(item))}</div>
+          <div class="muted">priority action: ${escapeHTML(renderProviderSmokePriorityAction(item))}</div>
           <div class="muted">异常样本：auth ${item.hasAuthExpiredSample ? "ready" : "pending"} / rate ${item.hasRateLimitedSample ? "ready" : "pending"} / local ${item.hasLocalFileMissingSample ? "ready" : "pending"} / manual ${item.hasPendingManualSample ? "ready" : "pending"}</div>
           <div class="muted">代表样本：large ${item.hasLargeFileSample ? "ready" : "pending"} / nested ${item.hasNestedDirectorySample ? "ready" : "pending"} / retry ${item.hasRetryRecoverySample ? "ready" : "pending"}</div>
           ${Array.isArray(item.anomalyMissing) && item.anomalyMissing.length ? `<div class="muted">anomaly missing: ${escapeHTML(item.anomalyMissing.join(", "))}</div>` : ""}

@@ -3483,6 +3483,22 @@ func renderSmokeNextActionSummary(row ProviderSmokeMatrixRow) string {
 	return strings.Join(deduped, "；")
 }
 
+func renderSmokePriorityAction(row ProviderSmokeMatrixRow) string {
+	if !row.HasUploadSuccessSample {
+		return "补 1 条真实上传成功样本"
+	}
+	if row.CoverageRealSuccessTaskCount < row.CoverageTaskCount {
+		return "补 1 条真实任务覆盖样本"
+	}
+	if len(row.AnomalyActions) > 0 {
+		return row.AnomalyActions[0]
+	}
+	if len(row.RepresentativeActions) > 0 {
+		return row.RepresentativeActions[0]
+	}
+	return "complete"
+}
+
 func buildEvidenceReport(summary EvidenceSummary, statuses []StatusSummary, smokeSummaries []ProviderSmokeSummary, smokeMatrix []ProviderSmokeMatrixRow, samples []EvidenceSample, generatedAt string, title string, note string) EvidenceReport {
 	title = normalizeEvidenceReportTitle(title)
 	note = strings.TrimSpace(note)
@@ -3660,6 +3676,14 @@ func buildEvidenceReport(summary EvidenceSummary, statuses []StatusSummary, smok
 			fmt.Fprintf(&b, "- %s: %s\n",
 				markdownCell(firstNonEmpty(item.ProtocolGroup, "-")),
 				markdownCell(renderSmokeNextActionSummary(item)),
+			)
+		}
+		b.WriteString("\n### 首要补样项\n\n")
+		b.WriteString("- 说明：只保留当前最该优先补的一项，方便先补最关键验收证据。\n\n")
+		for _, item := range smokeMatrix {
+			fmt.Fprintf(&b, "- %s: %s\n",
+				markdownCell(firstNonEmpty(item.ProtocolGroup, "-")),
+				markdownCell(renderSmokePriorityAction(item)),
 			)
 		}
 		b.WriteString("\n## 真实联调验收\n\n")

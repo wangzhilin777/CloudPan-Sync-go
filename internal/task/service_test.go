@@ -8145,6 +8145,9 @@ func TestServiceProviderSmokeMatrixTracksUploadSuccessSample(t *testing.T) {
 	if !strings.Contains(report.Markdown, "### 下一步补样动作") || !strings.Contains(report.Markdown, "补 1 条真实上传成功样本；补 1 条授权失效异常样本；补 1 条大文件上传或恢复样本") {
 		t.Fatalf("expected smoke next action summary in report markdown, got %s", report.Markdown)
 	}
+	if !strings.Contains(report.Markdown, "### 首要补样项") || !strings.Contains(report.Markdown, "- aliyun_123_open: 补 1 条授权失效异常样本") {
+		t.Fatalf("expected smoke priority action summary in report markdown, got %s", report.Markdown)
+	}
 }
 
 func TestServiceProviderSmokeMatrixTracksRepresentativeSamples(t *testing.T) {

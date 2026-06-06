@@ -874,6 +874,9 @@ func TestAppWorkflowMainline(t *testing.T) {
 	if !strings.Contains(reportData["markdown"].(string), "### 下一步补样动作") || !strings.Contains(reportData["markdown"].(string), "补 1 条真实上传成功样本；补 1 条授权失效异常样本；补 1 条大文件上传或恢复样本") {
 		t.Fatalf("expected report markdown to include smoke next action summary, got %s", reportData["markdown"].(string))
 	}
+	if !strings.Contains(reportData["markdown"].(string), "### 首要补样项") || !strings.Contains(reportData["markdown"].(string), "- aliyun_123_open: 补 1 条真实上传成功样本") {
+		t.Fatalf("expected report markdown to include smoke priority action summary, got %s", reportData["markdown"].(string))
+	}
 	if !strings.Contains(reportData["markdown"].(string), "Anomaly Coverage") || !strings.Contains(reportData["markdown"].(string), "Representative Coverage") {
 		t.Fatalf("expected report markdown to include smoke completion summary columns, got %s", reportData["markdown"].(string))
 	}

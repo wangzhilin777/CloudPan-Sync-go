@@ -300,14 +300,14 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 		chromedp.Click(`#task-runtime [data-source-delete-prefill-paths]`, chromedp.ByQuery),
 		waitForValueContains(`#plan-selected-roots`, "/demo/deleted.bin"),
 		waitForText(`#flash`, "已按全部删除记录重建向导范围"),
-		chromedp.Click(`button[data-view="tasks"]`, chromedp.ByQuery),
+		chromedp.Click(`.tabs button[data-view="tasks"]`, chromedp.ByQuery),
 		waitForText(`#task-runtime`, "删除记录摘要"),
 		waitForText(`#task-directory-states`, "/demo"),
 		chromedp.Click(`#task-summary [data-runtime-focus-kind="roots"]`, chromedp.ByQuery),
 		waitForText(`#task-directory-filter-summary`, "当前显示"),
 		chromedp.Click(`#task-directory-states [data-tree-prefill-path="/demo"]`, chromedp.ByQuery),
 		waitForValueContains(`#plan-selected-roots`, "/demo"),
-		chromedp.Click(`button[data-view="tasks"]`, chromedp.ByQuery),
+		chromedp.Click(`.tabs button[data-view="tasks"]`, chromedp.ByQuery),
 		waitForText(`#task-summary`, "leaf_first_lazy"),
 		chromedp.Click(`#task-directory-copy-visible`, chromedp.ByID),
 		waitForText(`#flash`, "已复制"),
@@ -333,7 +333,7 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 		chromedp.Evaluate(`(() => document.querySelector('#task-resolution-guide [data-task-guide-intent="focus_status_auto_recover_mode"]')?.click())()`, nil),
 		waitForValue(`#auto-recover-mode`, "retry_queue_auto_retry"),
 		waitForText(`#flash`, "已按 retry_queue_auto_retry 收敛后台补传候选"),
-		chromedp.Evaluate(`(() => document.querySelector('button[data-view="tasks"]')?.click())()`, nil),
+		chromedp.Evaluate(`(() => document.querySelector('.tabs button[data-view="tasks"]')?.click())()`, nil),
 		waitForText(`#task-resolution-guide`, "等待后台自动补传接管"),
 		chromedp.Evaluate(`(() => document.querySelector('#refresh-tasks')?.click())()`, nil),
 		waitForText(`#flash`, "任务列表已刷新"),
@@ -341,7 +341,7 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 	)
 
 	runStep(t, runCtx, "status overview",
-		chromedp.Evaluate(`(() => document.querySelector('button[data-view="status"]')?.click())()`, nil),
+		chromedp.Evaluate(`(() => document.querySelector('.tabs button[data-view="status"]')?.click())()`, nil),
 		waitForText(`#evidence-summary`, "Auto Recover"),
 		waitForText(`#auto-retry-policy-summary`, "group 1"),
 		waitForText(`#auto-recover-budget-summary`, "当前生效预算（默认）"),
@@ -398,7 +398,7 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 		chromedp.Evaluate(`(() => document.querySelector('#auto-recover-last-result-detail [data-auto-recover-decision-open-task]')?.click())()`, nil),
 		waitForText(`#task-detail`, recoverTaskID),
 		waitForText(`#task-detail`, `"state": "completed_with_errors"`),
-		chromedp.Evaluate(`(() => document.querySelector('button[data-view="status"]')?.click())()`, nil),
+		chromedp.Evaluate(`(() => document.querySelector('.tabs button[data-view="status"]')?.click())()`, nil),
 		waitForText(`#auto-recover-last-result-summary`, "最近预演"),
 		chromedp.Evaluate(`(() => document.querySelector('#auto-recover-last-result-detail [data-auto-recover-decision-run="1"]')?.click())()`, nil),
 		waitForText(`#flash`, "已按决策执行后台补传"),
@@ -418,7 +418,7 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 	)
 
 	runStep(t, runCtx, "manual confirmation blocked task guide",
-		chromedp.Evaluate(`(() => document.querySelector('button[data-view="tasks"]')?.click())()`, nil),
+		chromedp.Evaluate(`(() => document.querySelector('.tabs button[data-view="tasks"]')?.click())()`, nil),
 		chromedp.ActionFunc(func(ctx context.Context) error {
 			var payload string
 			if err := chromedp.Evaluate(fmt.Sprintf(`(() => {
@@ -471,7 +471,7 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 	}
 
 	runStep(t, runCtx, "manual confirmation blocked task",
-		chromedp.Evaluate(`(() => document.querySelector('button[data-view="tasks"]')?.click())()`, nil),
+		chromedp.Evaluate(`(() => document.querySelector('.tabs button[data-view="tasks"]')?.click())()`, nil),
 		chromedp.Evaluate(`(() => document.querySelector('#refresh-tasks')?.click())()`, nil),
 		waitForText(`#tasks-list`, "manual_confirmation_source -> manual_confirmation_target"),
 		chromedp.ActionFunc(func(ctx context.Context) error {
@@ -495,7 +495,7 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 		}),
 	)
 	runStep(t, runCtx, "provider session missing blocked task",
-		chromedp.Evaluate(`(() => document.querySelector('button[data-view="tasks"]')?.click())()`, nil),
+		chromedp.Evaluate(`(() => document.querySelector('.tabs button[data-view="tasks"]')?.click())()`, nil),
 		chromedp.ActionFunc(func(ctx context.Context) error {
 			var payload string
 			if err := chromedp.Evaluate(fmt.Sprintf(`(() => {
@@ -538,7 +538,7 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 	)
 
 	runStep(t, runCtx, "local file missing blocked task",
-		chromedp.Evaluate(`(() => document.querySelector('button[data-view="tasks"]')?.click())()`, nil),
+		chromedp.Evaluate(`(() => document.querySelector('.tabs button[data-view="tasks"]')?.click())()`, nil),
 		chromedp.ActionFunc(func(ctx context.Context) error {
 			var payload string
 			if err := chromedp.Evaluate(fmt.Sprintf(`(() => {
@@ -578,7 +578,7 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 	)
 
 	runStep(t, runCtx, "auth expired blocked task",
-		chromedp.Evaluate(`(() => document.querySelector('button[data-view="tasks"]')?.click())()`, nil),
+		chromedp.Evaluate(`(() => document.querySelector('.tabs button[data-view="tasks"]')?.click())()`, nil),
 		chromedp.ActionFunc(func(ctx context.Context) error {
 			var payload string
 			if err := chromedp.Evaluate(fmt.Sprintf(`(() => {
