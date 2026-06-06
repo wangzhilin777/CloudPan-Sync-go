@@ -5688,6 +5688,88 @@ function renderEvidenceUploadCheckpointSummary(report) {
   `;
 }
 
+function providerRiskCalibrationCounts(items) {
+  const counts = {
+    total: 0,
+    ready: 0,
+    partial: 0,
+    pending: 0,
+  };
+  for (const item of Array.isArray(items) ? items : []) {
+    counts.total += 1;
+    const readiness = String(item?.defaultRiskTemplate?.calibrationReadiness || "").trim().toLowerCase();
+    if (readiness === "ready") {
+      counts.ready += 1;
+      continue;
+    }
+    if (readiness === "partial") {
+      counts.partial += 1;
+      continue;
+    }
+    counts.pending += 1;
+  }
+  return counts;
+}
+
+function renderEvidenceRiskCalibrationSummary(report) {
+  const statusKeys = new Set(
+    (Array.isArray(report?.statuses) ? report.statuses : [])
+      .map((item) => String(item?.providerKey || "").trim())
+      .filter(Boolean),
+  );
+  const items = (state.providers || []).filter((entry) => statusKeys.has(String(entry?.meta?.key || "").trim()));
+  if (!items.length) {
+    return `
+      <div class="insight-card">
+        <strong>Provider 默认风控校准</strong>
+        <span>暂无 provider 默认模板校准数据，请先刷新 provider 列表。</span>
+      </div>
+    `;
+  }
+  const counts = providerRiskCalibrationCounts(items);
+  const focusItems = items
+    .filter((item) => String(item?.meta?.defaultRiskTemplate?.calibrationReadiness || "").toLowerCase() !== "ready")
+    .slice(0, 6);
+  return `
+    <div class="insight-card">
+      <strong>Provider 默认风控校准</strong>
+      <span>Calibration Ready ${counts.ready} / ${counts.total}</span>
+    </div>
+    <div class="directory-row tree-node">
+      <div class="directory-row-header">
+        <strong>默认模板缺口速览</strong>
+        <code>defaultRiskTemplate</code>
+      </div>
+      <div class="directory-metrics">
+        <span class="pill">ready ${counts.ready}</span>
+        <span class="pill">partial ${counts.partial}</span>
+        <span class="pill">pending ${counts.pending}</span>
+      </div>
+      ${
+        focusItems.length
+          ? focusItems
+              .map((item) => {
+                const template = item?.meta?.defaultRiskTemplate || {};
+                return `
+                  <div class="muted">
+                    ${escapeHTML(stringifyValue(item?.meta?.key, "-"))}:
+                    calibration readiness ${escapeHTML(stringifyValue(template.calibrationReadiness, "pending"))}
+                    / recommended ${escapeHTML(stringifyValue(template.recommendedMode, "-"))}
+                    / priority calibration ${escapeHTML(stringifyValue(template.calibrationPriorityAction, "-"))}
+                  </div>
+                  <div class="muted">
+                    window source ${escapeHTML(renderAutoRetryWindowSource(template.autoRetryWindowSource))}
+                    / window advice ${escapeHTML(stringifyValue(template.autoRetryWindowAdvice, "-"))}
+                  </div>
+                `;
+              })
+              .join("")
+          : `<div class="muted">priority calibration: complete</div>`
+      }
+    </div>
+  `;
+}
+
 function renderEvidenceReport(report) {
   if (!report || typeof report !== "object") {
     return `<div class="directory-empty">暂无验收报告，请先刷新或保存一份报告。</div>`;
@@ -5709,6 +5791,7 @@ function renderEvidenceReport(report) {
     ` : ""}
     ${renderEvidenceUploadCheckpointSummary(report)}
     ${renderEvidenceProviderSmokeProviders(report)}
+    ${renderEvidenceRiskCalibrationSummary(report)}
     <pre class="result-box">${escapeHTML(report.markdown || "")}</pre>
   `;
 }

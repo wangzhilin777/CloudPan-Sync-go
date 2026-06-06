@@ -780,6 +780,24 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "provider priority action") {
 		t.Fatalf("expected provider-level smoke priority action summary in app.js, got %q", body)
 	}
+	if !strings.Contains(body, "renderEvidenceRiskCalibrationSummary") {
+		t.Fatalf("expected evidence risk calibration summary renderer in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "Provider 默认风控校准") {
+		t.Fatalf("expected evidence provider risk calibration title in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "Calibration Ready") {
+		t.Fatalf("expected evidence provider risk calibration readiness metric in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "defaultRiskTemplate") {
+		t.Fatalf("expected evidence provider risk template wiring in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "priority calibration") {
+		t.Fatalf("expected evidence provider risk priority calibration summary in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "window source") {
+		t.Fatalf("expected evidence provider risk auto retry window source in app.js, got %q", body)
+	}
 	if !strings.Contains(body, "item.id === state.selectedReportId ? \"active\" : \"\"") {
 		t.Fatalf("expected report history selected-row state in app.js, got %q", body)
 	}

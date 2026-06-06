@@ -115,6 +115,7 @@
 - 已把 provider 默认风控模板补成“校准完成度/缺口”摘要，能直接看出哪些字段已由代码默认覆盖、哪些仍主要依赖账号默认或任务覆盖。
 - 已把 provider 默认风控模板补成“首要校准项”摘要，直接指出当前最该优先补的默认字段，便于继续按真实样本收口。
 - 已把 provider 默认风控模板补成“校准完成度单值摘要”，直接给出 `pending / partial / ready` 判断，便于更快评估离默认可用模板还有多远。
+- 已把 provider 默认风控模板校准摘要接入验收报告页，直接显示 `Calibration Ready`、`priority calibration` 和 `auto retry window` 来源/建议，便于不用翻 provider 卡片也能核对默认模板缺口。
 
 ### 对应提交
 
@@ -123,6 +124,7 @@
 - `494cd9a` 二期：细化样本来源推荐语义
 - `d8572ac` 二期：区分已验收与待补齐样本推荐
 - 当前轮次已新增 provider 风控模板清单与默认值契约测试，便于核对 `request interval / directory interval / retry limit / risk keywords` 当前到底落成了什么。
+- 当前轮次已新增 provider 默认风控校准验收报告页摘要，用于把校准 readiness、首要校准项和自动补传时间窗来源从局部卡片提升到统一验收视图。
 
 ### 仍未完成
 

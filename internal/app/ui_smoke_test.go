@@ -318,11 +318,11 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 	)
 
 	runStep(t, runCtx, "pause resume run task",
-		chromedp.Evaluate(`(() => document.querySelector('#task-pause')?.click())()`, nil),
+		chromedp.Click(`#task-pause`, chromedp.ByID),
 		waitForText(`#task-detail`, `"state": "paused"`),
-		chromedp.Evaluate(`(() => document.querySelector('#task-resume')?.click())()`, nil),
+		chromedp.Click(`#task-resume`, chromedp.ByID),
 		waitForText(`#task-detail`, `"state": "ready"`),
-		chromedp.Evaluate(`(() => document.querySelector('#task-run')?.click())()`, nil),
+		chromedp.Click(`#task-run`, chromedp.ByID),
 		waitForText(`#task-detail`, `"state": "completed_with_errors"`),
 		waitForText(`#task-detail`, `"status": "failed"`),
 		waitForText(`#task-runtime`, "completed"),
