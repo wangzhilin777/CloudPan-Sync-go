@@ -73,6 +73,12 @@ func TestAppWorkflowMainline(t *testing.T) {
 	if got := defaultRiskTemplate["autoRetryWindowAdvice"].(string); !strings.Contains(got, "always_on") {
 		t.Fatalf("expected provider autoRetryWindowAdvice to mention always_on, got %#v", got)
 	}
+	if got := defaultRiskTemplate["calibrationCoverage"].(string); got == "" {
+		t.Fatalf("expected provider calibrationCoverage in defaultRiskTemplate, got %#v", defaultRiskTemplate["calibrationCoverage"])
+	}
+	if missing, ok := defaultRiskTemplate["calibrationMissing"].([]interface{}); !ok || len(missing) == 0 {
+		t.Fatalf("expected provider calibrationMissing in defaultRiskTemplate, got %#v", defaultRiskTemplate["calibrationMissing"])
+	}
 	if hints, ok := defaultRiskTemplate["providerRiskHints"].([]interface{}); !ok || len(hints) == 0 {
 		t.Fatalf("expected providerRiskHints in defaultRiskTemplate, got %#v", defaultRiskTemplate["providerRiskHints"])
 	}
@@ -98,6 +104,12 @@ func TestAppWorkflowMainline(t *testing.T) {
 	}
 	if got := capabilityRiskTemplate["autoRetryWindowAdvice"].(string); !strings.Contains(got, "always_on") {
 		t.Fatalf("expected capability defaultRiskTemplate autoRetryWindowAdvice to mention always_on, got %#v", got)
+	}
+	if got := capabilityRiskTemplate["calibrationCoverage"].(string); got == "" {
+		t.Fatalf("expected capability defaultRiskTemplate calibrationCoverage, got %#v", capabilityRiskTemplate["calibrationCoverage"])
+	}
+	if missing, ok := capabilityRiskTemplate["calibrationMissing"].([]interface{}); !ok || len(missing) == 0 {
+		t.Fatalf("expected capability defaultRiskTemplate calibrationMissing, got %#v", capabilityRiskTemplate["calibrationMissing"])
 	}
 
 	profileResp := invokeJSON(t, handler, http.MethodPost, "/api/auth/profiles", map[string]interface{}{

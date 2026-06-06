@@ -323,6 +323,7 @@ function renderProviderRiskTemplateDetail(template, { title = "默认风控模�
     `<span>${escapeHTML(renderRiskProfileCompact(template.calibrated))}</span>`,
     `<div class="muted">auto retry window ${escapeHTML(renderRiskWindow(template.calibrated))}</div>`,
     `<div class="muted">window source ${escapeHTML(renderAutoRetryWindowSource(template.autoRetryWindowSource))}</div>`,
+    `<div class="muted">calibration coverage ${escapeHTML(stringifyValue(template.calibrationCoverage, "-"))}</div>`,
     `<div class="muted">recommended ${escapeHTML(stringifyValue(template.recommendedMode, "-"))}</div>`,
     `<div class="muted">recover budget ${escapeHTML(renderRecoverBudgetCompact(template.recoverBudget))}</div>`,
     `<div class="muted">budget advice ${escapeHTML(renderRecoverBudgetAdvice(template.recoverBudget, template.providerKey || ""))}</div>`,
@@ -332,6 +333,7 @@ function renderProviderRiskTemplateDetail(template, { title = "默认风控模�
     parts.push(`<div class="muted">reasons ${escapeHTML(reasons.join(" / ") || "-")}</div>`);
     parts.push(`<div class="muted">risk hints ${escapeHTML(providerHints.join(" / ") || "-")}</div>`);
     parts.push(`<div class="muted">risk traits ${escapeHTML(providerTraits.join(", ") || "-")}</div>`);
+    parts.push(`<div class="muted">calibration missing ${escapeHTML((template.calibrationMissing || []).join(", ") || "-")}</div>`);
     parts.push(`<div class="muted">window advice ${escapeHTML(stringifyValue(template.autoRetryWindowAdvice, "-"))}</div>`);
     parts.push(`<div class="muted">advice ${escapeHTML(stringifyValue(template.recommendedReason, "-"))}</div>`);
     parts.push(`<div class="muted">warning ${escapeHTML(stringifyValue(template.aggressiveRiskWarning, "-"))}</div>`);

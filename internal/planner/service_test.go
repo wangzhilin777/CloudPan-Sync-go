@@ -226,6 +226,12 @@ func TestProviderDefaultRiskTemplateIncludesAutoRetryWindowSummary(t *testing.T)
 	if !strings.Contains(template.AutoRetryWindowAdvice, "always_on") {
 		t.Fatalf("expected auto retry window advice to mention always_on, got %+v", template)
 	}
+	if template.CalibrationCoverage != "partial 7/8" {
+		t.Fatalf("expected calibration coverage partial 7/8, got %+v", template)
+	}
+	if len(template.CalibrationMissing) != 1 || template.CalibrationMissing[0] != "auto_retry_window" {
+		t.Fatalf("expected calibration missing [auto_retry_window], got %+v", template)
+	}
 }
 
 func TestDescribeProviderRiskDefaultsCatalogContract(t *testing.T) {

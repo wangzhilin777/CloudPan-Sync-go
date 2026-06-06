@@ -3,6 +3,7 @@ package planner
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"sort"
 	"strings"
 
@@ -294,6 +295,7 @@ func defaultRiskProfile(providerKey string, mode RiskMode) RiskProfile {
 func ProviderDefaultRiskTemplate(meta provider.Provider) provider.RiskTemplateSummary {
 	resolution := resolveRiskProfile(meta, RiskModeBalanced, nil, "", nil)
 	defaults := DescribeProviderRiskDefaults(meta)
+	calibrationMissing := defaultRiskCalibrationMissing(resolution.Calibrated)
 	return provider.RiskTemplateSummary{
 		RecommendedMode:       string(defaults.RecommendedRiskMode),
 		Base:                  resolution.Base,
@@ -301,6 +303,8 @@ func ProviderDefaultRiskTemplate(meta provider.Provider) provider.RiskTemplateSu
 		RecoverBudget:         resolution.RecoverBudget,
 		AutoRetryWindowSource: defaultRiskAutoRetryWindowSource(resolution.Calibrated),
 		AutoRetryWindowAdvice: defaultRiskAutoRetryWindowAdvice(resolution.Calibrated),
+		CalibrationCoverage:   defaultRiskCalibrationCoverage(resolution.Calibrated, calibrationMissing),
+		CalibrationMissing:    calibrationMissing,
 		CalibrationReasons:    append([]string(nil), defaults.CalibrationReasons...),
 		ProviderRiskHints:     append([]string(nil), defaults.ProviderRiskHints...),
 		ProviderRiskTraits:    append([]string(nil), defaults.ProviderRiskTraits...),
@@ -321,6 +325,49 @@ func defaultRiskAutoRetryWindowAdvice(profile RiskProfile) string {
 		return "当前 provider 默认模板已内建自动补传时间窗，可直接按该窗口评估后台恢复时段。"
 	}
 	return "当前 provider 默认模板未内建自动补传时间窗，默认按 always_on 解释；如需限时恢复，请通过账号默认或任务级覆盖补充。"
+}
+
+func defaultRiskCalibrationMissing(profile RiskProfile) []string {
+	missing := make([]string, 0, 2)
+	if profile.AutoRetryStartHour <= 0 && profile.AutoRetryEndHour <= 0 {
+		missing = append(missing, "auto_retry_window")
+	}
+	if len(profile.RiskKeywords) == 0 {
+		missing = append(missing, "risk_keywords")
+	}
+	return missing
+}
+
+func defaultRiskCalibrationCoverage(profile RiskProfile, missing []string) string {
+	covered := 0
+	if profile.RequestIntervalMS > 0 {
+		covered++
+	}
+	if profile.PageSize > 0 {
+		covered++
+	}
+	if profile.DirectoryIntervalMS > 0 {
+		covered++
+	}
+	if profile.CooldownSeconds > 0 {
+		covered++
+	}
+	if profile.RetryLimit > 0 {
+		covered++
+	}
+	if profile.MaxConcurrent > 0 {
+		covered++
+	}
+	if len(profile.RiskKeywords) > 0 {
+		covered++
+	}
+	if profile.AutoRetryStartHour > 0 || profile.AutoRetryEndHour > 0 {
+		covered++
+	}
+	if len(missing) == 0 {
+		return "complete 8/8"
+	}
+	return fmt.Sprintf("partial %d/8", covered)
 }
 
 func DescribeProviderRiskDefaults(meta provider.Provider) ProviderRiskDefaults {
