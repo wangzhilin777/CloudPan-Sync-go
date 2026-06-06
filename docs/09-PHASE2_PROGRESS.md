@@ -66,6 +66,7 @@
 - 已把 upload checkpoint 自动续传样本的 uploadId / nextPart / uploadedParts 进度写入运行证据与报告，便于直接核对是否从既有分片状态继续恢复。
 - 已把 upload checkpoint 自动续传样本补成稳定性摘要，直接说明当前是否已经具备“从既有 checkpoint 继续恢复”的关键证据。
 - 已把 upload checkpoint 自动续传证据补成 `pending / partial / ready` readiness 判断，报告和状态摘要都能直接看出离“默认恢复能力”还差多远。
+- 已把运行证据补成“自动补传首要动作”摘要，直接指出当前最该先处理的恢复阻塞或补样方向，便于继续减少人工介入。
 
 ### 对应提交
 

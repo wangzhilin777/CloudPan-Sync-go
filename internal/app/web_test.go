@@ -609,6 +609,12 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "Checkpoint Ready") {
 		t.Fatalf("expected upload checkpoint readiness metric in app.js, got %q", body)
 	}
+	if !strings.Contains(body, "renderAutoRecoverPriorityAction") {
+		t.Fatalf("expected auto recover priority-action helper in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "Recover Priority") {
+		t.Fatalf("expected auto recover priority metric in app.js, got %q", body)
+	}
 	if !strings.Contains(body, "gaps:") {
 		t.Fatalf("expected provider smoke gap summary in app.js, got %q", body)
 	}

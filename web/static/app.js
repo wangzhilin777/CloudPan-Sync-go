@@ -1443,6 +1443,41 @@ function renderUploadCheckpointReadiness(evidence) {
   return hasUploadID && hasPartEvidence ? "ready" : "partial";
 }
 
+function renderAutoRecoverPriorityAction(evidence) {
+  if (Number(evidence?.autoRecoverWaitingProviderSessionTasks || 0) > 0) {
+    return "优先重建 provider 会话缺口";
+  }
+  if (Number(evidence?.autoRecoverWaitingAuthRefreshTasks || 0) > 0) {
+    return "优先刷新授权档案后再恢复任务";
+  }
+  if (Number(evidence?.autoRecoverWaitingLocalRestoreTasks || 0) > 0) {
+    return "优先补回本地缺失文件";
+  }
+  if (Number(evidence?.autoRecoverWaitingManualTasks || 0) > 0) {
+    return "优先处理 pending_manual / 人工确认任务";
+  }
+  if (Number(evidence?.autoRecoverWaitingRetryLimitTasks || 0) > 0) {
+    return "优先处理重试耗尽任务";
+  }
+  if (Number(evidence?.autoRecoverWaitingRetryWindowTasks || 0) > 0) {
+    return "优先评估自动补传时间窗是否需要放宽";
+  }
+  if (Number(evidence?.autoRecoverWaitingCooldownTasks || 0) > 0) {
+    return "优先等待冷却结束后继续自动重试";
+  }
+  if (Number(evidence?.autoRecoverRunnableTasks || 0) > 0) {
+    return "优先放行当前可立即自动补传的任务";
+  }
+  if (Number(evidence?.uploadCheckpointTaskCount || 0) > 0 && Number(evidence?.uploadCheckpointResumeTaskCount || 0) <= 0) {
+    return "优先补 1 条 upload checkpoint 自动续传成功样本";
+  }
+  if (Array.isArray(evidence?.autoRecoverPool) && evidence.autoRecoverPool.length > 0) {
+    return "优先继续补多 provider / 多账号公平性样本";
+  }
+  return "complete";
+}
+
+
 function renderUploadCheckpoint(checkpoint) {
   if (!checkpoint || typeof checkpoint !== "object") {
     return "";
@@ -3845,6 +3880,7 @@ function renderStatus() {
     <div class="metric"><span>Upload Success Groups</span><strong>${stringifyValue(evidence.uploadSuccessGroups, String(uploadSuccessSmokeGroups))}</strong></div>
     <div class="metric"><span>Upload Success Samples</span><strong>${stringifyValue(evidence.uploadSuccessSamples, "0")}</strong></div>
     <div class="metric"><span>Checkpoint Ready</span><strong>${escapeHTML(renderUploadCheckpointReadiness(evidence))}</strong></div>
+    <div class="metric"><span>Recover Priority</span><strong>${escapeHTML(renderAutoRecoverPriorityAction(evidence))}</strong></div>
     <div class="metric"><span>Acceptance Actions</span><strong>${escapeHTML(acceptanceActionSummary || "-")}</strong></div>
   `;
   $("#blocked-actions-summary").innerHTML = renderBlockedActionsSummary(evidence.blockedActions || []);

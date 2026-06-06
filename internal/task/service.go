@@ -3392,6 +3392,33 @@ func renderUploadCheckpointResumeReadiness(summary EvidenceSummary) string {
 	return "partial"
 }
 
+func renderAutoRecoverPriorityAction(summary EvidenceSummary) string {
+	switch {
+	case summary.AutoRecoverWaitingProviderSessionTasks > 0:
+		return "优先重建 provider 会话缺口"
+	case summary.AutoRecoverWaitingAuthRefreshTasks > 0:
+		return "优先刷新授权档案后再恢复任务"
+	case summary.AutoRecoverWaitingLocalRestoreTasks > 0:
+		return "优先补回本地缺失文件"
+	case summary.AutoRecoverWaitingManualTasks > 0:
+		return "优先处理 pending_manual / 人工确认任务"
+	case summary.AutoRecoverWaitingRetryLimitTasks > 0:
+		return "优先处理重试耗尽任务"
+	case summary.AutoRecoverWaitingRetryWindowTasks > 0:
+		return "优先评估自动补传时间窗是否需要放宽"
+	case summary.AutoRecoverWaitingCooldownTasks > 0:
+		return "优先等待冷却结束后继续自动重试"
+	case summary.AutoRecoverRunnableTasks > 0:
+		return "优先放行当前可立即自动补传的任务"
+	case summary.UploadCheckpointTaskCount > 0 && summary.UploadCheckpointResumeTaskCount == 0:
+		return "优先补 1 条 upload checkpoint 自动续传成功样本"
+	case len(summary.AutoRecoverPool) > 0:
+		return "优先继续补多 provider / 多账号公平性样本"
+	default:
+		return "complete"
+	}
+}
+
 func renderAutoRecoverFairnessSummary(pool []AutoRecoverLane) string {
 	if len(pool) == 0 {
 		return "当前还没有可用于判断公平性的自动补传候选池样本。"
@@ -3555,6 +3582,7 @@ func buildEvidenceReport(summary EvidenceSummary, statuses []StatusSummary, smok
 	}
 	fmt.Fprintf(&b, "- Upload checkpoint 默认恢复 readiness: %s\n", renderUploadCheckpointResumeReadiness(summary))
 	fmt.Fprintf(&b, "- Upload checkpoint 稳定性摘要: %s\n", renderUploadCheckpointResumeEvidenceSummary(summary))
+	fmt.Fprintf(&b, "- 自动补传首要动作: %s\n", renderAutoRecoverPriorityAction(summary))
 	b.WriteString("\n## 阻塞动作\n\n")
 	if len(summary.BlockedActions) == 0 {
 		b.WriteString("- 当前没有需要人工处理的阻塞动作。\n")
