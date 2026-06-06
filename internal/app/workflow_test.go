@@ -871,6 +871,9 @@ func TestAppWorkflowMainline(t *testing.T) {
 	if !strings.Contains(reportData["markdown"].(string), "### 样本缺口速览") || !strings.Contains(reportData["markdown"].(string), "upload / anomaly(auth_expired_sample_missing,rate_limited_sample_missing,local_file_missing_sample_missing,pending_manual_sample_missing) / representative(large_file_sample_missing,nested_directory_sample_missing,retry_recovery_sample_missing)") {
 		t.Fatalf("expected report markdown to include smoke gap summary, got %s", reportData["markdown"].(string))
 	}
+	if !strings.Contains(reportData["markdown"].(string), "### 下一步补样动作") || !strings.Contains(reportData["markdown"].(string), "补 1 条真实上传成功样本；补 1 条授权失效异常样本；补 1 条大文件上传或恢复样本") {
+		t.Fatalf("expected report markdown to include smoke next action summary, got %s", reportData["markdown"].(string))
+	}
 	if !strings.Contains(reportData["markdown"].(string), "Anomaly Coverage") || !strings.Contains(reportData["markdown"].(string), "Representative Coverage") {
 		t.Fatalf("expected report markdown to include smoke completion summary columns, got %s", reportData["markdown"].(string))
 	}

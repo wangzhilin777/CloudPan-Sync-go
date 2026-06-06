@@ -8142,6 +8142,9 @@ func TestServiceProviderSmokeMatrixTracksUploadSuccessSample(t *testing.T) {
 	if !strings.Contains(report.Markdown, "### 样本缺口速览") || !strings.Contains(report.Markdown, "anomaly(auth_expired_sample_missing,rate_limited_sample_missing,local_file_missing_sample_missing,pending_manual_sample_missing) / representative(large_file_sample_missing,nested_directory_sample_missing,retry_recovery_sample_missing)") {
 		t.Fatalf("expected smoke gap summary in report markdown, got %s", report.Markdown)
 	}
+	if !strings.Contains(report.Markdown, "### 下一步补样动作") || !strings.Contains(report.Markdown, "补 1 条真实上传成功样本；补 1 条授权失效异常样本；补 1 条大文件上传或恢复样本") {
+		t.Fatalf("expected smoke next action summary in report markdown, got %s", report.Markdown)
+	}
 }
 
 func TestServiceProviderSmokeMatrixTracksRepresentativeSamples(t *testing.T) {

@@ -3447,6 +3447,42 @@ func renderSmokeGapSummary(row ProviderSmokeMatrixRow) string {
 	return strings.Join(gaps, " / ")
 }
 
+func renderSmokeNextActionSummary(row ProviderSmokeMatrixRow) string {
+	actions := make([]string, 0, 4)
+	if !row.HasUploadSuccessSample {
+		actions = append(actions, "补 1 条真实上传成功样本")
+	}
+	if row.CoverageRealSuccessTaskCount < row.CoverageTaskCount {
+		actions = append(actions, "补 1 条真实任务覆盖样本")
+	}
+	if len(row.AnomalyActions) > 0 {
+		actions = append(actions, row.AnomalyActions[0])
+	}
+	if len(row.RepresentativeActions) > 0 {
+		actions = append(actions, row.RepresentativeActions[0])
+	}
+	if len(actions) == 0 {
+		return "complete"
+	}
+	seen := make(map[string]struct{}, len(actions))
+	deduped := make([]string, 0, len(actions))
+	for _, item := range actions {
+		item = strings.TrimSpace(item)
+		if item == "" {
+			continue
+		}
+		if _, ok := seen[item]; ok {
+			continue
+		}
+		seen[item] = struct{}{}
+		deduped = append(deduped, item)
+	}
+	if len(deduped) == 0 {
+		return "complete"
+	}
+	return strings.Join(deduped, "；")
+}
+
 func buildEvidenceReport(summary EvidenceSummary, statuses []StatusSummary, smokeSummaries []ProviderSmokeSummary, smokeMatrix []ProviderSmokeMatrixRow, samples []EvidenceSample, generatedAt string, title string, note string) EvidenceReport {
 	title = normalizeEvidenceReportTitle(title)
 	note = strings.TrimSpace(note)
@@ -3616,6 +3652,14 @@ func buildEvidenceReport(summary EvidenceSummary, statuses []StatusSummary, smok
 			fmt.Fprintf(&b, "- %s: %s\n",
 				markdownCell(firstNonEmpty(item.ProtocolGroup, "-")),
 				markdownCell(renderSmokeGapSummary(item)),
+			)
+		}
+		b.WriteString("\n### 下一步补样动作\n\n")
+		b.WriteString("- 说明：按 upload / coverage / anomaly / representative 当前缺口，压缩给出每个协议组最值得先补的动作。\n\n")
+		for _, item := range smokeMatrix {
+			fmt.Fprintf(&b, "- %s: %s\n",
+				markdownCell(firstNonEmpty(item.ProtocolGroup, "-")),
+				markdownCell(renderSmokeNextActionSummary(item)),
 			)
 		}
 		b.WriteString("\n## 真实联调验收\n\n")
