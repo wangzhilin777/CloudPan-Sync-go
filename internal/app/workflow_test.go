@@ -76,6 +76,9 @@ func TestAppWorkflowMainline(t *testing.T) {
 	if got := defaultRiskTemplate["calibrationCoverage"].(string); got == "" {
 		t.Fatalf("expected provider calibrationCoverage in defaultRiskTemplate, got %#v", defaultRiskTemplate["calibrationCoverage"])
 	}
+	if got := defaultRiskTemplate["calibrationReadiness"].(string); got == "" {
+		t.Fatalf("expected provider calibrationReadiness in defaultRiskTemplate, got %#v", defaultRiskTemplate["calibrationReadiness"])
+	}
 	if missing, ok := defaultRiskTemplate["calibrationMissing"].([]interface{}); !ok || len(missing) == 0 {
 		t.Fatalf("expected provider calibrationMissing in defaultRiskTemplate, got %#v", defaultRiskTemplate["calibrationMissing"])
 	}
@@ -110,6 +113,9 @@ func TestAppWorkflowMainline(t *testing.T) {
 	}
 	if got := capabilityRiskTemplate["calibrationCoverage"].(string); got == "" {
 		t.Fatalf("expected capability defaultRiskTemplate calibrationCoverage, got %#v", capabilityRiskTemplate["calibrationCoverage"])
+	}
+	if got := capabilityRiskTemplate["calibrationReadiness"].(string); got == "" {
+		t.Fatalf("expected capability defaultRiskTemplate calibrationReadiness, got %#v", capabilityRiskTemplate["calibrationReadiness"])
 	}
 	if missing, ok := capabilityRiskTemplate["calibrationMissing"].([]interface{}); !ok || len(missing) == 0 {
 		t.Fatalf("expected capability defaultRiskTemplate calibrationMissing, got %#v", capabilityRiskTemplate["calibrationMissing"])

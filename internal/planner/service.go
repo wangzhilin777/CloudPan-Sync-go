@@ -296,6 +296,7 @@ func ProviderDefaultRiskTemplate(meta provider.Provider) provider.RiskTemplateSu
 	resolution := resolveRiskProfile(meta, RiskModeBalanced, nil, "", nil)
 	defaults := DescribeProviderRiskDefaults(meta)
 	calibrationMissing := defaultRiskCalibrationMissing(resolution.Calibrated)
+	calibrationReadiness := defaultRiskCalibrationReadiness(resolution.Calibrated, calibrationMissing)
 	calibrationPriorityAction := defaultRiskCalibrationPriorityAction(calibrationMissing)
 	return provider.RiskTemplateSummary{
 		RecommendedMode:           string(defaults.RecommendedRiskMode),
@@ -305,6 +306,7 @@ func ProviderDefaultRiskTemplate(meta provider.Provider) provider.RiskTemplateSu
 		AutoRetryWindowSource:     defaultRiskAutoRetryWindowSource(resolution.Calibrated),
 		AutoRetryWindowAdvice:     defaultRiskAutoRetryWindowAdvice(resolution.Calibrated),
 		CalibrationCoverage:       defaultRiskCalibrationCoverage(resolution.Calibrated, calibrationMissing),
+		CalibrationReadiness:      calibrationReadiness,
 		CalibrationMissing:        calibrationMissing,
 		CalibrationReasons:        append([]string(nil), defaults.CalibrationReasons...),
 		CalibrationPriorityAction: calibrationPriorityAction,
@@ -338,6 +340,18 @@ func defaultRiskCalibrationMissing(profile RiskProfile) []string {
 		missing = append(missing, "risk_keywords")
 	}
 	return missing
+}
+
+func defaultRiskCalibrationReadiness(profile RiskProfile, missing []string) string {
+	covered := defaultRiskCalibrationCoverage(profile, missing)
+	switch {
+	case len(missing) == 0:
+		return "ready"
+	case strings.HasPrefix(covered, "partial"):
+		return "partial"
+	default:
+		return "pending"
+	}
 }
 
 func defaultRiskCalibrationPriorityAction(missing []string) string {
