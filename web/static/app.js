@@ -1484,6 +1484,25 @@ function renderAutoRecoverFairnessReadiness(evidence) {
   }
   return "pending";
 }
+function renderAutoRecoverFairnessPriorityAction(evidence) {
+  const pool = Array.isArray(evidence?.autoRecoverPool) ? evidence.autoRecoverPool : [];
+  if (!pool.length) {
+    return "优先形成 1 条自动补传候选池样本";
+  }
+  const hasMultiProvider = pool.some((item) => Number(item?.providerCount || 0) > 1);
+  const hasMultiProfile = pool.some((item) => Number(item?.profileCount || 0) > 1);
+  const hasMultiProtocolGroup = pool.some((item) => Array.isArray(item?.protocolGroups) && item.protocolGroups.length > 1);
+  if (!hasMultiProvider) {
+    return "优先补多 provider 自动补传候选池样本";
+  }
+  if (!hasMultiProfile) {
+    return "优先补多账号自动补传候选池样本";
+  }
+  if (!hasMultiProtocolGroup) {
+    return "优先补多协议组自动补传候选池样本";
+  }
+  return "complete";
+}
 function renderAutoRecoverPriorityAction(evidence) {
   if (Number(evidence?.autoRecoverWaitingProviderSessionTasks || 0) > 0) {
     return "优先重建 provider 会话缺口";
@@ -3925,6 +3944,7 @@ function renderStatus() {
     <div class="metric"><span>Recover Priority</span><strong>${escapeHTML(renderAutoRecoverPriorityAction(evidence))}</strong></div>
     <div class="metric"><span>Recover Ready</span><strong>${escapeHTML(renderAutoRecoverReadiness(evidence))}</strong></div>
     <div class="metric"><span>Fairness Ready</span><strong>${escapeHTML(renderAutoRecoverFairnessReadiness(evidence))}</strong></div>
+    <div class="metric"><span>Fairness Priority</span><strong>${escapeHTML(renderAutoRecoverFairnessPriorityAction(evidence))}</strong></div>
     <div class="metric"><span>Acceptance Actions</span><strong>${escapeHTML(acceptanceActionSummary || "-")}</strong></div>
   `;
   $("#blocked-actions-summary").innerHTML = renderBlockedActionsSummary(evidence.blockedActions || []);

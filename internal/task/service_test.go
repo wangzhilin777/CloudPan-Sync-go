@@ -540,6 +540,9 @@ func TestServiceProtocolCoverageSummary(t *testing.T) {
 	if !strings.Contains(report.Markdown, "自动补传公平性完成度") {
 		t.Fatalf("expected auto recover fairness readiness in report markdown, got %s", report.Markdown)
 	}
+	if !strings.Contains(report.Markdown, "自动补传公平性首要动作") {
+		t.Fatalf("expected auto recover fairness priority in report markdown, got %s", report.Markdown)
+	}
 	if !strings.Contains(report.Markdown, "Upload checkpoint 任务数") {
 		t.Fatalf("expected upload checkpoint summary in report markdown, got %s", report.Markdown)
 	}

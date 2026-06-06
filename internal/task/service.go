@@ -3495,6 +3495,35 @@ func renderAutoRecoverFairnessReadiness(pool []AutoRecoverLane) string {
 	}
 	return "pending"
 }
+func renderAutoRecoverFairnessPriorityAction(pool []AutoRecoverLane) string {
+	if len(pool) == 0 {
+		return "优先形成 1 条自动补传候选池样本"
+	}
+	multiProviderLanes := 0
+	multiProfileLanes := 0
+	multiProtocolGroupLanes := 0
+	for _, item := range pool {
+		if item.ProviderCount > 1 {
+			multiProviderLanes++
+		}
+		if item.ProfileCount > 1 {
+			multiProfileLanes++
+		}
+		if len(item.ProtocolGroups) > 1 {
+			multiProtocolGroupLanes++
+		}
+	}
+	switch {
+	case multiProviderLanes == 0:
+		return "优先补多 provider 自动补传候选池样本"
+	case multiProfileLanes == 0:
+		return "优先补多账号自动补传候选池样本"
+	case multiProtocolGroupLanes == 0:
+		return "优先补多协议组自动补传候选池样本"
+	default:
+		return "complete"
+	}
+}
 func renderSmokeChecklistSummary(row ProviderSmokeMatrixRow) string {
 	parts := []string{
 		fmt.Sprintf("upload %s", boolLabel(row.HasUploadSuccessSample, "ready", "pending")),
@@ -3645,6 +3674,7 @@ func buildEvidenceReport(summary EvidenceSummary, statuses []StatusSummary, smok
 	fmt.Fprintf(&b, "- Upload checkpoint 稳定性摘要: %s\n", renderUploadCheckpointResumeEvidenceSummary(summary))
 	fmt.Fprintf(&b, "- 自动补传恢复完成度: %s\n", renderAutoRecoverReadiness(summary))
 	fmt.Fprintf(&b, "- 自动补传公平性完成度: %s\n", renderAutoRecoverFairnessReadiness(summary.AutoRecoverPool))
+	fmt.Fprintf(&b, "- 自动补传公平性首要动作: %s\n", renderAutoRecoverFairnessPriorityAction(summary.AutoRecoverPool))
 	fmt.Fprintf(&b, "- 自动补传首要动作: %s\n", renderAutoRecoverPriorityAction(summary))
 	b.WriteString("\n## 阻塞动作\n\n")
 	if len(summary.BlockedActions) == 0 {
