@@ -750,6 +750,18 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "renderEvidenceUploadCheckpointSummary") {
 		t.Fatalf("expected evidence upload checkpoint summary renderer in app.js, got %q", body)
 	}
+	if !strings.Contains(body, "renderEvidenceAutoRecoverSummary") {
+		t.Fatalf("expected evidence auto recover summary renderer in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "自动补传验收") {
+		t.Fatalf("expected evidence auto recover report title in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "autoRecoverPool") {
+		t.Fatalf("expected evidence auto recover pool wiring in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "fairness priority action") {
+		t.Fatalf("expected evidence auto recover fairness priority action in app.js, got %q", body)
+	}
 	if !strings.Contains(body, "Upload checkpoint 默认恢复验收") {
 		t.Fatalf("expected evidence upload checkpoint report title in app.js, got %q", body)
 	}

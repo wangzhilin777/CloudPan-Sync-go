@@ -41,6 +41,7 @@ const state = {
     limitPerProfile: "",
   },
   autoRecoverLastResult: null,
+  taskActionPending: false,
   treeGroupsCollapsed: {},
   treeFilters: {
     taskDirectory: { query: "", status: "", leafOnly: false, problemOnly: false },
@@ -2842,6 +2843,18 @@ function wireTaskQuickActions(detail) {
   }
 }
 
+function syncTaskActionButtons() {
+  const hasTask = Boolean(state.selectedTaskId);
+  const pending = Boolean(state.taskActionPending);
+  ["#task-run", "#task-pause", "#task-resume", "#task-retry"].forEach((selector) => {
+    const button = $(selector);
+    if (!button) {
+      return;
+    }
+    button.disabled = pending || !hasTask;
+  });
+}
+
 function renderTaskResolutionGuide(detail) {
   const metadata = detail?.plan?.metadata || {};
   const runtime = detail?.runtime || {};
@@ -3643,6 +3656,7 @@ function renderTasks() {
 function renderSelectedTask() {
   const detail = currentSelectedTaskDetail();
   if (!detail) {
+    syncTaskActionButtons();
     wireTaskQuickActions(null);
     $("#task-summary").innerHTML = `
       <div class="insight-card">
@@ -3664,6 +3678,7 @@ function renderSelectedTask() {
   }
   const metadata = detail.plan?.metadata || {};
   const runtime = detail.runtime || metadata.runtime || {};
+  syncTaskActionButtons();
   wireTaskQuickActions(detail);
   $("#task-summary").innerHTML = `
     <div class="insight-card">
@@ -5770,6 +5785,55 @@ function renderEvidenceRiskCalibrationSummary(report) {
   `;
 }
 
+function renderEvidenceAutoRecoverSummary(report) {
+  const summary = report?.summary && typeof report.summary === "object" ? report.summary : {};
+  const fairnessPool = Array.isArray(summary.autoRecoverPool) ? summary.autoRecoverPool : [];
+  const recoveryReadiness = renderAutoRecoverReadiness(summary);
+  const fairnessReadiness = renderAutoRecoverFairnessReadiness(summary);
+  const recoveryPriorityAction = renderAutoRecoverPriorityAction(summary);
+  const fairnessPriorityAction = renderAutoRecoverFairnessPriorityAction(summary);
+  const focusLanes = fairnessPool.slice(0, 4);
+  return `
+    <div class="insight-card">
+      <strong>自动补传验收</strong>
+      <span>Recover Ready ${escapeHTML(recoveryReadiness)} / Fairness Ready ${escapeHTML(fairnessReadiness)}</span>
+    </div>
+    <div class="directory-row tree-node">
+      <div class="directory-row-header">
+        <strong>自动补传恢复与公平性摘要</strong>
+        <code>autoRecoverPool</code>
+      </div>
+      <div class="directory-metrics">
+        <span class="pill">tasks ${escapeHTML(stringifyValue(summary.autoRecoverTasks, "0"))}</span>
+        <span class="pill">runnable ${escapeHTML(stringifyValue(summary.autoRecoverRunnableTasks, "0"))}</span>
+        <span class="pill">recover ${escapeHTML(recoveryReadiness)}</span>
+        <span class="pill">fairness ${escapeHTML(fairnessReadiness)}</span>
+      </div>
+      <div class="muted">recover priority action: ${escapeHTML(recoveryPriorityAction)}</div>
+      <div class="muted">fairness priority action: ${escapeHTML(fairnessPriorityAction)}</div>
+      <div class="muted">waiting: cooldown ${escapeHTML(stringifyValue(summary.autoRecoverWaitingCooldownTasks, "0"))} / window ${escapeHTML(stringifyValue(summary.autoRecoverWaitingRetryWindowTasks, "0"))} / auth ${escapeHTML(stringifyValue(summary.autoRecoverWaitingAuthRefreshTasks, "0"))} / local ${escapeHTML(stringifyValue(summary.autoRecoverWaitingLocalRestoreTasks, "0"))} / manual ${escapeHTML(stringifyValue(summary.autoRecoverWaitingManualTasks, "0"))}</div>
+      ${
+        focusLanes.length
+          ? focusLanes
+              .map(
+                (item) => `
+                  <div class="muted">
+                    lane ${escapeHTML(stringifyValue(item.mode, "-"))}:
+                    provider ${escapeHTML(stringifyValue(item.sampleProvider, "-"))}
+                    / group ${escapeHTML(stringifyValue(item.sampleProtocolGroup, "-"))}
+                    / profile ${escapeHTML(stringifyValue(item.sampleProfileId, "-"))}
+                    / providers ${escapeHTML(stringifyValue(item.providerCount, "0"))}
+                    / profiles ${escapeHTML(stringifyValue(item.profileCount, "0"))}
+                  </div>
+                `,
+              )
+              .join("")
+          : `<div class="muted">当前没有自动补传候选池样本。</div>`
+      }
+    </div>
+  `;
+}
+
 function renderEvidenceReport(report) {
   if (!report || typeof report !== "object") {
     return `<div class="directory-empty">暂无验收报告，请先刷新或保存一份报告。</div>`;
@@ -5789,6 +5853,7 @@ function renderEvidenceReport(report) {
         <span>${escapeHTML(report.note)}</span>
       </div>
     ` : ""}
+    ${renderEvidenceAutoRecoverSummary(report)}
     ${renderEvidenceUploadCheckpointSummary(report)}
     ${renderEvidenceProviderSmokeProviders(report)}
     ${renderEvidenceRiskCalibrationSummary(report)}
@@ -7218,6 +7283,12 @@ async function runTaskActionForTask(taskId, action, body = undefined) {
     showFlash("缺少任务标识", true);
     return false;
   }
+  if (state.taskActionPending) {
+    showFlash("任务操作执行中，请稍候", true);
+    return false;
+  }
+  state.taskActionPending = true;
+  syncTaskActionButtons();
   try {
     await api(`/api/tasks/${normalizedTaskId}/${action}`, { method: "POST", body });
     showFlash(`任务 ${action} 已执行`);
@@ -7226,6 +7297,9 @@ async function runTaskActionForTask(taskId, action, body = undefined) {
   } catch (error) {
     showFlash(error.message, true);
     return false;
+  } finally {
+    state.taskActionPending = false;
+    syncTaskActionButtons();
   }
 }
 

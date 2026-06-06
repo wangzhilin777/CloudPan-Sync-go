@@ -318,10 +318,13 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 	)
 
 	runStep(t, runCtx, "pause resume run task",
+		waitForButtonEnabled(`#task-pause`),
 		chromedp.Click(`#task-pause`, chromedp.ByID),
 		waitForText(`#task-detail`, `"state": "paused"`),
+		waitForButtonEnabled(`#task-resume`),
 		chromedp.Click(`#task-resume`, chromedp.ByID),
 		waitForText(`#task-detail`, `"state": "ready"`),
+		waitForButtonEnabled(`#task-run`),
 		chromedp.Click(`#task-run`, chromedp.ByID),
 		waitForText(`#task-detail`, `"state": "completed_with_errors"`),
 		waitForText(`#task-detail`, `"status": "failed"`),
@@ -727,6 +730,20 @@ func waitForTextContent(selector string, substring string) chromedp.ActionFunc {
 			const el = document.querySelector(%q);
 			return !!el && String(el.textContent || "").includes(%q);
 		})()`, selector, substring)
+		return chromedp.Poll(script, &matched,
+			chromedp.WithPollingInterval(120*time.Millisecond),
+			chromedp.WithPollingTimeout(30*time.Second),
+		).Do(ctx)
+	})
+}
+
+func waitForButtonEnabled(selector string) chromedp.ActionFunc {
+	return chromedp.ActionFunc(func(ctx context.Context) error {
+		var matched bool
+		script := fmt.Sprintf(`(() => {
+			const el = document.querySelector(%q);
+			return !!el && !el.disabled;
+		})()`, selector)
 		return chromedp.Poll(script, &matched,
 			chromedp.WithPollingInterval(120*time.Millisecond),
 			chromedp.WithPollingTimeout(30*time.Second),
