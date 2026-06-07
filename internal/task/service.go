@@ -296,32 +296,40 @@ type ProviderSmokeRecord struct {
 }
 
 type ProviderSmokeSummary struct {
-	ProtocolGroup             string   `json:"protocolGroup"`
-	SmokeCount                int      `json:"smokeCount"`
-	SuccessCount              int      `json:"successCount"`
-	FailureCount              int      `json:"failureCount"`
-	ProviderCount             int      `json:"providerCount"`
-	ProviderKeys              []string `json:"providerKeys,omitempty"`
-	SampleRecordID            string   `json:"sampleRecordId,omitempty"`
-	SampleTitle               string   `json:"sampleTitle,omitempty"`
-	SampleProviderKey         string   `json:"sampleProviderKey,omitempty"`
-	SampleResult              string   `json:"sampleResult,omitempty"`
-	SampleCategory            string   `json:"sampleCategory,omitempty"`
-	LatestSmokeAt             string   `json:"latestSmokeAt,omitempty"`
-	PreferredSampleRecordID   string   `json:"preferredSampleRecordId,omitempty"`
-	PreferredSampleTitle      string   `json:"preferredSampleTitle,omitempty"`
-	PreferredSampleProvider   string   `json:"preferredSampleProvider,omitempty"`
-	PreferredSamplePriority   string   `json:"preferredSamplePriority,omitempty"`
-	HasRealSuccessSample      bool     `json:"hasRealSuccessSample"`
-	UploadSuccessCount        int      `json:"uploadSuccessCount"`
-	HasUploadSuccessSample    bool     `json:"hasUploadSuccessSample"`
-	HasAuthExpiredSample      bool     `json:"hasAuthExpiredSample"`
-	HasRateLimitedSample      bool     `json:"hasRateLimitedSample"`
-	HasLocalFileMissingSample bool     `json:"hasLocalFileMissingSample"`
-	HasPendingManualSample    bool     `json:"hasPendingManualSample"`
-	HasLargeFileSample        bool     `json:"hasLargeFileSample"`
-	HasNestedDirectorySample  bool     `json:"hasNestedDirectorySample"`
-	HasRetryRecoverySample    bool     `json:"hasRetryRecoverySample"`
+	ProtocolGroup               string   `json:"protocolGroup"`
+	SmokeCount                  int      `json:"smokeCount"`
+	SuccessCount                int      `json:"successCount"`
+	FailureCount                int      `json:"failureCount"`
+	ProviderCount               int      `json:"providerCount"`
+	ProviderKeys                []string `json:"providerKeys,omitempty"`
+	SampleRecordID              string   `json:"sampleRecordId,omitempty"`
+	SampleTitle                 string   `json:"sampleTitle,omitempty"`
+	SampleProviderKey           string   `json:"sampleProviderKey,omitempty"`
+	SampleResult                string   `json:"sampleResult,omitempty"`
+	SampleCategory              string   `json:"sampleCategory,omitempty"`
+	LatestSmokeAt               string   `json:"latestSmokeAt,omitempty"`
+	PreferredSampleRecordID     string   `json:"preferredSampleRecordId,omitempty"`
+	PreferredSampleTitle        string   `json:"preferredSampleTitle,omitempty"`
+	PreferredSampleProvider     string   `json:"preferredSampleProvider,omitempty"`
+	PreferredSamplePriority     string   `json:"preferredSamplePriority,omitempty"`
+	PreferredUploadSampleID     string   `json:"preferredUploadSampleId,omitempty"`
+	PreferredUploadSampleTitle  string   `json:"preferredUploadSampleTitle,omitempty"`
+	PreferredUploadProvider     string   `json:"preferredUploadProvider,omitempty"`
+	PreferredUploadPriority     string   `json:"preferredUploadPriority,omitempty"`
+	PreferredAnomalySampleID    string   `json:"preferredAnomalySampleId,omitempty"`
+	PreferredAnomalySampleTitle string   `json:"preferredAnomalySampleTitle,omitempty"`
+	PreferredAnomalyProvider    string   `json:"preferredAnomalyProvider,omitempty"`
+	PreferredAnomalyPriority    string   `json:"preferredAnomalyPriority,omitempty"`
+	HasRealSuccessSample        bool     `json:"hasRealSuccessSample"`
+	UploadSuccessCount          int      `json:"uploadSuccessCount"`
+	HasUploadSuccessSample      bool     `json:"hasUploadSuccessSample"`
+	HasAuthExpiredSample        bool     `json:"hasAuthExpiredSample"`
+	HasRateLimitedSample        bool     `json:"hasRateLimitedSample"`
+	HasLocalFileMissingSample   bool     `json:"hasLocalFileMissingSample"`
+	HasPendingManualSample      bool     `json:"hasPendingManualSample"`
+	HasLargeFileSample          bool     `json:"hasLargeFileSample"`
+	HasNestedDirectorySample    bool     `json:"hasNestedDirectorySample"`
+	HasRetryRecoverySample      bool     `json:"hasRetryRecoverySample"`
 }
 
 type ProviderSmokeProviderRow struct {
@@ -4391,6 +4399,8 @@ func summarizeProviderSmokeRecords(records []ProviderSmokeRecord) []ProviderSmok
 		row                ProviderSmokeSummary
 		providerSeen       map[string]struct{}
 		preferredCreatedAt string
+		preferredUploadAt  string
+		preferredAnomalyAt string
 	}
 	states := make(map[string]*smokeGroupState)
 	order := make([]string, 0)
@@ -4476,6 +4486,30 @@ func summarizeProviderSmokeRecords(records []ProviderSmokeRecord) []ProviderSmok
 			state.row.PreferredSampleProvider = record.ProviderKey
 			state.row.PreferredSamplePriority = recordPriority
 			state.preferredCreatedAt = record.CreatedAt
+		}
+		if strings.EqualFold(record.Result, "success") && isUploadSuccessCategory(record.Category) {
+			if state.row.PreferredUploadSampleID == "" ||
+				smokeReusePriorityRank(recordPriority) > smokeReusePriorityRank(state.row.PreferredUploadPriority) ||
+				(smokeReusePriorityRank(recordPriority) == smokeReusePriorityRank(state.row.PreferredUploadPriority) &&
+					(state.preferredUploadAt == "" || record.CreatedAt > state.preferredUploadAt)) {
+				state.row.PreferredUploadSampleID = record.ID
+				state.row.PreferredUploadSampleTitle = record.Title
+				state.row.PreferredUploadProvider = record.ProviderKey
+				state.row.PreferredUploadPriority = recordPriority
+				state.preferredUploadAt = record.CreatedAt
+			}
+		}
+		if !strings.EqualFold(record.Result, "success") {
+			if state.row.PreferredAnomalySampleID == "" ||
+				smokeReusePriorityRank(recordPriority) > smokeReusePriorityRank(state.row.PreferredAnomalyPriority) ||
+				(smokeReusePriorityRank(recordPriority) == smokeReusePriorityRank(state.row.PreferredAnomalyPriority) &&
+					(state.preferredAnomalyAt == "" || record.CreatedAt > state.preferredAnomalyAt)) {
+				state.row.PreferredAnomalySampleID = record.ID
+				state.row.PreferredAnomalySampleTitle = record.Title
+				state.row.PreferredAnomalyProvider = record.ProviderKey
+				state.row.PreferredAnomalyPriority = recordPriority
+				state.preferredAnomalyAt = record.CreatedAt
+			}
 		}
 	}
 	rows := make([]ProviderSmokeSummary, 0, len(order))
