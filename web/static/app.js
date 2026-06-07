@@ -5855,7 +5855,7 @@ function providerRiskCalibrationCounts(items) {
   };
   for (const item of Array.isArray(items) ? items : []) {
     counts.total += 1;
-    const readiness = String(item?.defaultRiskTemplate?.calibrationReadiness || "").trim().toLowerCase();
+    const readiness = String(item?.meta?.defaultRiskTemplate?.calibrationReadiness || "").trim().toLowerCase();
     if (readiness === "ready") {
       counts.ready += 1;
       continue;
@@ -5885,6 +5885,37 @@ function renderEvidenceRiskCalibrationSummary(report) {
     `;
   }
   const counts = providerRiskCalibrationCounts(items);
+  const summary = report?.summary && typeof report.summary === "object" ? report.summary : {};
+  if (Object.prototype.hasOwnProperty.call(summary, "providerRiskCalibrationTotalCount")) {
+    counts.total = Number(summary.providerRiskCalibrationTotalCount || 0);
+  }
+  if (Object.prototype.hasOwnProperty.call(summary, "providerRiskCalibrationReadyCount")) {
+    counts.ready = Number(summary.providerRiskCalibrationReadyCount || 0);
+  }
+  if (Object.prototype.hasOwnProperty.call(summary, "providerRiskCalibrationPartialCount")) {
+    counts.partial = Number(summary.providerRiskCalibrationPartialCount || 0);
+  }
+  if (Object.prototype.hasOwnProperty.call(summary, "providerRiskCalibrationPendingCount")) {
+    counts.pending = Number(summary.providerRiskCalibrationPendingCount || 0);
+  }
+  const calibrationMissingFieldCounts =
+    summary.providerRiskCalibrationMissingFieldCounts && typeof summary.providerRiskCalibrationMissingFieldCounts === "object"
+      ? summary.providerRiskCalibrationMissingFieldCounts
+      : {};
+  const calibrationPriorityActionCounts =
+    summary.providerRiskCalibrationPriorityActionCounts && typeof summary.providerRiskCalibrationPriorityActionCounts === "object"
+      ? summary.providerRiskCalibrationPriorityActionCounts
+      : {};
+  const calibrationMissingFieldSummary = Object.entries(calibrationMissingFieldCounts)
+    .sort((left, right) => Number(right[1] || 0) - Number(left[1] || 0) || String(left[0]).localeCompare(String(right[0])))
+    .slice(0, 8)
+    .map(([label, count]) => `${label} x${count}`)
+    .join(" / ");
+  const calibrationPriorityActionSummary = Object.entries(calibrationPriorityActionCounts)
+    .sort((left, right) => Number(right[1] || 0) - Number(left[1] || 0) || String(left[0]).localeCompare(String(right[0])))
+    .slice(0, 8)
+    .map(([label, count]) => `${label} x${count}`)
+    .join(" / ");
   const focusItems = items
     .filter((item) => String(item?.meta?.defaultRiskTemplate?.calibrationReadiness || "").toLowerCase() !== "ready")
     .slice(0, 6);
@@ -5903,6 +5934,8 @@ function renderEvidenceRiskCalibrationSummary(report) {
         <span class="pill">partial ${counts.partial}</span>
         <span class="pill">pending ${counts.pending}</span>
       </div>
+      <div class="muted">calibration missing field counts: ${escapeHTML(calibrationMissingFieldSummary || "-")}</div>
+      <div class="muted">calibration priority action counts: ${escapeHTML(calibrationPriorityActionSummary || "-")}</div>
       ${
         focusItems.length
           ? focusItems

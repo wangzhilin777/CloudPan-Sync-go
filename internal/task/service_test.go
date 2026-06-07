@@ -546,6 +546,15 @@ func TestServiceProtocolCoverageSummary(t *testing.T) {
 	if !strings.Contains(report.Markdown, "## Provider 默认风控校准") || !strings.Contains(report.Markdown, "Calibration Ready") || !strings.Contains(report.Markdown, "| Provider | Readiness | Coverage | Covered | Missing Count | Covered Fields | Missing | Priority Calibration | Recommended | Window Source | Window Advice |") {
 		t.Fatalf("expected provider risk calibration section in report markdown, got %s", report.Markdown)
 	}
+	if report.Summary.ProviderRiskCalibrationTotalCount == 0 || report.Summary.ProviderRiskCalibrationReadyCount+report.Summary.ProviderRiskCalibrationPartialCount+report.Summary.ProviderRiskCalibrationPendingCount != report.Summary.ProviderRiskCalibrationTotalCount {
+		t.Fatalf("expected provider risk calibration summary counts, got %#v", report.Summary)
+	}
+	if len(report.Summary.ProviderRiskCalibrationMissingFieldCounts) == 0 || len(report.Summary.ProviderRiskCalibrationPriorityActionCounts) == 0 {
+		t.Fatalf("expected provider risk calibration missing/action counts, got %#v", report.Summary)
+	}
+	if !strings.Contains(report.Markdown, "Calibration Missing Fields") || !strings.Contains(report.Markdown, "Calibration Priority Actions") {
+		t.Fatalf("expected provider risk calibration summary counters in report markdown, got %s", report.Markdown)
+	}
 	if !strings.Contains(report.Markdown, "当前还没有可用于判断公平性的自动补传候选池样本") && !strings.Contains(report.Markdown, "当前没有自动补传候选池数据") && (!strings.Contains(report.Markdown, "公平性") || !strings.Contains(report.Markdown, "lane")) {
 		t.Fatalf("expected fairness completion summary in report markdown, got %s", report.Markdown)
 	}

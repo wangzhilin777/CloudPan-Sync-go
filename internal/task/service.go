@@ -208,6 +208,12 @@ type EvidenceSummary struct {
 	ProviderSmokeProviderMissingAnomalyProviders        []string           `json:"providerSmokeProviderMissingAnomalyProviders,omitempty"`
 	ProviderSmokeProviderMissingRepresentativeProviders []string           `json:"providerSmokeProviderMissingRepresentativeProviders,omitempty"`
 	ProviderSmokeProviderPriorityActionCounts           map[string]int     `json:"providerSmokeProviderPriorityActionCounts,omitempty"`
+	ProviderRiskCalibrationTotalCount                   int                `json:"providerRiskCalibrationTotalCount"`
+	ProviderRiskCalibrationReadyCount                   int                `json:"providerRiskCalibrationReadyCount"`
+	ProviderRiskCalibrationPartialCount                 int                `json:"providerRiskCalibrationPartialCount"`
+	ProviderRiskCalibrationPendingCount                 int                `json:"providerRiskCalibrationPendingCount"`
+	ProviderRiskCalibrationMissingFieldCounts           map[string]int     `json:"providerRiskCalibrationMissingFieldCounts,omitempty"`
+	ProviderRiskCalibrationPriorityActionCounts         map[string]int     `json:"providerRiskCalibrationPriorityActionCounts,omitempty"`
 	UploadCheckpointTaskCount                           int                `json:"uploadCheckpointTaskCount"`
 	UploadCheckpointResumeTaskCount                     int                `json:"uploadCheckpointResumeTaskCount"`
 	UploadCheckpointResumeSamplePaths                   []string           `json:"uploadCheckpointResumeSamplePaths,omitempty"`
@@ -4153,25 +4159,15 @@ func buildEvidenceReport(summary EvidenceSummary, statuses []StatusSummary, smok
 		}
 	}
 	if len(providerCalibrationRows) == 0 {
+		populateProviderRiskCalibrationSummary(&summary, nil)
 		b.WriteString("- 当前没有 provider 默认风控校准数据。\n")
 	} else {
-		readyCount := 0
-		partialCount := 0
-		pendingCount := 0
-		for _, item := range providerCalibrationRows {
-			readiness := strings.ToLower(strings.TrimSpace(item.Meta.DefaultRiskTemplate.CalibrationReadiness))
-			switch readiness {
-			case "ready":
-				readyCount++
-			case "partial":
-				partialCount++
-			default:
-				pendingCount++
-			}
-		}
-		fmt.Fprintf(&b, "- Calibration Ready: %d / %d\n", readyCount, len(providerCalibrationRows))
-		fmt.Fprintf(&b, "- Calibration Partial: %d\n", partialCount)
-		fmt.Fprintf(&b, "- Calibration Pending: %d\n", pendingCount)
+		populateProviderRiskCalibrationSummary(&summary, providerCalibrationRows)
+		fmt.Fprintf(&b, "- Calibration Ready: %d / %d\n", summary.ProviderRiskCalibrationReadyCount, summary.ProviderRiskCalibrationTotalCount)
+		fmt.Fprintf(&b, "- Calibration Partial: %d\n", summary.ProviderRiskCalibrationPartialCount)
+		fmt.Fprintf(&b, "- Calibration Pending: %d\n", summary.ProviderRiskCalibrationPendingCount)
+		fmt.Fprintf(&b, "- Calibration Missing Fields: %s\n", previewCountMap(summary.ProviderRiskCalibrationMissingFieldCounts, 8))
+		fmt.Fprintf(&b, "- Calibration Priority Actions: %s\n", previewCountMap(summary.ProviderRiskCalibrationPriorityActionCounts, 8))
 		b.WriteString("\n| Provider | Readiness | Coverage | Covered | Missing Count | Covered Fields | Missing | Priority Calibration | Recommended | Window Source | Window Advice |\n")
 		b.WriteString("| --- | --- | --- | ---: | ---: | --- | --- | --- | --- | --- | --- |\n")
 		for _, item := range providerCalibrationRows {
@@ -5002,6 +4998,49 @@ func populateProviderSmokeProviderCounts(summary *EvidenceSummary, rows []Provid
 			summary.ProviderSmokeProviderMissingRepresentativeCount++
 			summary.ProviderSmokeProviderMissingRepresentativeProviders = append(summary.ProviderSmokeProviderMissingRepresentativeProviders, providerKey)
 		}
+	}
+}
+
+func populateProviderRiskCalibrationSummary(summary *EvidenceSummary, rows []provider.Entry) {
+	if summary == nil {
+		return
+	}
+	summary.ProviderRiskCalibrationTotalCount = len(rows)
+	summary.ProviderRiskCalibrationReadyCount = 0
+	summary.ProviderRiskCalibrationPartialCount = 0
+	summary.ProviderRiskCalibrationPendingCount = 0
+	if summary.ProviderRiskCalibrationMissingFieldCounts == nil {
+		summary.ProviderRiskCalibrationMissingFieldCounts = make(map[string]int)
+	} else {
+		for key := range summary.ProviderRiskCalibrationMissingFieldCounts {
+			delete(summary.ProviderRiskCalibrationMissingFieldCounts, key)
+		}
+	}
+	if summary.ProviderRiskCalibrationPriorityActionCounts == nil {
+		summary.ProviderRiskCalibrationPriorityActionCounts = make(map[string]int)
+	} else {
+		for key := range summary.ProviderRiskCalibrationPriorityActionCounts {
+			delete(summary.ProviderRiskCalibrationPriorityActionCounts, key)
+		}
+	}
+	for _, row := range rows {
+		template := row.Meta.DefaultRiskTemplate
+		switch strings.ToLower(strings.TrimSpace(template.CalibrationReadiness)) {
+		case "ready":
+			summary.ProviderRiskCalibrationReadyCount++
+		case "partial":
+			summary.ProviderRiskCalibrationPartialCount++
+		default:
+			summary.ProviderRiskCalibrationPendingCount++
+		}
+		for _, field := range template.CalibrationMissing {
+			field = strings.TrimSpace(field)
+			if field != "" {
+				summary.ProviderRiskCalibrationMissingFieldCounts[field]++
+			}
+		}
+		action := firstNonEmpty(template.CalibrationPriorityAction, "complete")
+		summary.ProviderRiskCalibrationPriorityActionCounts[action]++
 	}
 }
 

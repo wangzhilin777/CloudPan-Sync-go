@@ -846,6 +846,9 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "Calibration Ready") {
 		t.Fatalf("expected evidence provider risk calibration readiness metric in app.js, got %q", body)
 	}
+	if !strings.Contains(body, "calibration missing field counts:") || !strings.Contains(body, "calibration priority action counts:") {
+		t.Fatalf("expected evidence provider risk calibration counts in app.js, got %q", body)
+	}
 	if !strings.Contains(body, "defaultRiskTemplate") {
 		t.Fatalf("expected evidence provider risk template wiring in app.js, got %q", body)
 	}
