@@ -3761,6 +3761,10 @@ function renderSelectedTask() {
       <span>${stringifyValue(metadata.retrySelectedPathCount, Array.isArray(metadata.retrySelectedPaths) ? metadata.retrySelectedPaths.length : 0)}</span>
     </div>
     <div class="insight-card">
+      <strong>重试 checkpoint 数</strong>
+      <span>${stringifyValue(metadata.retryUploadCheckpointCount, "0")}</span>
+    </div>
+    <div class="insight-card">
       <strong>重试摘要</strong>
       <span>${stringifyValue(metadata.retrySummary?.blockedReason || (metadata.retrySummary?.shouldBlock ? "blocked" : "ready"), "-")}</span>
     </div>
@@ -5381,6 +5385,7 @@ function renderSnapshotSummary(summary) {
       <div><strong>retryMode</strong> <code>${escapeHTML(stringifyValue(summary.retryMode, "-"))}</code></div>
       <div><strong>retryScope</strong> <code>${escapeHTML(stringifyValue(summary.retryScope, "-"))}</code></div>
       <div><strong>retrySelectedPathCount</strong> <code>${escapeHTML(stringifyValue(summary.retrySelectedPathCount, Array.isArray(summary.retrySelectedPaths) ? summary.retrySelectedPaths.length : 0))}</code></div>
+      <div><strong>retryUploadCheckpointCount</strong> <code>${escapeHTML(stringifyValue(summary.retryUploadCheckpointCount, "0"))}</code></div>
       <div><strong>retrySelectedPaths</strong> <code>${escapeHTML(retryPaths)}</code></div>
       <div><strong>riskProfileResolution</strong> <code>${escapeHTML(renderRiskResolutionSummary(summary.riskProfileResolution))}</code></div>
       <div><strong>profileDefaultKindBias</strong> <code>${escapeHTML(`${stringifyValue(summary.riskProfileResolution?.profileDefaultSourceKind, "-")} / ${stringifyValue(summary.riskProfileResolution?.profileDefaultBias, "same_as_provider")}`)}</code></div>

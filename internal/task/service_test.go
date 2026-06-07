@@ -1036,6 +1036,9 @@ func TestServiceRuntimePreservesUploadFailureEvidence(t *testing.T) {
 	if _, ok := checkpoints["/a.bin"]; !ok {
 		t.Fatalf("expected retryUploadCheckpoints to include /a.bin, got %#v", checkpoints)
 	}
+	if got, _ := retried.Plan.Metadata["retryUploadCheckpointCount"].(int); got != 1 {
+		t.Fatalf("expected retryUploadCheckpointCount 1, got %#v", retried.Plan.Metadata["retryUploadCheckpointCount"])
+	}
 	resumed, ok, err := svc.Run(ctx, retried.Task.ID)
 	if err != nil {
 		t.Fatalf("Run(retried) error = %v", err)
@@ -1045,6 +1048,9 @@ func TestServiceRuntimePreservesUploadFailureEvidence(t *testing.T) {
 	}
 	if got := resumed.Results[0].Mode; got != "fake_upload_resume" {
 		t.Fatalf("expected resumed upload mode fake_upload_resume, got %#v", resumed.Results)
+	}
+	if got := intNumber(resumed.Results[0].Payload["retryUploadCheckpointCount"]); got != 1 {
+		t.Fatalf("expected resumed result retryUploadCheckpointCount 1, got %#v", resumed.Results[0].Payload["retryUploadCheckpointCount"])
 	}
 	resumePayload, ok := resumed.Results[0].Payload["upload"].(map[string]interface{})
 	if !ok {
@@ -2585,6 +2591,9 @@ func TestServiceRetryWithOptionsSelectedRetrySubsetKeepsCheckpointContext(t *tes
 	}
 	if len(checkpoints) != 1 {
 		t.Fatalf("expected one filtered checkpoint, got %#v", checkpoints)
+	}
+	if got, _ := retried.Plan.Metadata["retryUploadCheckpointCount"].(int); got != 1 {
+		t.Fatalf("expected retryUploadCheckpointCount 1, got %#v", retried.Plan.Metadata["retryUploadCheckpointCount"])
 	}
 	if _, exists := checkpoints["/retry-a.bin"]; exists {
 		t.Fatalf("expected /retry-a.bin checkpoint to be excluded, got %#v", checkpoints)
