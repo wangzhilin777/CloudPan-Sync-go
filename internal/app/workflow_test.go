@@ -984,6 +984,12 @@ func TestAppWorkflowMainline(t *testing.T) {
 		if int(summary["providerRiskCalibrationTotalCount"].(float64)) == 0 || !ok || len(priorityCounts) == 0 {
 			t.Fatalf("expected provider risk calibration summary fields, got %#v", summary)
 		}
+		if int(summary["smokeMatrixPriorityActionCounts"].(map[string]interface{})["补 1 条真实上传成功样本"].(float64)) == 0 {
+			t.Fatalf("expected smoke matrix priority action counts in summary, got %#v", summary)
+		}
+		if missingUpload, ok := summary["smokeMatrixMissingUploadGroups"].([]interface{}); !ok || len(missingUpload) == 0 {
+			t.Fatalf("expected smoke matrix missing upload groups in summary, got %#v", summary["smokeMatrixMissingUploadGroups"])
+		}
 		if missingCounts, ok := summary["providerRiskCalibrationMissingFieldCounts"]; ok {
 			if _, ok := missingCounts.(map[string]interface{}); !ok {
 				t.Fatalf("expected provider risk calibration missing field counts map, got %#v", missingCounts)

@@ -163,6 +163,7 @@
 - 已把 provider 默认风控模板校准字段清单补成结构化 `calibrationCoveredFields / calibrationTargetFields`，并接入接口、验收报告和页面展示，便于直接核对 request interval、directory interval、retry limit、risk keywords、auto retry window 等字段到底覆盖了哪些。
 - 已把 provider 默认风控模板校准的 ready / partial / pending、missing field 分布和 priority action 分布结构化写入 summary，并接入验收报告和页面展示，便于直接看出默认风控模板还缺哪些字段、哪些动作还在被最多 provider 使用。
 - 已把 provider 默认风控模板校准 summary 接入运行证据 `RuntimeEvidence`，便于不生成报告也能直接读取当前默认模板校准聚合进度。
+- 已把协议组级真实样本缺口 summary 进一步接入 workflow JSON 兜底，便于接口层直接回放缺口列表和首要动作分布，而不只依赖页面字段。
 
 ### 对应提交
 
@@ -177,6 +178,7 @@
 - 当前轮次已新增 provider 风控校准 summary 聚合字段（ready/partial/pending、missing field counts、priority action counts）与 task/app 测试兜底，用于把默认风控模板校准进度从逐行表格推进到可直接统计的汇总字段。
 - 当前轮次已新增 provider 风控校准 summary 的 workflow JSON 兜底，用于把默认风控模板校准汇总字段从页面字符串推进到可回放接口结构。
 - 当前轮次已把 provider 风控校准 summary 接入 RuntimeEvidence，并补 task 测试兜底，用于让运行证据和保存报告使用同一套校准聚合字段。
+- 当前轮次已新增 smokeMatrixMissing*Groups 与 smokeMatrixPriorityActionCounts 的 workflow JSON 兜底，用于把协议组真实样本缺口从运行证据再推进到可回放接口结构。
 
 ### 仍未完成
 
