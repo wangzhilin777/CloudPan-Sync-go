@@ -8319,6 +8319,47 @@ func TestServiceProviderSmokeRecordsClassifyCoveragePendingManualSamples(t *test
 	}
 }
 
+func TestServiceProviderSmokeRecordsFocusCoreAnomalyRecoveryActions(t *testing.T) {
+	ctx := context.Background()
+	store, err := sqlitestore.New(ctx, filepath.Join(t.TempDir(), "provider-smoke-anomaly-focus.db"))
+	if err != nil {
+		t.Fatalf("new store: %v", err)
+	}
+	defer func() { _ = store.Close() }()
+
+	registry := provider.NewRegistry(provider.DefaultCatalog()...)
+	authSvc := auth.NewService(store, registry)
+	svc := NewService(store, registry, authSvc)
+
+	tests := []struct {
+		name string
+		note string
+		want string
+	}{
+		{name: "rate limit", note: "rate_limited retry window", want: "retry window"},
+		{name: "auth expired", note: "auth_expired refresh_auth_profile", want: "refresh_auth_profile"},
+		{name: "local missing", note: "local_file_missing restore_local_source_file", want: "restore_local_source_file"},
+	}
+	for _, tc := range tests {
+		record, err := svc.SaveProviderSmokeRecord(ctx, ProviderSmokeRecord{
+			ProviderKey:   "quark",
+			ProtocolGroup: "quark_uc",
+			AuthMode:      "manual_cookie",
+			Category:      "partial_blocked",
+			Result:        "failed",
+			Title:         tc.name,
+			Note:          tc.note,
+			Operations:    []string{"ValidateAuth"},
+		})
+		if err != nil {
+			t.Fatalf("SaveProviderSmokeRecord(%s) error = %v", tc.name, err)
+		}
+		if !strings.Contains(record.AutoRecoverFocus, tc.want) {
+			t.Fatalf("expected auto recover focus for %s to mention %s, got %s", tc.name, tc.want, record.AutoRecoverFocus)
+		}
+	}
+}
+
 func TestServiceProviderSmokeMatrixTracksUploadSuccessSample(t *testing.T) {
 	ctx := context.Background()
 	store, err := sqlitestore.New(ctx, filepath.Join(t.TempDir(), "provider-smoke-upload.db"))

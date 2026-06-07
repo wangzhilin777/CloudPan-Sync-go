@@ -4548,11 +4548,22 @@ func providerSmokeRepresentativeLabels(record ProviderSmokeRecord) []string {
 
 func providerSmokeAutoRecoverFocus(record ProviderSmokeRecord) string {
 	labels := providerSmokeRepresentativeLabels(record)
+	context := ""
+	if len(labels) > 0 {
+		context = "，当前样本同时涉及：" + strings.Join(labels, " / ")
+	}
+	note := strings.TrimSpace(strings.ToLower(record.Note))
+	if strings.Contains(note, "rate") {
+		return "建议同步记录限流/风控触发关键词、cooldown、retry window 与预算影响，便于回填风控模板和自动补传公平性证据" + context + "。"
+	}
+	if strings.Contains(note, "auth") {
+		return "建议同步记录授权失效状态、refresh_auth_profile 入口、会话重建条件与自动恢复结果" + context + "。"
+	}
+	if strings.Contains(note, "local") {
+		return "建议同步记录缺失本地路径、restore_local_source_file 条件、恢复后重试范围与结果" + context + "。"
+	}
 	if providerSmokeNoteMentionsCoveragePendingManual(record.Note) {
-		if len(labels) > 0 {
-			return "建议同步记录 pending_manual / 覆盖降级的 blocked action、人工确认条件、重试范围与自动补传队列影响，当前样本同时涉及：" + strings.Join(labels, " / ")
-		}
-		return "建议同步记录 pending_manual / 覆盖降级的 blocked action、人工确认条件、重试范围与自动补传队列影响。"
+		return "建议同步记录 pending_manual / 覆盖降级的 blocked action、人工确认条件、重试范围与自动补传队列影响" + context + "。"
 	}
 	if len(labels) > 0 {
 		return "建议同步关注自动补传、公平预算与续传链路，当前样本涉及：" + strings.Join(labels, " / ")
