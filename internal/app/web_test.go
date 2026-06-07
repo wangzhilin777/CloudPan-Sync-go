@@ -603,6 +603,9 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "checklist:") {
 		t.Fatalf("expected provider smoke checklist summary in app.js, got %q", body)
 	}
+	if !strings.Contains(body, "refresh_auth_profile") || !strings.Contains(body, "retry_window") || !strings.Contains(body, "restore_local_source_file") || !strings.Contains(body, "blocked_recovery") {
+		t.Fatalf("expected provider smoke anomaly draft recovery operations in app.js, got %q", body)
+	}
 	if !strings.Contains(body, "renderProviderSmokeChecklist") {
 		t.Fatalf("expected provider smoke checklist helper in app.js, got %q", body)
 	}

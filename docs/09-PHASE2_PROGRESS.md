@@ -63,6 +63,7 @@
 - 已把 smoke 样本的“可复用程度”继续收口成结构化 `reusePriority` 字段，直接区分 `直接回归 / 条件复用 / 参考样本`，并接到列表展示与检索，便于更快挑出最适合优先复跑的样本。
 - 已把真实联调模板补成“最小补样清单”和更明确的记录判定建议，便于后续每条 smoke 记录都能直接对照二期验收最小集合，而不是只记过程。
 - 已把 smoke 记录样本类型补强到覆盖降级 / pending_manual 异常样本，并同步细化限流、授权失效、本地文件缺失、覆盖降级 / pending_manual 等异常样本的自动补传关注点，避免关键最小异常样本继续被泛化进普通异常标签。
+- 已把 smoke 矩阵的异常缺口预填操作链路细化到 `refresh_auth_profile / retry_window / restore_local_source_file / blocked_recovery` 等恢复动作，便于从缺口矩阵直接生成更可回放的异常样本记录。
 - 已把协议组汇总里的“首选回归样本”继续收口成 `preferredSampleRecordId / preferredSampleTitle / preferredSampleProvider / preferredSamplePriority` 摘要，直接指向当前最值得先复跑的一条真实样本，而不只是显示最近记录。
 - 已把协议组汇总继续细分出 `preferredUploadSample*` 与 `preferredAnomalySample*` 摘要，能直接区分“优先复跑成功链路样本”与“优先复跑异常证据样本”，减少人工翻样本记录的时间。
 - 已把协议组汇总继续细分出 `preferredRepresentativeSample*` 摘要，能直接把大文件、多层目录、重试恢复这类代表性样本提升到优先回归入口，便于先补关键边界证据。

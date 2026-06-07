@@ -6889,7 +6889,7 @@ function providerSmokeDraftSpecFromAnomaly(item) {
       label: "补授权失效样本",
       category: "failed",
       result: "failure",
-      operations: ["ValidateAuth", "Upload"],
+      operations: ["ValidateAuth", "Upload", "refresh_auth_profile"],
       focusResult: "failure",
       note: "目标异常：auth_expired",
     };
@@ -6899,7 +6899,7 @@ function providerSmokeDraftSpecFromAnomaly(item) {
       label: "补限流样本",
       category: "partial_blocked",
       result: "failure",
-      operations: ["ValidateAuth", "List", "Metadata", "Upload"],
+      operations: ["ValidateAuth", "List", "Metadata", "Upload", "cooldown", "retry_window"],
       focusResult: "failure",
       note: "目标异常：rate_limited / risk_control",
     };
@@ -6909,7 +6909,7 @@ function providerSmokeDraftSpecFromAnomaly(item) {
       label: "补本地文件缺失样本",
       category: "failed",
       result: "failure",
-      operations: ["ValidateAuth", "Upload"],
+      operations: ["ValidateAuth", "Upload", "restore_local_source_file"],
       focusResult: "failure",
       note: "目标异常：local_file_missing",
     };
@@ -6919,7 +6919,7 @@ function providerSmokeDraftSpecFromAnomaly(item) {
       label: "补人工确认样本",
       category: "partial_blocked",
       result: "failure",
-      operations: ["ValidateAuth", "List", "Metadata", "Upload"],
+      operations: ["ValidateAuth", "List", "Metadata", "Upload", "manual_confirmation", "blocked_recovery"],
       focusResult: "failure",
       note: "目标异常：pending_manual / overwrite downgrade",
     };
