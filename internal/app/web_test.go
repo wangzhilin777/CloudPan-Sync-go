@@ -792,6 +792,9 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "provider priority action") {
 		t.Fatalf("expected provider-level smoke priority action summary in app.js, got %q", body)
 	}
+	if !strings.Contains(body, "provider preferred sample:") || !strings.Contains(body, "provider preferred upload:") || !strings.Contains(body, "provider preferred anomaly:") {
+		t.Fatalf("expected provider-level preferred sample summaries in app.js, got %q", body)
+	}
 	if !strings.Contains(body, "renderEvidenceRiskCalibrationSummary") {
 		t.Fatalf("expected evidence risk calibration summary renderer in app.js, got %q", body)
 	}

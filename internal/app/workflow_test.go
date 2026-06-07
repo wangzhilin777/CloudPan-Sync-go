@@ -909,6 +909,9 @@ func TestAppWorkflowMainline(t *testing.T) {
 	if !strings.Contains(reportData["markdown"].(string), "Provider ready") || !strings.Contains(reportData["markdown"].(string), "Provider pending") {
 		t.Fatalf("expected report markdown to include provider smoke provider acceptance counters, got %s", reportData["markdown"].(string))
 	}
+	if !strings.Contains(reportData["markdown"].(string), "Preferred Sample") || !strings.Contains(reportData["markdown"].(string), "Preferred Upload") || !strings.Contains(reportData["markdown"].(string), "Preferred Anomaly") {
+		t.Fatalf("expected report markdown to include provider preferred sample columns, got %s", reportData["markdown"].(string))
+	}
 	if !strings.Contains(reportData["markdown"].(string), "## 真实样本矩阵") {
 		t.Fatalf("expected report markdown to include smoke matrix section, got %s", reportData["markdown"].(string))
 	}

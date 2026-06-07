@@ -5662,6 +5662,9 @@ function renderEvidenceProviderSmokeProviders(report) {
                     / anomaly ${escapeHTML(stringifyValue(item.anomalyCompletedCount, "0"))}/${escapeHTML(stringifyValue(item.anomalyTargetCount, "0"))}
                     / priority ${escapeHTML(stringifyValue(item.priorityAction, "complete"))}
                   </div>
+                  <div class="muted">provider preferred sample: ${escapeHTML(stringifyValue(item.preferredSampleTitle, "-"))} / ${escapeHTML(stringifyValue(item.preferredSamplePriority, "-"))}</div>
+                  <div class="muted">provider preferred upload: ${escapeHTML(stringifyValue(item.preferredUploadSampleTitle, "-"))} / ${escapeHTML(stringifyValue(item.preferredUploadPriority, "-"))}</div>
+                  <div class="muted">provider preferred anomaly: ${escapeHTML(stringifyValue(item.preferredAnomalySampleTitle, "-"))} / ${escapeHTML(stringifyValue(item.preferredAnomalyPriority, "-"))}</div>
                 `,
               )
               .join("")

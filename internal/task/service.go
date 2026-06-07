@@ -337,29 +337,38 @@ type ProviderSmokeSummary struct {
 }
 
 type ProviderSmokeProviderRow struct {
-	ProviderKey               string   `json:"providerKey"`
-	Readiness                 string   `json:"readiness"`
-	SmokeCount                int      `json:"smokeCount"`
-	SuccessCount              int      `json:"successCount"`
-	FailureCount              int      `json:"failureCount"`
-	BasicSuccessCount         int      `json:"basicSuccessCount"`
-	HasBasicSuccessSample     bool     `json:"hasBasicSuccessSample"`
-	UploadSuccessCount        int      `json:"uploadSuccessCount"`
-	HasUploadSuccessSample    bool     `json:"hasUploadSuccessSample"`
-	AnomalyCompletedCount     int      `json:"anomalyCompletedCount"`
-	AnomalyTargetCount        int      `json:"anomalyTargetCount"`
-	AnomalyMissing            []string `json:"anomalyMissing,omitempty"`
-	AnomalyActions            []string `json:"anomalyActions,omitempty"`
-	PriorityAction            string   `json:"priorityAction,omitempty"`
-	SampleRecordID            string   `json:"sampleRecordId,omitempty"`
-	SampleTitle               string   `json:"sampleTitle,omitempty"`
-	SampleCategory            string   `json:"sampleCategory,omitempty"`
-	SampleResult              string   `json:"sampleResult,omitempty"`
-	LatestSmokeAt             string   `json:"latestSmokeAt,omitempty"`
-	HasAuthExpiredSample      bool     `json:"hasAuthExpiredSample"`
-	HasRateLimitedSample      bool     `json:"hasRateLimitedSample"`
-	HasLocalFileMissingSample bool     `json:"hasLocalFileMissingSample"`
-	HasPendingManualSample    bool     `json:"hasPendingManualSample"`
+	ProviderKey                 string   `json:"providerKey"`
+	Readiness                   string   `json:"readiness"`
+	SmokeCount                  int      `json:"smokeCount"`
+	SuccessCount                int      `json:"successCount"`
+	FailureCount                int      `json:"failureCount"`
+	BasicSuccessCount           int      `json:"basicSuccessCount"`
+	HasBasicSuccessSample       bool     `json:"hasBasicSuccessSample"`
+	UploadSuccessCount          int      `json:"uploadSuccessCount"`
+	HasUploadSuccessSample      bool     `json:"hasUploadSuccessSample"`
+	AnomalyCompletedCount       int      `json:"anomalyCompletedCount"`
+	AnomalyTargetCount          int      `json:"anomalyTargetCount"`
+	AnomalyMissing              []string `json:"anomalyMissing,omitempty"`
+	AnomalyActions              []string `json:"anomalyActions,omitempty"`
+	PriorityAction              string   `json:"priorityAction,omitempty"`
+	SampleRecordID              string   `json:"sampleRecordId,omitempty"`
+	SampleTitle                 string   `json:"sampleTitle,omitempty"`
+	SampleCategory              string   `json:"sampleCategory,omitempty"`
+	SampleResult                string   `json:"sampleResult,omitempty"`
+	LatestSmokeAt               string   `json:"latestSmokeAt,omitempty"`
+	PreferredSampleRecordID     string   `json:"preferredSampleRecordId,omitempty"`
+	PreferredSampleTitle        string   `json:"preferredSampleTitle,omitempty"`
+	PreferredSamplePriority     string   `json:"preferredSamplePriority,omitempty"`
+	PreferredUploadSampleID     string   `json:"preferredUploadSampleId,omitempty"`
+	PreferredUploadSampleTitle  string   `json:"preferredUploadSampleTitle,omitempty"`
+	PreferredUploadPriority     string   `json:"preferredUploadPriority,omitempty"`
+	PreferredAnomalySampleID    string   `json:"preferredAnomalySampleId,omitempty"`
+	PreferredAnomalySampleTitle string   `json:"preferredAnomalySampleTitle,omitempty"`
+	PreferredAnomalyPriority    string   `json:"preferredAnomalyPriority,omitempty"`
+	HasAuthExpiredSample        bool     `json:"hasAuthExpiredSample"`
+	HasRateLimitedSample        bool     `json:"hasRateLimitedSample"`
+	HasLocalFileMissingSample   bool     `json:"hasLocalFileMissingSample"`
+	HasPendingManualSample      bool     `json:"hasPendingManualSample"`
 }
 
 func smokeReusePriorityRank(priority string) int {
@@ -3836,10 +3845,10 @@ func buildEvidenceReport(summary EvidenceSummary, statuses []StatusSummary, smok
 		fmt.Fprintf(&b, "- Provider ready: %d / %d\n", readyCount, len(providerSmokeProviders))
 		fmt.Fprintf(&b, "- Provider partial: %d\n", partialCount)
 		fmt.Fprintf(&b, "- Provider pending: %d\n", pendingCount)
-		b.WriteString("\n| Provider | Readiness | Basic Success | Upload Success | Anomaly Coverage | Missing | Priority Action | Sample | Latest Smoke |\n")
-		b.WriteString("| --- | --- | --- | --- | --- | --- | --- | --- | --- |\n")
+		b.WriteString("\n| Provider | Readiness | Basic Success | Upload Success | Anomaly Coverage | Missing | Priority Action | Preferred Sample | Preferred Upload | Preferred Anomaly | Sample | Latest Smoke |\n")
+		b.WriteString("| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |\n")
 		for _, item := range providerSmokeProviders {
-			fmt.Fprintf(&b, "| %s | %s | %d (%s) | %d (%s) | %d/%d | %s | %s | %s / %s / %s | %s |\n",
+			fmt.Fprintf(&b, "| %s | %s | %d (%s) | %d (%s) | %d/%d | %s | %s | %s / %s | %s / %s | %s / %s | %s / %s / %s | %s |\n",
 				markdownCell(firstNonEmpty(item.ProviderKey, "-")),
 				markdownCell(firstNonEmpty(item.Readiness, "pending")),
 				item.BasicSuccessCount,
@@ -3850,6 +3859,12 @@ func buildEvidenceReport(summary EvidenceSummary, statuses []StatusSummary, smok
 				item.AnomalyTargetCount,
 				markdownCell(strings.Join(item.AnomalyMissing, ", ")),
 				markdownCell(firstNonEmpty(item.PriorityAction, "complete")),
+				markdownCell(firstNonEmpty(item.PreferredSampleTitle, "-")),
+				markdownCell(firstNonEmpty(item.PreferredSamplePriority, "-")),
+				markdownCell(firstNonEmpty(item.PreferredUploadSampleTitle, "-")),
+				markdownCell(firstNonEmpty(item.PreferredUploadPriority, "-")),
+				markdownCell(firstNonEmpty(item.PreferredAnomalySampleTitle, "-")),
+				markdownCell(firstNonEmpty(item.PreferredAnomalyPriority, "-")),
 				markdownCell(firstNonEmpty(item.SampleRecordID, "-")),
 				markdownCell(firstNonEmpty(item.SampleCategory, "-")),
 				markdownCell(firstNonEmpty(item.SampleResult, "-")),
@@ -4542,7 +4557,10 @@ func summarizeProviderSmokeRecords(records []ProviderSmokeRecord) []ProviderSmok
 
 func buildProviderSmokeProviderMatrix(records []ProviderSmokeRecord, providers []provider.Entry) []ProviderSmokeProviderRow {
 	type providerState struct {
-		row ProviderSmokeProviderRow
+		row                ProviderSmokeProviderRow
+		preferredAt        string
+		preferredUploadAt  string
+		preferredAnomalyAt string
 	}
 	states := make(map[string]*providerState)
 	order := make([]string, 0, len(providers)+len(records))
@@ -4595,6 +4613,40 @@ func buildProviderSmokeProviderMatrix(records []ProviderSmokeRecord, providers [
 			state.row.SampleCategory = record.Category
 			state.row.SampleResult = record.Result
 			state.row.LatestSmokeAt = record.CreatedAt
+		}
+		recordPriority := providerSmokeReusePriority(record)
+		if strings.EqualFold(record.Result, "success") {
+			if state.row.PreferredSampleRecordID == "" ||
+				smokeReusePriorityRank(recordPriority) > smokeReusePriorityRank(state.row.PreferredSamplePriority) ||
+				(smokeReusePriorityRank(recordPriority) == smokeReusePriorityRank(state.row.PreferredSamplePriority) &&
+					(state.preferredAt == "" || record.CreatedAt > state.preferredAt)) {
+				state.row.PreferredSampleRecordID = record.ID
+				state.row.PreferredSampleTitle = record.Title
+				state.row.PreferredSamplePriority = recordPriority
+				state.preferredAt = record.CreatedAt
+			}
+			if isUploadSuccessCategory(record.Category) {
+				if state.row.PreferredUploadSampleID == "" ||
+					smokeReusePriorityRank(recordPriority) > smokeReusePriorityRank(state.row.PreferredUploadPriority) ||
+					(smokeReusePriorityRank(recordPriority) == smokeReusePriorityRank(state.row.PreferredUploadPriority) &&
+						(state.preferredUploadAt == "" || record.CreatedAt > state.preferredUploadAt)) {
+					state.row.PreferredUploadSampleID = record.ID
+					state.row.PreferredUploadSampleTitle = record.Title
+					state.row.PreferredUploadPriority = recordPriority
+					state.preferredUploadAt = record.CreatedAt
+				}
+			}
+		}
+		if len(smokeAnomalySampleKeys(record)) > 0 {
+			if state.row.PreferredAnomalySampleID == "" ||
+				smokeReusePriorityRank(recordPriority) > smokeReusePriorityRank(state.row.PreferredAnomalyPriority) ||
+				(smokeReusePriorityRank(recordPriority) == smokeReusePriorityRank(state.row.PreferredAnomalyPriority) &&
+					(state.preferredAnomalyAt == "" || record.CreatedAt > state.preferredAnomalyAt)) {
+				state.row.PreferredAnomalySampleID = record.ID
+				state.row.PreferredAnomalySampleTitle = record.Title
+				state.row.PreferredAnomalyPriority = recordPriority
+				state.preferredAnomalyAt = record.CreatedAt
+			}
 		}
 	}
 	rows := make([]ProviderSmokeProviderRow, 0, len(order))

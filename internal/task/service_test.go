@@ -8111,6 +8111,12 @@ func TestServiceProviderSmokeRecords(t *testing.T) {
 			if row.HasUploadSuccessSample {
 				t.Fatalf("expected browse-only provider row to keep upload success pending, got %#v", row)
 			}
+			if row.PreferredSampleTitle != "123_open 真实 smoke" || row.PreferredSamplePriority != "条件复用" {
+				t.Fatalf("expected 123_open preferred sample summary, got %#v", row)
+			}
+			if row.PreferredUploadSampleID != "" || row.PreferredAnomalySampleID != "" {
+				t.Fatalf("expected browse-only provider row to keep preferred upload/anomaly empty, got %#v", row)
+			}
 		}
 		if row.ProviderKey != "123_open" && row.SmokeCount == 0 && row.Readiness == "pending" {
 			foundPending = true
@@ -8121,6 +8127,9 @@ func TestServiceProviderSmokeRecords(t *testing.T) {
 	}
 	if !foundPending {
 		t.Fatalf("expected provider smoke provider matrix to include pending catalog provider rows, got %#v", report.ProviderSmokeProviders)
+	}
+	if !strings.Contains(report.Markdown, "Preferred Sample") || !strings.Contains(report.Markdown, "Preferred Upload") || !strings.Contains(report.Markdown, "Preferred Anomaly") {
+		t.Fatalf("expected provider smoke provider markdown to include preferred sample columns, got %s", report.Markdown)
 	}
 }
 
