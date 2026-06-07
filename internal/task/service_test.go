@@ -8165,6 +8165,12 @@ func TestServiceProviderSmokeRecords(t *testing.T) {
 			if row.HasUploadSuccessSample {
 				t.Fatalf("expected browse-only provider row to keep upload success pending, got %#v", row)
 			}
+			if row.RepresentativeCompletedCount != 0 || row.RepresentativeTargetCount != 3 || len(row.RepresentativeMissing) != 3 {
+				t.Fatalf("expected browse-only provider representative coverage 0/3, got %#v", row)
+			}
+			if row.PriorityAction != "补 1 条 provider 上传成功样本" {
+				t.Fatalf("expected browse-only provider priority action to request upload sample, got %#v", row)
+			}
 			if row.PreferredSampleTitle != "123_open 真实 smoke" || row.PreferredSamplePriority != "条件复用" {
 				t.Fatalf("expected 123_open preferred sample summary, got %#v", row)
 			}
@@ -8182,7 +8188,7 @@ func TestServiceProviderSmokeRecords(t *testing.T) {
 	if !foundPending {
 		t.Fatalf("expected provider smoke provider matrix to include pending catalog provider rows, got %#v", report.ProviderSmokeProviders)
 	}
-	if !strings.Contains(report.Markdown, "Preferred Sample") || !strings.Contains(report.Markdown, "Preferred Upload") || !strings.Contains(report.Markdown, "Preferred Anomaly") {
+	if !strings.Contains(report.Markdown, "Preferred Sample") || !strings.Contains(report.Markdown, "Preferred Upload") || !strings.Contains(report.Markdown, "Preferred Anomaly") || !strings.Contains(report.Markdown, "Preferred Representative") {
 		t.Fatalf("expected provider smoke provider markdown to include preferred sample columns, got %s", report.Markdown)
 	}
 }
@@ -8382,6 +8388,32 @@ func TestServiceProviderSmokeMatrixTracksRepresentativeSamples(t *testing.T) {
 	}
 	if !strings.Contains(matrix[0].RepresentativeAdvice, "代表性样本已覆盖") {
 		t.Fatalf("expected representative complete advice, got %s", matrix[0].RepresentativeAdvice)
+	}
+	report, err := svc.EvidenceReport(ctx)
+	if err != nil {
+		t.Fatalf("EvidenceReport() error = %v", err)
+	}
+	foundProviderRepresentative := false
+	for _, row := range report.ProviderSmokeProviders {
+		if row.ProviderKey != "guangya" {
+			continue
+		}
+		foundProviderRepresentative = true
+		if !row.HasLargeFileSample || !row.HasNestedDirectorySample || !row.HasRetryRecoverySample {
+			t.Fatalf("expected provider representative flags true, got %#v", row)
+		}
+		if row.RepresentativeCompletedCount != 3 || row.RepresentativeTargetCount != 3 || len(row.RepresentativeMissing) != 0 {
+			t.Fatalf("expected provider representative coverage 3/3 without missing, got %#v", row)
+		}
+		if row.PreferredRepresentativeSampleTitle != "guangya 大文件 多层目录 checkpoint smoke" || row.PreferredRepresentativePriority == "" {
+			t.Fatalf("expected provider preferred representative summary, got %#v", row)
+		}
+	}
+	if !foundProviderRepresentative {
+		t.Fatalf("expected guangya provider representative row in %#v", report.ProviderSmokeProviders)
+	}
+	if !strings.Contains(report.Markdown, "Representative Coverage") || !strings.Contains(report.Markdown, "Preferred Representative") {
+		t.Fatalf("expected provider representative columns in report markdown, got %s", report.Markdown)
 	}
 	fetched, ok, err := svc.GetProviderSmokeRecord(ctx, summary[0].SampleRecordID)
 	if err != nil {

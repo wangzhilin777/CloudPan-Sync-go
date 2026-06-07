@@ -5714,11 +5714,14 @@ function renderEvidenceProviderSmokeProviders(report) {
                     / basic ${item.hasBasicSuccessSample ? "ready" : "pending"}
                     / upload ${item.hasUploadSuccessSample ? "ready" : "pending"}
                     / anomaly ${escapeHTML(stringifyValue(item.anomalyCompletedCount, "0"))}/${escapeHTML(stringifyValue(item.anomalyTargetCount, "0"))}
+                    / representative ${escapeHTML(stringifyValue(item.representativeCompletedCount, "0"))}/${escapeHTML(stringifyValue(item.representativeTargetCount, "0"))}
                     / priority ${escapeHTML(stringifyValue(item.priorityAction, "complete"))}
                   </div>
                   <div class="muted">provider preferred sample: ${escapeHTML(stringifyValue(item.preferredSampleTitle, "-"))} / ${escapeHTML(stringifyValue(item.preferredSamplePriority, "-"))}</div>
                   <div class="muted">provider preferred upload: ${escapeHTML(stringifyValue(item.preferredUploadSampleTitle, "-"))} / ${escapeHTML(stringifyValue(item.preferredUploadPriority, "-"))}</div>
                   <div class="muted">provider preferred anomaly: ${escapeHTML(stringifyValue(item.preferredAnomalySampleTitle, "-"))} / ${escapeHTML(stringifyValue(item.preferredAnomalyPriority, "-"))}</div>
+                  <div class="muted">provider preferred representative: ${escapeHTML(stringifyValue(item.preferredRepresentativeSampleTitle, "-"))} / ${escapeHTML(stringifyValue(item.preferredRepresentativePriority, "-"))}</div>
+                  ${Array.isArray(item.representativeMissing) && item.representativeMissing.length ? `<div class="muted">provider representative missing: ${escapeHTML(item.representativeMissing.join(", "))}</div>` : ""}
                 `,
               )
               .join("")
