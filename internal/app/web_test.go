@@ -804,8 +804,14 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "providerSmokeProviderMissingBasicCount") || !strings.Contains(body, "providerSmokeProviderMissingUploadCount") || !strings.Contains(body, "providerSmokeProviderMissingAnomalyCount") || !strings.Contains(body, "providerSmokeProviderMissingRepresentativeCount") {
 		t.Fatalf("expected provider-level smoke missing counters in app.js, got %q", body)
 	}
+	if !strings.Contains(body, "providerSmokeProviderMissingBasicProviders") || !strings.Contains(body, "providerSmokeProviderMissingUploadProviders") || !strings.Contains(body, "providerSmokeProviderMissingAnomalyProviders") || !strings.Contains(body, "providerSmokeProviderMissingRepresentativeProviders") {
+		t.Fatalf("expected provider-level smoke missing provider lists in app.js, got %q", body)
+	}
 	if !strings.Contains(body, "missing basic") || !strings.Contains(body, "missing upload") || !strings.Contains(body, "missing anomaly") || !strings.Contains(body, "missing representative") {
 		t.Fatalf("expected provider-level smoke missing counter labels in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "missing basic providers:") || !strings.Contains(body, "missing upload providers:") || !strings.Contains(body, "missing anomaly providers:") || !strings.Contains(body, "missing representative providers:") {
+		t.Fatalf("expected provider-level smoke missing provider list labels in app.js, got %q", body)
 	}
 	if !strings.Contains(body, "Provider 级真实样本验收") {
 		t.Fatalf("expected provider-level smoke acceptance title in app.js, got %q", body)

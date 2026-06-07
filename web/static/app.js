@@ -5650,20 +5650,29 @@ function providerSmokeProviderCounts(items) {
     missingUpload: 0,
     missingAnomaly: 0,
     missingRepresentative: 0,
+    missingBasicProviders: [],
+    missingUploadProviders: [],
+    missingAnomalyProviders: [],
+    missingRepresentativeProviders: [],
   };
   for (const item of Array.isArray(items) ? items : []) {
     counts.total += 1;
+    const providerKey = stringifyValue(item?.providerKey, "unknown");
     if (!item?.hasBasicSuccessSample) {
       counts.missingBasic += 1;
+      counts.missingBasicProviders.push(providerKey);
     }
     if (!item?.hasUploadSuccessSample) {
       counts.missingUpload += 1;
+      counts.missingUploadProviders.push(providerKey);
     }
     if (Array.isArray(item?.anomalyMissing) && item.anomalyMissing.length) {
       counts.missingAnomaly += 1;
+      counts.missingAnomalyProviders.push(providerKey);
     }
     if (Array.isArray(item?.representativeMissing) && item.representativeMissing.length) {
       counts.missingRepresentative += 1;
+      counts.missingRepresentativeProviders.push(providerKey);
     }
     const readiness = String(item?.readiness || "").trim().toLowerCase();
     if (readiness === "ready") {
@@ -5726,6 +5735,18 @@ function renderEvidenceProviderSmokeProviders(report) {
   if (Object.prototype.hasOwnProperty.call(summary, "providerSmokeProviderMissingRepresentativeCount")) {
     counts.missingRepresentative = Number(summary.providerSmokeProviderMissingRepresentativeCount || 0);
   }
+  if (Array.isArray(summary.providerSmokeProviderMissingBasicProviders)) {
+    counts.missingBasicProviders = summary.providerSmokeProviderMissingBasicProviders;
+  }
+  if (Array.isArray(summary.providerSmokeProviderMissingUploadProviders)) {
+    counts.missingUploadProviders = summary.providerSmokeProviderMissingUploadProviders;
+  }
+  if (Array.isArray(summary.providerSmokeProviderMissingAnomalyProviders)) {
+    counts.missingAnomalyProviders = summary.providerSmokeProviderMissingAnomalyProviders;
+  }
+  if (Array.isArray(summary.providerSmokeProviderMissingRepresentativeProviders)) {
+    counts.missingRepresentativeProviders = summary.providerSmokeProviderMissingRepresentativeProviders;
+  }
   const focusItems = items
     .filter((item) => String(item?.readiness || "").toLowerCase() !== "ready")
     .slice(0, 6);
@@ -5748,6 +5769,10 @@ function renderEvidenceProviderSmokeProviders(report) {
         <span class="pill">missing anomaly ${counts.missingAnomaly}</span>
         <span class="pill">missing representative ${counts.missingRepresentative}</span>
       </div>
+      <div class="muted">missing basic providers: ${escapeHTML(summarizePathList(counts.missingBasicProviders, 8))}</div>
+      <div class="muted">missing upload providers: ${escapeHTML(summarizePathList(counts.missingUploadProviders, 8))}</div>
+      <div class="muted">missing anomaly providers: ${escapeHTML(summarizePathList(counts.missingAnomalyProviders, 8))}</div>
+      <div class="muted">missing representative providers: ${escapeHTML(summarizePathList(counts.missingRepresentativeProviders, 8))}</div>
       ${
         focusItems.length
           ? focusItems

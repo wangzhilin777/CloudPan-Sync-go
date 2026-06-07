@@ -162,63 +162,67 @@ type Detail struct {
 }
 
 type EvidenceSummary struct {
-	TotalTasks                                      int                `json:"totalTasks"`
-	CompletedTasks                                  int                `json:"completedTasks"`
-	BlockedTasks                                    int                `json:"blockedTasks"`
-	ExecutionMode                                   string             `json:"executionMode,omitempty"`
-	ScanMode                                        string             `json:"scanMode,omitempty"`
-	SourceDeletePolicy                              string             `json:"sourceDeletePolicy,omitempty"`
-	AutoRecoverTasks                                int                `json:"autoRecoverTasks"`
-	AutoRecoverRunnableTasks                        int                `json:"autoRecoverRunnableTasks"`
-	AutoRecoverWaitingCooldownTasks                 int                `json:"autoRecoverWaitingCooldownTasks"`
-	AutoRecoverWaitingRetryWindowTasks              int                `json:"autoRecoverWaitingRetryWindowTasks"`
-	AutoRecoverWaitingAuthRefreshTasks              int                `json:"autoRecoverWaitingAuthRefreshTasks"`
-	AutoRecoverWaitingLocalRestoreTasks             int                `json:"autoRecoverWaitingLocalRestoreTasks"`
-	AutoRecoverWaitingProviderSessionTasks          int                `json:"autoRecoverWaitingProviderSessionTasks"`
-	AutoRecoverWaitingManualTasks                   int                `json:"autoRecoverWaitingManualTasks"`
-	AutoRecoverWaitingRetryLimitTasks               int                `json:"autoRecoverWaitingRetryLimitTasks"`
-	AutoRecoverWaitingOtherTasks                    int                `json:"autoRecoverWaitingOtherTasks"`
-	AutoRecoverFairnessReadiness                    string             `json:"autoRecoverFairnessReadiness,omitempty"`
-	AutoRecoverFairnessPriorityAction               string             `json:"autoRecoverFairnessPriorityAction,omitempty"`
-	AutoRecoverFairnessMissing                      []string           `json:"autoRecoverFairnessMissing,omitempty"`
-	FailedResultCount                               int                `json:"failedResultCount"`
-	DoneResultCount                                 int                `json:"doneResultCount"`
-	SkippedResultCount                              int                `json:"skippedResultCount"`
-	PendingResultCount                              int                `json:"pendingResultCount"`
-	SourceDeletionCount                             int                `json:"sourceDeletionCount"`
-	RiskHitCount                                    int                `json:"riskHitCount"`
-	BlockedActions                                  []BlockedAction    `json:"blockedActions,omitempty"`
-	AutoRecoverPool                                 []AutoRecoverLane  `json:"autoRecoverPool,omitempty"`
-	ProtocolCoverage                                []ProtocolCoverage `json:"protocolCoverage,omitempty"`
-	AcceptedSmokeGroups                             int                `json:"acceptedSmokeGroups"`
-	InProgressSmokeGroups                           int                `json:"inProgressSmokeGroups"`
-	PendingSmokeGroups                              int                `json:"pendingSmokeGroups"`
-	UploadSuccessGroups                             int                `json:"uploadSuccessGroups"`
-	UploadSuccessSamples                            int                `json:"uploadSuccessSamples"`
-	ProviderSmokeProviderTotalCount                 int                `json:"providerSmokeProviderTotalCount"`
-	ProviderSmokeProviderReadyCount                 int                `json:"providerSmokeProviderReadyCount"`
-	ProviderSmokeProviderPartialCount               int                `json:"providerSmokeProviderPartialCount"`
-	ProviderSmokeProviderPendingCount               int                `json:"providerSmokeProviderPendingCount"`
-	ProviderSmokeProviderMissingBasicCount          int                `json:"providerSmokeProviderMissingBasicCount"`
-	ProviderSmokeProviderMissingUploadCount         int                `json:"providerSmokeProviderMissingUploadCount"`
-	ProviderSmokeProviderMissingAnomalyCount        int                `json:"providerSmokeProviderMissingAnomalyCount"`
-	ProviderSmokeProviderMissingRepresentativeCount int                `json:"providerSmokeProviderMissingRepresentativeCount"`
-	UploadCheckpointTaskCount                       int                `json:"uploadCheckpointTaskCount"`
-	UploadCheckpointResumeTaskCount                 int                `json:"uploadCheckpointResumeTaskCount"`
-	UploadCheckpointResumeSamplePaths               []string           `json:"uploadCheckpointResumeSamplePaths,omitempty"`
-	UploadCheckpointResumeSampleProvider            string             `json:"uploadCheckpointResumeSampleProvider,omitempty"`
-	UploadCheckpointResumeSampleProtocol            string             `json:"uploadCheckpointResumeSampleProtocol,omitempty"`
-	UploadCheckpointResumeSampleTaskID              string             `json:"uploadCheckpointResumeSampleTaskId,omitempty"`
-	UploadCheckpointResumeSampleProfileID           string             `json:"uploadCheckpointResumeSampleProfileId,omitempty"`
-	UploadCheckpointResumeSampleUploadID            string             `json:"uploadCheckpointResumeSampleUploadId,omitempty"`
-	UploadCheckpointResumeSampleNextPart            int                `json:"uploadCheckpointResumeSampleNextPart,omitempty"`
-	UploadCheckpointResumeSamplePartCount           int                `json:"uploadCheckpointResumeSamplePartCount,omitempty"`
-	UploadCheckpointResumeSampleUploaded            int                `json:"uploadCheckpointResumeSampleUploaded,omitempty"`
-	UploadCheckpointResumeReadiness                 string             `json:"uploadCheckpointResumeReadiness,omitempty"`
-	UploadCheckpointResumePriorityAction            string             `json:"uploadCheckpointResumePriorityAction,omitempty"`
-	AcceptanceActionCounts                          map[string]int     `json:"acceptanceActionCounts,omitempty"`
-	RecentResults                                   []Result           `json:"recentResults"`
-	RecentProbes                                    []ProviderProbe    `json:"recentProbes"`
+	TotalTasks                                          int                `json:"totalTasks"`
+	CompletedTasks                                      int                `json:"completedTasks"`
+	BlockedTasks                                        int                `json:"blockedTasks"`
+	ExecutionMode                                       string             `json:"executionMode,omitempty"`
+	ScanMode                                            string             `json:"scanMode,omitempty"`
+	SourceDeletePolicy                                  string             `json:"sourceDeletePolicy,omitempty"`
+	AutoRecoverTasks                                    int                `json:"autoRecoverTasks"`
+	AutoRecoverRunnableTasks                            int                `json:"autoRecoverRunnableTasks"`
+	AutoRecoverWaitingCooldownTasks                     int                `json:"autoRecoverWaitingCooldownTasks"`
+	AutoRecoverWaitingRetryWindowTasks                  int                `json:"autoRecoverWaitingRetryWindowTasks"`
+	AutoRecoverWaitingAuthRefreshTasks                  int                `json:"autoRecoverWaitingAuthRefreshTasks"`
+	AutoRecoverWaitingLocalRestoreTasks                 int                `json:"autoRecoverWaitingLocalRestoreTasks"`
+	AutoRecoverWaitingProviderSessionTasks              int                `json:"autoRecoverWaitingProviderSessionTasks"`
+	AutoRecoverWaitingManualTasks                       int                `json:"autoRecoverWaitingManualTasks"`
+	AutoRecoverWaitingRetryLimitTasks                   int                `json:"autoRecoverWaitingRetryLimitTasks"`
+	AutoRecoverWaitingOtherTasks                        int                `json:"autoRecoverWaitingOtherTasks"`
+	AutoRecoverFairnessReadiness                        string             `json:"autoRecoverFairnessReadiness,omitempty"`
+	AutoRecoverFairnessPriorityAction                   string             `json:"autoRecoverFairnessPriorityAction,omitempty"`
+	AutoRecoverFairnessMissing                          []string           `json:"autoRecoverFairnessMissing,omitempty"`
+	FailedResultCount                                   int                `json:"failedResultCount"`
+	DoneResultCount                                     int                `json:"doneResultCount"`
+	SkippedResultCount                                  int                `json:"skippedResultCount"`
+	PendingResultCount                                  int                `json:"pendingResultCount"`
+	SourceDeletionCount                                 int                `json:"sourceDeletionCount"`
+	RiskHitCount                                        int                `json:"riskHitCount"`
+	BlockedActions                                      []BlockedAction    `json:"blockedActions,omitempty"`
+	AutoRecoverPool                                     []AutoRecoverLane  `json:"autoRecoverPool,omitempty"`
+	ProtocolCoverage                                    []ProtocolCoverage `json:"protocolCoverage,omitempty"`
+	AcceptedSmokeGroups                                 int                `json:"acceptedSmokeGroups"`
+	InProgressSmokeGroups                               int                `json:"inProgressSmokeGroups"`
+	PendingSmokeGroups                                  int                `json:"pendingSmokeGroups"`
+	UploadSuccessGroups                                 int                `json:"uploadSuccessGroups"`
+	UploadSuccessSamples                                int                `json:"uploadSuccessSamples"`
+	ProviderSmokeProviderTotalCount                     int                `json:"providerSmokeProviderTotalCount"`
+	ProviderSmokeProviderReadyCount                     int                `json:"providerSmokeProviderReadyCount"`
+	ProviderSmokeProviderPartialCount                   int                `json:"providerSmokeProviderPartialCount"`
+	ProviderSmokeProviderPendingCount                   int                `json:"providerSmokeProviderPendingCount"`
+	ProviderSmokeProviderMissingBasicCount              int                `json:"providerSmokeProviderMissingBasicCount"`
+	ProviderSmokeProviderMissingUploadCount             int                `json:"providerSmokeProviderMissingUploadCount"`
+	ProviderSmokeProviderMissingAnomalyCount            int                `json:"providerSmokeProviderMissingAnomalyCount"`
+	ProviderSmokeProviderMissingRepresentativeCount     int                `json:"providerSmokeProviderMissingRepresentativeCount"`
+	ProviderSmokeProviderMissingBasicProviders          []string           `json:"providerSmokeProviderMissingBasicProviders,omitempty"`
+	ProviderSmokeProviderMissingUploadProviders         []string           `json:"providerSmokeProviderMissingUploadProviders,omitempty"`
+	ProviderSmokeProviderMissingAnomalyProviders        []string           `json:"providerSmokeProviderMissingAnomalyProviders,omitempty"`
+	ProviderSmokeProviderMissingRepresentativeProviders []string           `json:"providerSmokeProviderMissingRepresentativeProviders,omitempty"`
+	UploadCheckpointTaskCount                           int                `json:"uploadCheckpointTaskCount"`
+	UploadCheckpointResumeTaskCount                     int                `json:"uploadCheckpointResumeTaskCount"`
+	UploadCheckpointResumeSamplePaths                   []string           `json:"uploadCheckpointResumeSamplePaths,omitempty"`
+	UploadCheckpointResumeSampleProvider                string             `json:"uploadCheckpointResumeSampleProvider,omitempty"`
+	UploadCheckpointResumeSampleProtocol                string             `json:"uploadCheckpointResumeSampleProtocol,omitempty"`
+	UploadCheckpointResumeSampleTaskID                  string             `json:"uploadCheckpointResumeSampleTaskId,omitempty"`
+	UploadCheckpointResumeSampleProfileID               string             `json:"uploadCheckpointResumeSampleProfileId,omitempty"`
+	UploadCheckpointResumeSampleUploadID                string             `json:"uploadCheckpointResumeSampleUploadId,omitempty"`
+	UploadCheckpointResumeSampleNextPart                int                `json:"uploadCheckpointResumeSampleNextPart,omitempty"`
+	UploadCheckpointResumeSamplePartCount               int                `json:"uploadCheckpointResumeSamplePartCount,omitempty"`
+	UploadCheckpointResumeSampleUploaded                int                `json:"uploadCheckpointResumeSampleUploaded,omitempty"`
+	UploadCheckpointResumeReadiness                     string             `json:"uploadCheckpointResumeReadiness,omitempty"`
+	UploadCheckpointResumePriorityAction                string             `json:"uploadCheckpointResumePriorityAction,omitempty"`
+	AcceptanceActionCounts                              map[string]int     `json:"acceptanceActionCounts,omitempty"`
+	RecentResults                                       []Result           `json:"recentResults"`
+	RecentProbes                                        []ProviderProbe    `json:"recentProbes"`
 }
 
 type AutoRecoverLane struct {
@@ -3845,6 +3849,10 @@ func buildEvidenceReport(summary EvidenceSummary, statuses []StatusSummary, smok
 	fmt.Fprintf(&b, "- Provider 验收缺上传成功: %d\n", summary.ProviderSmokeProviderMissingUploadCount)
 	fmt.Fprintf(&b, "- Provider 验收缺异常样本: %d\n", summary.ProviderSmokeProviderMissingAnomalyCount)
 	fmt.Fprintf(&b, "- Provider 验收缺代表性样本: %d\n", summary.ProviderSmokeProviderMissingRepresentativeCount)
+	fmt.Fprintf(&b, "- Provider 验收缺基础成功 provider: %s\n", previewStringList(summary.ProviderSmokeProviderMissingBasicProviders, 12))
+	fmt.Fprintf(&b, "- Provider 验收缺上传成功 provider: %s\n", previewStringList(summary.ProviderSmokeProviderMissingUploadProviders, 12))
+	fmt.Fprintf(&b, "- Provider 验收缺异常样本 provider: %s\n", previewStringList(summary.ProviderSmokeProviderMissingAnomalyProviders, 12))
+	fmt.Fprintf(&b, "- Provider 验收缺代表性样本 provider: %s\n", previewStringList(summary.ProviderSmokeProviderMissingRepresentativeProviders, 12))
 	fmt.Fprintf(&b, "- Upload checkpoint 任务数: %d\n", summary.UploadCheckpointTaskCount)
 	fmt.Fprintf(&b, "- Upload checkpoint 自动续传任务数: %d\n", summary.UploadCheckpointResumeTaskCount)
 	if len(summary.UploadCheckpointResumeSamplePaths) > 0 {
@@ -4913,7 +4921,12 @@ func populateProviderSmokeProviderCounts(summary *EvidenceSummary, rows []Provid
 	summary.ProviderSmokeProviderMissingUploadCount = 0
 	summary.ProviderSmokeProviderMissingAnomalyCount = 0
 	summary.ProviderSmokeProviderMissingRepresentativeCount = 0
+	summary.ProviderSmokeProviderMissingBasicProviders = nil
+	summary.ProviderSmokeProviderMissingUploadProviders = nil
+	summary.ProviderSmokeProviderMissingAnomalyProviders = nil
+	summary.ProviderSmokeProviderMissingRepresentativeProviders = nil
 	for _, row := range rows {
+		providerKey := firstNonEmpty(row.ProviderKey, "unknown")
 		switch strings.ToLower(strings.TrimSpace(row.Readiness)) {
 		case "ready":
 			summary.ProviderSmokeProviderReadyCount++
@@ -4924,17 +4937,49 @@ func populateProviderSmokeProviderCounts(summary *EvidenceSummary, rows []Provid
 		}
 		if !row.HasBasicSuccessSample {
 			summary.ProviderSmokeProviderMissingBasicCount++
+			summary.ProviderSmokeProviderMissingBasicProviders = append(summary.ProviderSmokeProviderMissingBasicProviders, providerKey)
 		}
 		if !row.HasUploadSuccessSample {
 			summary.ProviderSmokeProviderMissingUploadCount++
+			summary.ProviderSmokeProviderMissingUploadProviders = append(summary.ProviderSmokeProviderMissingUploadProviders, providerKey)
 		}
 		if len(row.AnomalyMissing) > 0 {
 			summary.ProviderSmokeProviderMissingAnomalyCount++
+			summary.ProviderSmokeProviderMissingAnomalyProviders = append(summary.ProviderSmokeProviderMissingAnomalyProviders, providerKey)
 		}
 		if len(row.RepresentativeMissing) > 0 {
 			summary.ProviderSmokeProviderMissingRepresentativeCount++
+			summary.ProviderSmokeProviderMissingRepresentativeProviders = append(summary.ProviderSmokeProviderMissingRepresentativeProviders, providerKey)
 		}
 	}
+}
+
+func previewStringList(values []string, limit int) string {
+	if len(values) == 0 {
+		return "-"
+	}
+	if limit <= 0 {
+		limit = len(values)
+	}
+	items := make([]string, 0, minInt(limit, len(values)))
+	for _, value := range values {
+		value = strings.TrimSpace(value)
+		if value == "" {
+			continue
+		}
+		items = append(items, value)
+		if len(items) >= limit {
+			break
+		}
+	}
+	if len(items) == 0 {
+		return "-"
+	}
+	suffix := ""
+	if len(values) > len(items) {
+		suffix = fmt.Sprintf(" ...(+%d)", len(values)-len(items))
+	}
+	return strings.Join(items, ", ") + suffix
 }
 
 func renderProviderSmokeProviderReadiness(row ProviderSmokeProviderRow) string {
