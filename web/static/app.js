@@ -327,7 +327,8 @@ function renderProviderRiskTemplateDetail(template, { title = "默认风控模�
     `<div class="muted">calibration coverage ${escapeHTML(stringifyValue(template.calibrationCoverage, "-"))}</div>
     <div class="muted">calibration covered ${escapeHTML(stringifyValue(template.calibrationCoveredCount, "0"))}/${escapeHTML(stringifyValue(template.calibrationTargetCount, "0"))} / missing ${escapeHTML(stringifyValue(template.calibrationMissingCount, "0"))}</div>
     <div class="muted">calibration covered fields ${escapeHTML((template.calibrationCoveredFields || []).join(", ") || "-")}</div>
-    <div class="muted">calibration readiness ${escapeHTML(stringifyValue(template.calibrationReadiness, "-"))}</div>`,
+    <div class="muted">calibration readiness ${escapeHTML(stringifyValue(template.calibrationReadiness, "-"))}</div>
+    <div class="muted">calibration sample advice ${escapeHTML(stringifyValue(template.calibrationSampleAdvice, "-"))}</div>`,
     `<div class="muted">recommended ${escapeHTML(stringifyValue(template.recommendedMode, "-"))}</div>`,
     `<div class="muted">recover budget ${escapeHTML(renderRecoverBudgetCompact(template.recoverBudget))}</div>`,
     `<div class="muted">budget advice ${escapeHTML(renderRecoverBudgetAdvice(template.recoverBudget, template.providerKey || ""))}</div>`,
@@ -5969,6 +5970,9 @@ function renderEvidenceRiskCalibrationSummary(report) {
                   </div>
                   <div class="muted">
                     covered fields ${escapeHTML((template.calibrationCoveredFields || []).join(", ") || "-")}
+                  </div>
+                  <div class="muted">
+                    calibration sample advice ${escapeHTML(stringifyValue(template.calibrationSampleAdvice, "-"))}
                   </div>
                 `;
               })

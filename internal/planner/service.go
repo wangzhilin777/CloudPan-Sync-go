@@ -317,6 +317,7 @@ func ProviderDefaultRiskTemplate(meta provider.Provider) provider.RiskTemplateSu
 		CalibrationMissing:        calibrationMissing,
 		CalibrationReasons:        append([]string(nil), defaults.CalibrationReasons...),
 		CalibrationPriorityAction: calibrationPriorityAction,
+		CalibrationSampleAdvice:   defaultRiskCalibrationSampleAdvice(calibrationMissing),
 		ProviderRiskHints:         append([]string(nil), defaults.ProviderRiskHints...),
 		ProviderRiskTraits:        append([]string(nil), defaults.ProviderRiskTraits...),
 		RecommendedReason:         defaults.RecommendedRiskReason,
@@ -373,6 +374,33 @@ func defaultRiskCalibrationPriorityAction(missing []string) string {
 	default:
 		return fmt.Sprintf("补 provider 默认 %s", missing[0])
 	}
+}
+
+func defaultRiskCalibrationSampleAdvice(missing []string) string {
+	if len(missing) == 0 {
+		return "默认模板已覆盖当前校准目标，后续真实样本主要用于确认 provider 默认节奏是否还需要微调。"
+	}
+	needsWindow := stringSliceContains(missing, "auto_retry_window")
+	needsKeywords := stringSliceContains(missing, "risk_keywords")
+	switch {
+	case needsWindow && needsKeywords:
+		return "优先补一条真实限流/风控异常样本，记录触发关键词、恢复时段和可安全自动重试窗口，用于同时回填 risk keywords 与 auto retry window。"
+	case needsWindow:
+		return "优先补一条真实限流/风控或后台补传样本，记录可安全自动重试的时间段，用于回填 provider 默认 auto retry window。"
+	case needsKeywords:
+		return "优先补一条真实风控命中样本，记录 provider 返回的错误状态和关键词，用于回填 provider 默认 risk keywords。"
+	default:
+		return "优先补真实 provider 样本回填缺失校准字段：" + strings.Join(missing, ", ") + "。"
+	}
+}
+
+func stringSliceContains(items []string, target string) bool {
+	for _, item := range items {
+		if strings.TrimSpace(item) == target {
+			return true
+		}
+	}
+	return false
 }
 
 func defaultRiskCalibrationCoverage(profile RiskProfile, missing []string) string {

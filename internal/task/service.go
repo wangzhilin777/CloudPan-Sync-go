@@ -4178,11 +4178,11 @@ func buildEvidenceReport(summary EvidenceSummary, statuses []StatusSummary, smok
 		fmt.Fprintf(&b, "- Calibration Pending: %d\n", summary.ProviderRiskCalibrationPendingCount)
 		fmt.Fprintf(&b, "- Calibration Missing Fields: %s\n", previewCountMap(summary.ProviderRiskCalibrationMissingFieldCounts, 8))
 		fmt.Fprintf(&b, "- Calibration Priority Actions: %s\n", previewCountMap(summary.ProviderRiskCalibrationPriorityActionCounts, 8))
-		b.WriteString("\n| Provider | Readiness | Coverage | Covered | Missing Count | Covered Fields | Missing | Priority Calibration | Recommended | Window Source | Window Advice |\n")
-		b.WriteString("| --- | --- | --- | ---: | ---: | --- | --- | --- | --- | --- | --- |\n")
+		b.WriteString("\n| Provider | Readiness | Coverage | Covered | Missing Count | Covered Fields | Missing | Priority Calibration | Sample Advice | Recommended | Window Source | Window Advice |\n")
+		b.WriteString("| --- | --- | --- | ---: | ---: | --- | --- | --- | --- | --- | --- | --- |\n")
 		for _, item := range providerCalibrationRows {
 			template := item.Meta.DefaultRiskTemplate
-			fmt.Fprintf(&b, "| %s | %s | %s | %d/%d | %d | %s | %s | %s | %s | %s | %s |\n",
+			fmt.Fprintf(&b, "| %s | %s | %s | %d/%d | %d | %s | %s | %s | %s | %s | %s | %s |\n",
 				markdownCell(firstNonEmpty(item.Meta.Key, "-")),
 				markdownCell(firstNonEmpty(template.CalibrationReadiness, "pending")),
 				markdownCell(firstNonEmpty(template.CalibrationCoverage, "-")),
@@ -4192,6 +4192,7 @@ func buildEvidenceReport(summary EvidenceSummary, statuses []StatusSummary, smok
 				markdownCell(strings.Join(template.CalibrationCoveredFields, ", ")),
 				markdownCell(strings.Join(template.CalibrationMissing, ", ")),
 				markdownCell(firstNonEmpty(template.CalibrationPriorityAction, "complete")),
+				markdownCell(firstNonEmpty(template.CalibrationSampleAdvice, "-")),
 				markdownCell(firstNonEmpty(template.RecommendedMode, "-")),
 				markdownCell(firstNonEmpty(template.AutoRetryWindowSource, "-")),
 				markdownCell(firstNonEmpty(template.AutoRetryWindowAdvice, "-")),

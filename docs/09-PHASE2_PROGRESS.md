@@ -191,6 +191,7 @@
 - 已把 provider 默认风控模板校准的 ready / partial / pending、missing field 分布和 priority action 分布结构化写入 summary，并接入验收报告和页面展示，便于直接看出默认风控模板还缺哪些字段、哪些动作还在被最多 provider 使用。
 - 已把 provider 默认风控模板校准 summary 接入运行证据 `RuntimeEvidence`，便于不生成报告也能直接读取当前默认模板校准聚合进度。
 - 已把协议组级真实样本缺口 summary 进一步接入 workflow JSON 兜底，便于接口层直接回放缺口列表和首要动作分布，而不只依赖页面字段。
+- 已把 provider 默认风控模板补上 `calibrationSampleAdvice`，并接入接口、验收报告和页面展示，用于直接说明下一条真实样本应优先回填 auto retry window、risk keywords 等校准证据。
 
 ### 对应提交
 

@@ -18,6 +18,7 @@ type RiskTemplateSummary struct {
 	CalibrationReadiness      string   `json:"calibrationReadiness,omitempty"`
 	CalibrationMissing        []string `json:"calibrationMissing,omitempty"`
 	CalibrationPriorityAction string   `json:"calibrationPriorityAction,omitempty"`
+	CalibrationSampleAdvice   string   `json:"calibrationSampleAdvice,omitempty"`
 	CalibrationReasons        []string `json:"calibrationReasons,omitempty"`
 	ProviderRiskHints         []string `json:"providerRiskHints,omitempty"`
 	ProviderRiskTraits        []string `json:"providerRiskTraits,omitempty"`

@@ -547,7 +547,7 @@ func TestServiceProtocolCoverageSummary(t *testing.T) {
 	if len(report.ProviderSmokeProviders) == 0 {
 		t.Fatal("expected provider smoke provider acceptance rows")
 	}
-	if !strings.Contains(report.Markdown, "## Provider 默认风控校准") || !strings.Contains(report.Markdown, "Calibration Ready") || !strings.Contains(report.Markdown, "| Provider | Readiness | Coverage | Covered | Missing Count | Covered Fields | Missing | Priority Calibration | Recommended | Window Source | Window Advice |") {
+	if !strings.Contains(report.Markdown, "## Provider 默认风控校准") || !strings.Contains(report.Markdown, "Calibration Ready") || !strings.Contains(report.Markdown, "| Provider | Readiness | Coverage | Covered | Missing Count | Covered Fields | Missing | Priority Calibration | Sample Advice | Recommended | Window Source | Window Advice |") {
 		t.Fatalf("expected provider risk calibration section in report markdown, got %s", report.Markdown)
 	}
 	if report.Summary.ProviderRiskCalibrationTotalCount == 0 || report.Summary.ProviderRiskCalibrationReadyCount+report.Summary.ProviderRiskCalibrationPartialCount+report.Summary.ProviderRiskCalibrationPendingCount != report.Summary.ProviderRiskCalibrationTotalCount {

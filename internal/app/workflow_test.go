@@ -100,6 +100,9 @@ func TestAppWorkflowMainline(t *testing.T) {
 	if got := defaultRiskTemplate["calibrationPriorityAction"].(string); got == "" {
 		t.Fatalf("expected provider calibrationPriorityAction in defaultRiskTemplate, got %#v", defaultRiskTemplate["calibrationPriorityAction"])
 	}
+	if got := defaultRiskTemplate["calibrationSampleAdvice"].(string); got == "" {
+		t.Fatalf("expected provider calibrationSampleAdvice in defaultRiskTemplate, got %#v", defaultRiskTemplate["calibrationSampleAdvice"])
+	}
 	if hints, ok := defaultRiskTemplate["providerRiskHints"].([]interface{}); !ok || len(hints) == 0 {
 		t.Fatalf("expected providerRiskHints in defaultRiskTemplate, got %#v", defaultRiskTemplate["providerRiskHints"])
 	}
@@ -152,6 +155,9 @@ func TestAppWorkflowMainline(t *testing.T) {
 	}
 	if got := capabilityRiskTemplate["calibrationPriorityAction"].(string); got == "" {
 		t.Fatalf("expected capability defaultRiskTemplate calibrationPriorityAction, got %#v", capabilityRiskTemplate["calibrationPriorityAction"])
+	}
+	if got := capabilityRiskTemplate["calibrationSampleAdvice"].(string); got == "" {
+		t.Fatalf("expected capability defaultRiskTemplate calibrationSampleAdvice, got %#v", capabilityRiskTemplate["calibrationSampleAdvice"])
 	}
 
 	profileResp := invokeJSON(t, handler, http.MethodPost, "/api/auth/profiles", map[string]interface{}{
@@ -974,7 +980,7 @@ func TestAppWorkflowMainline(t *testing.T) {
 	if !strings.Contains(reportData["markdown"].(string), "Preferred Sample") || !strings.Contains(reportData["markdown"].(string), "Preferred Upload") || !strings.Contains(reportData["markdown"].(string), "Preferred Anomaly") {
 		t.Fatalf("expected report markdown to include provider preferred sample columns, got %s", reportData["markdown"].(string))
 	}
-	if !strings.Contains(reportData["markdown"].(string), "## Provider 默认风控校准") || !strings.Contains(reportData["markdown"].(string), "Calibration Ready") || !strings.Contains(reportData["markdown"].(string), "Missing") {
+	if !strings.Contains(reportData["markdown"].(string), "## Provider 默认风控校准") || !strings.Contains(reportData["markdown"].(string), "Calibration Ready") || !strings.Contains(reportData["markdown"].(string), "Sample Advice") {
 		t.Fatalf("expected report markdown to include provider risk calibration checklist, got %s", reportData["markdown"].(string))
 	}
 	if summary, ok := reportData["summary"].(map[string]interface{}); !ok {
