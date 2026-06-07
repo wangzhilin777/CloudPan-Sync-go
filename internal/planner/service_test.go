@@ -232,6 +232,9 @@ func TestProviderDefaultRiskTemplateIncludesAutoRetryWindowSummary(t *testing.T)
 	if template.CalibrationCoveredCount != 7 || template.CalibrationTargetCount != 8 || template.CalibrationMissingCount != 1 {
 		t.Fatalf("expected calibration counts 7/8 missing 1, got %+v", template)
 	}
+	if len(template.CalibrationCoveredFields) != 7 || len(template.CalibrationTargetFields) != 8 {
+		t.Fatalf("expected calibration covered/target fields 7/8, got %+v", template)
+	}
 	if template.CalibrationReadiness != "partial" {
 		t.Fatalf("expected calibration readiness partial, got %+v", template)
 	}

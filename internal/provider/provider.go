@@ -13,6 +13,8 @@ type RiskTemplateSummary struct {
 	CalibrationCoveredCount   int      `json:"calibrationCoveredCount,omitempty"`
 	CalibrationTargetCount    int      `json:"calibrationTargetCount,omitempty"`
 	CalibrationMissingCount   int      `json:"calibrationMissingCount,omitempty"`
+	CalibrationCoveredFields  []string `json:"calibrationCoveredFields,omitempty"`
+	CalibrationTargetFields   []string `json:"calibrationTargetFields,omitempty"`
 	CalibrationReadiness      string   `json:"calibrationReadiness,omitempty"`
 	CalibrationMissing        []string `json:"calibrationMissing,omitempty"`
 	CalibrationPriorityAction string   `json:"calibrationPriorityAction,omitempty"`

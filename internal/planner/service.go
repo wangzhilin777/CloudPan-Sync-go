@@ -298,8 +298,8 @@ func ProviderDefaultRiskTemplate(meta provider.Provider) provider.RiskTemplateSu
 	calibrationMissing := defaultRiskCalibrationMissing(resolution.Calibrated)
 	calibrationReadiness := defaultRiskCalibrationReadiness(resolution.Calibrated, calibrationMissing)
 	calibrationPriorityAction := defaultRiskCalibrationPriorityAction(calibrationMissing)
-	calibrationCoveredCount := defaultRiskCalibrationCoveredCount(resolution.Calibrated)
-	const calibrationTargetCount = 8
+	calibrationCoveredFields := defaultRiskCalibrationCoveredFields(resolution.Calibrated)
+	calibrationTargetFields := defaultRiskCalibrationTargetFields()
 	return provider.RiskTemplateSummary{
 		RecommendedMode:           string(defaults.RecommendedRiskMode),
 		Base:                      resolution.Base,
@@ -308,9 +308,11 @@ func ProviderDefaultRiskTemplate(meta provider.Provider) provider.RiskTemplateSu
 		AutoRetryWindowSource:     defaultRiskAutoRetryWindowSource(resolution.Calibrated),
 		AutoRetryWindowAdvice:     defaultRiskAutoRetryWindowAdvice(resolution.Calibrated),
 		CalibrationCoverage:       defaultRiskCalibrationCoverage(resolution.Calibrated, calibrationMissing),
-		CalibrationCoveredCount:   calibrationCoveredCount,
-		CalibrationTargetCount:    calibrationTargetCount,
+		CalibrationCoveredCount:   len(calibrationCoveredFields),
+		CalibrationTargetCount:    len(calibrationTargetFields),
 		CalibrationMissingCount:   len(calibrationMissing),
+		CalibrationCoveredFields:  calibrationCoveredFields,
+		CalibrationTargetFields:   calibrationTargetFields,
 		CalibrationReadiness:      calibrationReadiness,
 		CalibrationMissing:        calibrationMissing,
 		CalibrationReasons:        append([]string(nil), defaults.CalibrationReasons...),
@@ -382,30 +384,47 @@ func defaultRiskCalibrationCoverage(profile RiskProfile, missing []string) strin
 }
 
 func defaultRiskCalibrationCoveredCount(profile RiskProfile) int {
-	covered := 0
+	return len(defaultRiskCalibrationCoveredFields(profile))
+}
+
+func defaultRiskCalibrationTargetFields() []string {
+	return []string{
+		"request_interval",
+		"page_size",
+		"directory_interval",
+		"cooldown",
+		"retry_limit",
+		"max_concurrent",
+		"risk_keywords",
+		"auto_retry_window",
+	}
+}
+
+func defaultRiskCalibrationCoveredFields(profile RiskProfile) []string {
+	covered := make([]string, 0, len(defaultRiskCalibrationTargetFields()))
 	if profile.RequestIntervalMS > 0 {
-		covered++
+		covered = append(covered, "request_interval")
 	}
 	if profile.PageSize > 0 {
-		covered++
+		covered = append(covered, "page_size")
 	}
 	if profile.DirectoryIntervalMS > 0 {
-		covered++
+		covered = append(covered, "directory_interval")
 	}
 	if profile.CooldownSeconds > 0 {
-		covered++
+		covered = append(covered, "cooldown")
 	}
 	if profile.RetryLimit > 0 {
-		covered++
+		covered = append(covered, "retry_limit")
 	}
 	if profile.MaxConcurrent > 0 {
-		covered++
+		covered = append(covered, "max_concurrent")
 	}
 	if len(profile.RiskKeywords) > 0 {
-		covered++
+		covered = append(covered, "risk_keywords")
 	}
 	if profile.AutoRetryStartHour > 0 || profile.AutoRetryEndHour > 0 {
-		covered++
+		covered = append(covered, "auto_retry_window")
 	}
 	return covered
 }

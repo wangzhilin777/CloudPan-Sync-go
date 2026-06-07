@@ -85,6 +85,12 @@ func TestAppWorkflowMainline(t *testing.T) {
 	if got := int(defaultRiskTemplate["calibrationMissingCount"].(float64)); got == 0 {
 		t.Fatalf("expected provider calibrationMissingCount in defaultRiskTemplate, got %#v", defaultRiskTemplate["calibrationMissingCount"])
 	}
+	if fields, ok := defaultRiskTemplate["calibrationCoveredFields"].([]interface{}); !ok || len(fields) == 0 {
+		t.Fatalf("expected provider calibrationCoveredFields in defaultRiskTemplate, got %#v", defaultRiskTemplate["calibrationCoveredFields"])
+	}
+	if fields, ok := defaultRiskTemplate["calibrationTargetFields"].([]interface{}); !ok || len(fields) == 0 {
+		t.Fatalf("expected provider calibrationTargetFields in defaultRiskTemplate, got %#v", defaultRiskTemplate["calibrationTargetFields"])
+	}
 	if got := defaultRiskTemplate["calibrationReadiness"].(string); got == "" {
 		t.Fatalf("expected provider calibrationReadiness in defaultRiskTemplate, got %#v", defaultRiskTemplate["calibrationReadiness"])
 	}
@@ -131,6 +137,12 @@ func TestAppWorkflowMainline(t *testing.T) {
 	}
 	if got := int(capabilityRiskTemplate["calibrationMissingCount"].(float64)); got == 0 {
 		t.Fatalf("expected capability defaultRiskTemplate calibrationMissingCount, got %#v", capabilityRiskTemplate["calibrationMissingCount"])
+	}
+	if fields, ok := capabilityRiskTemplate["calibrationCoveredFields"].([]interface{}); !ok || len(fields) == 0 {
+		t.Fatalf("expected capability defaultRiskTemplate calibrationCoveredFields, got %#v", capabilityRiskTemplate["calibrationCoveredFields"])
+	}
+	if fields, ok := capabilityRiskTemplate["calibrationTargetFields"].([]interface{}); !ok || len(fields) == 0 {
+		t.Fatalf("expected capability defaultRiskTemplate calibrationTargetFields, got %#v", capabilityRiskTemplate["calibrationTargetFields"])
 	}
 	if got := capabilityRiskTemplate["calibrationReadiness"].(string); got == "" {
 		t.Fatalf("expected capability defaultRiskTemplate calibrationReadiness, got %#v", capabilityRiskTemplate["calibrationReadiness"])

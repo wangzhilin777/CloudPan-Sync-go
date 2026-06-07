@@ -1281,6 +1281,9 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "calibration covered") {
 		t.Fatalf("expected provider calibration covered-count text in app.js, got %q", body)
 	}
+	if !strings.Contains(body, "calibration covered fields") {
+		t.Fatalf("expected provider calibration covered-fields text in app.js, got %q", body)
+	}
 	if !strings.Contains(body, "risk calibration:") {
 		t.Fatalf("expected provider risk calibration text in app.js, got %q", body)
 	}

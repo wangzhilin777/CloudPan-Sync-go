@@ -326,6 +326,7 @@ function renderProviderRiskTemplateDetail(template, { title = "默认风控模�
     `<div class="muted">window source ${escapeHTML(renderAutoRetryWindowSource(template.autoRetryWindowSource))}</div>`,
     `<div class="muted">calibration coverage ${escapeHTML(stringifyValue(template.calibrationCoverage, "-"))}</div>
     <div class="muted">calibration covered ${escapeHTML(stringifyValue(template.calibrationCoveredCount, "0"))}/${escapeHTML(stringifyValue(template.calibrationTargetCount, "0"))} / missing ${escapeHTML(stringifyValue(template.calibrationMissingCount, "0"))}</div>
+    <div class="muted">calibration covered fields ${escapeHTML((template.calibrationCoveredFields || []).join(", ") || "-")}</div>
     <div class="muted">calibration readiness ${escapeHTML(stringifyValue(template.calibrationReadiness, "-"))}</div>`,
     `<div class="muted">recommended ${escapeHTML(stringifyValue(template.recommendedMode, "-"))}</div>`,
     `<div class="muted">recover budget ${escapeHTML(renderRecoverBudgetCompact(template.recoverBudget))}</div>`,
@@ -5837,6 +5838,9 @@ function renderEvidenceRiskCalibrationSummary(report) {
                     calibration missing ${escapeHTML((template.calibrationMissing || []).join(", ") || "-")}
                     / calibration coverage ${escapeHTML(stringifyValue(template.calibrationCoverage, "-"))}
                     / covered ${escapeHTML(stringifyValue(template.calibrationCoveredCount, "0"))}/${escapeHTML(stringifyValue(template.calibrationTargetCount, "0"))}
+                  </div>
+                  <div class="muted">
+                    covered fields ${escapeHTML((template.calibrationCoveredFields || []).join(", ") || "-")}
                   </div>
                 `;
               })
