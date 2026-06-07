@@ -10,6 +10,9 @@ type RiskTemplateSummary struct {
 	AutoRetryWindowSource     string   `json:"autoRetryWindowSource,omitempty"`
 	AutoRetryWindowAdvice     string   `json:"autoRetryWindowAdvice,omitempty"`
 	CalibrationCoverage       string   `json:"calibrationCoverage,omitempty"`
+	CalibrationCoveredCount   int      `json:"calibrationCoveredCount,omitempty"`
+	CalibrationTargetCount    int      `json:"calibrationTargetCount,omitempty"`
+	CalibrationMissingCount   int      `json:"calibrationMissingCount,omitempty"`
 	CalibrationReadiness      string   `json:"calibrationReadiness,omitempty"`
 	CalibrationMissing        []string `json:"calibrationMissing,omitempty"`
 	CalibrationPriorityAction string   `json:"calibrationPriorityAction,omitempty"`

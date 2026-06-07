@@ -543,7 +543,7 @@ func TestServiceProtocolCoverageSummary(t *testing.T) {
 	if len(report.ProviderSmokeProviders) == 0 {
 		t.Fatal("expected provider smoke provider acceptance rows")
 	}
-	if !strings.Contains(report.Markdown, "## Provider 默认风控校准") || !strings.Contains(report.Markdown, "Calibration Ready") || !strings.Contains(report.Markdown, "| Provider | Readiness | Coverage | Missing | Priority Calibration | Recommended | Window Source | Window Advice |") {
+	if !strings.Contains(report.Markdown, "## Provider 默认风控校准") || !strings.Contains(report.Markdown, "Calibration Ready") || !strings.Contains(report.Markdown, "| Provider | Readiness | Coverage | Covered | Missing Count | Missing | Priority Calibration | Recommended | Window Source | Window Advice |") {
 		t.Fatalf("expected provider risk calibration section in report markdown, got %s", report.Markdown)
 	}
 	if !strings.Contains(report.Markdown, "当前还没有可用于判断公平性的自动补传候选池样本") && !strings.Contains(report.Markdown, "当前没有自动补传候选池数据") && (!strings.Contains(report.Markdown, "公平性") || !strings.Contains(report.Markdown, "lane")) {

@@ -76,6 +76,15 @@ func TestAppWorkflowMainline(t *testing.T) {
 	if got := defaultRiskTemplate["calibrationCoverage"].(string); got == "" {
 		t.Fatalf("expected provider calibrationCoverage in defaultRiskTemplate, got %#v", defaultRiskTemplate["calibrationCoverage"])
 	}
+	if got := int(defaultRiskTemplate["calibrationCoveredCount"].(float64)); got == 0 {
+		t.Fatalf("expected provider calibrationCoveredCount in defaultRiskTemplate, got %#v", defaultRiskTemplate["calibrationCoveredCount"])
+	}
+	if got := int(defaultRiskTemplate["calibrationTargetCount"].(float64)); got == 0 {
+		t.Fatalf("expected provider calibrationTargetCount in defaultRiskTemplate, got %#v", defaultRiskTemplate["calibrationTargetCount"])
+	}
+	if got := int(defaultRiskTemplate["calibrationMissingCount"].(float64)); got == 0 {
+		t.Fatalf("expected provider calibrationMissingCount in defaultRiskTemplate, got %#v", defaultRiskTemplate["calibrationMissingCount"])
+	}
 	if got := defaultRiskTemplate["calibrationReadiness"].(string); got == "" {
 		t.Fatalf("expected provider calibrationReadiness in defaultRiskTemplate, got %#v", defaultRiskTemplate["calibrationReadiness"])
 	}
@@ -113,6 +122,15 @@ func TestAppWorkflowMainline(t *testing.T) {
 	}
 	if got := capabilityRiskTemplate["calibrationCoverage"].(string); got == "" {
 		t.Fatalf("expected capability defaultRiskTemplate calibrationCoverage, got %#v", capabilityRiskTemplate["calibrationCoverage"])
+	}
+	if got := int(capabilityRiskTemplate["calibrationCoveredCount"].(float64)); got == 0 {
+		t.Fatalf("expected capability defaultRiskTemplate calibrationCoveredCount, got %#v", capabilityRiskTemplate["calibrationCoveredCount"])
+	}
+	if got := int(capabilityRiskTemplate["calibrationTargetCount"].(float64)); got == 0 {
+		t.Fatalf("expected capability defaultRiskTemplate calibrationTargetCount, got %#v", capabilityRiskTemplate["calibrationTargetCount"])
+	}
+	if got := int(capabilityRiskTemplate["calibrationMissingCount"].(float64)); got == 0 {
+		t.Fatalf("expected capability defaultRiskTemplate calibrationMissingCount, got %#v", capabilityRiskTemplate["calibrationMissingCount"])
 	}
 	if got := capabilityRiskTemplate["calibrationReadiness"].(string); got == "" {
 		t.Fatalf("expected capability defaultRiskTemplate calibrationReadiness, got %#v", capabilityRiskTemplate["calibrationReadiness"])

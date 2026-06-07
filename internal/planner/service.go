@@ -298,6 +298,8 @@ func ProviderDefaultRiskTemplate(meta provider.Provider) provider.RiskTemplateSu
 	calibrationMissing := defaultRiskCalibrationMissing(resolution.Calibrated)
 	calibrationReadiness := defaultRiskCalibrationReadiness(resolution.Calibrated, calibrationMissing)
 	calibrationPriorityAction := defaultRiskCalibrationPriorityAction(calibrationMissing)
+	calibrationCoveredCount := defaultRiskCalibrationCoveredCount(resolution.Calibrated)
+	const calibrationTargetCount = 8
 	return provider.RiskTemplateSummary{
 		RecommendedMode:           string(defaults.RecommendedRiskMode),
 		Base:                      resolution.Base,
@@ -306,6 +308,9 @@ func ProviderDefaultRiskTemplate(meta provider.Provider) provider.RiskTemplateSu
 		AutoRetryWindowSource:     defaultRiskAutoRetryWindowSource(resolution.Calibrated),
 		AutoRetryWindowAdvice:     defaultRiskAutoRetryWindowAdvice(resolution.Calibrated),
 		CalibrationCoverage:       defaultRiskCalibrationCoverage(resolution.Calibrated, calibrationMissing),
+		CalibrationCoveredCount:   calibrationCoveredCount,
+		CalibrationTargetCount:    calibrationTargetCount,
+		CalibrationMissingCount:   len(calibrationMissing),
 		CalibrationReadiness:      calibrationReadiness,
 		CalibrationMissing:        calibrationMissing,
 		CalibrationReasons:        append([]string(nil), defaults.CalibrationReasons...),
@@ -369,6 +374,14 @@ func defaultRiskCalibrationPriorityAction(missing []string) string {
 }
 
 func defaultRiskCalibrationCoverage(profile RiskProfile, missing []string) string {
+	covered := defaultRiskCalibrationCoveredCount(profile)
+	if len(missing) == 0 {
+		return "complete 8/8"
+	}
+	return fmt.Sprintf("partial %d/8", covered)
+}
+
+func defaultRiskCalibrationCoveredCount(profile RiskProfile) int {
 	covered := 0
 	if profile.RequestIntervalMS > 0 {
 		covered++
@@ -394,10 +407,7 @@ func defaultRiskCalibrationCoverage(profile RiskProfile, missing []string) strin
 	if profile.AutoRetryStartHour > 0 || profile.AutoRetryEndHour > 0 {
 		covered++
 	}
-	if len(missing) == 0 {
-		return "complete 8/8"
-	}
-	return fmt.Sprintf("partial %d/8", covered)
+	return covered
 }
 
 func DescribeProviderRiskDefaults(meta provider.Provider) ProviderRiskDefaults {
