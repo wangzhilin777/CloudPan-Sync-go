@@ -8143,6 +8143,12 @@ func TestServiceProviderSmokeRecords(t *testing.T) {
 	if evidence.ProviderSmokeProviderReadyCount != 0 || evidence.ProviderSmokeProviderPartialCount != 1 || evidence.ProviderSmokeProviderPendingCount != len(registry.List())-1 {
 		t.Fatalf("expected runtime provider smoke provider counts ready 0 partial 1 pending %d, got %#v", len(registry.List())-1, evidence)
 	}
+	if evidence.ProviderSmokeProviderMissingBasicCount != len(registry.List())-1 ||
+		evidence.ProviderSmokeProviderMissingUploadCount != len(registry.List()) ||
+		evidence.ProviderSmokeProviderMissingAnomalyCount != len(registry.List()) ||
+		evidence.ProviderSmokeProviderMissingRepresentativeCount != len(registry.List()) {
+		t.Fatalf("expected runtime provider smoke provider missing counts, got %#v", evidence)
+	}
 	if got := evidence.AcceptanceActionCounts["补 1 条真实上传成功样本"]; got < 1 {
 		t.Fatalf("expected acceptance action count for upload success sample >= 1, got %d", got)
 	}
@@ -8160,8 +8166,17 @@ func TestServiceProviderSmokeRecords(t *testing.T) {
 	if report.Summary.ProviderSmokeProviderTotalCount != len(registry.List()) || report.Summary.ProviderSmokeProviderPartialCount != 1 || report.Summary.ProviderSmokeProviderPendingCount != len(registry.List())-1 {
 		t.Fatalf("expected report provider smoke provider summary counts, got %#v", report.Summary)
 	}
+	if report.Summary.ProviderSmokeProviderMissingBasicCount != len(registry.List())-1 ||
+		report.Summary.ProviderSmokeProviderMissingUploadCount != len(registry.List()) ||
+		report.Summary.ProviderSmokeProviderMissingAnomalyCount != len(registry.List()) ||
+		report.Summary.ProviderSmokeProviderMissingRepresentativeCount != len(registry.List()) {
+		t.Fatalf("expected report provider smoke provider missing counts, got %#v", report.Summary)
+	}
 	if !strings.Contains(report.Markdown, "Provider 验收 ready") || !strings.Contains(report.Markdown, "Provider 验收 partial") || !strings.Contains(report.Markdown, "Provider 验收 pending") {
 		t.Fatalf("expected provider smoke provider summary counters in report markdown, got %s", report.Markdown)
+	}
+	if !strings.Contains(report.Markdown, "Provider 验收缺基础成功") || !strings.Contains(report.Markdown, "Provider 验收缺上传成功") || !strings.Contains(report.Markdown, "Provider 验收缺异常样本") || !strings.Contains(report.Markdown, "Provider 验收缺代表性样本") {
+		t.Fatalf("expected provider smoke provider missing counters in report markdown, got %s", report.Markdown)
 	}
 	var found123 bool
 	var foundPending bool

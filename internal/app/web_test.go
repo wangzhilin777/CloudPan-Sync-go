@@ -801,6 +801,12 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "providerSmokeProviderTotalCount") || !strings.Contains(body, "providerSmokeProviderReadyCount") || !strings.Contains(body, "providerSmokeProviderPartialCount") || !strings.Contains(body, "providerSmokeProviderPendingCount") {
 		t.Fatalf("expected provider-level smoke summary counters in app.js, got %q", body)
 	}
+	if !strings.Contains(body, "providerSmokeProviderMissingBasicCount") || !strings.Contains(body, "providerSmokeProviderMissingUploadCount") || !strings.Contains(body, "providerSmokeProviderMissingAnomalyCount") || !strings.Contains(body, "providerSmokeProviderMissingRepresentativeCount") {
+		t.Fatalf("expected provider-level smoke missing counters in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "missing basic") || !strings.Contains(body, "missing upload") || !strings.Contains(body, "missing anomaly") || !strings.Contains(body, "missing representative") {
+		t.Fatalf("expected provider-level smoke missing counter labels in app.js, got %q", body)
+	}
 	if !strings.Contains(body, "Provider 级真实样本验收") {
 		t.Fatalf("expected provider-level smoke acceptance title in app.js, got %q", body)
 	}

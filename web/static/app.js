@@ -5646,9 +5646,25 @@ function providerSmokeProviderCounts(items) {
     ready: 0,
     partial: 0,
     pending: 0,
+    missingBasic: 0,
+    missingUpload: 0,
+    missingAnomaly: 0,
+    missingRepresentative: 0,
   };
   for (const item of Array.isArray(items) ? items : []) {
     counts.total += 1;
+    if (!item?.hasBasicSuccessSample) {
+      counts.missingBasic += 1;
+    }
+    if (!item?.hasUploadSuccessSample) {
+      counts.missingUpload += 1;
+    }
+    if (Array.isArray(item?.anomalyMissing) && item.anomalyMissing.length) {
+      counts.missingAnomaly += 1;
+    }
+    if (Array.isArray(item?.representativeMissing) && item.representativeMissing.length) {
+      counts.missingRepresentative += 1;
+    }
     const readiness = String(item?.readiness || "").trim().toLowerCase();
     if (readiness === "ready") {
       counts.ready += 1;
@@ -5698,6 +5714,18 @@ function renderEvidenceProviderSmokeProviders(report) {
   if (Object.prototype.hasOwnProperty.call(summary, "providerSmokeProviderPendingCount")) {
     counts.pending = Number(summary.providerSmokeProviderPendingCount || 0);
   }
+  if (Object.prototype.hasOwnProperty.call(summary, "providerSmokeProviderMissingBasicCount")) {
+    counts.missingBasic = Number(summary.providerSmokeProviderMissingBasicCount || 0);
+  }
+  if (Object.prototype.hasOwnProperty.call(summary, "providerSmokeProviderMissingUploadCount")) {
+    counts.missingUpload = Number(summary.providerSmokeProviderMissingUploadCount || 0);
+  }
+  if (Object.prototype.hasOwnProperty.call(summary, "providerSmokeProviderMissingAnomalyCount")) {
+    counts.missingAnomaly = Number(summary.providerSmokeProviderMissingAnomalyCount || 0);
+  }
+  if (Object.prototype.hasOwnProperty.call(summary, "providerSmokeProviderMissingRepresentativeCount")) {
+    counts.missingRepresentative = Number(summary.providerSmokeProviderMissingRepresentativeCount || 0);
+  }
   const focusItems = items
     .filter((item) => String(item?.readiness || "").toLowerCase() !== "ready")
     .slice(0, 6);
@@ -5715,6 +5743,10 @@ function renderEvidenceProviderSmokeProviders(report) {
         <span class="pill">ready ${counts.ready}</span>
         <span class="pill">partial ${counts.partial}</span>
         <span class="pill">pending ${counts.pending}</span>
+        <span class="pill">missing basic ${counts.missingBasic}</span>
+        <span class="pill">missing upload ${counts.missingUpload}</span>
+        <span class="pill">missing anomaly ${counts.missingAnomaly}</span>
+        <span class="pill">missing representative ${counts.missingRepresentative}</span>
       </div>
       ${
         focusItems.length

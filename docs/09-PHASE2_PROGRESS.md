@@ -42,6 +42,7 @@
 - 已把 provider 级真实样本验收继续细分出 preferredSample* / preferredUploadSample* / preferredAnomalySample* 摘要，能直接看出每家 provider 此刻最值得先复核的基础样本、上传样本和异常样本。
 - 已把 provider 级真实样本验收继续补上代表性样本覆盖度、缺口清单、preferredRepresentativeSample* 摘要和更严格的首要补样动作，能直接看出每家 provider 是否补齐上传成功、大文件、多层目录、重试恢复等关键样本。
 - 已把 provider 级真实样本验收的 total / ready / partial / pending 聚合计数结构化写入运行证据和验收报告 summary，便于保存报告和页面展示直接读取稳定字段。
+- 已把 provider 级真实样本验收的缺基础成功、缺上传成功、缺异常样本、缺代表性样本 provider 数量结构化写入 summary，并在报告页展示，便于直接判断下一轮补样方向。
 
 ### 对应提交
 
@@ -62,6 +63,7 @@
 - 当前轮次已新增 provider 级 preferredSample* / preferredUploadSample* / preferredAnomalySample* 摘要与 task/app/web 测试兜底，用于把 provider 维度的优先复核样本直接提升到验收报告和页面摘要。
 - 当前轮次已新增 provider 级 representative 覆盖计数、缺口清单、补样动作、建议文案、首选代表性样本摘要与 task/app/web 测试兜底，并收紧 provider readiness / priority action 口径，用于把上传成功、大文件、多层目录、重试恢复等缺口提升到 provider 维度可直接验收的稳定字段。
 - 当前轮次已新增 providerSmokeProviderTotalCount / ReadyCount / PartialCount / PendingCount summary 字段与 task/app 测试兜底，用于把 provider 真实样本验收进度从前端临时统计推进到可保存、可回放的报告结构。
+- 当前轮次已新增 providerSmokeProviderMissingBasicCount / MissingUploadCount / MissingAnomalyCount / MissingRepresentativeCount summary 字段与 task/app 测试兜底，用于把 provider 真实样本缺口从逐行翻阅推进到聚合缺口计数。
 
 ### 仍未完成
 
