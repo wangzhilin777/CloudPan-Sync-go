@@ -6319,6 +6319,7 @@ function renderProviderSmokeRecords(items) {
           ${item.note ? `<div class="muted">${escapeHTML(item.note)}</div>` : ""}
           <div class="muted">template: ${escapeHTML(stringifyValue(item.templateVersion, "-"))} / type ${escapeHTML(stringifyValue(item.sampleType, "-"))} / completeness ${escapeHTML(stringifyValue(item.evidenceCompleteness, "-"))}</div>
           <div class="muted">reuse: ${escapeHTML(stringifyValue(item.reuseAdvice, "-"))}</div>
+          <div class="muted">regression entry: ${escapeHTML(stringifyValue(item.regressionEntry, "-"))}</div>
           <div class="muted">representative: ${escapeHTML((item.representativeLabels || []).join(" / ") || "-")} / auto recover focus: ${escapeHTML(stringifyValue(item.autoRecoverFocus, "-"))}</div>
           <div class="muted">operations: ${escapeHTML((item.operations || []).join(", ") || "-")}</div>
           <div class="muted">createdAt: <code>${escapeHTML(stringifyValue(item.createdAt, "-"))}</code></div>
@@ -6340,7 +6341,7 @@ function filterProviderSmokeRecords(items, filters = {}) {
   const filterActive = Boolean(query || protocolGroup || result);
   const visible = records.filter((item) => {
     const matchesQuery = includesFilterText(
-      [item.title, item.providerKey, item.note, Array.isArray(item.operations) ? item.operations.join(",") : ""],
+      [item.title, item.providerKey, item.note, item.regressionEntry, Array.isArray(item.operations) ? item.operations.join(",") : ""],
       query,
     );
     const matchesGroup = includesFilterText([item.protocolGroup], protocolGroup);

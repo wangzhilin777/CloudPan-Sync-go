@@ -7919,6 +7919,9 @@ func TestServiceProviderSmokeRecords(t *testing.T) {
 	if got := items[0].ReuseAdvice; !strings.Contains(got, "基础成功样本") {
 		t.Fatalf("expected list reuse advice to mention 基础成功样本, got %s", got)
 	}
+	if got := items[0].RegressionEntry; got != "ValidateAuth -> List -> Metadata" {
+		t.Fatalf("expected list regression entry ValidateAuth -> List -> Metadata, got %s", got)
+	}
 
 	fetched, ok, err := svc.GetProviderSmokeRecord(ctx, record.ID)
 	if err != nil {
@@ -7944,6 +7947,9 @@ func TestServiceProviderSmokeRecords(t *testing.T) {
 	}
 	if !strings.Contains(fetched.ReuseAdvice, "基础成功样本") {
 		t.Fatalf("expected fetched reuse advice to mention 基础成功样本, got %s", fetched.ReuseAdvice)
+	}
+	if fetched.RegressionEntry != "ValidateAuth -> List -> Metadata" {
+		t.Fatalf("expected fetched regression entry ValidateAuth -> List -> Metadata, got %s", fetched.RegressionEntry)
 	}
 	if fetched.AutoRecoverFocus == "" {
 		t.Fatal("expected fetched auto recover focus")

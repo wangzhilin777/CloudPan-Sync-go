@@ -287,6 +287,7 @@ type ProviderSmokeRecord struct {
 	SampleType           string            `json:"sampleType,omitempty"`
 	EvidenceCompleteness string            `json:"evidenceCompleteness,omitempty"`
 	ReuseAdvice          string            `json:"reuseAdvice,omitempty"`
+	RegressionEntry      string            `json:"regressionEntry,omitempty"`
 	RepresentativeLabels []string          `json:"representativeLabels,omitempty"`
 	AutoRecoverFocus     string            `json:"autoRecoverFocus,omitempty"`
 	Markdown             string            `json:"markdown,omitempty"`
@@ -4097,6 +4098,7 @@ func enrichProviderSmokeRecord(record ProviderSmokeRecord) ProviderSmokeRecord {
 	record.SampleType = providerSmokeSampleType(record)
 	record.EvidenceCompleteness = providerSmokeEvidenceCompleteness(record)
 	record.ReuseAdvice = providerSmokeReuseAdvice(record)
+	record.RegressionEntry = providerSmokeRegressionEntry(record)
 	record.RepresentativeLabels = providerSmokeRepresentativeLabels(record)
 	record.AutoRecoverFocus = providerSmokeAutoRecoverFocus(record)
 	return record
