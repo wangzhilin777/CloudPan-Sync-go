@@ -792,6 +792,9 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "recover priority action") {
 		t.Fatalf("expected evidence upload checkpoint priority action summary in app.js, got %q", body)
 	}
+	if !strings.Contains(body, "autoRecoverPriorityActionCounts") || !strings.Contains(body, "recover priority action counts:") {
+		t.Fatalf("expected evidence auto recover priority action counts in app.js, got %q", body)
+	}
 	if !strings.Contains(body, "renderEvidenceProviderSmokeProviders") {
 		t.Fatalf("expected evidence provider smoke provider renderer in app.js, got %q", body)
 	}

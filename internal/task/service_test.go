@@ -3547,6 +3547,11 @@ func TestServiceAutoRecoverPoolSummaryAndPriority(t *testing.T) {
 			evidence.AutoRecoverWaitingOtherTasks,
 		)
 	}
+	if evidence.AutoRecoverPriorityActionCounts["优先放行当前可立即自动补传的任务"] != 1 ||
+		evidence.AutoRecoverPriorityActionCounts["优先等待冷却结束后继续自动重试"] != 1 ||
+		evidence.AutoRecoverPriorityActionCounts["优先补 1 条 upload checkpoint 自动续传成功样本"] != 1 {
+		t.Fatalf("expected auto recover priority action counts for runnable/cooldown/checkpoint gap, got %#v", evidence.AutoRecoverPriorityActionCounts)
+	}
 	if len(evidence.AutoRecoverPool) != 2 {
 		t.Fatalf("expected autoRecoverPool len 2, got %#v", evidence.AutoRecoverPool)
 	}

@@ -5943,6 +5943,15 @@ function renderEvidenceAutoRecoverSummary(report) {
   const fairnessReadiness = renderAutoRecoverFairnessReadiness(summary);
   const recoveryPriorityAction = renderAutoRecoverPriorityAction(summary);
   const fairnessPriorityAction = renderAutoRecoverFairnessPriorityAction(summary);
+  const autoRecoverPriorityActionCounts =
+    summary.autoRecoverPriorityActionCounts && typeof summary.autoRecoverPriorityActionCounts === "object"
+      ? summary.autoRecoverPriorityActionCounts
+      : {};
+  const autoRecoverPriorityActionSummary = Object.entries(autoRecoverPriorityActionCounts)
+    .sort((left, right) => Number(right[1] || 0) - Number(left[1] || 0) || String(left[0]).localeCompare(String(right[0])))
+    .slice(0, 8)
+    .map(([label, count]) => `${label} x${count}`)
+    .join(" / ");
   const focusLanes = fairnessPool.slice(0, 4);
   return `
     <div class="insight-card">
@@ -5961,6 +5970,7 @@ function renderEvidenceAutoRecoverSummary(report) {
         <span class="pill">fairness ${escapeHTML(fairnessReadiness)}</span>
       </div>
       <div class="muted">recover priority action: ${escapeHTML(recoveryPriorityAction)}</div>
+      <div class="muted">recover priority action counts: ${escapeHTML(autoRecoverPriorityActionSummary || "-")}</div>
       <div class="muted">fairness missing: ${escapeHTML(renderAutoRecoverFairnessMissing(summary))}</div>
       <div class="muted">fairness priority action: ${escapeHTML(fairnessPriorityAction)}</div>
       <div class="muted">waiting: cooldown ${escapeHTML(stringifyValue(summary.autoRecoverWaitingCooldownTasks, "0"))} / window ${escapeHTML(stringifyValue(summary.autoRecoverWaitingRetryWindowTasks, "0"))} / auth ${escapeHTML(stringifyValue(summary.autoRecoverWaitingAuthRefreshTasks, "0"))} / local ${escapeHTML(stringifyValue(summary.autoRecoverWaitingLocalRestoreTasks, "0"))} / manual ${escapeHTML(stringifyValue(summary.autoRecoverWaitingManualTasks, "0"))}</div>

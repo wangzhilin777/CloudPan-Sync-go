@@ -221,6 +221,7 @@ type EvidenceSummary struct {
 	UploadCheckpointResumeSampleUploaded                int                `json:"uploadCheckpointResumeSampleUploaded,omitempty"`
 	UploadCheckpointResumeReadiness                     string             `json:"uploadCheckpointResumeReadiness,omitempty"`
 	UploadCheckpointResumePriorityAction                string             `json:"uploadCheckpointResumePriorityAction,omitempty"`
+	AutoRecoverPriorityActionCounts                     map[string]int     `json:"autoRecoverPriorityActionCounts,omitempty"`
 	AcceptanceActionCounts                              map[string]int     `json:"acceptanceActionCounts,omitempty"`
 	RecentResults                                       []Result           `json:"recentResults"`
 	RecentProbes                                        []ProviderProbe    `json:"recentProbes"`
@@ -3601,6 +3602,43 @@ func renderAutoRecoverPriorityAction(summary EvidenceSummary) string {
 	}
 }
 
+func populateAutoRecoverPriorityActionCounts(summary *EvidenceSummary) {
+	if summary == nil {
+		return
+	}
+	if summary.AutoRecoverPriorityActionCounts == nil {
+		summary.AutoRecoverPriorityActionCounts = make(map[string]int)
+	} else {
+		for key := range summary.AutoRecoverPriorityActionCounts {
+			delete(summary.AutoRecoverPriorityActionCounts, key)
+		}
+	}
+	add := func(action string, count int) {
+		action = strings.TrimSpace(action)
+		if action == "" || count <= 0 {
+			return
+		}
+		summary.AutoRecoverPriorityActionCounts[action] += count
+	}
+	add("优先重建 provider 会话缺口", summary.AutoRecoverWaitingProviderSessionTasks)
+	add("优先刷新授权档案后再恢复任务", summary.AutoRecoverWaitingAuthRefreshTasks)
+	add("优先补回本地缺失文件", summary.AutoRecoverWaitingLocalRestoreTasks)
+	add("优先处理 pending_manual / 人工确认任务", summary.AutoRecoverWaitingManualTasks)
+	add("优先处理重试耗尽任务", summary.AutoRecoverWaitingRetryLimitTasks)
+	add("优先评估自动补传时间窗是否需要放宽", summary.AutoRecoverWaitingRetryWindowTasks)
+	add("优先等待冷却结束后继续自动重试", summary.AutoRecoverWaitingCooldownTasks)
+	add("优先放行当前可立即自动补传的任务", summary.AutoRecoverRunnableTasks)
+	if summary.UploadCheckpointTaskCount > 0 && summary.UploadCheckpointResumeTaskCount == 0 {
+		add("优先补 1 条 upload checkpoint 自动续传成功样本", summary.UploadCheckpointTaskCount)
+	}
+	if len(summary.AutoRecoverPool) > 0 {
+		add("优先继续补多 provider / 多账号公平性样本", len(summary.AutoRecoverPool))
+	}
+	if len(summary.AutoRecoverPriorityActionCounts) == 0 {
+		summary.AutoRecoverPriorityActionCounts["complete"] = 1
+	}
+}
+
 func renderAutoRecoverFairnessSummary(pool []AutoRecoverLane) string {
 	if len(pool) == 0 {
 		return "当前还没有可用于判断公平性的自动补传候选池样本。"
@@ -3808,6 +3846,7 @@ func renderSmokePriorityAction(row ProviderSmokeMatrixRow) string {
 func buildEvidenceReport(summary EvidenceSummary, statuses []StatusSummary, smokeSummaries []ProviderSmokeSummary, smokeMatrix []ProviderSmokeMatrixRow, providerSmokeProviders []ProviderSmokeProviderRow, samples []EvidenceSample, providers []provider.Entry, generatedAt string, title string, note string) EvidenceReport {
 	title = normalizeEvidenceReportTitle(title)
 	note = strings.TrimSpace(note)
+	populateAutoRecoverPriorityActionCounts(&summary)
 	populateProviderSmokeProviderCounts(&summary, providerSmokeProviders)
 	providerLookup := make(map[string]provider.Entry, len(providers))
 	for _, item := range providers {
@@ -3888,6 +3927,7 @@ func buildEvidenceReport(summary EvidenceSummary, statuses []StatusSummary, smok
 	fmt.Fprintf(&b, "- 自动补传公平性缺口: %s\n", autoRecoverFairnessMissingLabel(summary.AutoRecoverFairnessMissing))
 	fmt.Fprintf(&b, "- 自动补传公平性首要动作: %s\n", fairnessPriorityAction)
 	fmt.Fprintf(&b, "- 自动补传首要动作: %s\n", renderAutoRecoverPriorityAction(summary))
+	fmt.Fprintf(&b, "- 自动补传首要动作分布: %s\n", previewCountMap(summary.AutoRecoverPriorityActionCounts, 8))
 	b.WriteString("\n## 阻塞动作\n\n")
 	if len(summary.BlockedActions) == 0 {
 		b.WriteString("- 当前没有需要人工处理的阻塞动作。\n")
