@@ -5666,7 +5666,7 @@ function providerSmokeProviderCounts(items) {
 function renderProviderSmokeProviderReadinessLabel(value) {
   const readiness = String(value || "").trim().toLowerCase();
   if (readiness === "ready") {
-    return "ready（基础与异常样本齐）";
+    return "ready（基础、上传、异常、代表性样本齐）";
   }
   if (readiness === "partial") {
     return "partial（已有样本，仍缺验收项）";

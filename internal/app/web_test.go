@@ -807,6 +807,9 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "Provider Ready") {
 		t.Fatalf("expected provider-level smoke readiness metric in app.js, got %q", body)
 	}
+	if !strings.Contains(body, "ready（基础、上传、异常、代表性样本齐）") {
+		t.Fatalf("expected provider-level smoke readiness label to mention all sample groups in app.js, got %q", body)
+	}
 	if !strings.Contains(body, "providerSmokeProviders") {
 		t.Fatalf("expected providerSmokeProviders report wiring in app.js, got %q", body)
 	}
