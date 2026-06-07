@@ -178,6 +178,9 @@ type EvidenceSummary struct {
 	AutoRecoverWaitingManualTasks          int                `json:"autoRecoverWaitingManualTasks"`
 	AutoRecoverWaitingRetryLimitTasks      int                `json:"autoRecoverWaitingRetryLimitTasks"`
 	AutoRecoverWaitingOtherTasks           int                `json:"autoRecoverWaitingOtherTasks"`
+	AutoRecoverFairnessReadiness           string             `json:"autoRecoverFairnessReadiness,omitempty"`
+	AutoRecoverFairnessPriorityAction      string             `json:"autoRecoverFairnessPriorityAction,omitempty"`
+	AutoRecoverFairnessMissing             []string           `json:"autoRecoverFairnessMissing,omitempty"`
 	FailedResultCount                      int                `json:"failedResultCount"`
 	DoneResultCount                        int                `json:"doneResultCount"`
 	SkippedResultCount                     int                `json:"skippedResultCount"`
@@ -3568,56 +3571,85 @@ func renderAutoRecoverFairnessReadiness(pool []AutoRecoverLane) string {
 	if len(pool) == 0 {
 		return "pending"
 	}
-	multiProviderLanes := 0
-	multiProfileLanes := 0
-	multiProtocolGroupLanes := 0
-	for _, item := range pool {
-		if item.ProviderCount > 1 {
-			multiProviderLanes++
-		}
-		if item.ProfileCount > 1 {
-			multiProfileLanes++
-		}
-		if len(item.ProtocolGroups) > 1 {
-			multiProtocolGroupLanes++
-		}
-	}
-	if multiProviderLanes > 0 && multiProfileLanes > 0 {
+	missing := autoRecoverFairnessMissing(pool)
+	if !stringSliceContains(missing, "multi_provider") && !stringSliceContains(missing, "multi_profile") {
 		return "ready"
 	}
-	if multiProviderLanes > 0 || multiProfileLanes > 0 || multiProtocolGroupLanes > 0 {
+	if len(missing) < 3 {
 		return "partial"
 	}
 	return "pending"
 }
 func renderAutoRecoverFairnessPriorityAction(pool []AutoRecoverLane) string {
-	if len(pool) == 0 {
-		return "优先形成 1 条自动补传候选池样本"
-	}
-	multiProviderLanes := 0
-	multiProfileLanes := 0
-	multiProtocolGroupLanes := 0
-	for _, item := range pool {
-		if item.ProviderCount > 1 {
-			multiProviderLanes++
-		}
-		if item.ProfileCount > 1 {
-			multiProfileLanes++
-		}
-		if len(item.ProtocolGroups) > 1 {
-			multiProtocolGroupLanes++
-		}
-	}
+	missing := autoRecoverFairnessMissing(pool)
 	switch {
-	case multiProviderLanes == 0:
+	case stringSliceContains(missing, "candidate_pool"):
+		return "优先形成 1 条自动补传候选池样本"
+	case stringSliceContains(missing, "multi_provider"):
 		return "优先补多 provider 自动补传候选池样本"
-	case multiProfileLanes == 0:
+	case stringSliceContains(missing, "multi_profile"):
 		return "优先补多账号自动补传候选池样本"
-	case multiProtocolGroupLanes == 0:
+	case stringSliceContains(missing, "multi_protocol_group"):
 		return "优先补多协议组自动补传候选池样本"
 	default:
 		return "complete"
 	}
+}
+
+func autoRecoverFairnessMissing(pool []AutoRecoverLane) []string {
+	if len(pool) == 0 {
+		return []string{"candidate_pool"}
+	}
+	hasMultiProvider := false
+	hasMultiProfile := false
+	hasMultiProtocolGroup := false
+	for _, item := range pool {
+		if item.ProviderCount > 1 {
+			hasMultiProvider = true
+		}
+		if item.ProfileCount > 1 {
+			hasMultiProfile = true
+		}
+		if len(item.ProtocolGroups) > 1 {
+			hasMultiProtocolGroup = true
+		}
+	}
+	missing := make([]string, 0, 3)
+	if !hasMultiProvider {
+		missing = append(missing, "multi_provider")
+	}
+	if !hasMultiProfile {
+		missing = append(missing, "multi_profile")
+	}
+	if !hasMultiProtocolGroup {
+		missing = append(missing, "multi_protocol_group")
+	}
+	return missing
+}
+
+func stringSliceContains(values []string, expected string) bool {
+	for _, value := range values {
+		if value == expected {
+			return true
+		}
+	}
+	return false
+}
+
+func populateAutoRecoverFairnessSummary(summary *EvidenceSummary) {
+	if summary == nil {
+		return
+	}
+	summary.AutoRecoverFairnessReadiness = renderAutoRecoverFairnessReadiness(summary.AutoRecoverPool)
+	summary.AutoRecoverFairnessPriorityAction = renderAutoRecoverFairnessPriorityAction(summary.AutoRecoverPool)
+	summary.AutoRecoverFairnessMissing = autoRecoverFairnessMissing(summary.AutoRecoverPool)
+}
+
+func autoRecoverFairnessMissingLabel(values []string) string {
+	if len(values) == 0 {
+		return "complete"
+	}
+	return strings.Join(values, ", ")
 }
 func renderSmokeChecklistSummary(row ProviderSmokeMatrixRow) string {
 	parts := []string{
@@ -3772,8 +3804,11 @@ func buildEvidenceReport(summary EvidenceSummary, statuses []StatusSummary, smok
 	fmt.Fprintf(&b, "- Upload checkpoint 默认恢复 readiness: %s\n", renderUploadCheckpointResumeReadiness(summary))
 	fmt.Fprintf(&b, "- Upload checkpoint 稳定性摘要: %s\n", renderUploadCheckpointResumeEvidenceSummary(summary))
 	fmt.Fprintf(&b, "- 自动补传恢复完成度: %s\n", renderAutoRecoverReadiness(summary))
-	fmt.Fprintf(&b, "- 自动补传公平性完成度: %s\n", renderAutoRecoverFairnessReadiness(summary.AutoRecoverPool))
-	fmt.Fprintf(&b, "- 自动补传公平性首要动作: %s\n", renderAutoRecoverFairnessPriorityAction(summary.AutoRecoverPool))
+	fairnessReadiness := firstNonEmpty(summary.AutoRecoverFairnessReadiness, renderAutoRecoverFairnessReadiness(summary.AutoRecoverPool))
+	fairnessPriorityAction := firstNonEmpty(summary.AutoRecoverFairnessPriorityAction, renderAutoRecoverFairnessPriorityAction(summary.AutoRecoverPool))
+	fmt.Fprintf(&b, "- 自动补传公平性完成度: %s\n", fairnessReadiness)
+	fmt.Fprintf(&b, "- 自动补传公平性缺口: %s\n", autoRecoverFairnessMissingLabel(summary.AutoRecoverFairnessMissing))
+	fmt.Fprintf(&b, "- 自动补传公平性首要动作: %s\n", fairnessPriorityAction)
 	fmt.Fprintf(&b, "- 自动补传首要动作: %s\n", renderAutoRecoverPriorityAction(summary))
 	b.WriteString("\n## 阻塞动作\n\n")
 	if len(summary.BlockedActions) == 0 {

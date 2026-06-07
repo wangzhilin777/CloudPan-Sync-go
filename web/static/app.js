@@ -1470,6 +1470,9 @@ function renderAutoRecoverReadiness(evidence) {
 }
 
 function renderAutoRecoverFairnessReadiness(evidence) {
+  if (evidence?.autoRecoverFairnessReadiness) {
+    return evidence.autoRecoverFairnessReadiness;
+  }
   const pool = Array.isArray(evidence?.autoRecoverPool) ? evidence.autoRecoverPool : [];
   if (!pool.length) {
     return "pending";
@@ -1486,6 +1489,9 @@ function renderAutoRecoverFairnessReadiness(evidence) {
   return "pending";
 }
 function renderAutoRecoverFairnessPriorityAction(evidence) {
+  if (evidence?.autoRecoverFairnessPriorityAction) {
+    return evidence.autoRecoverFairnessPriorityAction;
+  }
   const pool = Array.isArray(evidence?.autoRecoverPool) ? evidence.autoRecoverPool : [];
   if (!pool.length) {
     return "优先形成 1 条自动补传候选池样本";
@@ -1503,6 +1509,10 @@ function renderAutoRecoverFairnessPriorityAction(evidence) {
     return "优先补多协议组自动补传候选池样本";
   }
   return "complete";
+}
+function renderAutoRecoverFairnessMissing(evidence) {
+  const missing = Array.isArray(evidence?.autoRecoverFairnessMissing) ? evidence.autoRecoverFairnessMissing : [];
+  return missing.length ? missing.join(", ") : "complete";
 }
 function renderAutoRecoverPriorityAction(evidence) {
   if (Number(evidence?.autoRecoverWaitingProviderSessionTasks || 0) > 0) {
@@ -3963,6 +3973,7 @@ function renderStatus() {
     <div class="metric"><span>Recover Priority</span><strong>${escapeHTML(renderAutoRecoverPriorityAction(evidence))}</strong></div>
     <div class="metric"><span>Recover Ready</span><strong>${escapeHTML(renderAutoRecoverReadiness(evidence))}</strong></div>
     <div class="metric"><span>Fairness Ready</span><strong>${escapeHTML(renderAutoRecoverFairnessReadiness(evidence))}</strong></div>
+    <div class="metric"><span>Fairness Missing</span><strong>${escapeHTML(renderAutoRecoverFairnessMissing(evidence))}</strong></div>
     <div class="metric"><span>Fairness Priority</span><strong>${escapeHTML(renderAutoRecoverFairnessPriorityAction(evidence))}</strong></div>
     <div class="metric"><span>Acceptance Actions</span><strong>${escapeHTML(acceptanceActionSummary || "-")}</strong></div>
   `;
@@ -5826,6 +5837,7 @@ function renderEvidenceAutoRecoverSummary(report) {
         <span class="pill">fairness ${escapeHTML(fairnessReadiness)}</span>
       </div>
       <div class="muted">recover priority action: ${escapeHTML(recoveryPriorityAction)}</div>
+      <div class="muted">fairness missing: ${escapeHTML(renderAutoRecoverFairnessMissing(summary))}</div>
       <div class="muted">fairness priority action: ${escapeHTML(fairnessPriorityAction)}</div>
       <div class="muted">waiting: cooldown ${escapeHTML(stringifyValue(summary.autoRecoverWaitingCooldownTasks, "0"))} / window ${escapeHTML(stringifyValue(summary.autoRecoverWaitingRetryWindowTasks, "0"))} / auth ${escapeHTML(stringifyValue(summary.autoRecoverWaitingAuthRefreshTasks, "0"))} / local ${escapeHTML(stringifyValue(summary.autoRecoverWaitingLocalRestoreTasks, "0"))} / manual ${escapeHTML(stringifyValue(summary.autoRecoverWaitingManualTasks, "0"))}</div>
       ${

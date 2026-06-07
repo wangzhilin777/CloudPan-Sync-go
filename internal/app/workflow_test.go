@@ -394,6 +394,16 @@ func TestAppWorkflowMainline(t *testing.T) {
 	if got := int(evidenceData["autoRecoverWaitingOtherTasks"].(float64)); got != 0 {
 		t.Fatalf("expected autoRecoverWaitingOtherTasks=0, got %d", got)
 	}
+	if got := evidenceData["autoRecoverFairnessReadiness"].(string); got != "pending" {
+		t.Fatalf("expected autoRecoverFairnessReadiness pending, got %s", got)
+	}
+	if got := evidenceData["autoRecoverFairnessPriorityAction"].(string); got != "优先补多 provider 自动补传候选池样本" {
+		t.Fatalf("expected autoRecoverFairnessPriorityAction multi-provider, got %s", got)
+	}
+	fairnessMissing := evidenceData["autoRecoverFairnessMissing"].([]interface{})
+	if len(fairnessMissing) == 0 || fairnessMissing[0].(string) != "multi_provider" {
+		t.Fatalf("expected autoRecoverFairnessMissing to start with multi_provider, got %#v", fairnessMissing)
+	}
 	autoRetryPolicy := evidenceData["autoRetryPolicy"].(map[string]interface{})
 	if got := autoRetryPolicy["tick"].(string); got == "" {
 		t.Fatal("expected autoRetryPolicy.tick in evidence summary")
@@ -602,6 +612,16 @@ func TestAppWorkflowMainline(t *testing.T) {
 		if got := int(summary["autoRecoverWaitingOtherTasks"].(float64)); got != 0 {
 			t.Fatalf("expected status summary autoRecoverWaitingOtherTasks 0, got %d", got)
 		}
+		if got := summary["autoRecoverFairnessReadiness"].(string); got != "pending" {
+			t.Fatalf("expected status summary autoRecoverFairnessReadiness pending, got %s", got)
+		}
+		if got := summary["autoRecoverFairnessPriorityAction"].(string); got != "优先补多 provider 自动补传候选池样本" {
+			t.Fatalf("expected status summary autoRecoverFairnessPriorityAction multi-provider, got %s", got)
+		}
+		statusFairnessMissing := summary["autoRecoverFairnessMissing"].([]interface{})
+		if len(statusFairnessMissing) == 0 || statusFairnessMissing[0].(string) != "multi_provider" {
+			t.Fatalf("expected status summary autoRecoverFairnessMissing to start with multi_provider, got %#v", statusFairnessMissing)
+		}
 		if got := int(summary["retrySummary"].(map[string]interface{})["autoRecoverWaitingLocalRestoreTasks"].(float64)); got != 1 {
 			t.Fatalf("expected status retrySummary autoRecoverWaitingLocalRestoreTasks 1, got %d", got)
 		}
@@ -660,6 +680,9 @@ func TestAppWorkflowMainline(t *testing.T) {
 	}
 	if got := reportData["markdown"].(string); !strings.Contains(got, "自动补传公平性完成度") {
 		t.Fatalf("expected auto recover fairness readiness in report markdown, got %s", got)
+	}
+	if got := reportData["markdown"].(string); !strings.Contains(got, "自动补传公平性缺口") {
+		t.Fatalf("expected auto recover fairness missing in report markdown, got %s", got)
 	}
 	if got := reportData["markdown"].(string); !strings.Contains(got, "自动补传公平性首要动作") {
 		t.Fatalf("expected auto recover fairness priority in report markdown, got %s", got)

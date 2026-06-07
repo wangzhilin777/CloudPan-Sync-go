@@ -836,6 +836,7 @@ func taskEvidenceSummary(ctx context.Context, store *sqlitestore.Store, provider
 		summary.AutoRecoverWaitingManualTasks,
 		summary.AutoRecoverWaitingRetryLimitTasks,
 		summary.AutoRecoverWaitingOtherTasks = summarizeAutoRecoverStateCounts(summary.AutoRecoverPool)
+	populateAutoRecoverFairnessSummary(&summary)
 	results, err := recentTaskResults(ctx, store, 10)
 	if err != nil {
 		return summary, err
@@ -985,6 +986,9 @@ func providerStatusSummary(ctx context.Context, store *sqlitestore.Store, provid
 		item.SnapshotSummary["autoRecoverWaitingManualTasks"] = waitingManual
 		item.SnapshotSummary["autoRecoverWaitingRetryLimitTasks"] = waitingRetryLimit
 		item.SnapshotSummary["autoRecoverWaitingOtherTasks"] = waitingOther
+		item.SnapshotSummary["autoRecoverFairnessReadiness"] = renderAutoRecoverFairnessReadiness(autoRecoverPool)
+		item.SnapshotSummary["autoRecoverFairnessPriorityAction"] = renderAutoRecoverFairnessPriorityAction(autoRecoverPool)
+		item.SnapshotSummary["autoRecoverFairnessMissing"] = autoRecoverFairnessMissing(autoRecoverPool)
 		items = append(items, item)
 	}
 	return items, nil

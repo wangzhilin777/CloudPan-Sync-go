@@ -630,11 +630,17 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "renderAutoRecoverFairnessPriorityAction") {
 		t.Fatalf("expected auto recover fairness priority helper in app.js, got %q", body)
 	}
+	if !strings.Contains(body, "renderAutoRecoverFairnessMissing") {
+		t.Fatalf("expected auto recover fairness missing helper in app.js, got %q", body)
+	}
 	if !strings.Contains(body, "Recover Ready") {
 		t.Fatalf("expected auto recover readiness metric in app.js, got %q", body)
 	}
 	if !strings.Contains(body, "Fairness Ready") {
 		t.Fatalf("expected auto recover fairness readiness metric in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "Fairness Missing") {
+		t.Fatalf("expected auto recover fairness missing metric in app.js, got %q", body)
 	}
 	if !strings.Contains(body, "Fairness Priority") {
 		t.Fatalf("expected auto recover fairness priority metric in app.js, got %q", body)
