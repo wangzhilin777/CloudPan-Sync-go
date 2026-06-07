@@ -5779,6 +5779,10 @@ function renderEvidenceRiskCalibrationSummary(report) {
                     window source ${escapeHTML(renderAutoRetryWindowSource(template.autoRetryWindowSource))}
                     / window advice ${escapeHTML(stringifyValue(template.autoRetryWindowAdvice, "-"))}
                   </div>
+                  <div class="muted">
+                    calibration missing ${escapeHTML((template.calibrationMissing || []).join(", ") || "-")}
+                    / calibration coverage ${escapeHTML(stringifyValue(template.calibrationCoverage, "-"))}
+                  </div>
                 `;
               })
               .join("")

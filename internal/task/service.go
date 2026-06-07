@@ -1225,7 +1225,7 @@ func (s *Service) EvidenceReport(ctx context.Context) (EvidenceReport, error) {
 	if err != nil {
 		return EvidenceReport{}, err
 	}
-	return buildEvidenceReport(summary, statuses, smokeSummaries, smokeMatrix, providerSmokeProviders, buildEvidenceSamples(details, 12), time.Now().UTC().Format(time.RFC3339), "", ""), nil
+	return buildEvidenceReport(summary, statuses, smokeSummaries, smokeMatrix, providerSmokeProviders, buildEvidenceSamples(details, 12), s.registry.List(), time.Now().UTC().Format(time.RFC3339), "", ""), nil
 }
 
 func (s *Service) SaveEvidenceReport(ctx context.Context, title, note string) (EvidenceReportRecord, error) {
@@ -1233,7 +1233,7 @@ func (s *Service) SaveEvidenceReport(ctx context.Context, title, note string) (E
 	if err != nil {
 		return EvidenceReportRecord{}, err
 	}
-	return saveEvidenceReport(ctx, s.store, buildEvidenceReport(report.Summary, report.Statuses, report.SmokeSummaries, report.SmokeMatrix, report.ProviderSmokeProviders, report.Samples, report.GeneratedAt, title, note))
+	return saveEvidenceReport(ctx, s.store, buildEvidenceReport(report.Summary, report.Statuses, report.SmokeSummaries, report.SmokeMatrix, report.ProviderSmokeProviders, report.Samples, s.registry.List(), report.GeneratedAt, title, note))
 }
 
 func (s *Service) ListEvidenceReports(ctx context.Context) ([]EvidenceReportRecord, error) {
@@ -3704,9 +3704,13 @@ func renderSmokePriorityAction(row ProviderSmokeMatrixRow) string {
 	return "complete"
 }
 
-func buildEvidenceReport(summary EvidenceSummary, statuses []StatusSummary, smokeSummaries []ProviderSmokeSummary, smokeMatrix []ProviderSmokeMatrixRow, providerSmokeProviders []ProviderSmokeProviderRow, samples []EvidenceSample, generatedAt string, title string, note string) EvidenceReport {
+func buildEvidenceReport(summary EvidenceSummary, statuses []StatusSummary, smokeSummaries []ProviderSmokeSummary, smokeMatrix []ProviderSmokeMatrixRow, providerSmokeProviders []ProviderSmokeProviderRow, samples []EvidenceSample, providers []provider.Entry, generatedAt string, title string, note string) EvidenceReport {
 	title = normalizeEvidenceReportTitle(title)
 	note = strings.TrimSpace(note)
+	providerLookup := make(map[string]provider.Entry, len(providers))
+	for _, item := range providers {
+		providerLookup[item.Meta.Key] = item
+	}
 	var b strings.Builder
 	b.WriteString("# ")
 	b.WriteString(title)
@@ -3964,6 +3968,58 @@ func buildEvidenceReport(summary EvidenceSummary, statuses []StatusSummary, smok
 				markdownCell(firstNonEmpty(item.SampleProviderKey, "-")),
 				markdownCell(firstNonEmpty(item.SampleCategory, "-")),
 				markdownCell(firstNonEmpty(item.LatestSmokeAt, "-")),
+			)
+		}
+	}
+	b.WriteString("\n## Provider 默认风控校准\n\n")
+	providerCalibrationRows := make([]provider.Entry, 0, len(statuses))
+	providerCalibrationSeen := make(map[string]struct{}, len(statuses))
+	for _, status := range statuses {
+		providerKey := strings.TrimSpace(status.ProviderKey)
+		if providerKey == "" {
+			continue
+		}
+		if _, ok := providerCalibrationSeen[providerKey]; ok {
+			continue
+		}
+		providerCalibrationSeen[providerKey] = struct{}{}
+		if entry, ok := providerLookup[providerKey]; ok {
+			providerCalibrationRows = append(providerCalibrationRows, entry)
+		}
+	}
+	if len(providerCalibrationRows) == 0 {
+		b.WriteString("- 当前没有 provider 默认风控校准数据。\n")
+	} else {
+		readyCount := 0
+		partialCount := 0
+		pendingCount := 0
+		for _, item := range providerCalibrationRows {
+			readiness := strings.ToLower(strings.TrimSpace(item.Meta.DefaultRiskTemplate.CalibrationReadiness))
+			switch readiness {
+			case "ready":
+				readyCount++
+			case "partial":
+				partialCount++
+			default:
+				pendingCount++
+			}
+		}
+		fmt.Fprintf(&b, "- Calibration Ready: %d / %d\n", readyCount, len(providerCalibrationRows))
+		fmt.Fprintf(&b, "- Calibration Partial: %d\n", partialCount)
+		fmt.Fprintf(&b, "- Calibration Pending: %d\n", pendingCount)
+		b.WriteString("\n| Provider | Readiness | Coverage | Missing | Priority Calibration | Recommended | Window Source | Window Advice |\n")
+		b.WriteString("| --- | --- | --- | --- | --- | --- | --- | --- |\n")
+		for _, item := range providerCalibrationRows {
+			template := item.Meta.DefaultRiskTemplate
+			fmt.Fprintf(&b, "| %s | %s | %s | %s | %s | %s | %s | %s |\n",
+				markdownCell(firstNonEmpty(item.Meta.Key, "-")),
+				markdownCell(firstNonEmpty(template.CalibrationReadiness, "pending")),
+				markdownCell(firstNonEmpty(template.CalibrationCoverage, "-")),
+				markdownCell(strings.Join(template.CalibrationMissing, ", ")),
+				markdownCell(firstNonEmpty(template.CalibrationPriorityAction, "complete")),
+				markdownCell(firstNonEmpty(template.RecommendedMode, "-")),
+				markdownCell(firstNonEmpty(template.AutoRetryWindowSource, "-")),
+				markdownCell(firstNonEmpty(template.AutoRetryWindowAdvice, "-")),
 			)
 		}
 	}

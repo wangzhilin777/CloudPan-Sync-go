@@ -810,6 +810,9 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "priority calibration") {
 		t.Fatalf("expected evidence provider risk priority calibration summary in app.js, got %q", body)
 	}
+	if !strings.Contains(body, "calibration missing") || !strings.Contains(body, "calibration coverage") {
+		t.Fatalf("expected evidence provider risk missing/coverage summary in app.js, got %q", body)
+	}
 	if !strings.Contains(body, "window source") {
 		t.Fatalf("expected evidence provider risk auto retry window source in app.js, got %q", body)
 	}
