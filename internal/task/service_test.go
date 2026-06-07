@@ -7963,6 +7963,9 @@ func TestServiceProviderSmokeRecords(t *testing.T) {
 	if !strings.Contains(fetched.Markdown, "真实浏览成功样本") {
 		t.Fatalf("expected browse sample type in markdown, got %s", fetched.Markdown)
 	}
+	if !strings.Contains(fetched.Markdown, "推荐回归入口: ValidateAuth -> List") {
+		t.Fatalf("expected inferred regression entry in markdown, got %s", fetched.Markdown)
+	}
 	if !strings.Contains(fetched.Markdown, "环境键") || !strings.Contains(fetched.Markdown, "os") {
 		t.Fatalf("expected environment keys summary in markdown, got %s", fetched.Markdown)
 	}
@@ -8311,6 +8314,20 @@ func TestServiceProviderSmokeMatrixTracksRepresentativeSamples(t *testing.T) {
 	}
 	if !strings.Contains(fetched.Markdown, "自动补传/公平性关注点") {
 		t.Fatalf("expected auto recover focus in representative markdown, got %s", fetched.Markdown)
+	}
+}
+
+func TestProviderSmokeRegressionEntryInfersFallbackChecklist(t *testing.T) {
+	record := ProviderSmokeRecord{
+		Category: "binary_upload_success",
+		Result:   "failed",
+		Note:     "multipart upload leaf_first checkpoint retry after remote error",
+	}
+
+	got := providerSmokeRegressionEntry(record)
+	want := "ValidateAuth -> Metadata -> Upload -> leaf_first -> checkpoint -> blocked_recovery"
+	if got != want {
+		t.Fatalf("expected inferred regression entry %q, got %q", want, got)
 	}
 }
 

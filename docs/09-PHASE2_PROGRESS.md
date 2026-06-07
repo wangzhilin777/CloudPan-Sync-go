@@ -32,6 +32,7 @@
 - 已补 provider 级真实样本验收矩阵，覆盖 catalog 中所有 provider，直接展示基础成功样本、上传成功样本、异常样本覆盖、缺口与首要补样动作。
 - 已把 provider 级真实样本验收矩阵接入验收报告页摘要，直接显示 `Provider Ready`、`ready / partial / pending` 数量和未 ready provider 的首要补样动作，避免验收时只能翻 Markdown。
 - 已把固定记录模板里的 `templateVersion / sampleType / evidenceCompleteness / reuseAdvice / representativeLabels / autoRecoverFocus` 结构化返回到 smoke 记录接口与列表视图，便于不打开 Markdown 也能直接判断样本是否值得复用和继续补齐。
+- 已把固定记录模板里的“推荐回归入口”从占位语义收口为自动生成的操作链路；即使未手填 operations，也会按样本类型、备注关键词和失败语义推导出 `ValidateAuth / List / FastUploadCheck / Metadata / Upload / checkpoint / blocked_recovery` 组合，便于后续按样本直接回放。
 
 ### 对应提交
 
@@ -43,6 +44,7 @@
 - `f2924fd` 二期：补齐 provider 级真实样本验收矩阵
 - 当前轮次已新增 provider 级真实样本验收报告页摘要，用于把 provider 维度缺口从 Markdown 提升到页面可视摘要。
 - 当前轮次已新增固定记录模板结构化字段回传与列表展示，用于把样本类型、证据完整度和复用建议从 Markdown 提升到可筛查的日常视图。
+- 当前轮次已新增固定记录模板“推荐回归入口”自动推导与测试兜底，用于把未填写 operations 的真实样本也收口成可直接复放的回归清单，而不是继续停留在“待补充操作清单”。
 
 ### 仍未完成
 

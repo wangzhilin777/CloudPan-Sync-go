@@ -273,24 +273,24 @@ type EvidenceReportRecord struct {
 }
 
 type ProviderSmokeRecord struct {
-	ID            string            `json:"id"`
-	ProviderKey   string            `json:"providerKey"`
-	ProtocolGroup string            `json:"protocolGroup,omitempty"`
-	AuthMode      string            `json:"authMode,omitempty"`
-	Category      string            `json:"category,omitempty"`
-	Result        string            `json:"result"`
-	Title         string            `json:"title"`
-	Note          string            `json:"note,omitempty"`
-	Operations    []string          `json:"operations,omitempty"`
-	Environment   map[string]string `json:"environment,omitempty"`
-	TemplateVersion      string   `json:"templateVersion,omitempty"`
-	SampleType           string   `json:"sampleType,omitempty"`
-	EvidenceCompleteness string   `json:"evidenceCompleteness,omitempty"`
-	ReuseAdvice          string   `json:"reuseAdvice,omitempty"`
-	RepresentativeLabels []string `json:"representativeLabels,omitempty"`
-	AutoRecoverFocus     string   `json:"autoRecoverFocus,omitempty"`
-	Markdown      string            `json:"markdown,omitempty"`
-	CreatedAt     string            `json:"createdAt"`
+	ID                   string            `json:"id"`
+	ProviderKey          string            `json:"providerKey"`
+	ProtocolGroup        string            `json:"protocolGroup,omitempty"`
+	AuthMode             string            `json:"authMode,omitempty"`
+	Category             string            `json:"category,omitempty"`
+	Result               string            `json:"result"`
+	Title                string            `json:"title"`
+	Note                 string            `json:"note,omitempty"`
+	Operations           []string          `json:"operations,omitempty"`
+	Environment          map[string]string `json:"environment,omitempty"`
+	TemplateVersion      string            `json:"templateVersion,omitempty"`
+	SampleType           string            `json:"sampleType,omitempty"`
+	EvidenceCompleteness string            `json:"evidenceCompleteness,omitempty"`
+	ReuseAdvice          string            `json:"reuseAdvice,omitempty"`
+	RepresentativeLabels []string          `json:"representativeLabels,omitempty"`
+	AutoRecoverFocus     string            `json:"autoRecoverFocus,omitempty"`
+	Markdown             string            `json:"markdown,omitempty"`
+	CreatedAt            string            `json:"createdAt"`
 }
 
 type ProviderSmokeSummary struct {
@@ -4214,6 +4214,57 @@ func providerSmokeAutoRecoverFocus(record ProviderSmokeRecord) string {
 	return "建议补充 blocked reason、重试动作与预算影响，便于后续归档到自动补传公平性证据。"
 }
 
+func providerSmokeRegressionEntry(record ProviderSmokeRecord) string {
+	if len(record.Operations) > 0 {
+		return strings.Join(record.Operations, " -> ")
+	}
+	steps := []string{"ValidateAuth"}
+	category := strings.TrimSpace(strings.ToLower(record.Category))
+	result := strings.TrimSpace(strings.ToLower(record.Result))
+	note := strings.ToLower(record.Note)
+
+	if category == "browse_only" || strings.Contains(note, "list") || strings.Contains(note, "browse") {
+		steps = append(steps, "List")
+	}
+	if category == "fast_upload_success" || strings.Contains(note, "fast") || strings.Contains(note, "hash") {
+		steps = append(steps, "FastUploadCheck")
+	}
+	if category == "binary_upload_success" || strings.Contains(note, "upload") || strings.Contains(note, "multipart") {
+		steps = append(steps, "Metadata", "Upload")
+	}
+	if strings.Contains(note, "leaf_first") || strings.Contains(note, "leaf-first") {
+		steps = append(steps, "leaf_first")
+	}
+	if strings.Contains(note, "checkpoint") || strings.Contains(note, "resume") || strings.Contains(note, "retry") {
+		steps = append(steps, "checkpoint")
+	}
+	if result != "success" {
+		steps = append(steps, "blocked_recovery")
+	}
+
+	return strings.Join(uniqueNonEmptyStrings(steps), " -> ")
+}
+
+func uniqueNonEmptyStrings(items []string) []string {
+	if len(items) == 0 {
+		return nil
+	}
+	seen := make(map[string]struct{}, len(items))
+	result := make([]string, 0, len(items))
+	for _, item := range items {
+		trimmed := strings.TrimSpace(item)
+		if trimmed == "" {
+			continue
+		}
+		if _, ok := seen[trimmed]; ok {
+			continue
+		}
+		seen[trimmed] = struct{}{}
+		result = append(result, trimmed)
+	}
+	return result
+}
+
 func buildProviderSmokeMarkdown(record ProviderSmokeRecord) string {
 	var b strings.Builder
 	title := strings.TrimSpace(record.Title)
@@ -4237,11 +4288,7 @@ func buildProviderSmokeMarkdown(record ProviderSmokeRecord) string {
 	fmt.Fprintf(&b, "- 模板版本: %s\n", markdownCell(providerSmokeTemplateVersion()))
 	fmt.Fprintf(&b, "- 样本类型: %s\n", markdownCell(providerSmokeSampleType(record)))
 	fmt.Fprintf(&b, "- 证据完整度: %s\n", markdownCell(providerSmokeEvidenceCompleteness(record)))
-	if len(record.Operations) == 0 {
-		b.WriteString("- 推荐回归入口: 待补充操作清单\n")
-	} else {
-		fmt.Fprintf(&b, "- 推荐回归入口: %s\n", markdownCell(strings.Join(record.Operations, " -> ")))
-	}
+	fmt.Fprintf(&b, "- 推荐回归入口: %s\n", markdownCell(providerSmokeRegressionEntry(record)))
 	keys := providerSmokeEnvironmentKeys(record)
 	if len(keys) == 0 {
 		b.WriteString("- 环境键摘要: 未填写\n")
