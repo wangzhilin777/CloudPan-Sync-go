@@ -59,7 +59,7 @@
 - 当前轮次已新增协议组级 preferred sample 摘要和 task/app/web 测试兜底，用于把“先拿哪条样本回归”从人工判断提升到汇总视图可直接查看的统一口径。
 - 当前轮次已新增 `preferredUploadSample* / preferredAnomalySample* / preferredRepresentativeSample*` 摘要与 task/app/web 测试兜底，用于把协议组样本进一步拆成“首选上传样本”“首选异常样本”和“首选代表性样本”三类优先证据。
 - 当前轮次已新增 provider 级 preferredSample* / preferredUploadSample* / preferredAnomalySample* 摘要与 task/app/web 测试兜底，用于把 provider 维度的优先复核样本直接提升到验收报告和页面摘要。
-- 当前轮次已新增 provider 级 representative 覆盖计数、缺口清单、首选代表性样本摘要与 task/app/web 测试兜底，并收紧 provider readiness / priority action 口径，用于把上传成功、大文件、多层目录、重试恢复等缺口提升到 provider 维度可直接验收的稳定字段。
+- 当前轮次已新增 provider 级 representative 覆盖计数、缺口清单、补样动作、建议文案、首选代表性样本摘要与 task/app/web 测试兜底，并收紧 provider readiness / priority action 口径，用于把上传成功、大文件、多层目录、重试恢复等缺口提升到 provider 维度可直接验收的稳定字段。
 
 ### 仍未完成
 

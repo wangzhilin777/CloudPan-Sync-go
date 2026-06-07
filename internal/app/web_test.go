@@ -984,7 +984,7 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "preferred upload:") || !strings.Contains(body, "preferred anomaly:") || !strings.Contains(body, "preferred representative:") {
 		t.Fatalf("expected provider smoke preferred upload/anomaly/representative summaries in app.js, got %q", body)
 	}
-	if !strings.Contains(body, "provider preferred representative:") || !strings.Contains(body, "provider representative missing:") {
+	if !strings.Contains(body, "provider preferred representative:") || !strings.Contains(body, "provider representative missing:") || !strings.Contains(body, "provider representative actions:") || !strings.Contains(body, "provider representative advice:") {
 		t.Fatalf("expected provider-level representative summaries in app.js, got %q", body)
 	}
 	if !strings.Contains(body, "auto recover focus:") {

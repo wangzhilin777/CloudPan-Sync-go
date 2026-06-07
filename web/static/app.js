@@ -5722,6 +5722,8 @@ function renderEvidenceProviderSmokeProviders(report) {
                   <div class="muted">provider preferred anomaly: ${escapeHTML(stringifyValue(item.preferredAnomalySampleTitle, "-"))} / ${escapeHTML(stringifyValue(item.preferredAnomalyPriority, "-"))}</div>
                   <div class="muted">provider preferred representative: ${escapeHTML(stringifyValue(item.preferredRepresentativeSampleTitle, "-"))} / ${escapeHTML(stringifyValue(item.preferredRepresentativePriority, "-"))}</div>
                   ${Array.isArray(item.representativeMissing) && item.representativeMissing.length ? `<div class="muted">provider representative missing: ${escapeHTML(item.representativeMissing.join(", "))}</div>` : ""}
+                  ${Array.isArray(item.representativeActions) && item.representativeActions.length ? `<div class="muted">provider representative actions: ${escapeHTML(item.representativeActions.join("；"))}</div>` : ""}
+                  ${item.representativeAdvice ? `<div class="muted">provider representative advice: ${escapeHTML(item.representativeAdvice)}</div>` : ""}
                 `,
               )
               .join("")
