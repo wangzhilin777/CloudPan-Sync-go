@@ -5747,6 +5747,15 @@ function renderEvidenceProviderSmokeProviders(report) {
   if (Array.isArray(summary.providerSmokeProviderMissingRepresentativeProviders)) {
     counts.missingRepresentativeProviders = summary.providerSmokeProviderMissingRepresentativeProviders;
   }
+  const providerPriorityActionCounts =
+    summary.providerSmokeProviderPriorityActionCounts && typeof summary.providerSmokeProviderPriorityActionCounts === "object"
+      ? summary.providerSmokeProviderPriorityActionCounts
+      : {};
+  const providerPriorityActionSummary = Object.entries(providerPriorityActionCounts)
+    .sort((left, right) => Number(right[1] || 0) - Number(left[1] || 0) || String(left[0]).localeCompare(String(right[0])))
+    .slice(0, 8)
+    .map(([label, count]) => `${label} x${count}`)
+    .join(" / ");
   const focusItems = items
     .filter((item) => String(item?.readiness || "").toLowerCase() !== "ready")
     .slice(0, 6);
@@ -5773,6 +5782,7 @@ function renderEvidenceProviderSmokeProviders(report) {
       <div class="muted">missing upload providers: ${escapeHTML(summarizePathList(counts.missingUploadProviders, 8))}</div>
       <div class="muted">missing anomaly providers: ${escapeHTML(summarizePathList(counts.missingAnomalyProviders, 8))}</div>
       <div class="muted">missing representative providers: ${escapeHTML(summarizePathList(counts.missingRepresentativeProviders, 8))}</div>
+      <div class="muted">provider priority action counts: ${escapeHTML(providerPriorityActionSummary || "-")}</div>
       ${
         focusItems.length
           ? focusItems

@@ -807,6 +807,9 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "providerSmokeProviderMissingBasicProviders") || !strings.Contains(body, "providerSmokeProviderMissingUploadProviders") || !strings.Contains(body, "providerSmokeProviderMissingAnomalyProviders") || !strings.Contains(body, "providerSmokeProviderMissingRepresentativeProviders") {
 		t.Fatalf("expected provider-level smoke missing provider lists in app.js, got %q", body)
 	}
+	if !strings.Contains(body, "providerSmokeProviderPriorityActionCounts") || !strings.Contains(body, "provider priority action counts:") {
+		t.Fatalf("expected provider-level smoke priority action counts in app.js, got %q", body)
+	}
 	if !strings.Contains(body, "missing basic") || !strings.Contains(body, "missing upload") || !strings.Contains(body, "missing anomaly") || !strings.Contains(body, "missing representative") {
 		t.Fatalf("expected provider-level smoke missing counter labels in app.js, got %q", body)
 	}

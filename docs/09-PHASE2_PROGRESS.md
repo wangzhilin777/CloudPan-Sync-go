@@ -44,6 +44,7 @@
 - 已把 provider 级真实样本验收的 total / ready / partial / pending 聚合计数结构化写入运行证据和验收报告 summary，便于保存报告和页面展示直接读取稳定字段。
 - 已把 provider 级真实样本验收的缺基础成功、缺上传成功、缺异常样本、缺代表性样本 provider 数量结构化写入 summary，并在报告页展示，便于直接判断下一轮补样方向。
 - 已把 provider 级真实样本验收的缺口 provider 列表结构化写入 summary，并在报告和页面摘要展示，便于直接定位下一批要补样的 provider。
+- 已把 provider 级真实样本验收的首要补样动作聚合成 priority action counts，并在报告和页面摘要展示，便于直接判断当前最该优先补基础成功、上传成功还是异常/代表性样本。
 
 ### 对应提交
 
@@ -66,6 +67,7 @@
 - 当前轮次已新增 providerSmokeProviderTotalCount / ReadyCount / PartialCount / PendingCount summary 字段与 task/app 测试兜底，用于把 provider 真实样本验收进度从前端临时统计推进到可保存、可回放的报告结构。
 - 当前轮次已新增 providerSmokeProviderMissingBasicCount / MissingUploadCount / MissingAnomalyCount / MissingRepresentativeCount summary 字段与 task/app 测试兜底，用于把 provider 真实样本缺口从逐行翻阅推进到聚合缺口计数。
 - 当前轮次已新增 providerSmokeProviderMissing*Providers summary 列表字段与 task/app 测试兜底，用于把“缺哪类样本”进一步落到具体 provider key。
+- 当前轮次已新增 providerSmokeProviderPriorityActionCounts summary 字段与 task/app 测试兜底，用于把 provider 级首要补样动作从逐行阅读推进到可直接统计的动作分布。
 
 ### 仍未完成
 

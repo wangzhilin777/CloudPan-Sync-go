@@ -207,6 +207,7 @@ type EvidenceSummary struct {
 	ProviderSmokeProviderMissingUploadProviders         []string           `json:"providerSmokeProviderMissingUploadProviders,omitempty"`
 	ProviderSmokeProviderMissingAnomalyProviders        []string           `json:"providerSmokeProviderMissingAnomalyProviders,omitempty"`
 	ProviderSmokeProviderMissingRepresentativeProviders []string           `json:"providerSmokeProviderMissingRepresentativeProviders,omitempty"`
+	ProviderSmokeProviderPriorityActionCounts           map[string]int     `json:"providerSmokeProviderPriorityActionCounts,omitempty"`
 	UploadCheckpointTaskCount                           int                `json:"uploadCheckpointTaskCount"`
 	UploadCheckpointResumeTaskCount                     int                `json:"uploadCheckpointResumeTaskCount"`
 	UploadCheckpointResumeSamplePaths                   []string           `json:"uploadCheckpointResumeSamplePaths,omitempty"`
@@ -3853,6 +3854,7 @@ func buildEvidenceReport(summary EvidenceSummary, statuses []StatusSummary, smok
 	fmt.Fprintf(&b, "- Provider 验收缺上传成功 provider: %s\n", previewStringList(summary.ProviderSmokeProviderMissingUploadProviders, 12))
 	fmt.Fprintf(&b, "- Provider 验收缺异常样本 provider: %s\n", previewStringList(summary.ProviderSmokeProviderMissingAnomalyProviders, 12))
 	fmt.Fprintf(&b, "- Provider 验收缺代表性样本 provider: %s\n", previewStringList(summary.ProviderSmokeProviderMissingRepresentativeProviders, 12))
+	fmt.Fprintf(&b, "- Provider 验收首要动作分布: %s\n", previewCountMap(summary.ProviderSmokeProviderPriorityActionCounts, 8))
 	fmt.Fprintf(&b, "- Upload checkpoint 任务数: %d\n", summary.UploadCheckpointTaskCount)
 	fmt.Fprintf(&b, "- Upload checkpoint 自动续传任务数: %d\n", summary.UploadCheckpointResumeTaskCount)
 	if len(summary.UploadCheckpointResumeSamplePaths) > 0 {
@@ -4925,8 +4927,17 @@ func populateProviderSmokeProviderCounts(summary *EvidenceSummary, rows []Provid
 	summary.ProviderSmokeProviderMissingUploadProviders = nil
 	summary.ProviderSmokeProviderMissingAnomalyProviders = nil
 	summary.ProviderSmokeProviderMissingRepresentativeProviders = nil
+	if summary.ProviderSmokeProviderPriorityActionCounts == nil {
+		summary.ProviderSmokeProviderPriorityActionCounts = make(map[string]int)
+	} else {
+		for key := range summary.ProviderSmokeProviderPriorityActionCounts {
+			delete(summary.ProviderSmokeProviderPriorityActionCounts, key)
+		}
+	}
 	for _, row := range rows {
 		providerKey := firstNonEmpty(row.ProviderKey, "unknown")
+		priorityAction := firstNonEmpty(row.PriorityAction, "complete")
+		summary.ProviderSmokeProviderPriorityActionCounts[priorityAction]++
 		switch strings.ToLower(strings.TrimSpace(row.Readiness)) {
 		case "ready":
 			summary.ProviderSmokeProviderReadyCount++
@@ -4980,6 +4991,44 @@ func previewStringList(values []string, limit int) string {
 		suffix = fmt.Sprintf(" ...(+%d)", len(values)-len(items))
 	}
 	return strings.Join(items, ", ") + suffix
+}
+
+func previewCountMap(values map[string]int, limit int) string {
+	if len(values) == 0 {
+		return "-"
+	}
+	type pair struct {
+		key   string
+		count int
+	}
+	items := make([]pair, 0, len(values))
+	for key, count := range values {
+		key = strings.TrimSpace(key)
+		if key == "" || count <= 0 {
+			continue
+		}
+		items = append(items, pair{key: key, count: count})
+	}
+	if len(items) == 0 {
+		return "-"
+	}
+	sort.Slice(items, func(i, j int) bool {
+		if items[i].count != items[j].count {
+			return items[i].count > items[j].count
+		}
+		return items[i].key < items[j].key
+	})
+	if limit <= 0 || limit > len(items) {
+		limit = len(items)
+	}
+	parts := make([]string, 0, limit)
+	for _, item := range items[:limit] {
+		parts = append(parts, fmt.Sprintf("%s x%d", item.key, item.count))
+	}
+	if len(items) > limit {
+		parts = append(parts, fmt.Sprintf("...(+%d)", len(items)-limit))
+	}
+	return strings.Join(parts, "；")
 }
 
 func renderProviderSmokeProviderReadiness(row ProviderSmokeProviderRow) string {
