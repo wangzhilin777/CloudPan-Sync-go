@@ -195,6 +195,10 @@ type EvidenceSummary struct {
 	PendingSmokeGroups                     int                `json:"pendingSmokeGroups"`
 	UploadSuccessGroups                    int                `json:"uploadSuccessGroups"`
 	UploadSuccessSamples                   int                `json:"uploadSuccessSamples"`
+	ProviderSmokeProviderTotalCount        int                `json:"providerSmokeProviderTotalCount"`
+	ProviderSmokeProviderReadyCount        int                `json:"providerSmokeProviderReadyCount"`
+	ProviderSmokeProviderPartialCount      int                `json:"providerSmokeProviderPartialCount"`
+	ProviderSmokeProviderPendingCount      int                `json:"providerSmokeProviderPendingCount"`
 	UploadCheckpointTaskCount              int                `json:"uploadCheckpointTaskCount"`
 	UploadCheckpointResumeTaskCount        int                `json:"uploadCheckpointResumeTaskCount"`
 	UploadCheckpointResumeSamplePaths      []string           `json:"uploadCheckpointResumeSamplePaths,omitempty"`
@@ -1200,7 +1204,9 @@ func (s *Service) RuntimeEvidence(ctx context.Context) (EvidenceSummary, error) 
 	if err != nil {
 		return EvidenceSummary{}, err
 	}
-	return enrichEvidenceSummaryWithSmoke(summary, summarizeProviderSmokeRecords(records)), nil
+	summary = enrichEvidenceSummaryWithSmoke(summary, summarizeProviderSmokeRecords(records))
+	populateProviderSmokeProviderCounts(&summary, buildProviderSmokeProviderMatrix(records, s.registry.List()))
+	return summary, nil
 }
 
 func (s *Service) ProviderStatuses(ctx context.Context) ([]StatusSummary, error) {
@@ -1244,6 +1250,7 @@ func (s *Service) EvidenceReport(ctx context.Context) (EvidenceReport, error) {
 	summary = enrichEvidenceSummaryWithSmoke(summary, smokeSummaries)
 	smokeMatrix := buildProviderSmokeMatrix(summary, smokeSummaries)
 	providerSmokeProviders := buildProviderSmokeProviderMatrix(records, s.registry.List())
+	populateProviderSmokeProviderCounts(&summary, providerSmokeProviders)
 	details, err := s.List(ctx)
 	if err != nil {
 		return EvidenceReport{}, err
@@ -3792,6 +3799,7 @@ func renderSmokePriorityAction(row ProviderSmokeMatrixRow) string {
 func buildEvidenceReport(summary EvidenceSummary, statuses []StatusSummary, smokeSummaries []ProviderSmokeSummary, smokeMatrix []ProviderSmokeMatrixRow, providerSmokeProviders []ProviderSmokeProviderRow, samples []EvidenceSample, providers []provider.Entry, generatedAt string, title string, note string) EvidenceReport {
 	title = normalizeEvidenceReportTitle(title)
 	note = strings.TrimSpace(note)
+	populateProviderSmokeProviderCounts(&summary, providerSmokeProviders)
 	providerLookup := make(map[string]provider.Entry, len(providers))
 	for _, item := range providers {
 		providerLookup[item.Meta.Key] = item
@@ -3826,6 +3834,9 @@ func buildEvidenceReport(summary EvidenceSummary, statuses []StatusSummary, smok
 	fmt.Fprintf(&b, "- 待补齐协议组: %d\n", summary.PendingSmokeGroups)
 	fmt.Fprintf(&b, "- 上传成功协议组: %d\n", summary.UploadSuccessGroups)
 	fmt.Fprintf(&b, "- 上传成功样本数: %d\n", summary.UploadSuccessSamples)
+	fmt.Fprintf(&b, "- Provider 验收 ready: %d / %d\n", summary.ProviderSmokeProviderReadyCount, summary.ProviderSmokeProviderTotalCount)
+	fmt.Fprintf(&b, "- Provider 验收 partial: %d\n", summary.ProviderSmokeProviderPartialCount)
+	fmt.Fprintf(&b, "- Provider 验收 pending: %d\n", summary.ProviderSmokeProviderPendingCount)
 	fmt.Fprintf(&b, "- Upload checkpoint 任务数: %d\n", summary.UploadCheckpointTaskCount)
 	fmt.Fprintf(&b, "- Upload checkpoint 自动续传任务数: %d\n", summary.UploadCheckpointResumeTaskCount)
 	if len(summary.UploadCheckpointResumeSamplePaths) > 0 {
@@ -4883,6 +4894,23 @@ func buildProviderRepresentativeSampleMissing(row ProviderSmokeProviderRow) []st
 		missing = append(missing, "retry_recovery_sample_missing")
 	}
 	return missing
+}
+
+func populateProviderSmokeProviderCounts(summary *EvidenceSummary, rows []ProviderSmokeProviderRow) {
+	summary.ProviderSmokeProviderTotalCount = len(rows)
+	summary.ProviderSmokeProviderReadyCount = 0
+	summary.ProviderSmokeProviderPartialCount = 0
+	summary.ProviderSmokeProviderPendingCount = 0
+	for _, row := range rows {
+		switch strings.ToLower(strings.TrimSpace(row.Readiness)) {
+		case "ready":
+			summary.ProviderSmokeProviderReadyCount++
+		case "partial":
+			summary.ProviderSmokeProviderPartialCount++
+		default:
+			summary.ProviderSmokeProviderPendingCount++
+		}
+	}
 }
 
 func renderProviderSmokeProviderReadiness(row ProviderSmokeProviderRow) string {

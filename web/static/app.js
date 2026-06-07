@@ -5685,6 +5685,19 @@ function renderEvidenceProviderSmokeProviders(report) {
     `;
   }
   const counts = providerSmokeProviderCounts(items);
+  const summary = report?.summary && typeof report.summary === "object" ? report.summary : {};
+  if (Object.prototype.hasOwnProperty.call(summary, "providerSmokeProviderTotalCount")) {
+    counts.total = Number(summary.providerSmokeProviderTotalCount || 0);
+  }
+  if (Object.prototype.hasOwnProperty.call(summary, "providerSmokeProviderReadyCount")) {
+    counts.ready = Number(summary.providerSmokeProviderReadyCount || 0);
+  }
+  if (Object.prototype.hasOwnProperty.call(summary, "providerSmokeProviderPartialCount")) {
+    counts.partial = Number(summary.providerSmokeProviderPartialCount || 0);
+  }
+  if (Object.prototype.hasOwnProperty.call(summary, "providerSmokeProviderPendingCount")) {
+    counts.pending = Number(summary.providerSmokeProviderPendingCount || 0);
+  }
   const focusItems = items
     .filter((item) => String(item?.readiness || "").toLowerCase() !== "ready")
     .slice(0, 6);

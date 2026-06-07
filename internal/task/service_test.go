@@ -8137,6 +8137,12 @@ func TestServiceProviderSmokeRecords(t *testing.T) {
 	if evidence.UploadSuccessSamples != 0 {
 		t.Fatalf("expected upload success samples 0, got %d", evidence.UploadSuccessSamples)
 	}
+	if evidence.ProviderSmokeProviderTotalCount != len(registry.List()) {
+		t.Fatalf("expected runtime provider smoke provider total %d, got %d", len(registry.List()), evidence.ProviderSmokeProviderTotalCount)
+	}
+	if evidence.ProviderSmokeProviderReadyCount != 0 || evidence.ProviderSmokeProviderPartialCount != 1 || evidence.ProviderSmokeProviderPendingCount != len(registry.List())-1 {
+		t.Fatalf("expected runtime provider smoke provider counts ready 0 partial 1 pending %d, got %#v", len(registry.List())-1, evidence)
+	}
 	if got := evidence.AcceptanceActionCounts["补 1 条真实上传成功样本"]; got < 1 {
 		t.Fatalf("expected acceptance action count for upload success sample >= 1, got %d", got)
 	}
@@ -8150,6 +8156,12 @@ func TestServiceProviderSmokeRecords(t *testing.T) {
 	}
 	if len(report.ProviderSmokeProviders) != len(registry.List()) {
 		t.Fatalf("expected provider smoke provider matrix to cover all catalog providers, got %d want %d", len(report.ProviderSmokeProviders), len(registry.List()))
+	}
+	if report.Summary.ProviderSmokeProviderTotalCount != len(registry.List()) || report.Summary.ProviderSmokeProviderPartialCount != 1 || report.Summary.ProviderSmokeProviderPendingCount != len(registry.List())-1 {
+		t.Fatalf("expected report provider smoke provider summary counts, got %#v", report.Summary)
+	}
+	if !strings.Contains(report.Markdown, "Provider 验收 ready") || !strings.Contains(report.Markdown, "Provider 验收 partial") || !strings.Contains(report.Markdown, "Provider 验收 pending") {
+		t.Fatalf("expected provider smoke provider summary counters in report markdown, got %s", report.Markdown)
 	}
 	var found123 bool
 	var foundPending bool
