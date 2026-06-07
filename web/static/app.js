@@ -3747,6 +3747,10 @@ function renderSelectedTask() {
       <span>${Array.isArray(metadata.retrySelectedPaths) && metadata.retrySelectedPaths.length ? summarizePathList(metadata.retrySelectedPaths, 4) : "-"}</span>
     </div>
     <div class="insight-card">
+      <strong>重试路径数</strong>
+      <span>${stringifyValue(metadata.retrySelectedPathCount, Array.isArray(metadata.retrySelectedPaths) ? metadata.retrySelectedPaths.length : 0)}</span>
+    </div>
+    <div class="insight-card">
       <strong>重试摘要</strong>
       <span>${stringifyValue(metadata.retrySummary?.blockedReason || (metadata.retrySummary?.shouldBlock ? "blocked" : "ready"), "-")}</span>
     </div>
@@ -5365,6 +5369,7 @@ function renderSnapshotSummary(summary) {
       <div><strong>scanMode</strong> <code>${escapeHTML(stringifyValue(summary.scanMode, "-"))}</code></div>
       <div><strong>retryMode</strong> <code>${escapeHTML(stringifyValue(summary.retryMode, "-"))}</code></div>
       <div><strong>retryScope</strong> <code>${escapeHTML(stringifyValue(summary.retryScope, "-"))}</code></div>
+      <div><strong>retrySelectedPathCount</strong> <code>${escapeHTML(stringifyValue(summary.retrySelectedPathCount, Array.isArray(summary.retrySelectedPaths) ? summary.retrySelectedPaths.length : 0))}</code></div>
       <div><strong>retrySelectedPaths</strong> <code>${escapeHTML(retryPaths)}</code></div>
       <div><strong>riskProfileResolution</strong> <code>${escapeHTML(renderRiskResolutionSummary(summary.riskProfileResolution))}</code></div>
       <div><strong>profileDefaultKindBias</strong> <code>${escapeHTML(`${stringifyValue(summary.riskProfileResolution?.profileDefaultSourceKind, "-")} / ${stringifyValue(summary.riskProfileResolution?.profileDefaultBias, "same_as_provider")}`)}</code></div>
@@ -5415,6 +5420,7 @@ function renderRecentResultsTable(items) {
           <th>Execution Mode</th>
           <th>Retry Mode</th>
           <th>Retry Scope</th>
+          <th>Retry Path Count</th>
           <th>Retry Paths</th>
           <th>Source Delete</th>
           <th>Recommended</th>
@@ -5434,6 +5440,7 @@ function renderRecentResultsTable(items) {
                 <td>${stringifyValue(item.payload?.executionMode)}</td>
                 <td>${stringifyValue(item.payload?.retryMode)}</td>
                 <td>${stringifyValue(item.payload?.retryScope, item.payload?.retrySelectedPaths?.length ? "selected_subset" : "-")}</td>
+                <td>${stringifyValue(item.payload?.retrySelectedPathCount, item.payload?.retrySelectedPaths?.length || 0)}</td>
                 <td><code>${escapeHTML(summarizePathList(item.payload?.retrySelectedPaths || [], 3))}</code></td>
                 <td>${renderSourceDeletePolicy(item.payload?.sourceDeletePolicy)}</td>
                 <td>${stringifyValue(item.payload?.recommendedExecutionMode)}</td>
@@ -5465,6 +5472,7 @@ function renderRecentProbesTable(items) {
           <th>Scan Mode</th>
           <th>Retry Mode</th>
           <th>Retry Scope</th>
+          <th>Retry Path Count</th>
           <th>Retry Paths</th>
           <th>Source Delete</th>
           <th>Risk Hit</th>
@@ -5484,6 +5492,7 @@ function renderRecentProbesTable(items) {
                 <td>${stringifyValue(item.payload?.scanMode)}</td>
                 <td>${stringifyValue(item.payload?.retryMode)}</td>
                 <td>${stringifyValue(item.payload?.retryScope, item.payload?.retrySelectedPaths?.length ? "selected_subset" : "-")}</td>
+                <td>${stringifyValue(item.payload?.retrySelectedPathCount, item.payload?.retrySelectedPaths?.length || 0)}</td>
                 <td><code>${escapeHTML(summarizePathList(item.payload?.retrySelectedPaths || [], 3))}</code></td>
                 <td>${renderSourceDeletePolicy(item.payload?.sourceDeletePolicy)}</td>
                 <td>${stringifyValue(item.payload?.lastRiskStatus || item.payload?.riskHitCount)}</td>

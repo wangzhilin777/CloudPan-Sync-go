@@ -2223,6 +2223,9 @@ func TestServiceRetryWithOptionsSelectedPendingSubsetKeepsOnlyChosenPaths(t *tes
 	if selectedPaths, ok := retried.Plan.Metadata["retrySelectedPaths"].([]string); !ok || len(selectedPaths) != 1 || selectedPaths[0] != "/pending-b.bin" {
 		t.Fatalf("expected retrySelectedPaths [/pending-b.bin], got %#v", retried.Plan.Metadata["retrySelectedPaths"])
 	}
+	if got, _ := retried.Plan.Metadata["retrySelectedPathCount"].(int); got != 1 {
+		t.Fatalf("expected retrySelectedPathCount 1, got %#v", retried.Plan.Metadata["retrySelectedPathCount"])
+	}
 
 	secondRun, ok, err := svc.Run(ctx, detail.Task.ID)
 	if err != nil || !ok {
@@ -2324,6 +2327,9 @@ func TestServiceRetryWithOptionsSelectedDirectorySubsetKeepsOnlyChosenSubtree(t 
 	}
 	if selectedPaths, ok := retried.Plan.Metadata["retrySelectedPaths"].([]string); !ok || len(selectedPaths) != 1 || selectedPaths[0] != "/1/11" {
 		t.Fatalf("expected retrySelectedPaths [/1/11], got %#v", retried.Plan.Metadata["retrySelectedPaths"])
+	}
+	if got, _ := retried.Plan.Metadata["retrySelectedPathCount"].(int); got != 1 {
+		t.Fatalf("expected retrySelectedPathCount 1, got %#v", retried.Plan.Metadata["retrySelectedPathCount"])
 	}
 }
 
@@ -2434,6 +2440,9 @@ func TestServiceRetryWithOptionsSelectedRetrySubsetKeepsOnlyChosenPaths(t *testi
 	}
 	if retryPendingOnly, _ := retried.Plan.Metadata["retryPendingOnly"].(bool); retryPendingOnly {
 		t.Fatalf("expected retryPendingOnly false for selected retry queue, got %#v", retried.Plan.Metadata["retryPendingOnly"])
+	}
+	if got, _ := retried.Plan.Metadata["retrySelectedPathCount"].(int); got != 1 {
+		t.Fatalf("expected retrySelectedPathCount 1, got %#v", retried.Plan.Metadata["retrySelectedPathCount"])
 	}
 
 	secondRun, ok, err := svc.Run(ctx, detail.Task.ID)

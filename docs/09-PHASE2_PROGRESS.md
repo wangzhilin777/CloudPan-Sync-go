@@ -95,6 +95,7 @@
 - 已把自动补传公平性补成“完成度单值摘要”，直接给出 `pending / partial / ready` 判断，便于更快核对多 provider / 多账号候选池是否形成分散证据。
 - 已把自动补传公平性补成“首要动作摘要”，直接指出当前应优先补多 provider、多账号或多协议组候选池样本，便于继续收口公平性验证。
 - 已把自动补传恢复与公平性摘要接入验收报告页，直接显示 `Recover Ready`、`Fairness Ready`、首要动作、等待态分布和 lane 样本上下文，便于不用翻 Markdown 或状态页也能核对主线二验收情况。
+- 已把选择路径重试的路径数量补成结构化 `retrySelectedPathCount`，并透传到任务 metadata、运行结果、recent probe、provider 状态摘要、验收报告和页面展示，便于直接核对路径级/子树级补传范围。
 
 ### 对应提交
 
@@ -109,6 +110,7 @@
 - 当前轮次已新增 upload checkpoint 默认恢复验收报告页摘要，用于把大文件/长链路恢复 readiness、样本上下文和首要动作从 Markdown 提升到页面可视摘要。
 - 当前轮次已新增 legacy checkpoint `itemPath` 兜底回归测试，用于证明历史 retryUploadCheckpoints metadata 仍能按请求路径恢复上传会话。
 - 当前轮次已新增自动补传恢复与公平性验收报告页摘要，用于把恢复完成度、公平性完成度、首要动作和 lane 样本上下文提升到统一验收视图。
+- 当前轮次已新增 `retrySelectedPathCount` 透传与 task/app/web 测试兜底，用于让选择路径重试的范围不再只能靠人工展开 `retrySelectedPaths` 数组确认。
 
 ### 仍未完成
 

@@ -180,6 +180,9 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "retrySelectedPaths") {
 		t.Fatalf("expected retrySelectedPaths evidence in app.js, got %q", body)
 	}
+	if !strings.Contains(body, "retrySelectedPathCount") {
+		t.Fatalf("expected retrySelectedPathCount evidence in app.js, got %q", body)
+	}
 	if !strings.Contains(body, "renderUploadCheckpointResumeState") {
 		t.Fatalf("expected upload checkpoint resumable-state renderer in app.js, got %q", body)
 	}

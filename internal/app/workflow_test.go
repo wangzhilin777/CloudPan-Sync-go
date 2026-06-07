@@ -978,6 +978,9 @@ func TestAppWorkflowMainline(t *testing.T) {
 	if !ok || len(selectedPaths) != 1 || selectedPaths[0].(string) != "/demo/pending.bin" {
 		t.Fatalf("expected retrySelectedPaths [/demo/pending.bin], got %#v", retryMetadata["retrySelectedPaths"])
 	}
+	if got := int(retryMetadata["retrySelectedPathCount"].(float64)); got != 1 {
+		t.Fatalf("expected retrySelectedPathCount 1, got %#v", retryMetadata["retrySelectedPathCount"])
+	}
 	reportAfterRetryResp := invokeJSON(t, handler, http.MethodGet, "/api/evidence/report", nil)
 	reportAfterRetryMarkdown := reportAfterRetryResp.Data.(map[string]interface{})["markdown"].(string)
 	if !strings.Contains(reportAfterRetryMarkdown, "RetryMode") || !strings.Contains(reportAfterRetryMarkdown, "RetryScope") || !strings.Contains(reportAfterRetryMarkdown, "RetryPaths") {
@@ -1308,6 +1311,9 @@ func TestAppRetrySelectedDirectorySubsetKeepsChosenSubtree(t *testing.T) {
 	if !ok || len(selectedPaths) != 1 || selectedPaths[0].(string) != "/1/11" {
 		t.Fatalf("expected retrySelectedPaths [/1/11], got %#v", retryMetadata["retrySelectedPaths"])
 	}
+	if got := int(retryMetadata["retrySelectedPathCount"].(float64)); got != 1 {
+		t.Fatalf("expected retrySelectedPathCount 1, got %#v", retryMetadata["retrySelectedPathCount"])
+	}
 
 	runRetryResp := invokeJSON(t, handler, http.MethodPost, "/api/tasks/"+taskID+"/run", nil)
 	runRetryData := runRetryResp.Data.(map[string]interface{})
@@ -1326,6 +1332,9 @@ func TestAppRetrySelectedDirectorySubsetKeepsChosenSubtree(t *testing.T) {
 	if !ok || len(retriedSelectedPaths) != 1 || retriedSelectedPaths[0].(string) != "/1/11" {
 		t.Fatalf("expected retried result retrySelectedPaths [/1/11], got %#v", retriedResultPayload["retrySelectedPaths"])
 	}
+	if got := int(retriedResultPayload["retrySelectedPathCount"].(float64)); got != 1 {
+		t.Fatalf("expected retried result retrySelectedPathCount 1, got %#v", retriedResultPayload["retrySelectedPathCount"])
+	}
 
 	evidenceResp := invokeJSON(t, handler, http.MethodGet, "/api/evidence/runtime", nil)
 	evidenceData := evidenceResp.Data.(map[string]interface{})
@@ -1340,6 +1349,9 @@ func TestAppRetrySelectedDirectorySubsetKeepsChosenSubtree(t *testing.T) {
 	if !ok || len(evidenceRecentResultSelectedPaths) != 1 || evidenceRecentResultSelectedPaths[0].(string) != "/1/11" {
 		t.Fatalf("expected evidence recent result retrySelectedPaths [/1/11], got %#v", evidenceRecentResultPayload["retrySelectedPaths"])
 	}
+	if got := int(evidenceRecentResultPayload["retrySelectedPathCount"].(float64)); got != 1 {
+		t.Fatalf("expected evidence recent result retrySelectedPathCount 1, got %#v", evidenceRecentResultPayload["retrySelectedPathCount"])
+	}
 	evidenceRecentProbePayload := evidenceData["recentProbes"].([]interface{})[0].(map[string]interface{})["payload"].(map[string]interface{})
 	if got := evidenceRecentProbePayload["retryMode"].(string); got != "selected_directory_subset" {
 		t.Fatalf("expected evidence recent probe retryMode selected_directory_subset, got %s", got)
@@ -1350,6 +1362,9 @@ func TestAppRetrySelectedDirectorySubsetKeepsChosenSubtree(t *testing.T) {
 	evidenceRecentProbeSelectedPaths, ok := evidenceRecentProbePayload["retrySelectedPaths"].([]interface{})
 	if !ok || len(evidenceRecentProbeSelectedPaths) != 1 || evidenceRecentProbeSelectedPaths[0].(string) != "/1/11" {
 		t.Fatalf("expected evidence recent probe retrySelectedPaths [/1/11], got %#v", evidenceRecentProbePayload["retrySelectedPaths"])
+	}
+	if got := int(evidenceRecentProbePayload["retrySelectedPathCount"].(float64)); got != 1 {
+		t.Fatalf("expected evidence recent probe retrySelectedPathCount 1, got %#v", evidenceRecentProbePayload["retrySelectedPathCount"])
 	}
 
 	statusResp := invokeJSON(t, handler, http.MethodGet, "/api/status/providers", nil)
@@ -1371,6 +1386,9 @@ func TestAppRetrySelectedDirectorySubsetKeepsChosenSubtree(t *testing.T) {
 		statusSelectedPaths, ok := summary["retrySelectedPaths"].([]interface{})
 		if !ok || len(statusSelectedPaths) != 1 || statusSelectedPaths[0].(string) != "/1/11" {
 			t.Fatalf("expected status summary retrySelectedPaths [/1/11], got %#v", summary["retrySelectedPaths"])
+		}
+		if got := int(summary["retrySelectedPathCount"].(float64)); got != 1 {
+			t.Fatalf("expected status summary retrySelectedPathCount 1, got %#v", summary["retrySelectedPathCount"])
 		}
 	}
 	if !foundTargetStatus {

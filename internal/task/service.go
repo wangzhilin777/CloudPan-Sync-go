@@ -436,23 +436,24 @@ type ProviderSmokeMatrixRow struct {
 }
 
 type EvidenceSample struct {
-	ProviderKey        string   `json:"providerKey"`
-	TaskID             string   `json:"taskId"`
-	SourceProvider     string   `json:"sourceProvider"`
-	TargetProvider     string   `json:"targetProvider"`
-	TaskState          string   `json:"taskState"`
-	CompletionKind     string   `json:"completionKind,omitempty"`
-	ExecutionMode      string   `json:"executionMode,omitempty"`
-	ScanMode           string   `json:"scanMode,omitempty"`
-	RetryMode          string   `json:"retryMode,omitempty"`
-	RetryScope         string   `json:"retryScope,omitempty"`
-	RetrySelectedPaths []string `json:"retrySelectedPaths,omitempty"`
-	SelectedRoots      []string `json:"selectedRoots,omitempty"`
-	ScanTrace          []string `json:"scanTrace,omitempty"`
-	BlockedReason      string   `json:"blockedReason,omitempty"`
-	LastCompletedPath  string   `json:"lastCompletedPath,omitempty"`
-	ResultCount        int      `json:"resultCount"`
-	CreatedAt          string   `json:"createdAt"`
+	ProviderKey            string   `json:"providerKey"`
+	TaskID                 string   `json:"taskId"`
+	SourceProvider         string   `json:"sourceProvider"`
+	TargetProvider         string   `json:"targetProvider"`
+	TaskState              string   `json:"taskState"`
+	CompletionKind         string   `json:"completionKind,omitempty"`
+	ExecutionMode          string   `json:"executionMode,omitempty"`
+	ScanMode               string   `json:"scanMode,omitempty"`
+	RetryMode              string   `json:"retryMode,omitempty"`
+	RetryScope             string   `json:"retryScope,omitempty"`
+	RetrySelectedPaths     []string `json:"retrySelectedPaths,omitempty"`
+	RetrySelectedPathCount int      `json:"retrySelectedPathCount,omitempty"`
+	SelectedRoots          []string `json:"selectedRoots,omitempty"`
+	ScanTrace              []string `json:"scanTrace,omitempty"`
+	BlockedReason          string   `json:"blockedReason,omitempty"`
+	LastCompletedPath      string   `json:"lastCompletedPath,omitempty"`
+	ResultCount            int      `json:"resultCount"`
+	CreatedAt              string   `json:"createdAt"`
 }
 
 type BlockedAction struct {
@@ -1136,7 +1137,9 @@ func (s *Service) buildRetryDetail(detail Detail, opts RetryOptions) (Detail, er
 		plan.Metadata["retryMode"] = retryMode
 		plan.Metadata["retryPendingPaths"] = retryPaths
 		if len(opts.Paths) > 0 {
-			plan.Metadata["retrySelectedPaths"] = normalizeSelectionPaths(opts.Paths)
+			selectedPaths := normalizeSelectionPaths(opts.Paths)
+			plan.Metadata["retrySelectedPaths"] = selectedPaths
+			plan.Metadata["retrySelectedPathCount"] = len(selectedPaths)
 			plan.Metadata["retryScope"] = strings.TrimSpace(opts.Scope)
 		}
 		plan.Metadata["retrySourceResultCount"] = len(detail.Results)
@@ -1157,6 +1160,7 @@ func (s *Service) buildRetryDetail(detail Detail, opts RetryOptions) (Detail, er
 		delete(detail.Plan.Metadata, "retryAttempts")
 		delete(detail.Plan.Metadata, "retryUploadCheckpoints")
 		delete(detail.Plan.Metadata, "retrySelectedPaths")
+		delete(detail.Plan.Metadata, "retrySelectedPathCount")
 		delete(detail.Plan.Metadata, "retryScope")
 		delete(detail.Plan.Metadata, "retrySummary")
 	}
@@ -2443,6 +2447,9 @@ func attachPlanContextToResult(result *Result, metadata map[string]interface{}) 
 	}
 	if retrySelectedPaths, ok := metadata["retrySelectedPaths"]; ok {
 		result.Payload["retrySelectedPaths"] = retrySelectedPaths
+	}
+	if retrySelectedPathCount, ok := metadata["retrySelectedPathCount"]; ok {
+		result.Payload["retrySelectedPathCount"] = retrySelectedPathCount
 	}
 	if riskProfile, ok := metadata["riskProfile"]; ok {
 		result.Payload["riskProfile"] = riskProfile
@@ -4027,10 +4034,10 @@ func buildEvidenceReport(summary EvidenceSummary, statuses []StatusSummary, smok
 	if len(samples) == 0 {
 		b.WriteString("- 当前没有可展示的任务样本。\n")
 	} else {
-		b.WriteString("| Provider | Task | State | Completion | ExecMode | ScanMode | RetryMode | RetryScope | RetryPaths | Selected Roots | Scan Trace | BlockedReason | Last Path |\n")
-		b.WriteString("| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |\n")
+		b.WriteString("| Provider | Task | State | Completion | ExecMode | ScanMode | RetryMode | RetryScope | RetryPathCount | RetryPaths | Selected Roots | Scan Trace | BlockedReason | Last Path |\n")
+		b.WriteString("| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |\n")
 		for _, item := range samples {
-			fmt.Fprintf(&b, "| %s | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s |\n",
+			fmt.Fprintf(&b, "| %s | %s | %s | %s | %s | %s | %s | %s | %d | %s | %s | %s | %s | %s |\n",
 				markdownCell(firstNonEmpty(item.ProviderKey, "-")),
 				markdownCell(firstNonEmpty(item.TaskID, "-")),
 				markdownCell(firstNonEmpty(item.TaskState, "-")),
@@ -4039,6 +4046,7 @@ func buildEvidenceReport(summary EvidenceSummary, statuses []StatusSummary, smok
 				markdownCell(firstNonEmpty(item.ScanMode, "-")),
 				markdownCell(firstNonEmpty(item.RetryMode, "-")),
 				markdownCell(firstNonEmpty(item.RetryScope, "-")),
+				item.RetrySelectedPathCount,
 				markdownCell(strings.Join(item.RetrySelectedPaths, " -> ")),
 				markdownCell(strings.Join(item.SelectedRoots, " -> ")),
 				markdownCell(strings.Join(item.ScanTrace, " -> ")),
@@ -4052,14 +4060,16 @@ func buildEvidenceReport(summary EvidenceSummary, statuses []StatusSummary, smok
 		b.WriteString("- 暂无 recent probe。\n")
 	} else {
 		for _, probe := range summary.RecentProbes {
-			fmt.Fprintf(&b, "- %s %s %s %s retry=%s/%s paths=%s\n",
+			retrySelectedPaths := interfaceStringSlice(probe.Payload["retrySelectedPaths"])
+			fmt.Fprintf(&b, "- %s %s %s %s retry=%s/%s count=%d paths=%s\n",
 				markdownCell(firstNonEmpty(probe.ProviderKey, "-")),
 				markdownCell(firstNonEmpty(probe.Status, "-")),
 				markdownCell(firstNonEmpty(probe.CreatedAt, "-")),
 				markdownCell(firstNonEmpty(stringValue(probe.Payload["taskState"]), "-")),
 				markdownCell(firstNonEmpty(stringValue(probe.Payload["retryMode"]), "-")),
 				markdownCell(firstNonEmpty(stringValue(probe.Payload["retryScope"]), "-")),
-				markdownCell(strings.Join(interfaceStringSlice(probe.Payload["retrySelectedPaths"]), " -> ")),
+				len(retrySelectedPaths),
+				markdownCell(strings.Join(retrySelectedPaths, " -> ")),
 			)
 		}
 	}
@@ -4087,23 +4097,24 @@ func buildEvidenceSamples(details []Detail, limit int) []EvidenceSample {
 		scanTrace := metadataStringSlice(detail.Plan.Metadata, "scanTrace")
 		retrySelectedPaths := metadataStringSlice(detail.Plan.Metadata, "retrySelectedPaths")
 		samples = append(samples, EvidenceSample{
-			ProviderKey:        detail.Task.TargetProvider,
-			TaskID:             detail.Task.ID,
-			SourceProvider:     detail.Task.SourceProvider,
-			TargetProvider:     detail.Task.TargetProvider,
-			TaskState:          string(detail.Task.State),
-			CompletionKind:     string(detail.Task.CompletionKind),
-			ExecutionMode:      executionModeString(detail.Plan.Metadata),
-			ScanMode:           stringValue(detail.Plan.Metadata["scanMode"]),
-			RetryMode:          stringValue(detail.Plan.Metadata["retryMode"]),
-			RetryScope:         stringValue(detail.Plan.Metadata["retryScope"]),
-			RetrySelectedPaths: retrySelectedPaths,
-			SelectedRoots:      selectedRoots,
-			ScanTrace:          scanTrace,
-			BlockedReason:      stringValue(detail.Runtime.BlockedReason),
-			LastCompletedPath:  detail.Runtime.LastCompletedPath,
-			ResultCount:        len(detail.Results),
-			CreatedAt:          detail.Task.CreatedAt,
+			ProviderKey:            detail.Task.TargetProvider,
+			TaskID:                 detail.Task.ID,
+			SourceProvider:         detail.Task.SourceProvider,
+			TargetProvider:         detail.Task.TargetProvider,
+			TaskState:              string(detail.Task.State),
+			CompletionKind:         string(detail.Task.CompletionKind),
+			ExecutionMode:          executionModeString(detail.Plan.Metadata),
+			ScanMode:               stringValue(detail.Plan.Metadata["scanMode"]),
+			RetryMode:              stringValue(detail.Plan.Metadata["retryMode"]),
+			RetryScope:             stringValue(detail.Plan.Metadata["retryScope"]),
+			RetrySelectedPaths:     retrySelectedPaths,
+			RetrySelectedPathCount: len(retrySelectedPaths),
+			SelectedRoots:          selectedRoots,
+			ScanTrace:              scanTrace,
+			BlockedReason:          stringValue(detail.Runtime.BlockedReason),
+			LastCompletedPath:      detail.Runtime.LastCompletedPath,
+			ResultCount:            len(detail.Results),
+			CreatedAt:              detail.Task.CreatedAt,
 		})
 		if len(samples) >= limit {
 			break
@@ -6471,6 +6482,7 @@ func buildProviderProbe(detail Detail, profile provider.AuthProfile, results []R
 			"retryMode":                      detail.Plan.Metadata["retryMode"],
 			"retryScope":                     detail.Plan.Metadata["retryScope"],
 			"retrySelectedPaths":             detail.Plan.Metadata["retrySelectedPaths"],
+			"retrySelectedPathCount":         detail.Plan.Metadata["retrySelectedPathCount"],
 			"riskProfile":                    detail.Plan.Metadata["riskProfile"],
 			"riskOverride":                   detail.Plan.Metadata["riskOverride"],
 			"sourceDeletePolicy":             detail.Plan.Metadata["sourceDeletePolicy"],
