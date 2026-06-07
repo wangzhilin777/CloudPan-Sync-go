@@ -131,6 +131,9 @@ func TestHandleIndexServesHTML(t *testing.T) {
 	if !strings.Contains(body, `id="plan-target-provider-insight"`) {
 		t.Fatalf("expected target provider insight panel in html body, got %q", body)
 	}
+	if !strings.Contains(body, `id="provider-smoke-records-filter-sample-type"`) {
+		t.Fatalf("expected provider smoke sample type filter in html body, got %q", body)
+	}
 }
 
 func TestRoutesServeStaticAssets(t *testing.T) {
@@ -989,6 +992,9 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	}
 	if !strings.Contains(body, "provider-smoke-records-filter-clear") {
 		t.Fatalf("expected provider smoke filter clear action in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "providerSmokeRecordFilters.sampleType") || !strings.Contains(body, "#provider-smoke-records-filter-sample-type") {
+		t.Fatalf("expected provider smoke sample type filter wiring in app.js, got %q", body)
 	}
 	if !strings.Contains(body, "template:") {
 		t.Fatalf("expected provider smoke template summary in app.js, got %q", body)

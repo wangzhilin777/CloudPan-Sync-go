@@ -20,6 +20,7 @@ const state = {
   providerSmokeRecordFilters: {
     query: "",
     protocolGroup: "",
+    sampleType: "",
     result: "",
   },
   selectedProviderSmokeId: "",
@@ -6546,16 +6547,18 @@ function filterProviderSmokeRecords(items, filters = {}) {
   const records = Array.isArray(items) ? items : [];
   const query = String(filters.query || "").trim().toLowerCase();
   const protocolGroup = String(filters.protocolGroup || "").trim().toLowerCase();
+  const sampleType = String(filters.sampleType || "").trim().toLowerCase();
   const result = String(filters.result || "").trim().toLowerCase();
-  const filterActive = Boolean(query || protocolGroup || result);
+  const filterActive = Boolean(query || protocolGroup || sampleType || result);
   const visible = records.filter((item) => {
     const matchesQuery = includesFilterText(
       [item.title, item.providerKey, item.note, item.sampleType, item.evidenceCompleteness, item.reuseAdvice, item.reusePriority, item.regressionEntry, Array.isArray(item.representativeLabels) ? item.representativeLabels.join("/") : "", item.autoRecoverFocus, Array.isArray(item.operations) ? item.operations.join(",") : ""],
       query,
     );
     const matchesGroup = includesFilterText([item.protocolGroup], protocolGroup);
+    const matchesSampleType = includesFilterText([item.sampleType, item.reusePriority, item.autoRecoverFocus], sampleType);
     const matchesResult = includesFilterText([item.result], result);
-    return matchesQuery && matchesGroup && matchesResult;
+    return matchesQuery && matchesGroup && matchesSampleType && matchesResult;
   });
   return {
     items: visible,
@@ -8059,6 +8062,10 @@ function wireTreeFilters() {
     state.providerSmokeRecordFilters.protocolGroup = event.target.value;
     renderStatus();
   });
+  $("#provider-smoke-records-filter-sample-type").addEventListener("input", (event) => {
+    state.providerSmokeRecordFilters.sampleType = event.target.value;
+    renderStatus();
+  });
   $("#provider-smoke-records-filter-result").addEventListener("change", (event) => {
     state.providerSmokeRecordFilters.result = event.target.value;
     renderStatus();
@@ -8066,9 +8073,11 @@ function wireTreeFilters() {
   $("#provider-smoke-records-filter-clear").addEventListener("click", () => {
     state.providerSmokeRecordFilters.query = "";
     state.providerSmokeRecordFilters.protocolGroup = "";
+    state.providerSmokeRecordFilters.sampleType = "";
     state.providerSmokeRecordFilters.result = "";
     setFilterControlValue("#provider-smoke-records-filter-query", "");
     setFilterControlValue("#provider-smoke-records-filter-group", "");
+    setFilterControlValue("#provider-smoke-records-filter-sample-type", "");
     setFilterControlValue("#provider-smoke-records-filter-result", "");
     renderStatus();
     showFlash("已清空 smoke 记录筛选");
