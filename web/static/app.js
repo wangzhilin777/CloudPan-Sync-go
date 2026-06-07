@@ -3965,6 +3965,11 @@ function renderStatus() {
     .sort((left, right) => Number(right[1] || 0) - Number(left[1] || 0) || String(left[0]).localeCompare(String(right[0])))
     .map(([label, count]) => `${label} x${count}`)
     .join(" / ");
+  const smokePriorityActionCounts = evidence.smokeMatrixPriorityActionCounts && typeof evidence.smokeMatrixPriorityActionCounts === "object" ? evidence.smokeMatrixPriorityActionCounts : {};
+  const smokePriorityActionSummary = Object.entries(smokePriorityActionCounts)
+    .sort((left, right) => Number(right[1] || 0) - Number(left[1] || 0) || String(left[0]).localeCompare(String(right[0])))
+    .map(([label, count]) => `${label} x${count}`)
+    .join(" / ");
   syncAutoRecoverProtocolGroups();
   syncAutoRecoverProfiles();
   syncAutoRecoverBlockedActions();
@@ -4001,6 +4006,11 @@ function renderStatus() {
     <div class="metric"><span>Pending Groups</span><strong>${pendingSmokeGroups}</strong></div>
     <div class="metric"><span>Upload Success Groups</span><strong>${stringifyValue(evidence.uploadSuccessGroups, String(uploadSuccessSmokeGroups))}</strong></div>
     <div class="metric"><span>Upload Success Samples</span><strong>${stringifyValue(evidence.uploadSuccessSamples, "0")}</strong></div>
+    <div class="metric"><span>Smoke Missing Upload</span><strong>${escapeHTML(summarizePathList(evidence.smokeMatrixMissingUploadGroups, 4))}</strong></div>
+    <div class="metric"><span>Smoke Missing Coverage</span><strong>${escapeHTML(summarizePathList(evidence.smokeMatrixMissingCoverageGroups, 4))}</strong></div>
+    <div class="metric"><span>Smoke Missing Anomaly</span><strong>${escapeHTML(summarizePathList(evidence.smokeMatrixMissingAnomalyGroups, 4))}</strong></div>
+    <div class="metric"><span>Smoke Missing Representative</span><strong>${escapeHTML(summarizePathList(evidence.smokeMatrixMissingRepresentativeGroups, 4))}</strong></div>
+    <div class="metric"><span>Smoke Priority Actions</span><strong>${escapeHTML(smokePriorityActionSummary || "-")}</strong></div>
     <div class="metric"><span>Checkpoint Ready</span><strong>${escapeHTML(renderUploadCheckpointReadiness(evidence))}</strong></div>
     <div class="metric"><span>Checkpoint Priority</span><strong>${escapeHTML(renderUploadCheckpointPriorityAction(evidence))}</strong></div>
     <div class="metric"><span>Recover Priority</span><strong>${escapeHTML(renderAutoRecoverPriorityAction(evidence))}</strong></div>

@@ -45,6 +45,7 @@
 - 已把 provider 级真实样本验收的缺基础成功、缺上传成功、缺异常样本、缺代表性样本 provider 数量结构化写入 summary，并在报告页展示，便于直接判断下一轮补样方向。
 - 已把 provider 级真实样本验收的缺口 provider 列表结构化写入 summary，并在报告和页面摘要展示，便于直接定位下一批要补样的 provider。
 - 已把 provider 级真实样本验收的首要补样动作聚合成 priority action counts，并在报告和页面摘要展示，便于直接判断当前最该优先补基础成功、上传成功还是异常/代表性样本。
+- 已把协议组级真实样本矩阵的缺上传、缺任务覆盖、缺异常样本、缺代表性样本协议组列表和首要补样动作分布结构化写入 summary，并在运行证据和报告摘要展示，便于直接定位下一批协议组补样方向。
 
 ### 对应提交
 
@@ -68,6 +69,7 @@
 - 当前轮次已新增 providerSmokeProviderMissingBasicCount / MissingUploadCount / MissingAnomalyCount / MissingRepresentativeCount summary 字段与 task/app 测试兜底，用于把 provider 真实样本缺口从逐行翻阅推进到聚合缺口计数。
 - 当前轮次已新增 providerSmokeProviderMissing*Providers summary 列表字段与 task/app 测试兜底，用于把“缺哪类样本”进一步落到具体 provider key。
 - 当前轮次已新增 providerSmokeProviderPriorityActionCounts summary 字段与 task/app 测试兜底，用于把 provider 级首要补样动作从逐行阅读推进到可直接统计的动作分布。
+- 当前轮次已新增 smokeMatrixMissing*Groups 与 smokeMatrixPriorityActionCounts summary 字段与 task/app 测试兜底，用于把协议组真实样本缺口从矩阵逐行阅读推进到运行证据可直接读取的缺口列表和动作分布。
 
 ### 仍未完成
 

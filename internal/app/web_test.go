@@ -1011,6 +1011,12 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "preferred upload:") || !strings.Contains(body, "preferred anomaly:") || !strings.Contains(body, "preferred representative:") {
 		t.Fatalf("expected provider smoke preferred upload/anomaly/representative summaries in app.js, got %q", body)
 	}
+	if !strings.Contains(body, "smokeMatrixMissingUploadGroups") || !strings.Contains(body, "smokeMatrixMissingCoverageGroups") || !strings.Contains(body, "smokeMatrixMissingAnomalyGroups") || !strings.Contains(body, "smokeMatrixMissingRepresentativeGroups") {
+		t.Fatalf("expected smoke matrix missing group summaries in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "smokeMatrixPriorityActionCounts") || !strings.Contains(body, "Smoke Priority Actions") {
+		t.Fatalf("expected smoke matrix priority action counts in app.js, got %q", body)
+	}
 	if !strings.Contains(body, "provider preferred representative:") || !strings.Contains(body, "provider representative missing:") || !strings.Contains(body, "provider representative actions:") || !strings.Contains(body, "provider representative advice:") {
 		t.Fatalf("expected provider-level representative summaries in app.js, got %q", body)
 	}

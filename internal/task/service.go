@@ -195,6 +195,11 @@ type EvidenceSummary struct {
 	PendingSmokeGroups                                  int                `json:"pendingSmokeGroups"`
 	UploadSuccessGroups                                 int                `json:"uploadSuccessGroups"`
 	UploadSuccessSamples                                int                `json:"uploadSuccessSamples"`
+	SmokeMatrixMissingUploadGroups                      []string           `json:"smokeMatrixMissingUploadGroups,omitempty"`
+	SmokeMatrixMissingCoverageGroups                    []string           `json:"smokeMatrixMissingCoverageGroups,omitempty"`
+	SmokeMatrixMissingAnomalyGroups                     []string           `json:"smokeMatrixMissingAnomalyGroups,omitempty"`
+	SmokeMatrixMissingRepresentativeGroups              []string           `json:"smokeMatrixMissingRepresentativeGroups,omitempty"`
+	SmokeMatrixPriorityActionCounts                     map[string]int     `json:"smokeMatrixPriorityActionCounts,omitempty"`
 	ProviderSmokeProviderTotalCount                     int                `json:"providerSmokeProviderTotalCount"`
 	ProviderSmokeProviderReadyCount                     int                `json:"providerSmokeProviderReadyCount"`
 	ProviderSmokeProviderPartialCount                   int                `json:"providerSmokeProviderPartialCount"`
@@ -3888,6 +3893,11 @@ func buildEvidenceReport(summary EvidenceSummary, statuses []StatusSummary, smok
 	fmt.Fprintf(&b, "- 待补齐协议组: %d\n", summary.PendingSmokeGroups)
 	fmt.Fprintf(&b, "- 上传成功协议组: %d\n", summary.UploadSuccessGroups)
 	fmt.Fprintf(&b, "- 上传成功样本数: %d\n", summary.UploadSuccessSamples)
+	fmt.Fprintf(&b, "- 真实样本缺上传协议组: %s\n", previewStringList(summary.SmokeMatrixMissingUploadGroups, 12))
+	fmt.Fprintf(&b, "- 真实样本缺任务覆盖协议组: %s\n", previewStringList(summary.SmokeMatrixMissingCoverageGroups, 12))
+	fmt.Fprintf(&b, "- 真实样本缺异常协议组: %s\n", previewStringList(summary.SmokeMatrixMissingAnomalyGroups, 12))
+	fmt.Fprintf(&b, "- 真实样本缺代表性协议组: %s\n", previewStringList(summary.SmokeMatrixMissingRepresentativeGroups, 12))
+	fmt.Fprintf(&b, "- 真实样本首要补样动作分布: %s\n", previewCountMap(summary.SmokeMatrixPriorityActionCounts, 8))
 	fmt.Fprintf(&b, "- Provider 验收 ready: %d / %d\n", summary.ProviderSmokeProviderReadyCount, summary.ProviderSmokeProviderTotalCount)
 	fmt.Fprintf(&b, "- Provider 验收 partial: %d\n", summary.ProviderSmokeProviderPartialCount)
 	fmt.Fprintf(&b, "- Provider 验收 pending: %d\n", summary.ProviderSmokeProviderPendingCount)
@@ -4290,6 +4300,10 @@ func enrichEvidenceSummaryWithSmoke(summary EvidenceSummary, smokeSummaries []Pr
 	summary.PendingSmokeGroups = 0
 	summary.UploadSuccessGroups = 0
 	summary.UploadSuccessSamples = 0
+	summary.SmokeMatrixMissingUploadGroups = nil
+	summary.SmokeMatrixMissingCoverageGroups = nil
+	summary.SmokeMatrixMissingAnomalyGroups = nil
+	summary.SmokeMatrixMissingRepresentativeGroups = nil
 	if summary.AcceptanceActionCounts == nil {
 		summary.AcceptanceActionCounts = make(map[string]int)
 	} else {
@@ -4297,12 +4311,32 @@ func enrichEvidenceSummaryWithSmoke(summary EvidenceSummary, smokeSummaries []Pr
 			delete(summary.AcceptanceActionCounts, key)
 		}
 	}
+	if summary.SmokeMatrixPriorityActionCounts == nil {
+		summary.SmokeMatrixPriorityActionCounts = make(map[string]int)
+	} else {
+		for key := range summary.SmokeMatrixPriorityActionCounts {
+			delete(summary.SmokeMatrixPriorityActionCounts, key)
+		}
+	}
 	smokeMatrix := buildProviderSmokeMatrix(summary, smokeSummaries)
 	for _, row := range smokeMatrix {
+		protocolGroup := firstNonEmpty(row.ProtocolGroup, "unknown")
 		if row.HasUploadSuccessSample {
 			summary.UploadSuccessGroups++
+		} else {
+			summary.SmokeMatrixMissingUploadGroups = append(summary.SmokeMatrixMissingUploadGroups, protocolGroup)
+		}
+		if row.CoverageRealSuccessTaskCount < row.CoverageTaskCount {
+			summary.SmokeMatrixMissingCoverageGroups = append(summary.SmokeMatrixMissingCoverageGroups, protocolGroup)
+		}
+		if len(row.AnomalyMissing) > 0 {
+			summary.SmokeMatrixMissingAnomalyGroups = append(summary.SmokeMatrixMissingAnomalyGroups, protocolGroup)
+		}
+		if len(row.RepresentativeMissing) > 0 {
+			summary.SmokeMatrixMissingRepresentativeGroups = append(summary.SmokeMatrixMissingRepresentativeGroups, protocolGroup)
 		}
 		summary.UploadSuccessSamples += row.UploadSuccessCount
+		summary.SmokeMatrixPriorityActionCounts[renderSmokePriorityAction(row)]++
 		for _, action := range row.AcceptanceActions {
 			action = strings.TrimSpace(action)
 			if action == "" {

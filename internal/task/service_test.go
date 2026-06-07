@@ -8180,6 +8180,12 @@ func TestServiceProviderSmokeRecords(t *testing.T) {
 	if got := evidence.AcceptanceActionCounts["补 1 条真实上传成功样本"]; got < 1 {
 		t.Fatalf("expected acceptance action count for upload success sample >= 1, got %d", got)
 	}
+	if len(evidence.SmokeMatrixMissingUploadGroups) == 0 || len(evidence.SmokeMatrixMissingAnomalyGroups) == 0 || len(evidence.SmokeMatrixMissingRepresentativeGroups) == 0 {
+		t.Fatalf("expected smoke matrix missing group summaries, got %#v", evidence)
+	}
+	if got := evidence.SmokeMatrixPriorityActionCounts["补 1 条真实上传成功样本"]; got < 1 {
+		t.Fatalf("expected smoke matrix priority action count for upload success sample >= 1, got %d", got)
+	}
 
 	report, err := svc.EvidenceReport(ctx)
 	if err != nil {
@@ -8212,6 +8218,9 @@ func TestServiceProviderSmokeRecords(t *testing.T) {
 	}
 	if !strings.Contains(report.Markdown, "Provider 验收 ready") || !strings.Contains(report.Markdown, "Provider 验收 partial") || !strings.Contains(report.Markdown, "Provider 验收 pending") {
 		t.Fatalf("expected provider smoke provider summary counters in report markdown, got %s", report.Markdown)
+	}
+	if !strings.Contains(report.Markdown, "真实样本缺上传协议组") || !strings.Contains(report.Markdown, "真实样本缺异常协议组") || !strings.Contains(report.Markdown, "真实样本首要补样动作分布") {
+		t.Fatalf("expected smoke matrix missing group summaries in report markdown, got %s", report.Markdown)
 	}
 	if !strings.Contains(report.Markdown, "Provider 验收缺基础成功") || !strings.Contains(report.Markdown, "Provider 验收缺上传成功") || !strings.Contains(report.Markdown, "Provider 验收缺异常样本") || !strings.Contains(report.Markdown, "Provider 验收缺代表性样本") {
 		t.Fatalf("expected provider smoke provider missing counters in report markdown, got %s", report.Markdown)
