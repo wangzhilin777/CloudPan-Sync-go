@@ -4427,6 +4427,16 @@ func providerSmokeEnvironmentKeys(record ProviderSmokeRecord) []string {
 	return keys
 }
 
+func providerSmokeNoteMentionsCoveragePendingManual(note string) bool {
+	normalized := strings.TrimSpace(strings.ToLower(note))
+	return strings.Contains(normalized, "pending_manual") ||
+		strings.Contains(normalized, "pending manual") ||
+		strings.Contains(normalized, "coverage") ||
+		strings.Contains(normalized, "downgrade") ||
+		strings.Contains(normalized, "degrade") ||
+		strings.Contains(normalized, "降级")
+}
+
 func providerSmokeSampleType(record ProviderSmokeRecord) string {
 	category := strings.TrimSpace(strings.ToLower(record.Category))
 	result := strings.TrimSpace(strings.ToLower(record.Result))
@@ -4438,7 +4448,7 @@ func providerSmokeSampleType(record ProviderSmokeRecord) string {
 		return "授权失效异常样本"
 	case result != "success" && strings.Contains(note, "local"):
 		return "本地文件缺失异常样本"
-	case result != "success" && (strings.Contains(note, "pending_manual") || strings.Contains(note, "pending manual") || strings.Contains(note, "coverage") || strings.Contains(note, "downgrade") || strings.Contains(note, "degrade") || strings.Contains(note, "降级")):
+	case result != "success" && providerSmokeNoteMentionsCoveragePendingManual(note):
 		return "覆盖降级或 pending_manual 异常样本"
 	case result != "success" && strings.Contains(note, "manual"):
 		return "人工确认异常样本"
@@ -4473,7 +4483,7 @@ func providerSmokeReuseAdvice(record ProviderSmokeRecord) string {
 		return "可复用为授权失效回归样本，后续验证 refresh_auth_profile 闭环。"
 	case strings.Contains(strings.ToLower(record.Note), "local"):
 		return "可复用为本地文件缺失回归样本，后续验证 restore_local_source_file 闭环。"
-	case strings.Contains(strings.ToLower(record.Note), "pending_manual") || strings.Contains(strings.ToLower(record.Note), "coverage") || strings.Contains(strings.ToLower(record.Note), "downgrade") || strings.Contains(strings.ToLower(record.Note), "degrade") || strings.Contains(strings.ToLower(record.Note), "降级"):
+	case providerSmokeNoteMentionsCoveragePendingManual(record.Note):
 		return "可复用为覆盖降级 / pending_manual 回归样本，后续验证 pending_manual 与覆盖降级闭环。"
 	case strings.Contains(strings.ToLower(record.Note), "manual"):
 		return "可复用为人工确认回归样本，后续验证 pending_manual 与覆盖降级闭环。"
@@ -4537,6 +4547,12 @@ func providerSmokeRepresentativeLabels(record ProviderSmokeRecord) []string {
 
 func providerSmokeAutoRecoverFocus(record ProviderSmokeRecord) string {
 	labels := providerSmokeRepresentativeLabels(record)
+	if providerSmokeNoteMentionsCoveragePendingManual(record.Note) {
+		if len(labels) > 0 {
+			return "建议同步记录 pending_manual / 覆盖降级的 blocked action、人工确认条件、重试范围与自动补传队列影响，当前样本同时涉及：" + strings.Join(labels, " / ")
+		}
+		return "建议同步记录 pending_manual / 覆盖降级的 blocked action、人工确认条件、重试范围与自动补传队列影响。"
+	}
 	if len(labels) > 0 {
 		return "建议同步关注自动补传、公平预算与续传链路，当前样本涉及：" + strings.Join(labels, " / ")
 	}

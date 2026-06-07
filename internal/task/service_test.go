@@ -8308,6 +8308,9 @@ func TestServiceProviderSmokeRecordsClassifyCoveragePendingManualSamples(t *test
 	if record.ReusePriority != "条件复用" {
 		t.Fatalf("expected reuse priority 条件复用 for classified anomaly sample, got %s", record.ReusePriority)
 	}
+	if !strings.Contains(record.AutoRecoverFocus, "pending_manual") || !strings.Contains(record.AutoRecoverFocus, "自动补传队列") {
+		t.Fatalf("expected auto recover focus to mention pending_manual queue impact, got %s", record.AutoRecoverFocus)
+	}
 	if !strings.Contains(record.Markdown, "覆盖降级或 pending_manual 异常样本") {
 		t.Fatalf("expected markdown to include classified sample type, got %s", record.Markdown)
 	}
