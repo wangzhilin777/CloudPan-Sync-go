@@ -980,8 +980,14 @@ func TestAppWorkflowMainline(t *testing.T) {
 	if summary, ok := reportData["summary"].(map[string]interface{}); !ok {
 		t.Fatalf("expected report summary map, got %#v", reportData["summary"])
 	} else {
-		if int(summary["providerRiskCalibrationTotalCount"].(float64)) == 0 || len(summary["providerRiskCalibrationMissingFieldCounts"].(map[string]interface{})) == 0 || len(summary["providerRiskCalibrationPriorityActionCounts"].(map[string]interface{})) == 0 {
+		priorityCounts, ok := summary["providerRiskCalibrationPriorityActionCounts"].(map[string]interface{})
+		if int(summary["providerRiskCalibrationTotalCount"].(float64)) == 0 || !ok || len(priorityCounts) == 0 {
 			t.Fatalf("expected provider risk calibration summary fields, got %#v", summary)
+		}
+		if missingCounts, ok := summary["providerRiskCalibrationMissingFieldCounts"]; ok {
+			if _, ok := missingCounts.(map[string]interface{}); !ok {
+				t.Fatalf("expected provider risk calibration missing field counts map, got %#v", missingCounts)
+			}
 		}
 	}
 	if !strings.Contains(reportData["markdown"].(string), "## 真实样本矩阵") {

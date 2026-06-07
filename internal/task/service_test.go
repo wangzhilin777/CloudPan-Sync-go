@@ -482,6 +482,10 @@ func TestServiceProtocolCoverageSummary(t *testing.T) {
 	if quarkCoverage.SampleProviderKey != "coverage_target_quark" {
 		t.Fatalf("expected quark sample provider, got %#v", quarkCoverage)
 	}
+	if evidence.ProviderRiskCalibrationTotalCount != len(registry.List()) ||
+		evidence.ProviderRiskCalibrationReadyCount+evidence.ProviderRiskCalibrationPartialCount+evidence.ProviderRiskCalibrationPendingCount != evidence.ProviderRiskCalibrationTotalCount {
+		t.Fatalf("expected runtime provider risk calibration counts, got %#v", evidence)
+	}
 
 	statuses, err := svc.ProviderStatuses(ctx)
 	if err != nil {

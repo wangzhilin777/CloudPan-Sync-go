@@ -839,6 +839,7 @@ func taskEvidenceSummary(ctx context.Context, store *sqlitestore.Store, provider
 		summary.AutoRecoverWaitingOtherTasks = summarizeAutoRecoverStateCounts(summary.AutoRecoverPool)
 	populateAutoRecoverFairnessSummary(&summary)
 	populateAutoRecoverPriorityActionCounts(&summary)
+	populateProviderRiskCalibrationSummary(&summary, providers)
 	results, err := recentTaskResults(ctx, store, 10)
 	if err != nil {
 		return summary, err
