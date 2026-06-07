@@ -781,6 +781,11 @@ func TestAppWorkflowMainline(t *testing.T) {
 	if got := smokeSummary[0].(map[string]interface{})["preferredUploadPriority"].(string); got == "" {
 		t.Fatal("expected smoke summary preferredUploadPriority")
 	}
+	if preferredRepresentative, ok := smokeSummary[0].(map[string]interface{})["preferredRepresentativePriority"]; ok {
+		if got := preferredRepresentative.(string); got == "" {
+			t.Fatal("expected smoke summary preferredRepresentativePriority")
+		}
+	}
 	if got := smokeSummary[0].(map[string]interface{})["sampleCategory"].(string); got != "binary_upload_success" {
 		t.Fatalf("expected smoke summary sampleCategory binary_upload_success, got %s", got)
 	}

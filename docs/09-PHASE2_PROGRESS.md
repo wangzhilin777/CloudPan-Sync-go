@@ -38,6 +38,7 @@
 - 已把 smoke 样本的“可复用程度”继续收口成结构化 `reusePriority` 字段，直接区分 `直接回归 / 条件复用 / 参考样本`，并接到列表展示与检索，便于更快挑出最适合优先复跑的样本。
 - 已把协议组汇总里的“首选回归样本”继续收口成 `preferredSampleRecordId / preferredSampleTitle / preferredSampleProvider / preferredSamplePriority` 摘要，直接指向当前最值得先复跑的一条真实样本，而不只是显示最近记录。
 - 已把协议组汇总继续细分出 `preferredUploadSample*` 与 `preferredAnomalySample*` 摘要，能直接区分“优先复跑成功链路样本”与“优先复跑异常证据样本”，减少人工翻样本记录的时间。
+- 已把协议组汇总继续细分出 `preferredRepresentativeSample*` 摘要，能直接把大文件、多层目录、重试恢复这类代表性样本提升到优先回归入口，便于先补关键边界证据。
 
 ### 对应提交
 
@@ -54,8 +55,7 @@
 - 当前轮次已把 smoke 列表查询同步扩展到结构化样本字段，并补 workflow/web 断言兜底，用于直接按复用建议、代表性标签和自动补传关注点检索历史样本。
 - 当前轮次已新增 `reusePriority` 结构化字段和 task/app 测试兜底，用于把“这条样本更适合直接回归还是只作参考”从经验判断提升成可直接返回和展示的统一口径。
 - 当前轮次已新增协议组级 preferred sample 摘要和 task/app/web 测试兜底，用于把“先拿哪条样本回归”从人工判断提升到汇总视图可直接查看的统一口径。
-- 当前轮次已新增 `preferredUploadSample* / preferredAnomalySample*` 摘要与测试兜底，用于把“先补成功链路还是先复跑异常样本”直接提升到协议组汇总层。
-- 当前轮次已新增 preferred upload/anomaly 摘要和 task/app/web 测试兜底，用于把协议组样本进一步拆成“首选上传样本”和“首选异常样本”两类优先证据。
+- 当前轮次已新增 `preferredUploadSample* / preferredAnomalySample* / preferredRepresentativeSample*` 摘要与 task/app/web 测试兜底，用于把协议组样本进一步拆成“首选上传样本”“首选异常样本”和“首选代表性样本”三类优先证据。
 
 ### 仍未完成
 

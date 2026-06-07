@@ -8445,6 +8445,12 @@ func TestProviderSmokeSummaryPrefersHigherReusePrioritySample(t *testing.T) {
 	if summary[0].PreferredAnomalySampleID != "" {
 		t.Fatalf("expected empty preferred anomaly sample id, got %s", summary[0].PreferredAnomalySampleID)
 	}
+	if summary[0].PreferredRepresentativeSampleID != uploadRecord.ID {
+		t.Fatalf("expected preferred representative sample id %s, got %s", uploadRecord.ID, summary[0].PreferredRepresentativeSampleID)
+	}
+	if summary[0].PreferredRepresentativePriority != "直接回归" {
+		t.Fatalf("expected preferred representative sample priority 直接回归, got %s", summary[0].PreferredRepresentativePriority)
+	}
 }
 
 func TestRecoverBudgetsPreferPlannerMetadataAndFallback(t *testing.T) {
