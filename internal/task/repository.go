@@ -827,6 +827,7 @@ func taskEvidenceSummary(ctx context.Context, store *sqlitestore.Store, provider
 	}
 	summary.BlockedActions = summarizeBlockedActions(blockedDetails)
 	summary.AutoRecoverPool, summary.AutoRecoverTasks = summarizeAutoRecoverPool(details, providers)
+	populateUploadCheckpointResumeSummary(&summary)
 	summary.AutoRecoverRunnableTasks,
 		summary.AutoRecoverWaitingCooldownTasks,
 		summary.AutoRecoverWaitingRetryWindowTasks,

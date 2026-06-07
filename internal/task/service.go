@@ -206,6 +206,8 @@ type EvidenceSummary struct {
 	UploadCheckpointResumeSampleNextPart   int                `json:"uploadCheckpointResumeSampleNextPart,omitempty"`
 	UploadCheckpointResumeSamplePartCount  int                `json:"uploadCheckpointResumeSamplePartCount,omitempty"`
 	UploadCheckpointResumeSampleUploaded   int                `json:"uploadCheckpointResumeSampleUploaded,omitempty"`
+	UploadCheckpointResumeReadiness        string             `json:"uploadCheckpointResumeReadiness,omitempty"`
+	UploadCheckpointResumePriorityAction   string             `json:"uploadCheckpointResumePriorityAction,omitempty"`
 	AcceptanceActionCounts                 map[string]int     `json:"acceptanceActionCounts,omitempty"`
 	RecentResults                          []Result           `json:"recentResults"`
 	RecentProbes                           []ProviderProbe    `json:"recentProbes"`
@@ -3496,6 +3498,33 @@ func renderUploadCheckpointResumeReadiness(summary EvidenceSummary) string {
 	return "partial"
 }
 
+func renderUploadCheckpointResumePriorityAction(summary EvidenceSummary) string {
+	if summary.UploadCheckpointTaskCount == 0 {
+		return "优先形成 1 条 upload checkpoint 失败样本"
+	}
+	if summary.UploadCheckpointResumeTaskCount == 0 {
+		return "优先补 1 条 upload checkpoint 自动续传成功样本"
+	}
+	hasUploadID := strings.TrimSpace(summary.UploadCheckpointResumeSampleUploadID) != ""
+	hasPartEvidence := summary.UploadCheckpointResumeSampleNextPart > 0 || summary.UploadCheckpointResumeSampleUploaded > 0 || summary.UploadCheckpointResumeSamplePartCount > 0
+	switch {
+	case !hasUploadID:
+		return "优先补 uploadId / upload session 证据"
+	case !hasPartEvidence:
+		return "优先补 nextPart / uploadedParts 分片进度证据"
+	default:
+		return "complete"
+	}
+}
+
+func populateUploadCheckpointResumeSummary(summary *EvidenceSummary) {
+	if summary == nil {
+		return
+	}
+	summary.UploadCheckpointResumeReadiness = renderUploadCheckpointResumeReadiness(*summary)
+	summary.UploadCheckpointResumePriorityAction = renderUploadCheckpointResumePriorityAction(*summary)
+}
+
 func renderAutoRecoverReadiness(summary EvidenceSummary) string {
 	hasRunnable := summary.AutoRecoverRunnableTasks > 0
 	hasBlockingWait := summary.AutoRecoverWaitingProviderSessionTasks > 0 ||
@@ -3807,7 +3836,10 @@ func buildEvidenceReport(summary EvidenceSummary, statuses []StatusSummary, smok
 			summary.UploadCheckpointResumeSamplePartCount,
 		)
 	}
-	fmt.Fprintf(&b, "- Upload checkpoint 默认恢复 readiness: %s\n", renderUploadCheckpointResumeReadiness(summary))
+	checkpointReadiness := firstNonEmpty(summary.UploadCheckpointResumeReadiness, renderUploadCheckpointResumeReadiness(summary))
+	checkpointPriorityAction := firstNonEmpty(summary.UploadCheckpointResumePriorityAction, renderUploadCheckpointResumePriorityAction(summary))
+	fmt.Fprintf(&b, "- Upload checkpoint 默认恢复 readiness: %s\n", checkpointReadiness)
+	fmt.Fprintf(&b, "- Upload checkpoint 首要动作: %s\n", checkpointPriorityAction)
 	fmt.Fprintf(&b, "- Upload checkpoint 稳定性摘要: %s\n", renderUploadCheckpointResumeEvidenceSummary(summary))
 	fmt.Fprintf(&b, "- 自动补传恢复完成度: %s\n", renderAutoRecoverReadiness(summary))
 	fairnessReadiness := firstNonEmpty(summary.AutoRecoverFairnessReadiness, renderAutoRecoverFairnessReadiness(summary.AutoRecoverPool))

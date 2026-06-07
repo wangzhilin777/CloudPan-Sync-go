@@ -1434,6 +1434,9 @@ function renderUploadCheckpointResumeState(checkpoint) {
 }
 
 function renderUploadCheckpointReadiness(evidence) {
+  if (evidence?.uploadCheckpointResumeReadiness) {
+    return evidence.uploadCheckpointResumeReadiness;
+  }
   const resumeCount = Number(evidence?.uploadCheckpointResumeTaskCount || 0);
   if (resumeCount <= 0) {
     return "pending";
@@ -1443,6 +1446,29 @@ function renderUploadCheckpointReadiness(evidence) {
     || Number(evidence?.uploadCheckpointResumeSampleUploaded || 0) > 0
     || Number(evidence?.uploadCheckpointResumeSamplePartCount || 0) > 0;
   return hasUploadID && hasPartEvidence ? "ready" : "partial";
+}
+
+function renderUploadCheckpointPriorityAction(evidence) {
+  if (evidence?.uploadCheckpointResumePriorityAction) {
+    return evidence.uploadCheckpointResumePriorityAction;
+  }
+  if (Number(evidence?.uploadCheckpointTaskCount || 0) <= 0) {
+    return "优先形成 1 条 upload checkpoint 失败样本";
+  }
+  if (Number(evidence?.uploadCheckpointResumeTaskCount || 0) <= 0) {
+    return "优先补 1 条 upload checkpoint 自动续传成功样本";
+  }
+  const hasUploadID = Boolean(String(evidence?.uploadCheckpointResumeSampleUploadId || "").trim());
+  const hasPartEvidence = Number(evidence?.uploadCheckpointResumeSampleNextPart || 0) > 0
+    || Number(evidence?.uploadCheckpointResumeSampleUploaded || 0) > 0
+    || Number(evidence?.uploadCheckpointResumeSamplePartCount || 0) > 0;
+  if (!hasUploadID) {
+    return "优先补 uploadId / upload session 证据";
+  }
+  if (!hasPartEvidence) {
+    return "优先补 nextPart / uploadedParts 分片进度证据";
+  }
+  return "complete";
 }
 
 function renderAutoRecoverReadiness(evidence) {
@@ -3974,6 +4000,7 @@ function renderStatus() {
     <div class="metric"><span>Upload Success Groups</span><strong>${stringifyValue(evidence.uploadSuccessGroups, String(uploadSuccessSmokeGroups))}</strong></div>
     <div class="metric"><span>Upload Success Samples</span><strong>${stringifyValue(evidence.uploadSuccessSamples, "0")}</strong></div>
     <div class="metric"><span>Checkpoint Ready</span><strong>${escapeHTML(renderUploadCheckpointReadiness(evidence))}</strong></div>
+    <div class="metric"><span>Checkpoint Priority</span><strong>${escapeHTML(renderUploadCheckpointPriorityAction(evidence))}</strong></div>
     <div class="metric"><span>Recover Priority</span><strong>${escapeHTML(renderAutoRecoverPriorityAction(evidence))}</strong></div>
     <div class="metric"><span>Recover Ready</span><strong>${escapeHTML(renderAutoRecoverReadiness(evidence))}</strong></div>
     <div class="metric"><span>Fairness Ready</span><strong>${escapeHTML(renderAutoRecoverFairnessReadiness(evidence))}</strong></div>
@@ -5707,7 +5734,7 @@ function renderEvidenceUploadCheckpointSummary(report) {
     ? summary.uploadCheckpointResumeSamplePaths.filter(Boolean)
     : [];
   const readiness = renderUploadCheckpointReadiness(summary);
-  const priorityAction = renderAutoRecoverPriorityAction(summary);
+  const priorityAction = renderUploadCheckpointPriorityAction(summary);
   return `
     <div class="insight-card">
       <strong>Upload checkpoint 默认恢复验收</strong>
@@ -5723,6 +5750,7 @@ function renderEvidenceUploadCheckpointSummary(report) {
         <span class="pill">auto-resume ${resumeCount}</span>
         <span class="pill">readiness ${escapeHTML(readiness)}</span>
       </div>
+      <div class="muted">priority action: ${escapeHTML(priorityAction)}</div>
       <div class="muted">sample context: provider ${escapeHTML(stringifyValue(summary.uploadCheckpointResumeSampleProvider, "-"))} / group ${escapeHTML(stringifyValue(summary.uploadCheckpointResumeSampleProtocol, "-"))} / task ${escapeHTML(stringifyValue(summary.uploadCheckpointResumeSampleTaskId, "-"))} / profile ${escapeHTML(stringifyValue(summary.uploadCheckpointResumeSampleProfileId, "-"))}</div>
       <div class="muted">resume detail: upload ${escapeHTML(stringifyValue(summary.uploadCheckpointResumeSampleUploadId, "-"))} / next part ${escapeHTML(stringifyValue(summary.uploadCheckpointResumeSampleNextPart, "0"))} / uploaded ${escapeHTML(stringifyValue(summary.uploadCheckpointResumeSampleUploaded, "0"))}/${escapeHTML(stringifyValue(summary.uploadCheckpointResumeSamplePartCount, "0"))}</div>
       <div class="muted">sample path: ${escapeHTML(paths.length ? paths.join(" -> ") : "-")}</div>

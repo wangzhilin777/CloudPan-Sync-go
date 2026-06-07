@@ -98,6 +98,7 @@
 - 已把选择路径重试的路径数量补成结构化 `retrySelectedPathCount`，并透传到任务 metadata、运行结果、recent probe、provider 状态摘要、验收报告和页面展示，便于直接核对路径级/子树级补传范围。
 - 已把自动补传公平性验收补成结构化 `autoRecoverFairnessReadiness / autoRecoverFairnessMissing / autoRecoverFairnessPriorityAction`，并透传到运行证据、provider 状态、验收报告和页面展示，便于直接看出还缺多 provider、多账号还是多协议组候选池证据。
 - 已把重试链路里的 upload checkpoint 数量补成结构化 `retryUploadCheckpointCount`，并透传到任务 metadata、运行结果、recent probe、provider 状态摘要、验收报告和页面展示，便于直接核对本轮 retry 是否带着 checkpoint 恢复上下文继续执行。
+- 已把 upload checkpoint 默认恢复验收补成结构化 `uploadCheckpointResumeReadiness / uploadCheckpointResumePriorityAction`，并接入运行证据、验收报告和页面展示，便于直接判断还缺失败样本、自动续传样本还是 uploadId/分片进度证据。
 
 ### 对应提交
 
@@ -115,6 +116,7 @@
 - 当前轮次已新增 `retrySelectedPathCount` 透传与 task/app/web 测试兜底，用于让选择路径重试的范围不再只能靠人工展开 `retrySelectedPaths` 数组确认。
 - 当前轮次已新增自动补传公平性结构化缺口字段与 app/web 测试兜底，用于把公平性验收从纯文本摘要推进到接口可直接判断的稳定字段。
 - 当前轮次已新增 `retryUploadCheckpointCount` 透传与 task/web 测试兜底，用于让 upload checkpoint 续传上下文数量从内部 metadata map 提升成可直接查看的稳定字段。
+- 当前轮次已新增 upload checkpoint 默认恢复结构化 readiness / priority 字段与 task/app/web 测试兜底，用于把大文件/长链路恢复验收从报告文案进一步推进到接口稳定字段。
 
 ### 仍未完成
 

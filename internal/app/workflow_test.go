@@ -394,6 +394,12 @@ func TestAppWorkflowMainline(t *testing.T) {
 	if got := int(evidenceData["autoRecoverWaitingOtherTasks"].(float64)); got != 0 {
 		t.Fatalf("expected autoRecoverWaitingOtherTasks=0, got %d", got)
 	}
+	if got := evidenceData["uploadCheckpointResumeReadiness"].(string); got != "pending" {
+		t.Fatalf("expected uploadCheckpointResumeReadiness pending, got %s", got)
+	}
+	if got := evidenceData["uploadCheckpointResumePriorityAction"].(string); got != "优先形成 1 条 upload checkpoint 失败样本" {
+		t.Fatalf("expected uploadCheckpointResumePriorityAction to request checkpoint sample, got %s", got)
+	}
 	if got := evidenceData["autoRecoverFairnessReadiness"].(string); got != "pending" {
 		t.Fatalf("expected autoRecoverFairnessReadiness pending, got %s", got)
 	}
@@ -671,6 +677,9 @@ func TestAppWorkflowMainline(t *testing.T) {
 	}
 	if got := reportData["markdown"].(string); !strings.Contains(got, "Upload checkpoint 默认恢复 readiness") {
 		t.Fatalf("expected upload checkpoint readiness in report markdown, got %s", got)
+	}
+	if got := reportData["markdown"].(string); !strings.Contains(got, "Upload checkpoint 首要动作") {
+		t.Fatalf("expected upload checkpoint priority action in report markdown, got %s", got)
 	}
 	if got := reportData["markdown"].(string); !strings.Contains(got, "自动补传首要动作") {
 		t.Fatalf("expected auto recover priority action in report markdown, got %s", got)

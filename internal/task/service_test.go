@@ -3218,6 +3218,12 @@ func TestServiceRecoverBlockedTasksAutoResumesUploadCheckpointQueue(t *testing.T
 	if evidence.UploadCheckpointResumeSampleUploaded != 0 {
 		t.Fatalf("expected upload checkpoint resume sample uploaded count 0, got %d", evidence.UploadCheckpointResumeSampleUploaded)
 	}
+	if evidence.UploadCheckpointResumeReadiness != "ready" {
+		t.Fatalf("expected upload checkpoint resume readiness ready, got %q", evidence.UploadCheckpointResumeReadiness)
+	}
+	if evidence.UploadCheckpointResumePriorityAction != "complete" {
+		t.Fatalf("expected upload checkpoint resume priority complete, got %q", evidence.UploadCheckpointResumePriorityAction)
+	}
 	report, err := svc.EvidenceReport(ctx)
 	if err != nil {
 		t.Fatalf("EvidenceReport() error = %v", err)
@@ -3227,6 +3233,9 @@ func TestServiceRecoverBlockedTasksAutoResumesUploadCheckpointQueue(t *testing.T
 	}
 	if !strings.Contains(report.Markdown, "Upload checkpoint 默认恢复 readiness: ready") {
 		t.Fatalf("expected upload checkpoint readiness in report markdown, got %s", report.Markdown)
+	}
+	if !strings.Contains(report.Markdown, "Upload checkpoint 首要动作: complete") {
+		t.Fatalf("expected upload checkpoint priority action in report markdown, got %s", report.Markdown)
 	}
 	if !strings.Contains(report.Markdown, "自动补传首要动作") {
 		t.Fatalf("expected auto recover priority action in report markdown, got %s", report.Markdown)
