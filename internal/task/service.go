@@ -6695,8 +6695,9 @@ func resumeUploadForPath(metadata map[string]interface{}, path string) *provider
 	if checkpoint == nil {
 		return nil
 	}
+	itemPath := firstNonEmpty(checkpoint.ItemPath, normalizeScanPath(path))
 	return &provider.ResumeUpload{
-		ItemPath:          checkpoint.ItemPath,
+		ItemPath:          itemPath,
 		ProviderStatus:    checkpoint.ProviderStatus,
 		UpdatedAt:         checkpoint.UpdatedAt,
 		FileID:            checkpoint.FileID,

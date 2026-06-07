@@ -1067,6 +1067,30 @@ func TestServiceRuntimePreservesUploadFailureEvidence(t *testing.T) {
 	}
 }
 
+func TestResumeUploadForPathFallsBackToRequestedPath(t *testing.T) {
+	metadata := map[string]interface{}{
+		"retryUploadCheckpoints": map[string]interface{}{
+			"/legacy.bin": map[string]interface{}{
+				"providerStatus": "provider_request_failed",
+				"fileId":         "file-legacy",
+				"uploadId":       "upload-legacy",
+				"nextPartNumber": 2,
+			},
+		},
+	}
+
+	resume := resumeUploadForPath(metadata, "/legacy.bin")
+	if resume == nil {
+		t.Fatal("expected resume upload context")
+	}
+	if resume.ItemPath != "/legacy.bin" {
+		t.Fatalf("expected fallback item path /legacy.bin, got %s", resume.ItemPath)
+	}
+	if resume.UploadID != "upload-legacy" || resume.FileID != "file-legacy" || resume.NextPartNumber != 2 {
+		t.Fatalf("expected checkpoint fields to be preserved, got %#v", resume)
+	}
+}
+
 func TestServiceRuntimeHandlesPendingManualAuthExpiredRateLimitAndMissingLocalFile(t *testing.T) {
 	ctx := context.Background()
 	store, err := sqlitestore.New(ctx, filepath.Join(t.TempDir(), "runtime-errors.db"))
