@@ -757,6 +757,9 @@ func TestAppWorkflowMainline(t *testing.T) {
 	if got := smokeList[0].(map[string]interface{})["reuseAdvice"].(string); got == "" {
 		t.Fatal("expected smoke list reuseAdvice")
 	}
+	if got := smokeList[0].(map[string]interface{})["regressionEntry"].(string); got == "" {
+		t.Fatal("expected smoke list regressionEntry")
+	}
 	if got := smokeList[0].(map[string]interface{})["autoRecoverFocus"].(string); got == "" {
 		t.Fatal("expected smoke list autoRecoverFocus")
 	}

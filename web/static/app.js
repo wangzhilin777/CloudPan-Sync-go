@@ -6341,7 +6341,7 @@ function filterProviderSmokeRecords(items, filters = {}) {
   const filterActive = Boolean(query || protocolGroup || result);
   const visible = records.filter((item) => {
     const matchesQuery = includesFilterText(
-      [item.title, item.providerKey, item.note, item.regressionEntry, Array.isArray(item.operations) ? item.operations.join(",") : ""],
+      [item.title, item.providerKey, item.note, item.sampleType, item.evidenceCompleteness, item.reuseAdvice, item.regressionEntry, Array.isArray(item.representativeLabels) ? item.representativeLabels.join("/") : "", item.autoRecoverFocus, Array.isArray(item.operations) ? item.operations.join(",") : ""],
       query,
     );
     const matchesGroup = includesFilterText([item.protocolGroup], protocolGroup);
@@ -7917,5 +7917,4 @@ async function init() {
     }
   }
 }
-
 window.addEventListener("DOMContentLoaded", init);

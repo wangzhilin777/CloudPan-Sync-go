@@ -945,6 +945,9 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "reuse:") {
 		t.Fatalf("expected provider smoke reuse advice summary in app.js, got %q", body)
 	}
+	if !strings.Contains(body, "item.sampleType") || !strings.Contains(body, "item.evidenceCompleteness") || !strings.Contains(body, "item.reuseAdvice") || !strings.Contains(body, "item.autoRecoverFocus") || !strings.Contains(body, "item.regressionEntry") {
+		t.Fatalf("expected provider smoke filter to include structured fields in app.js, got %q", body)
+	}
 	if !strings.Contains(body, "regression entry:") {
 		t.Fatalf("expected provider smoke regression entry summary in app.js, got %q", body)
 	}
