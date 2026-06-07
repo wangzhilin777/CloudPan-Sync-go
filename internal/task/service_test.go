@@ -8273,6 +8273,49 @@ func TestServiceProviderSmokeRecords(t *testing.T) {
 	}
 }
 
+func TestServiceProviderSmokeRecordsClassifyCoveragePendingManualSamples(t *testing.T) {
+	ctx := context.Background()
+	store, err := sqlitestore.New(ctx, filepath.Join(t.TempDir(), "provider-smoke-classify.db"))
+	if err != nil {
+		t.Fatalf("new store: %v", err)
+	}
+	defer func() { _ = store.Close() }()
+
+	registry := provider.NewRegistry(provider.DefaultCatalog()...)
+	authSvc := auth.NewService(store, registry)
+	svc := NewService(store, registry, authSvc)
+
+	record, err := svc.SaveProviderSmokeRecord(ctx, ProviderSmokeRecord{
+		ProviderKey:   "quark",
+		ProtocolGroup: "aliyun_quark",
+		AuthMode:      "manual_cookie",
+		Category:      "partial_blocked",
+		Result:        "failed",
+		Title:         "quark 覆盖降级 smoke",
+		Note:          "coverage downgrade pending_manual",
+		Operations:    []string{"ValidateAuth", "List"},
+	})
+	if err != nil {
+		t.Fatalf("SaveProviderSmokeRecord(classify) error = %v", err)
+	}
+
+	if record.SampleType != "覆盖降级或 pending_manual 异常样本" {
+		t.Fatalf("expected coverage/pending_manual sample type, got %s", record.SampleType)
+	}
+	if !strings.Contains(record.ReuseAdvice, "覆盖降级") {
+		t.Fatalf("expected reuse advice to mention 覆盖降级, got %s", record.ReuseAdvice)
+	}
+	if record.ReusePriority != "条件复用" {
+		t.Fatalf("expected reuse priority 条件复用 for classified anomaly sample, got %s", record.ReusePriority)
+	}
+	if !strings.Contains(record.Markdown, "覆盖降级或 pending_manual 异常样本") {
+		t.Fatalf("expected markdown to include classified sample type, got %s", record.Markdown)
+	}
+	if !strings.Contains(record.Markdown, "ValidateAuth -> List") {
+		t.Fatalf("expected markdown to preserve regression entry, got %s", record.Markdown)
+	}
+}
+
 func TestServiceProviderSmokeMatrixTracksUploadSuccessSample(t *testing.T) {
 	ctx := context.Background()
 	store, err := sqlitestore.New(ctx, filepath.Join(t.TempDir(), "provider-smoke-upload.db"))
