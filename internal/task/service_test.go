@@ -549,8 +549,8 @@ func TestServiceProtocolCoverageSummary(t *testing.T) {
 	if report.Summary.ProviderRiskCalibrationTotalCount == 0 || report.Summary.ProviderRiskCalibrationReadyCount+report.Summary.ProviderRiskCalibrationPartialCount+report.Summary.ProviderRiskCalibrationPendingCount != report.Summary.ProviderRiskCalibrationTotalCount {
 		t.Fatalf("expected provider risk calibration summary counts, got %#v", report.Summary)
 	}
-	if len(report.Summary.ProviderRiskCalibrationMissingFieldCounts) == 0 || len(report.Summary.ProviderRiskCalibrationPriorityActionCounts) == 0 {
-		t.Fatalf("expected provider risk calibration missing/action counts, got %#v", report.Summary)
+	if report.Summary.ProviderRiskCalibrationMissingFieldCounts == nil || report.Summary.ProviderRiskCalibrationPriorityActionCounts == nil {
+		t.Fatalf("expected provider risk calibration missing/action count maps, got %#v", report.Summary)
 	}
 	if !strings.Contains(report.Markdown, "Calibration Missing Fields") || !strings.Contains(report.Markdown, "Calibration Priority Actions") {
 		t.Fatalf("expected provider risk calibration summary counters in report markdown, got %s", report.Markdown)

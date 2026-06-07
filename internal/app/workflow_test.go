@@ -977,6 +977,13 @@ func TestAppWorkflowMainline(t *testing.T) {
 	if !strings.Contains(reportData["markdown"].(string), "## Provider 默认风控校准") || !strings.Contains(reportData["markdown"].(string), "Calibration Ready") || !strings.Contains(reportData["markdown"].(string), "Missing") {
 		t.Fatalf("expected report markdown to include provider risk calibration checklist, got %s", reportData["markdown"].(string))
 	}
+	if summary, ok := reportData["summary"].(map[string]interface{}); !ok {
+		t.Fatalf("expected report summary map, got %#v", reportData["summary"])
+	} else {
+		if int(summary["providerRiskCalibrationTotalCount"].(float64)) == 0 || len(summary["providerRiskCalibrationMissingFieldCounts"].(map[string]interface{})) == 0 || len(summary["providerRiskCalibrationPriorityActionCounts"].(map[string]interface{})) == 0 {
+			t.Fatalf("expected provider risk calibration summary fields, got %#v", summary)
+		}
+	}
 	if !strings.Contains(reportData["markdown"].(string), "## 真实样本矩阵") {
 		t.Fatalf("expected report markdown to include smoke matrix section, got %s", reportData["markdown"].(string))
 	}

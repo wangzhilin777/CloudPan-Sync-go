@@ -172,6 +172,7 @@
 - 当前轮次已新增 provider 默认风控校准覆盖计数字段与 planner/app/task/web 测试兜底，用于把校准完成度从展示文本推进到接口可直接判断的稳定字段。
 - 当前轮次已新增 provider 默认风控校准 covered/target 字段清单与 planner/app/task/web 测试兜底，用于把风控模板校准项从计数进一步推进到可直接核对字段名的稳定结构。
 - 当前轮次已新增 provider 风控校准 summary 聚合字段（ready/partial/pending、missing field counts、priority action counts）与 task/app 测试兜底，用于把默认风控模板校准进度从逐行表格推进到可直接统计的汇总字段。
+- 当前轮次已新增 provider 风控校准 summary 的 workflow JSON 兜底，用于把默认风控模板校准汇总字段从页面字符串推进到可回放接口结构。
 
 ### 仍未完成
 
