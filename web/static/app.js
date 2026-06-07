@@ -6388,6 +6388,7 @@ function renderProviderSmokeSummary(items) {
           </div>
           <div class="muted">providers: ${escapeHTML((item.providerKeys || []).join(", ") || "-")}</div>
           <div class="muted">sample: ${escapeHTML(stringifyValue(item.sampleTitle, "-"))} / ${escapeHTML(stringifyValue(item.sampleProviderKey, "-"))} / ${escapeHTML(stringifyValue(item.sampleCategory, "-"))}</div>
+          <div class="muted">preferred sample: ${escapeHTML(stringifyValue(item.preferredSampleTitle, "-"))} / ${escapeHTML(stringifyValue(item.preferredSampleProvider, "-"))} / ${escapeHTML(stringifyValue(item.preferredSamplePriority, "-"))}</div>
           <div class="muted">latestSmokeAt: <code>${escapeHTML(stringifyValue(item.latestSmokeAt, "-"))}</code></div>
         </div>
       `,

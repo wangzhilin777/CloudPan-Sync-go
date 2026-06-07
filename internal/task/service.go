@@ -308,6 +308,10 @@ type ProviderSmokeSummary struct {
 	SampleResult              string   `json:"sampleResult,omitempty"`
 	SampleCategory            string   `json:"sampleCategory,omitempty"`
 	LatestSmokeAt             string   `json:"latestSmokeAt,omitempty"`
+	PreferredSampleRecordID   string   `json:"preferredSampleRecordId,omitempty"`
+	PreferredSampleTitle      string   `json:"preferredSampleTitle,omitempty"`
+	PreferredSampleProvider   string   `json:"preferredSampleProvider,omitempty"`
+	PreferredSamplePriority   string   `json:"preferredSamplePriority,omitempty"`
 	HasRealSuccessSample      bool     `json:"hasRealSuccessSample"`
 	UploadSuccessCount        int      `json:"uploadSuccessCount"`
 	HasUploadSuccessSample    bool     `json:"hasUploadSuccessSample"`
@@ -344,6 +348,19 @@ type ProviderSmokeProviderRow struct {
 	HasRateLimitedSample      bool     `json:"hasRateLimitedSample"`
 	HasLocalFileMissingSample bool     `json:"hasLocalFileMissingSample"`
 	HasPendingManualSample    bool     `json:"hasPendingManualSample"`
+}
+
+func smokeReusePriorityRank(priority string) int {
+	switch strings.TrimSpace(priority) {
+	case "直接回归":
+		return 3
+	case "条件复用":
+		return 2
+	case "参考样本":
+		return 1
+	default:
+		return 0
+	}
 }
 
 type ProviderSmokeMatrixRow struct {
@@ -4371,8 +4388,9 @@ func summarizeProviderSmokeRecords(records []ProviderSmokeRecord) []ProviderSmok
 		return nil
 	}
 	type smokeGroupState struct {
-		row          ProviderSmokeSummary
-		providerSeen map[string]struct{}
+		row                ProviderSmokeSummary
+		providerSeen       map[string]struct{}
+		preferredCreatedAt string
 	}
 	states := make(map[string]*smokeGroupState)
 	order := make([]string, 0)
@@ -4447,6 +4465,17 @@ func summarizeProviderSmokeRecords(records []ProviderSmokeRecord) []ProviderSmok
 			state.row.SampleCategory = record.Category
 			state.row.SampleResult = record.Result
 			state.row.LatestSmokeAt = record.CreatedAt
+		}
+		recordPriority := providerSmokeReusePriority(record)
+		if state.row.PreferredSampleRecordID == "" ||
+			smokeReusePriorityRank(recordPriority) > smokeReusePriorityRank(state.row.PreferredSamplePriority) ||
+			(smokeReusePriorityRank(recordPriority) == smokeReusePriorityRank(state.row.PreferredSamplePriority) &&
+				(state.preferredCreatedAt == "" || record.CreatedAt > state.preferredCreatedAt)) {
+			state.row.PreferredSampleRecordID = record.ID
+			state.row.PreferredSampleTitle = record.Title
+			state.row.PreferredSampleProvider = record.ProviderKey
+			state.row.PreferredSamplePriority = recordPriority
+			state.preferredCreatedAt = record.CreatedAt
 		}
 	}
 	rows := make([]ProviderSmokeSummary, 0, len(order))

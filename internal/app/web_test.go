@@ -954,6 +954,9 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "regression entry:") {
 		t.Fatalf("expected provider smoke regression entry summary in app.js, got %q", body)
 	}
+	if !strings.Contains(body, "preferred sample:") {
+		t.Fatalf("expected provider smoke preferred sample summary in app.js, got %q", body)
+	}
 	if !strings.Contains(body, "auto recover focus:") {
 		t.Fatalf("expected provider smoke auto recover focus summary in app.js, got %q", body)
 	}

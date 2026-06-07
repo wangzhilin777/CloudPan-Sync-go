@@ -775,6 +775,9 @@ func TestAppWorkflowMainline(t *testing.T) {
 	if got := smokeSummary[0].(map[string]interface{})["protocolGroup"].(string); got != "aliyun_123_open" {
 		t.Fatalf("expected smoke summary protocolGroup aliyun_123_open, got %s", got)
 	}
+	if got := smokeSummary[0].(map[string]interface{})["preferredSamplePriority"].(string); got == "" {
+		t.Fatal("expected smoke summary preferredSamplePriority")
+	}
 	if got := smokeSummary[0].(map[string]interface{})["sampleCategory"].(string); got != "binary_upload_success" {
 		t.Fatalf("expected smoke summary sampleCategory binary_upload_success, got %s", got)
 	}

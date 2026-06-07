@@ -8013,6 +8013,12 @@ func TestServiceProviderSmokeRecords(t *testing.T) {
 	if summary[0].SampleCategory != "browse_only" {
 		t.Fatalf("expected smoke summary sample category browse_only, got %s", summary[0].SampleCategory)
 	}
+	if summary[0].PreferredSampleRecordID != record.ID {
+		t.Fatalf("expected preferred sample record id %s, got %s", record.ID, summary[0].PreferredSampleRecordID)
+	}
+	if summary[0].PreferredSamplePriority != "条件复用" {
+		t.Fatalf("expected preferred sample priority 条件复用, got %s", summary[0].PreferredSamplePriority)
+	}
 
 	matrix, err := svc.ProviderSmokeMatrix(ctx)
 	if err != nil {
@@ -8362,6 +8368,70 @@ func TestProviderSmokeReusePriority(t *testing.T) {
 	}
 	if got := providerSmokeReusePriority(referenceRecord); got != "参考样本" {
 		t.Fatalf("expected sparse failure reuse priority 参考样本, got %s", got)
+	}
+}
+
+func TestProviderSmokeSummaryPrefersHigherReusePrioritySample(t *testing.T) {
+	ctx := context.Background()
+	store, err := sqlitestore.New(ctx, filepath.Join(t.TempDir(), "provider-smoke-preferred.db"))
+	if err != nil {
+		t.Fatalf("new store: %v", err)
+	}
+	defer func() { _ = store.Close() }()
+
+	registry := provider.NewRegistry(provider.DefaultCatalog()...)
+	authSvc := auth.NewService(store, registry)
+	svc := NewService(store, registry, authSvc)
+
+	_, err = svc.SaveProviderSmokeRecord(ctx, ProviderSmokeRecord{
+		ProviderKey:   "123_open",
+		ProtocolGroup: "aliyun_123_open",
+		AuthMode:      "manual_token",
+		Category:      "browse_only",
+		Result:        "success",
+		Title:         "browse sample",
+		Note:          "ValidateAuth/List/Metadata",
+		Operations:    []string{"ValidateAuth", "List", "Metadata"},
+		Environment: map[string]string{
+			"os": "windows",
+		},
+	})
+	if err != nil {
+		t.Fatalf("SaveProviderSmokeRecord(browse) error = %v", err)
+	}
+
+	uploadRecord, err := svc.SaveProviderSmokeRecord(ctx, ProviderSmokeRecord{
+		ProviderKey:   "123_open",
+		ProtocolGroup: "aliyun_123_open",
+		AuthMode:      "manual_token",
+		Category:      "binary_upload_success",
+		Result:        "success",
+		Title:         "upload sample",
+		Note:          "multipart upload checkpoint",
+		Operations:    []string{"ValidateAuth", "Metadata", "Upload"},
+		Environment: map[string]string{
+			"os": "windows",
+		},
+	})
+	if err != nil {
+		t.Fatalf("SaveProviderSmokeRecord(upload) error = %v", err)
+	}
+
+	summary, err := svc.ProviderSmokeSummary(ctx)
+	if err != nil {
+		t.Fatalf("ProviderSmokeSummary() error = %v", err)
+	}
+	if len(summary) == 0 {
+		t.Fatal("expected smoke summary")
+	}
+	if summary[0].PreferredSampleRecordID != uploadRecord.ID {
+		t.Fatalf("expected preferred sample record id %s, got %s", uploadRecord.ID, summary[0].PreferredSampleRecordID)
+	}
+	if summary[0].PreferredSampleTitle != "upload sample" {
+		t.Fatalf("expected preferred sample title upload sample, got %s", summary[0].PreferredSampleTitle)
+	}
+	if summary[0].PreferredSamplePriority != "直接回归" {
+		t.Fatalf("expected preferred sample priority 直接回归, got %s", summary[0].PreferredSamplePriority)
 	}
 }
 
