@@ -61,6 +61,7 @@
 - 已把固定记录模板里的推荐回归入口继续收口成结构化 `regressionEntry` 字段，并接到 smoke 记录列表展示与筛选，便于直接按回放链路查找可复用样本，而不用再打开 Markdown 逐条翻。
 - 已把 smoke 记录列表筛选继续扩展到 `sampleType / evidenceCompleteness / reuseAdvice / regressionEntry / representativeLabels / autoRecoverFocus` 等结构化字段，补样和回归时可以直接按“样本类型、复用建议、代表性标签、自动补传关注点”搜历史样本。
 - 已把 smoke 样本的“可复用程度”继续收口成结构化 `reusePriority` 字段，直接区分 `直接回归 / 条件复用 / 参考样本`，并接到列表展示与检索，便于更快挑出最适合优先复跑的样本。
+- 已把真实联调模板补成“最小补样清单”和更明确的记录判定建议，便于后续每条 smoke 记录都能直接对照二期验收最小集合，而不是只记过程。
 - 已把协议组汇总里的“首选回归样本”继续收口成 `preferredSampleRecordId / preferredSampleTitle / preferredSampleProvider / preferredSamplePriority` 摘要，直接指向当前最值得先复跑的一条真实样本，而不只是显示最近记录。
 - 已把协议组汇总继续细分出 `preferredUploadSample*` 与 `preferredAnomalySample*` 摘要，能直接区分“优先复跑成功链路样本”与“优先复跑异常证据样本”，减少人工翻样本记录的时间。
 - 已把协议组汇总继续细分出 `preferredRepresentativeSample*` 摘要，能直接把大文件、多层目录、重试恢复这类代表性样本提升到优先回归入口，便于先补关键边界证据。

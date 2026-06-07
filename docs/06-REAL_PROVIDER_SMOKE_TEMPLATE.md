@@ -65,6 +65,42 @@
 - `FastUploadCheck`: 未测 / 失败 / 成功
 - `Upload`: 未测 / 失败 / 成功
 
+## 本次最小补样清单
+
+> 如果这份记录要直接推进二期验收，建议至少补齐下面 1 类真实证据；否则就把它明确标成 `browse_only` 或 `partial_blocked`，避免把“看过流程”误写成“补完样本”。
+
+- 真实上传成功样本
+  - 目标：证明当前协议族至少有 1 条能稳定落库的真实上传成功证据。
+  - 最低要求：`Upload` 成功，且 `completionKind` 能回到 `done` 或等价完成态。
+- 最小异常样本
+  - 目标：证明 provider 的异常边界不是口头经验。
+  - 建议至少覆盖其中 1 项：
+    - `auth_expired`
+    - `rate_limited`
+    - `local_file_missing`
+    - `pending_manual_requires_confirmation`
+- 代表性样本
+  - 目标：把后续最容易回归的边界样本先沉淀下来。
+  - 建议至少覆盖其中 1 项：
+    - 大文件
+    - 多层目录
+    - 重试恢复
+
+## 记录判定建议
+
+- `auth_only`
+  - 只打通授权校验，还没有形成真实上传样本。
+- `browse_only`
+  - 只打通目录 / 元数据 / 建目录，还没有真实上传成功样本。
+- `fast_upload_success`
+  - 已形成真实上传成功样本，且优先可复用快传链路。
+- `binary_upload_success`
+  - 已形成真实上传成功样本，且优先可复用普通上传链路。
+- `partial_blocked`
+  - 已有部分样本，但还没达到二期验收最低集合。
+- `failed`
+  - 本次未形成可复用样本。
+
 ## 联调前准备
 
 - 服务启动命令：
