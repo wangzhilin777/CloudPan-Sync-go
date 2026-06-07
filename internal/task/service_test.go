@@ -7919,6 +7919,9 @@ func TestServiceProviderSmokeRecords(t *testing.T) {
 	if got := items[0].ReuseAdvice; !strings.Contains(got, "基础成功样本") {
 		t.Fatalf("expected list reuse advice to mention 基础成功样本, got %s", got)
 	}
+	if got := items[0].ReusePriority; got != "条件复用" {
+		t.Fatalf("expected list reuse priority 条件复用, got %s", got)
+	}
 	if got := items[0].RegressionEntry; got != "ValidateAuth -> List -> Metadata" {
 		t.Fatalf("expected list regression entry ValidateAuth -> List -> Metadata, got %s", got)
 	}
@@ -7947,6 +7950,9 @@ func TestServiceProviderSmokeRecords(t *testing.T) {
 	}
 	if !strings.Contains(fetched.ReuseAdvice, "基础成功样本") {
 		t.Fatalf("expected fetched reuse advice to mention 基础成功样本, got %s", fetched.ReuseAdvice)
+	}
+	if fetched.ReusePriority != "条件复用" {
+		t.Fatalf("expected fetched reuse priority 条件复用, got %s", fetched.ReusePriority)
 	}
 	if fetched.RegressionEntry != "ValidateAuth -> List -> Metadata" {
 		t.Fatalf("expected fetched regression entry ValidateAuth -> List -> Metadata, got %s", fetched.RegressionEntry)
@@ -8334,6 +8340,28 @@ func TestProviderSmokeRegressionEntryInfersFallbackChecklist(t *testing.T) {
 	want := "ValidateAuth -> Metadata -> Upload -> leaf_first -> checkpoint -> blocked_recovery"
 	if got != want {
 		t.Fatalf("expected inferred regression entry %q, got %q", want, got)
+	}
+}
+
+func TestProviderSmokeReusePriority(t *testing.T) {
+	successRecord := ProviderSmokeRecord{
+		Category:   "binary_upload_success",
+		Result:     "success",
+		Note:       "multipart upload checkpoint",
+		Operations: []string{"ValidateAuth", "Metadata", "Upload"},
+		Environment: map[string]string{
+			"os": "windows",
+		},
+	}
+	if got := providerSmokeReusePriority(successRecord); got != "直接回归" {
+		t.Fatalf("expected binary success reuse priority 直接回归, got %s", got)
+	}
+
+	referenceRecord := ProviderSmokeRecord{
+		Result: "failed",
+	}
+	if got := providerSmokeReusePriority(referenceRecord); got != "参考样本" {
+		t.Fatalf("expected sparse failure reuse priority 参考样本, got %s", got)
 	}
 }
 

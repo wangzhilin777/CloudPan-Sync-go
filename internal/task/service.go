@@ -287,6 +287,7 @@ type ProviderSmokeRecord struct {
 	SampleType           string            `json:"sampleType,omitempty"`
 	EvidenceCompleteness string            `json:"evidenceCompleteness,omitempty"`
 	ReuseAdvice          string            `json:"reuseAdvice,omitempty"`
+	ReusePriority        string            `json:"reusePriority,omitempty"`
 	RegressionEntry      string            `json:"regressionEntry,omitempty"`
 	RepresentativeLabels []string          `json:"representativeLabels,omitempty"`
 	AutoRecoverFocus     string            `json:"autoRecoverFocus,omitempty"`
@@ -4098,6 +4099,7 @@ func enrichProviderSmokeRecord(record ProviderSmokeRecord) ProviderSmokeRecord {
 	record.SampleType = providerSmokeSampleType(record)
 	record.EvidenceCompleteness = providerSmokeEvidenceCompleteness(record)
 	record.ReuseAdvice = providerSmokeReuseAdvice(record)
+	record.ReusePriority = providerSmokeReusePriority(record)
 	record.RegressionEntry = providerSmokeRegressionEntry(record)
 	record.RepresentativeLabels = providerSmokeRepresentativeLabels(record)
 	record.AutoRecoverFocus = providerSmokeAutoRecoverFocus(record)
@@ -4183,6 +4185,24 @@ func providerSmokeEvidenceCompleteness(record ProviderSmokeRecord) string {
 		return "基础"
 	default:
 		return "待补充"
+	}
+}
+
+func providerSmokeReusePriority(record ProviderSmokeRecord) string {
+	result := strings.TrimSpace(strings.ToLower(record.Result))
+	category := strings.TrimSpace(strings.ToLower(record.Category))
+	completeness := providerSmokeEvidenceCompleteness(record)
+	hasRepresentative := len(providerSmokeRepresentativeLabels(record)) > 0
+
+	switch {
+	case result == "success" && category == "binary_upload_success" && (completeness == "完整" || hasRepresentative):
+		return "直接回归"
+	case result == "success" && (category == "binary_upload_success" || category == "fast_upload_success" || category == "browse_only" || category == "auth_only"):
+		return "条件复用"
+	case result != "success" && completeness != "待补充":
+		return "条件复用"
+	default:
+		return "参考样本"
 	}
 }
 
