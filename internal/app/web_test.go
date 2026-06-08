@@ -38,7 +38,7 @@ func TestHandleIndexServesHTML(t *testing.T) {
 		t.Fatalf("expected html content type, got %q", got)
 	}
 	body := rec.Body.String()
-	if !strings.Contains(body, "CloudPan Sync Go Console") {
+	if !strings.Contains(body, "CloudPan Sync Go 控制台") {
 		t.Fatalf("expected console html body, got %q", body)
 	}
 	if !strings.Contains(body, `id="recent-results"`) {
@@ -207,7 +207,7 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "Provider 恢复线索") {
 		t.Fatalf("expected upload checkpoint provider data label in app.js, got %q", body)
 	}
-	if !strings.Contains(body, "CALIBRATED") {
+	if !strings.Contains(body, "校准结果") {
 		t.Fatalf("expected CALIBRATED risk resolution detail in app.js, got %q", body)
 	}
 	if !strings.Contains(body, "recommendedExecutionMode") {
@@ -258,19 +258,19 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "已按真实样本预填账号默认风控") {
 		t.Fatalf("expected profile risk prefill flash text in app.js, got %q", body)
 	}
-	if !strings.Contains(body, "OVERRIDE FIELDS") {
+	if !strings.Contains(body, "任务覆盖字段") {
 		t.Fatalf("expected OVERRIDE FIELDS risk resolution detail in app.js, got %q", body)
 	}
-	if !strings.Contains(body, "PROVIDER HINTS") {
+	if !strings.Contains(body, "风险提示") {
 		t.Fatalf("expected PROVIDER HINTS risk resolution detail in app.js, got %q", body)
 	}
-	if !strings.Contains(body, "PROVIDER TRAITS") {
+	if !strings.Contains(body, "风险特征") {
 		t.Fatalf("expected PROVIDER TRAITS risk resolution detail in app.js, got %q", body)
 	}
-	if !strings.Contains(body, "PROFILE DEFAULT SOURCE KIND") {
+	if !strings.Contains(body, "来源类型") {
 		t.Fatalf("expected PROFILE DEFAULT SOURCE KIND risk resolution detail in app.js, got %q", body)
 	}
-	if !strings.Contains(body, "PROFILE DEFAULT BIAS") {
+	if !strings.Contains(body, "偏向策略") {
 		t.Fatalf("expected PROFILE DEFAULT BIAS risk resolution detail in app.js, got %q", body)
 	}
 	if !strings.Contains(body, "来源类型 / 偏向") {
@@ -282,10 +282,10 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "renderAutoRetryWindowSource") {
 		t.Fatalf("expected renderAutoRetryWindowSource helper in app.js, got %q", body)
 	}
-	if !strings.Contains(body, "window source") {
+	if !strings.Contains(body, "时间窗来源") {
 		t.Fatalf("expected auto retry window source text in app.js, got %q", body)
 	}
-	if !strings.Contains(body, "window advice") {
+	if !strings.Contains(body, "时间窗建议") {
 		t.Fatalf("expected auto retry window advice text in app.js, got %q", body)
 	}
 	if !strings.Contains(body, "profileDefaultKindBias") {
@@ -309,22 +309,22 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "next-step:") {
 		t.Fatalf("expected blocked action next-step summary in app.js, got %q", body)
 	}
-	if !strings.Contains(body, "profile-kind") {
+	if !strings.Contains(body, "来源类型") {
 		t.Fatalf("expected profile-kind summary token in app.js, got %q", body)
 	}
-	if !strings.Contains(body, "profile-bias") {
+	if !strings.Contains(body, "偏向策略") {
 		t.Fatalf("expected profile-bias summary token in app.js, got %q", body)
 	}
-	if !strings.Contains(body, "PROFILE DEFAULT SOURCE") {
+	if !strings.Contains(body, "账号默认来源") {
 		t.Fatalf("expected PROFILE DEFAULT SOURCE risk resolution detail in app.js, got %q", body)
 	}
-	if !strings.Contains(body, "PROFILE DEFAULT FIELDS") {
+	if !strings.Contains(body, "账号默认字段") {
 		t.Fatalf("expected PROFILE DEFAULT FIELDS risk resolution detail in app.js, got %q", body)
 	}
-	if !strings.Contains(body, "PROFILE DEFAULT ") {
+	if !strings.Contains(body, "账号默认") {
 		t.Fatalf("expected PROFILE DEFAULT risk resolution detail in app.js, got %q", body)
 	}
-	if !strings.Contains(body, "profile-default") {
+	if !strings.Contains(body, "账号默认") {
 		t.Fatalf("expected profile-default summary token in app.js, got %q", body)
 	}
 	if !strings.Contains(body, "renderSourceDeletePolicy") {
@@ -336,7 +336,7 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "data-profile-edit") {
 		t.Fatalf("expected profile edit action in app.js, got %q", body)
 	}
-	if !strings.Contains(body, "auth profile riskDefaults") {
+	if !strings.Contains(body, "未配置，使用网盘源默认模板") {
 		t.Fatalf("expected target profile risk defaults source text in app.js, got %q", body)
 	}
 	if !strings.Contains(body, "授权档案已更新") {
@@ -345,10 +345,10 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "record_only（只记录，不删目标端）") {
 		t.Fatalf("expected source delete policy label in app.js, got %q", body)
 	}
-	if !strings.Contains(body, "Selected Roots") {
+	if !strings.Contains(body, "选定根目录") {
 		t.Fatalf("expected selected roots label in app.js, got %q", body)
 	}
-	if !strings.Contains(body, "Scan Trace") {
+	if !strings.Contains(body, "扫描轨迹") {
 		t.Fatalf("expected scan trace label in app.js, got %q", body)
 	}
 	if !strings.Contains(body, "data-runtime-focus-path") {
@@ -624,10 +624,10 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "renderUploadCheckpointPriorityAction") {
 		t.Fatalf("expected upload checkpoint priority helper in app.js, got %q", body)
 	}
-	if !strings.Contains(body, "Checkpoint Ready") {
+	if !strings.Contains(body, "断点续传就绪度") {
 		t.Fatalf("expected upload checkpoint readiness metric in app.js, got %q", body)
 	}
-	if !strings.Contains(body, "Checkpoint Priority") {
+	if !strings.Contains(body, "断点续传优先动作") {
 		t.Fatalf("expected upload checkpoint priority metric in app.js, got %q", body)
 	}
 	if !strings.Contains(body, "renderAutoRecoverPriorityAction") {
@@ -678,10 +678,10 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "priority action:") {
 		t.Fatalf("expected provider smoke priority-action summary in app.js, got %q", body)
 	}
-	if !strings.Contains(body, "priority calibration:") {
+	if !strings.Contains(body, "优先校准动作:") {
 		t.Fatalf("expected provider default risk priority-calibration summary in app.js, got %q", body)
 	}
-	if !strings.Contains(body, "calibration readiness") {
+	if !strings.Contains(body, "校准就绪度") {
 		t.Fatalf("expected provider default risk calibration-readiness summary in app.js, got %q", body)
 	}
 	if !strings.Contains(body, "anomaly missing") {
@@ -789,7 +789,7 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "Upload checkpoint 默认恢复验收") {
 		t.Fatalf("expected evidence upload checkpoint report title in app.js, got %q", body)
 	}
-	if !strings.Contains(body, "Checkpoint Resume Ready") {
+	if !strings.Contains(body, "断点续传就绪度") {
 		t.Fatalf("expected evidence upload checkpoint readiness metric in app.js, got %q", body)
 	}
 	if !strings.Contains(body, "uploadCheckpointResume") {
@@ -825,10 +825,10 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "missing basic providers:") || !strings.Contains(body, "missing upload providers:") || !strings.Contains(body, "missing anomaly providers:") || !strings.Contains(body, "missing representative providers:") {
 		t.Fatalf("expected provider-level smoke missing provider list labels in app.js, got %q", body)
 	}
-	if !strings.Contains(body, "Provider 级真实样本验收") {
+	if !strings.Contains(body, "网盘源级真实样本验收") {
 		t.Fatalf("expected provider-level smoke acceptance title in app.js, got %q", body)
 	}
-	if !strings.Contains(body, "Provider Ready") {
+	if !strings.Contains(body, "网盘就绪") {
 		t.Fatalf("expected provider-level smoke readiness metric in app.js, got %q", body)
 	}
 	if !strings.Contains(body, "ready（基础、上传、异常、代表性样本齐）") {
@@ -849,22 +849,22 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "Provider 默认风控校准") {
 		t.Fatalf("expected evidence provider risk calibration title in app.js, got %q", body)
 	}
-	if !strings.Contains(body, "Calibration Ready") {
+	if !strings.Contains(body, "校准就绪") {
 		t.Fatalf("expected evidence provider risk calibration readiness metric in app.js, got %q", body)
 	}
-	if !strings.Contains(body, "calibration missing field counts:") || !strings.Contains(body, "calibration priority action counts:") {
+	if !strings.Contains(body, "校准缺失字段统计:") || !strings.Contains(body, "校准优先动作统计:") {
 		t.Fatalf("expected evidence provider risk calibration counts in app.js, got %q", body)
 	}
 	if !strings.Contains(body, "defaultRiskTemplate") {
 		t.Fatalf("expected evidence provider risk template wiring in app.js, got %q", body)
 	}
-	if !strings.Contains(body, "priority calibration") {
+	if !strings.Contains(body, "优先校准动作") {
 		t.Fatalf("expected evidence provider risk priority calibration summary in app.js, got %q", body)
 	}
-	if !strings.Contains(body, "calibration missing") || !strings.Contains(body, "calibration coverage") {
+	if !strings.Contains(body, "校准缺失") || !strings.Contains(body, "校准覆盖") {
 		t.Fatalf("expected evidence provider risk missing/coverage summary in app.js, got %q", body)
 	}
-	if !strings.Contains(body, "window source") {
+	if !strings.Contains(body, "时间窗来源") {
 		t.Fatalf("expected evidence provider risk auto retry window source in app.js, got %q", body)
 	}
 	if !strings.Contains(body, "item.id === state.selectedReportId ? \"active\" : \"\"") {
@@ -888,7 +888,7 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "验收报告已刷新") {
 		t.Fatalf("expected report refresh flash text in app.js, got %q", body)
 	}
-	if !strings.Contains(body, "Provider smoke 记录已保存") {
+	if !strings.Contains(body, "网盘样本 smoke 记录已保存") {
 		t.Fatalf("expected provider smoke save flash text in app.js, got %q", body)
 	}
 	if !strings.Contains(body, "状态矩阵已刷新") {
@@ -1320,7 +1320,7 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "recommended risk:") {
 		t.Fatalf("expected provider recommended risk text in app.js, got %q", body)
 	}
-	if !strings.Contains(body, "calibration coverage") {
+	if !strings.Contains(body, "校准覆盖") {
 		t.Fatalf("expected provider calibration coverage text in app.js, got %q", body)
 	}
 	if !strings.Contains(body, "calibration covered") {
@@ -1329,13 +1329,13 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "calibration covered fields") {
 		t.Fatalf("expected provider calibration covered-fields text in app.js, got %q", body)
 	}
-	if !strings.Contains(body, "calibration sample advice") {
+	if !strings.Contains(body, "校准样本建议") {
 		t.Fatalf("expected provider calibration sample advice text in app.js, got %q", body)
 	}
-	if !strings.Contains(body, "risk calibration:") {
+	if !strings.Contains(body, "优先校准动作:") {
 		t.Fatalf("expected provider risk calibration text in app.js, got %q", body)
 	}
-	if !strings.Contains(body, "calibration missing") {
+	if !strings.Contains(body, "校准缺失") {
 		t.Fatalf("expected provider calibration missing text in app.js, got %q", body)
 	}
 	if !strings.Contains(body, "recover budget:") {
@@ -1389,7 +1389,7 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "#apply-recommended-risk") {
 		t.Fatalf("expected apply recommended risk handler in app.js, got %q", body)
 	}
-	if !strings.Contains(body, "已采用 provider 推荐风控") {
+	if !strings.Contains(body, "已采用网盘源推荐风控") {
 		t.Fatalf("expected provider default risk flash text in app.js, got %q", body)
 	}
 	if !strings.Contains(body, "已打开 ") {

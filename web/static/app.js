@@ -174,26 +174,26 @@ function renderRiskResolutionSummary(resolution) {
     return "-";
   }
   const providerKey = stringifyValue(resolution.providerKey, "-");
-  const profileSource = stringifyValue(resolution.profileDefaultSource, "provider default only");
+  const profileSource = stringifyValue(resolution.profileDefaultSource, "仅使用网盘源默认模板");
   const profileSourceKind = stringifyValue(resolution.profileDefaultSourceKind, "-");
   const profileDefaultBias = stringifyValue(resolution.profileDefaultBias, "same_as_provider");
   const profileDefaultFields = Array.isArray(resolution.profileDefaultFields)
     ? resolution.profileDefaultFields.filter(Boolean)
     : [];
   const overrideFields = Array.isArray(resolution.overrideFields) ? resolution.overrideFields.filter(Boolean) : [];
-  const steps = [`provider ${providerKey}`];
-  steps.push(`profile ${profileSource}`);
+  const steps = [`网盘源 ${providerKey}`];
+  steps.push(`账号默认 ${profileSource}`);
   if (profileSourceKind !== "-") {
-    steps.push(`profile-kind ${profileSourceKind}`);
+    steps.push(`来源类型 ${profileSourceKind}`);
   }
   if (profileDefaultBias !== "same_as_provider") {
-    steps.push(`profile-bias ${profileDefaultBias}`);
+    steps.push(`偏向 ${profileDefaultBias}`);
   }
   if (profileDefaultFields.length) {
-    steps.push(`profile fields ${profileDefaultFields.join(", ")}`);
+    steps.push(`账号字段 ${profileDefaultFields.join(", ")}`);
   }
-  steps.push(`override ${overrideFields.length ? overrideFields.join(", ") : "none"}`);
-  steps.push(`final ${stringifyValue(resolution.applied?.mode, stringifyValue(resolution.calibrated?.mode, "balanced"))}`);
+  steps.push(`任务覆盖 ${overrideFields.length ? overrideFields.join(", ") : "无"}`);
+  steps.push(`最终档位 ${stringifyValue(resolution.applied?.mode, stringifyValue(resolution.calibrated?.mode, "balanced"))}`);
   return steps.join(" -> ");
 }
 
@@ -214,17 +214,17 @@ function renderRiskResolutionFlow(resolution) {
   const overrideFields = Array.isArray(resolution.overrideFields) ? resolution.overrideFields.filter(Boolean) : [];
   return `
     <div class="insight-card">
-      <strong>Provider 基线</strong>
+      <strong>网盘源基线</strong>
       <span>${escapeHTML(renderRiskProfileCompact(resolution.base))}</span>
     </div>
     <div class="insight-card">
-      <strong>Provider 校准后</strong>
+      <strong>网盘源校准后</strong>
       <span>${escapeHTML(renderRiskProfileCompact(resolution.calibrated))}</span>
     </div>
     <div class="insight-card">
       <strong>账号默认注入</strong>
       <span>${escapeHTML(renderRiskProfileCompact(resolution.profileApplied))}</span>
-      <div class="muted">source ${escapeHTML(stringifyValue(resolution.profileDefaultSource, "provider default only"))} / kind ${escapeHTML(profileSourceKind)} / bias ${escapeHTML(profileDefaultBias)} / fields ${escapeHTML(profileDefaultFields.join(", ") || "-")}</div>
+      <div class="muted">来源 ${escapeHTML(stringifyValue(resolution.profileDefaultSource, "仅使用网盘源默认模板"))} / 类型 ${escapeHTML(profileSourceKind)} / 偏向 ${escapeHTML(profileDefaultBias)} / 字段 ${escapeHTML(profileDefaultFields.join(", ") || "-")}</div>
     </div>
     <div class="insight-card">
       <strong>任务覆盖</strong>
@@ -277,7 +277,7 @@ function renderRecoverBudgetAdvice(policy, providerKey = "") {
   }
   const reason = String(policy.reason || "").trim();
   if (isSensitiveRecoverBudgetTemplate(policy, providerKey)) {
-    return `高风险 provider 建议单账号串行推进：${renderRecoverBudgetCompact(policy)}${reason ? `；${reason}` : ""}`;
+    return `高风险网盘源建议单账号串行推进：${renderRecoverBudgetCompact(policy)}${reason ? `；${reason}` : ""}`;
   }
   if (Number(policy.profileBudget || 0) <= 1 && Number(policy.providerBudget || 0) > 0) {
     return `建议按账号轮转控制补传并发：${renderRecoverBudgetCompact(policy)}${reason ? `；${reason}` : ""}`;
@@ -298,12 +298,12 @@ function renderProviderCapabilityCompact(capability) {
     return "-";
   }
   const enabled = [];
-  if (capability.supportsAuthValidation) enabled.push("auth");
-  if (capability.supportsList) enabled.push("list");
-  if (capability.supportsMetadata) enabled.push("metadata");
-  if (capability.supportsCreateDir) enabled.push("create_dir");
-  if (capability.supportsFastUpload) enabled.push("fast_check");
-  if (capability.supportsUpload) enabled.push("upload");
+  if (capability.supportsAuthValidation) enabled.push("授权校验");
+  if (capability.supportsList) enabled.push("目录浏览");
+  if (capability.supportsMetadata) enabled.push("详情读取");
+  if (capability.supportsCreateDir) enabled.push("创建目录");
+  if (capability.supportsFastUpload) enabled.push("秒传预检");
+  if (capability.supportsUpload) enabled.push("上传");
   return enabled.length ? enabled.join(", ") : "-";
 }
 
@@ -324,12 +324,12 @@ function renderProviderRiskTemplateDetail(template, { title = "默认风控模�
     `<strong>${escapeHTML(title)}</strong>`,
     `<span>${escapeHTML(renderRiskProfileCompact(template.calibrated))}</span>`,
     `<div class="muted">auto retry window ${escapeHTML(renderRiskWindow(template.calibrated))}</div>`,
-    `<div class="muted">window source ${escapeHTML(renderAutoRetryWindowSource(template.autoRetryWindowSource))}</div>`,
+    `<div class="muted">时间窗来源 ${escapeHTML(renderAutoRetryWindowSource(template.autoRetryWindowSource))}</div>`,
     `<div class="muted">calibration coverage ${escapeHTML(stringifyValue(template.calibrationCoverage, "-"))}</div>
     <div class="muted">calibration covered ${escapeHTML(stringifyValue(template.calibrationCoveredCount, "0"))}/${escapeHTML(stringifyValue(template.calibrationTargetCount, "0"))} / missing ${escapeHTML(stringifyValue(template.calibrationMissingCount, "0"))}</div>
     <div class="muted">calibration covered fields ${escapeHTML((template.calibrationCoveredFields || []).join(", ") || "-")}</div>
-    <div class="muted">calibration readiness ${escapeHTML(stringifyValue(template.calibrationReadiness, "-"))}</div>
-    <div class="muted">calibration sample advice ${escapeHTML(stringifyValue(template.calibrationSampleAdvice, "-"))}</div>`,
+    <div class="muted">校准就绪度 ${escapeHTML(stringifyValue(template.calibrationReadiness, "-"))}</div>
+    <div class="muted">校准样本建议 ${escapeHTML(stringifyValue(template.calibrationSampleAdvice, "-"))}</div>`,
     `<div class="muted">recommended ${escapeHTML(stringifyValue(template.recommendedMode, "-"))}</div>`,
     `<div class="muted">recover budget ${escapeHTML(renderRecoverBudgetCompact(template.recoverBudget))}</div>`,
     `<div class="muted">budget advice ${escapeHTML(renderRecoverBudgetAdvice(template.recoverBudget, template.providerKey || ""))}</div>`,
@@ -339,9 +339,9 @@ function renderProviderRiskTemplateDetail(template, { title = "默认风控模�
     parts.push(`<div class="muted">reasons ${escapeHTML(reasons.join(" / ") || "-")}</div>`);
     parts.push(`<div class="muted">risk hints ${escapeHTML(providerHints.join(" / ") || "-")}</div>`);
     parts.push(`<div class="muted">risk traits ${escapeHTML(providerTraits.join(", ") || "-")}</div>`);
-    parts.push(`<div class="muted">calibration missing ${escapeHTML((template.calibrationMissing || []).join(", ") || "-")}</div>`);
-    parts.push(`<div class="muted">priority calibration: ${escapeHTML(stringifyValue(template.calibrationPriorityAction, "-"))}</div>`);
-    parts.push(`<div class="muted">window advice ${escapeHTML(stringifyValue(template.autoRetryWindowAdvice, "-"))}</div>`);
+    parts.push(`<div class="muted">校准缺失 ${escapeHTML((template.calibrationMissing || []).join(", ") || "-")}</div>`);
+    parts.push(`<div class="muted">优先校准动作: ${escapeHTML(stringifyValue(template.calibrationPriorityAction, "-"))}</div>`);
+    parts.push(`<div class="muted">时间窗建议 ${escapeHTML(stringifyValue(template.autoRetryWindowAdvice, "-"))}</div>`);
     parts.push(`<div class="muted">advice ${escapeHTML(stringifyValue(template.recommendedReason, "-"))}</div>`);
     parts.push(`<div class="muted">warning ${escapeHTML(stringifyValue(template.aggressiveRiskWarning, "-"))}</div>`);
   }
@@ -358,7 +358,7 @@ function renderProviderCapabilityDetail() {
   const entry = findProviderEntry(providerKey);
   const detail = state.providerCapabilityDetails[providerKey] || null;
   if (!providerKey || !entry) {
-    wrap.innerHTML = `<div class="muted">点击任一 provider 卡片，查看能力声明、默认风控模板和恢复预算。</div>`;
+    wrap.innerHTML = `<div class="muted">点击任一网盘源卡片，查看能力声明、默认风控模板和恢复预算。</div>`;
     return;
   }
   if (!detail) {
@@ -381,11 +381,11 @@ function renderProviderCapabilityDetail() {
     </div>
     <div class="insight-grid">
       <div class="insight-card">
-        <strong>能力声明</strong>
+        <strong>能力摘要</strong>
         <span>${escapeHTML(renderProviderCapabilityCompact(capability))}</span>
       </div>
       <div class="insight-card">
-        <strong>鉴权模式</strong>
+        <strong>授权方式</strong>
         <span>${escapeHTML((provider.authModes || []).join(", ") || "-")}</span>
       </div>
       <div class="insight-card">
@@ -393,7 +393,7 @@ function renderProviderCapabilityDetail() {
         <span>${escapeHTML((provider.conflictPolicies || []).join(", ") || "-")}</span>
       </div>
       <div class="insight-card">
-        <strong>回退策略</strong>
+        <strong>兜底策略</strong>
         <span>${escapeHTML((provider.fallbackModes || []).join(", ") || "-")}</span>
       </div>
       ${renderProviderRiskTemplateDetail({ ...(provider.defaultRiskTemplate || {}), providerKey: provider.key || providerKey }, { title: "默认风控模板" })}
@@ -409,7 +409,7 @@ function syncTargetProviderInsight() {
   const providerKey = $("#plan-target-provider")?.value || "";
   const entry = findProviderEntry(providerKey);
   if (!providerKey || !entry) {
-    wrap.innerHTML = `<div class="muted">选择目标 provider 后，这里会显示默认风控模板、推荐档位和恢复预算。</div>`;
+    wrap.innerHTML = `<div class="muted">选择目标网盘源后，这里会显示默认风控模板、推荐档位和恢复预算。</div>`;
     return;
   }
   wrap.innerHTML = `
@@ -429,24 +429,24 @@ function syncTargetProviderInsight() {
       ${renderProviderRiskTemplateDetail({ ...(entry.meta.defaultRiskTemplate || {}), providerKey }, { title: "Provider 默认模板", compact: true })}
     </div>
     <div class="actions compact-actions">
-      <button type="button" class="ghost" id="apply-provider-default-risk">采用 provider 推荐风控</button>
-      <button type="button" class="ghost" id="open-target-provider-capability">查看 provider 能力详情</button>
+      <button type="button" class="ghost" id="apply-provider-default-risk">采用网盘源推荐风控</button>
+      <button type="button" class="ghost" id="open-target-provider-capability">查看网盘源能力详情</button>
     </div>
   `;
   $("#apply-provider-default-risk").onclick = () => {
     const recommended = entry.meta.defaultRiskTemplate?.recommendedMode || "";
     if (!recommended) {
-      showFlash("当前 provider 没有可用的推荐风控档位", true);
+      showFlash("当前网盘源没有可用的推荐风控档位", true);
       return;
     }
     setSelectValueIfPresent("#plan-risk-mode", recommended);
-    showFlash(`已采用 provider 推荐风控：${recommended}`);
+    showFlash(`已采用网盘源推荐风控：${recommended}`);
   };
   $("#open-target-provider-capability").onclick = async () => {
     try {
       await loadProviderCapabilityDetail(providerKey);
       activateTab("providers");
-      showFlash(`已打开 ${providerKey} provider 能力详情`);
+      showFlash(`已打开 ${providerKey} 网盘源能力详情`);
     } catch (error) {
       showFlash(error.message, true);
     }
@@ -483,11 +483,11 @@ function syncTargetProfileInsight() {
       </div>
       <div class="insight-card">
         <strong>来源</strong>
-        <span>${riskDefaults ? escapeHTML(riskDefaultSource || "auth profile riskDefaults") : "未配置，使用 provider 默认模板"}</span>
+        <span>${riskDefaults ? escapeHTML(riskDefaultSource || "auth profile riskDefaults") : "未配置，使用网盘源默认模板"}</span>
         <div class="muted">${escapeHTML(renderProfileRiskDefaultSourceAdvice(riskDefaultSource || ""))}</div>
       </div>
       <div class="insight-card">
-        <strong>Extra Keys</strong>
+        <strong>附加字段</strong>
         <span>${escapeHTML(extraKeys.join(", ") || "-")}</span>
       </div>
       <div class="insight-card">
@@ -522,7 +522,7 @@ function syncTargetProfileInsight() {
     clearButton.onclick = () => {
       hydrateRiskOverrideForm(null);
       $("#plan-risk-override").value = "";
-      showFlash("已清空任务覆盖，将回到账号默认 / provider 默认链路");
+      showFlash("已清空任务覆盖，将回到账号默认 / 网盘源默认链路");
     };
   }
 }
@@ -562,22 +562,22 @@ function renderRiskResolutionDetail(resolution) {
     ? recoverBudget.sensitiveProviders.filter(Boolean)
     : [];
   return `
-    <div class="muted">FLOW ${escapeHTML(renderRiskResolutionSummary(resolution))}</div>
-    <div class="muted">BASE ${escapeHTML(renderRiskProfileCompact(resolution.base))}</div>
-    <div class="muted">CALIBRATED ${escapeHTML(renderRiskProfileCompact(resolution.calibrated))}</div>
-    <div class="muted">PROFILE DEFAULT SOURCE ${escapeHTML(stringifyValue(resolution.profileDefaultSource, "-"))}</div>
-    <div class="muted">PROFILE DEFAULT SOURCE KIND ${escapeHTML(profileSourceKind)}</div>
-    <div class="muted">PROFILE DEFAULT BIAS ${escapeHTML(profileDefaultBias)}</div>
-    <div class="muted">PROFILE DEFAULT ${escapeHTML(renderRiskProfileCompact(resolution.profileApplied))}</div>
-    <div class="muted">APPLIED ${escapeHTML(renderRiskProfileCompact(resolution.applied))}</div>
-    <div class="muted">RECOVER BUDGET ${escapeHTML(renderRecoverBudgetCompact(recoverBudget))}</div>
-    <div class="muted">RECOVER REASON ${escapeHTML(stringifyValue(recoverBudget?.reason, "-"))}</div>
-    <div class="muted">SENSITIVE PROVIDERS ${escapeHTML(sensitiveProviders.join(", ") || "-")}</div>
-    <div class="muted">PROVIDER HINTS ${escapeHTML(providerHints.join(" / ") || "-")}</div>
-    <div class="muted">PROVIDER TRAITS ${escapeHTML(providerTraits.join(", ") || "-")}</div>
-    <div class="muted">CALIBRATION REASONS ${escapeHTML(reasons.join(" / ") || "-")}</div>
-    <div class="muted">PROFILE DEFAULT FIELDS ${escapeHTML(profileDefaultFields.join(", ") || "-")}</div>
-    <div class="muted">OVERRIDE FIELDS ${escapeHTML(overrideFields.join(", ") || "-")}</div>
+    <div class="muted">风控链路 ${escapeHTML(renderRiskResolutionSummary(resolution))}</div>
+    <div class="muted">基础模板 ${escapeHTML(renderRiskProfileCompact(resolution.base))}</div>
+    <div class="muted">校准结果 ${escapeHTML(renderRiskProfileCompact(resolution.calibrated))}</div>
+    <div class="muted">账号默认来源 ${escapeHTML(stringifyValue(resolution.profileDefaultSource, "-"))}</div>
+    <div class="muted">来源类型 ${escapeHTML(profileSourceKind)}</div>
+    <div class="muted">偏向策略 ${escapeHTML(profileDefaultBias)}</div>
+    <div class="muted">账号默认 ${escapeHTML(renderRiskProfileCompact(resolution.profileApplied))}</div>
+    <div class="muted">最终生效 ${escapeHTML(renderRiskProfileCompact(resolution.applied))}</div>
+    <div class="muted">恢复预算 ${escapeHTML(renderRecoverBudgetCompact(recoverBudget))}</div>
+    <div class="muted">预算说明 ${escapeHTML(stringifyValue(recoverBudget?.reason, "-"))}</div>
+    <div class="muted">敏感网盘源 ${escapeHTML(sensitiveProviders.join(", ") || "-")}</div>
+    <div class="muted">风险提示 ${escapeHTML(providerHints.join(" / ") || "-")}</div>
+    <div class="muted">风险特征 ${escapeHTML(providerTraits.join(", ") || "-")}</div>
+    <div class="muted">校准依据 ${escapeHTML(reasons.join(" / ") || "-")}</div>
+    <div class="muted">账号默认字段 ${escapeHTML(profileDefaultFields.join(", ") || "-")}</div>
+    <div class="muted">任务覆盖字段 ${escapeHTML(overrideFields.join(", ") || "-")}</div>
   `;
 }
 
@@ -586,7 +586,7 @@ function renderRiskResolutionMetaCards(resolution) {
     return "";
   }
   const recoverBudget = resolution.recoverBudget && typeof resolution.recoverBudget === "object" ? resolution.recoverBudget : {};
-  const profileSource = stringifyValue(resolution.profileDefaultSource, "provider default only");
+  const profileSource = stringifyValue(resolution.profileDefaultSource, "仅使用网盘源默认模板");
   const profileSourceKind = stringifyValue(resolution.profileDefaultSourceKind, "-");
   const profileDefaultBias = stringifyValue(resolution.profileDefaultBias, "same_as_provider");
   const profileDefaultFields = Array.isArray(resolution.profileDefaultFields)
@@ -628,9 +628,9 @@ function renderRiskWindow(profile) {
 function renderAutoRetryWindowSource(source) {
   switch (String(source || "").trim()) {
     case "provider_default":
-      return "provider default";
+      return "网盘源默认模板";
     case "empty_until_profile_or_override":
-      return "provider default empty";
+      return "默认留空，等待账号或任务覆盖";
     default:
       return stringifyValue(source, "-");
   }
@@ -1060,7 +1060,7 @@ function renderRetryQueueSummary(result) {
         <span>${result.visibleItems} / ${result.totalItems}</span>
       </div>
       <div class="retry-card">
-        <strong>Retryable</strong>
+        <strong>可立即重试</strong>
         <span>${retryable}</span>
       </div>
       <div class="retry-card">
@@ -1225,8 +1225,8 @@ function renderRuntimeCheckpoint(runtime, metadata = null, scope = "task") {
       <strong>处理进度</strong>
       <span>${stringifyValue(runtime.processedCount, "0")} / next ${stringifyValue(runtime.nextSequence, "1")}</span>
     </div>
-    ${metadata && typeof metadata === "object" ? renderRuntimePathChips("Selected Roots", metadata.selectedRoots || [], scope, "roots") : ""}
-    ${metadata && typeof metadata === "object" ? renderRuntimePathChips("Scan Trace", metadata.scanTrace || [], scope, "scan") : ""}
+    ${metadata && typeof metadata === "object" ? renderRuntimePathChips("选定根目录", metadata.selectedRoots || [], scope, "roots") : ""}
+    ${metadata && typeof metadata === "object" ? renderRuntimePathChips("扫描轨迹", metadata.scanTrace || [], scope, "scan") : ""}
     <div class="insight-card checkpoint-card">
       <strong>结果计数</strong>
       <span>done ${stringifyValue(runtime.doneCount, "0")} / skipped ${stringifyValue(runtime.skippedCount, "0")} / failed ${stringifyValue(runtime.failedCount, "0")}</span>
@@ -1241,7 +1241,7 @@ function renderRuntimeCheckpoint(runtime, metadata = null, scope = "task") {
     </div>
     <div class="insight-card checkpoint-card">
       <strong>重试队列</strong>
-      <span>retryable ${stringifyValue(runtime.retryableCount, "0")} / blocked ${stringifyValue(runtime.blockedRetryCount, "0")}</span>
+      <span>可重试 ${stringifyValue(runtime.retryableCount, "0")} / 阻塞 ${stringifyValue(runtime.blockedRetryCount, "0")}</span>
     </div>
     <div class="insight-card checkpoint-card">
       <strong>阻塞原因</strong>
@@ -2953,7 +2953,7 @@ function renderTaskResolutionGuide(detail) {
     refresh_auth_profile: {
       title: "刷新授权档案",
       steps: [
-        "切到“Provider / 授权”面板，定位当前目标端授权档案。",
+        "切到“网盘源 / 授权”面板，定位当前目标端授权档案。",
         "更新 token/cookie 后先执行 Validate，确认授权恢复正常。",
         "回到任务详情页，再执行 Resume 或 Retry。",
       ],
@@ -3197,8 +3197,8 @@ function renderProviders() {
           <div class="muted">default risk: ${escapeHTML(renderRiskProfileCompact(defaultRiskTemplate?.calibrated))}</div>
           <div class="muted">recommended risk: ${escapeHTML(stringifyValue(defaultRiskTemplate?.recommendedMode, "-"))}</div>
           <div class="muted">risk calibration: ${escapeHTML((defaultRiskTemplate?.calibrationReasons || []).join(" / ") || "-")}</div>
-          <div class="muted">calibration readiness: ${escapeHTML(stringifyValue(defaultRiskTemplate?.calibrationReadiness, "-"))}</div>
-          <div class="muted">priority calibration: ${escapeHTML(stringifyValue(defaultRiskTemplate?.calibrationPriorityAction, "-"))}</div>
+          <div class="muted">校准就绪度: ${escapeHTML(stringifyValue(defaultRiskTemplate?.calibrationReadiness, "-"))}</div>
+          <div class="muted">优先校准动作: ${escapeHTML(stringifyValue(defaultRiskTemplate?.calibrationPriorityAction, "-"))}</div>
           <div class="muted">recover budget: ${escapeHTML(renderRecoverBudgetCompact(defaultRiskTemplate?.recoverBudget))}</div>
           <div class="muted">profile risk source: ${escapeHTML(renderRiskDefaultsSourceBadge(profileSource))}</div>
           <div class="muted">profile risk advice: ${escapeHTML(renderProfileRiskDefaultSourceAdvice(profileSource))}</div>
@@ -3369,7 +3369,7 @@ function renderProfiles() {
         <tr>
           <th>显示名称</th>
           <th>Provider</th>
-          <th>Auth Mode</th>
+          <th>授权方式</th>
           <th>账号默认风控</th>
           <th>Status</th>
           <th>操作</th>
@@ -3725,8 +3725,8 @@ function renderSelectedTask() {
       <strong>执行模式</strong>
       <span>${stringifyValue(metadata.executionMode)}</span>
     </div>
-    ${renderRuntimePathChips("Selected Roots", metadata.selectedRoots || [], "task", "roots")}
-    ${renderRuntimePathChips("Scan Trace", metadata.scanTrace || [], "task", "scan")}
+    ${renderRuntimePathChips("选定根目录", metadata.selectedRoots || [], "task", "roots")}
+    ${renderRuntimePathChips("扫描轨迹", metadata.scanTrace || [], "task", "scan")}
     <div class="insight-card">
       <strong>推荐模式</strong>
       <span>${stringifyValue(metadata.recommendedExecutionMode)}</span>
@@ -3861,7 +3861,7 @@ function renderPreview() {
       <span>${stringifyValue(metadata.executionMode)}</span>
     </div>
     <div class="insight-card">
-      <strong>Selected Roots</strong>
+      <strong>选定根目录</strong>
       <span><code>${escapeHTML(summarizePathList(metadata.selectedRoots || []))}</code></span>
     </div>
     <div class="insight-card">
@@ -4013,8 +4013,8 @@ function renderStatus() {
     <div class="metric"><span>Smoke Missing Anomaly</span><strong>${escapeHTML(summarizePathList(evidence.smokeMatrixMissingAnomalyGroups, 4))}</strong></div>
     <div class="metric"><span>Smoke Missing Representative</span><strong>${escapeHTML(summarizePathList(evidence.smokeMatrixMissingRepresentativeGroups, 4))}</strong></div>
     <div class="metric"><span>Smoke Priority Actions</span><strong>${escapeHTML(smokePriorityActionSummary || "-")}</strong></div>
-    <div class="metric"><span>Checkpoint Ready</span><strong>${escapeHTML(renderUploadCheckpointReadiness(evidence))}</strong></div>
-    <div class="metric"><span>Checkpoint Priority</span><strong>${escapeHTML(renderUploadCheckpointPriorityAction(evidence))}</strong></div>
+    <div class="metric"><span>断点续传就绪度</span><strong>${escapeHTML(renderUploadCheckpointReadiness(evidence))}</strong></div>
+    <div class="metric"><span>断点续传优先动作</span><strong>${escapeHTML(renderUploadCheckpointPriorityAction(evidence))}</strong></div>
     <div class="metric"><span>Recover Priority</span><strong>${escapeHTML(renderAutoRecoverPriorityAction(evidence))}</strong></div>
     <div class="metric"><span>Recover Ready</span><strong>${escapeHTML(renderAutoRecoverReadiness(evidence))}</strong></div>
     <div class="metric"><span>Fairness Ready</span><strong>${escapeHTML(renderAutoRecoverFairnessReadiness(evidence))}</strong></div>
@@ -5716,7 +5716,7 @@ function renderEvidenceProviderSmokeProviders(report) {
   if (!items.length) {
     return `
       <div class="insight-card">
-        <strong>Provider 级真实样本验收</strong>
+        <strong>网盘源级真实样本验收</strong>
         <span>暂无 providerSmokeProviders 数据，请先刷新或保存新版验收报告。</span>
       </div>
     `;
@@ -5773,12 +5773,12 @@ function renderEvidenceProviderSmokeProviders(report) {
     .slice(0, 6);
   return `
     <div class="insight-card">
-      <strong>Provider 级真实样本验收</strong>
-      <span>Provider Ready ${counts.ready} / ${counts.total}</span>
+      <strong>网盘源级真实样本验收</strong>
+      <span>网盘就绪 ${counts.ready} / ${counts.total}</span>
     </div>
     <div class="directory-row tree-node">
       <div class="directory-row-header">
-        <strong>Provider 验收缺口速览</strong>
+        <strong>网盘源验收缺口速览</strong>
         <code>providerSmokeProviders</code>
       </div>
       <div class="directory-metrics">
@@ -5837,7 +5837,7 @@ function renderEvidenceUploadCheckpointSummary(report) {
   return `
     <div class="insight-card">
       <strong>Upload checkpoint 默认恢复验收</strong>
-      <span>Checkpoint Resume Ready: ${escapeHTML(readiness)}</span>
+      <span>断点续传就绪度：${escapeHTML(readiness)}</span>
     </div>
     <div class="directory-row tree-node">
       <div class="directory-row-header">
@@ -5934,7 +5934,7 @@ function renderEvidenceRiskCalibrationSummary(report) {
   return `
     <div class="insight-card">
       <strong>Provider 默认风控校准</strong>
-      <span>Calibration Ready ${counts.ready} / ${counts.total}</span>
+      <span>校准就绪 ${counts.ready} / ${counts.total}</span>
     </div>
     <div class="directory-row tree-node">
       <div class="directory-row-header">
@@ -5946,8 +5946,8 @@ function renderEvidenceRiskCalibrationSummary(report) {
         <span class="pill">partial ${counts.partial}</span>
         <span class="pill">pending ${counts.pending}</span>
       </div>
-      <div class="muted">calibration missing field counts: ${escapeHTML(calibrationMissingFieldSummary || "-")}</div>
-      <div class="muted">calibration priority action counts: ${escapeHTML(calibrationPriorityActionSummary || "-")}</div>
+      <div class="muted">校准缺失字段统计: ${escapeHTML(calibrationMissingFieldSummary || "-")}</div>
+      <div class="muted">校准优先动作统计: ${escapeHTML(calibrationPriorityActionSummary || "-")}</div>
       ${
         focusItems.length
           ? focusItems
@@ -5956,29 +5956,29 @@ function renderEvidenceRiskCalibrationSummary(report) {
                 return `
                   <div class="muted">
                     ${escapeHTML(stringifyValue(item?.meta?.key, "-"))}:
-                    calibration readiness ${escapeHTML(stringifyValue(template.calibrationReadiness, "pending"))}
+                    校准就绪度 ${escapeHTML(stringifyValue(template.calibrationReadiness, "pending"))}
                     / recommended ${escapeHTML(stringifyValue(template.recommendedMode, "-"))}
-                    / priority calibration ${escapeHTML(stringifyValue(template.calibrationPriorityAction, "-"))}
+                    / 优先校准 ${escapeHTML(stringifyValue(template.calibrationPriorityAction, "-"))}
                   </div>
                   <div class="muted">
-                    window source ${escapeHTML(renderAutoRetryWindowSource(template.autoRetryWindowSource))}
-                    / window advice ${escapeHTML(stringifyValue(template.autoRetryWindowAdvice, "-"))}
+                    时间窗来源 ${escapeHTML(renderAutoRetryWindowSource(template.autoRetryWindowSource))}
+                    / 时间窗建议 ${escapeHTML(stringifyValue(template.autoRetryWindowAdvice, "-"))}
                   </div>
                   <div class="muted">
-                    calibration missing ${escapeHTML((template.calibrationMissing || []).join(", ") || "-")}
-                    / calibration coverage ${escapeHTML(stringifyValue(template.calibrationCoverage, "-"))}
+                    校准缺失 ${escapeHTML((template.calibrationMissing || []).join(", ") || "-")}
+                    / 校准覆盖 ${escapeHTML(stringifyValue(template.calibrationCoverage, "-"))}
                     / covered ${escapeHTML(stringifyValue(template.calibrationCoveredCount, "0"))}/${escapeHTML(stringifyValue(template.calibrationTargetCount, "0"))}
                   </div>
                   <div class="muted">
                     covered fields ${escapeHTML((template.calibrationCoveredFields || []).join(", ") || "-")}
                   </div>
                   <div class="muted">
-                    calibration sample advice ${escapeHTML(stringifyValue(template.calibrationSampleAdvice, "-"))}
+                    校准样本建议 ${escapeHTML(stringifyValue(template.calibrationSampleAdvice, "-"))}
                   </div>
                 `;
               })
               .join("")
-          : `<div class="muted">priority calibration: complete</div>`
+          : `<div class="muted">优先校准动作: complete</div>`
       }
     </div>
   `;
@@ -7285,7 +7285,7 @@ function wireProfiles() {
     try {
       await loadProviderCapabilityDetail(providerKey);
     } catch (error) {
-      showFlash(`加载 provider 能力详情失败：${error.message}`, true);
+      showFlash(`加载网盘能力详情失败：${error.message}`, true);
     }
   });
   $("#plan-execution-mode").addEventListener("change", () => {
@@ -7299,7 +7299,7 @@ function wireProfiles() {
     }
     try {
       await loadProviderCapabilityDetail(button.dataset.providerDetailOpen || "");
-      showFlash(`已加载 ${button.dataset.providerDetailOpen} provider 能力详情`);
+      showFlash(`已加载 ${button.dataset.providerDetailOpen} 网盘能力详情`);
     } catch (error) {
       showFlash(error.message, true);
     }
@@ -7308,7 +7308,7 @@ function wireProfiles() {
   $("#refresh-providers").addEventListener("click", async () => {
     try {
       await loadProviders();
-      showFlash("Provider 列表已刷新");
+      showFlash("网盘列表已刷新");
     } catch (error) {
       showFlash(error.message, true);
     }
@@ -7414,13 +7414,13 @@ function wirePlanner() {
   $("#clear-risk-override").addEventListener("click", () => {
     hydrateRiskOverrideForm(null);
     $("#plan-risk-override").value = "";
-    showFlash("风控覆盖已清空，将使用默认档位和 provider 校准");
+    showFlash("风控覆盖已清空，将使用默认档位和网盘源校准");
   });
   $("#plan-risk-override").addEventListener("blur", () => {
     try {
       hydrateRiskOverrideForm(parseJSONInput($("#plan-risk-override").value, null));
     } catch (error) {
-      showFlash(`Risk Override JSON 无法解析：${error.message}`, true);
+      showFlash(`风控覆盖 JSON 无法解析：${error.message}`, true);
     }
   });
   $("#apply-recommended-execution").addEventListener("click", () => {
@@ -7811,7 +7811,7 @@ function wireStatus() {
       hydrateProviderSmokeForm(record);
       state.selectedProviderSmokeId = record.id || "";
       state.selectedProviderSmokeMarkdown = record.markdown || "";
-      showFlash("Provider smoke 记录已保存");
+      showFlash("网盘样本 smoke 记录已保存");
       await loadStatus();
     } catch (error) {
       showFlash(error.message, true);

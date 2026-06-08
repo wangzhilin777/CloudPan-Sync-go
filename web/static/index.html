@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>CloudPan Sync Go Console</title>
+    <title>CloudPan Sync Go 控制台</title>
     <link rel="stylesheet" href="/assets/styles.css" />
   </head>
   <body>
@@ -13,7 +13,7 @@
           <p class="eyebrow">CloudPan Sync Go</p>
           <h1>多网盘互传控制台，围绕任务、状态和证据做日常操作。</h1>
           <p class="lede">
-            当前页面覆盖登录、Provider/授权、任务向导、任务列表、状态矩阵与运行证据，适合统一管理多 provider 之间的同步任务。
+            当前页面覆盖登录、网盘授权、任务向导、任务列表、状态矩阵与运行证据，适合统一管理多网盘之间的同步任务。
           </p>
           <p class="lede">
             当前控制台会直接展示叶子目录优先、后台补传，以及“源端删除仅记录、不默认删除目标端”等核心同步语义，方便查看任务策略和处理结果。
@@ -22,13 +22,13 @@
         <div class="hero-badge">
           <span class="dot"></span>
           <strong id="session-state">未登录</strong>
-          <span>Scaffold Console</span>
+          <span>本地控制台</span>
         </div>
       </header>
 
       <nav class="tabs" aria-label="Primary">
         <button class="tab active" data-view="login">登录</button>
-        <button class="tab" data-view="providers">Provider / 授权</button>
+        <button class="tab" data-view="providers">网盘源 / 授权</button>
         <button class="tab" data-view="wizard">任务向导</button>
         <button class="tab" data-view="tasks">任务列表详情</button>
         <button class="tab" data-view="status">状态矩阵 / 证据</button>
@@ -73,11 +73,11 @@
               <form id="profile-form" class="stack">
                 <input id="profile-id" name="id" type="hidden" />
                 <label>
-                  <span>Provider</span>
+                  <span>网盘源</span>
                   <select id="profile-provider" name="providerKey"></select>
                 </label>
                 <label>
-                  <span>Auth Mode</span>
+                  <span>授权方式</span>
                   <select id="profile-auth-mode" name="authMode"></select>
                 </label>
                 <label>
@@ -85,7 +85,7 @@
                   <input id="profile-display-name" name="displayName" type="text" placeholder="例如：189Cloud 主账号" />
                 </label>
                 <label>
-                  <span>Token</span>
+                  <span>令牌 Token</span>
                   <input id="profile-token" name="token" type="text" placeholder="可留空" />
                 </label>
                 <label>
@@ -93,7 +93,7 @@
                   <textarea id="profile-cookie" name="cookie" rows="3" placeholder="可留空"></textarea>
                 </label>
                 <label>
-                  <span>Extra(JSON)</span>
+                  <span>附加配置(JSON)</span>
                   <textarea id="profile-extra" name="extra" rows="4" placeholder='例如：{"pwdId":"abcd"}'></textarea>
                 </label>
                 <div class="risk-builder">
@@ -153,12 +153,12 @@
 
             <article class="card">
               <div class="section-head">
-                <h2>Provider 能力概览</h2>
+                <h2>网盘能力概览</h2>
                 <button type="button" class="ghost" id="refresh-providers">刷新</button>
               </div>
               <div id="providers-grid" class="provider-grid"></div>
               <div id="provider-capability-detail" class="provider-detail-card">
-                <div class="muted">点击任一 provider 卡片，查看能力声明、默认风控模板和恢复预算。</div>
+                <div class="muted">点击任一网盘卡片，查看能力说明、默认风控模板和恢复预算。</div>
               </div>
             </article>
           </div>
@@ -178,15 +178,15 @@
               <h2>任务预览 / 创建</h2>
               <form id="plan-form" class="stack">
                 <label>
-                  <span>源 Provider</span>
+                  <span>源网盘源</span>
                   <select id="plan-source-provider" name="sourceProvider"></select>
                 </label>
                 <label>
-                  <span>目标 Provider</span>
+                  <span>目标网盘源</span>
                   <select id="plan-target-provider" name="targetProvider"></select>
                 </label>
                 <div id="plan-target-provider-insight" class="provider-detail-card compact">
-                  <div class="muted">选择目标 provider 后，这里会显示默认风控模板、推荐档位和恢复预算。</div>
+                  <div class="muted">选择目标网盘源后，这里会显示默认风控模板、推荐档位和恢复预算。</div>
                 </div>
                 <label>
                   <span>源授权档案</span>
@@ -200,7 +200,7 @@
                   <div class="muted">选择目标授权档案后，这里会显示账号默认风控模板，并支持一键写入任务覆盖。</div>
                 </div>
                 <label>
-                  <span>Risk Mode</span>
+                  <span>风控档位</span>
                   <select id="plan-risk-mode" name="riskMode">
                     <option value="balanced">balanced</option>
                     <option value="safe">safe</option>
@@ -211,7 +211,7 @@
                 <div class="risk-builder">
                   <div class="risk-builder-head">
                     <strong>任务级风控覆盖</strong>
-                    <span>可选。留空时使用当前档位 + provider 默认校准。</span>
+                    <span>可选。留空时使用当前档位 + 网盘源默认校准。</span>
                   </div>
                   <div class="mini-grid">
                     <label>
@@ -257,11 +257,11 @@
                   </div>
                 </div>
                 <label>
-                  <span>Risk Override(JSON)</span>
+                  <span>风控覆盖(JSON)</span>
                   <textarea id="plan-risk-override" rows="4" placeholder='例如：{"requestIntervalMs":1200,"directoryIntervalMs":2000,"retryLimit":2,"riskKeywords":["rate_limit","captcha"]}'></textarea>
                 </label>
                 <label>
-                  <span>Execution Mode</span>
+                  <span>执行模式</span>
                   <select id="plan-execution-mode" name="executionMode">
                     <option value="leaf_first_lazy">leaf_first_lazy</option>
                     <option value="pre_scan_flat">pre_scan_flat</option>
@@ -274,7 +274,7 @@
                   </select>
                 </label>
                 <div id="plan-execution-hint" class="inline-note">
-                  默认优先推荐 `leaf_first_lazy`，适合大目录、风控敏感 provider 和按需扫描场景。
+                  默认优先推荐 `leaf_first_lazy`，适合大目录、风控敏感网盘源和按需扫描场景。
                 </div>
                 <div class="inline-note">
                   当前首版仅支持 `record_only`，用于显式记录源端删除事件，不会默认删除目标端已有文件。
@@ -294,18 +294,18 @@
                   <input id="plan-threshold" name="thresholdMB" type="number" min="0" value="10" />
                 </label>
                 <label>
-                  <span>Conflict Policy</span>
+                  <span>冲突策略</span>
                   <select id="plan-conflict-policy" name="conflictPolicy">
                     <option value="auto_rename_new">auto_rename_new</option>
                     <option value="overwrite_existing">overwrite_existing</option>
                   </select>
                 </label>
                 <label>
-                  <span>Selected Roots(JSON)</span>
+                  <span>选定根目录(JSON)</span>
                   <textarea id="plan-selected-roots" rows="2">["/demo"]</textarea>
                 </label>
                 <label>
-                  <span>Entries(JSON)</span>
+                  <span>条目(JSON)</span>
                   <textarea id="plan-entries" rows="12">[
   {
     "path": "/demo/file.bin",
@@ -346,10 +346,10 @@
               <div class="section-head">
                 <h2>任务详情</h2>
                 <div class="actions compact">
-                  <button type="button" class="ghost" id="task-run">Run</button>
-                  <button type="button" class="ghost" id="task-pause">Pause</button>
-                  <button type="button" class="ghost" id="task-resume">Resume</button>
-                  <button type="button" class="ghost" id="task-retry">Retry</button>
+                  <button type="button" class="ghost" id="task-run">运行</button>
+                  <button type="button" class="ghost" id="task-pause">暂停</button>
+                  <button type="button" class="ghost" id="task-resume">继续</button>
+                  <button type="button" class="ghost" id="task-retry">重试</button>
                 </div>
               </div>
               <div id="task-summary" class="insight-grid">

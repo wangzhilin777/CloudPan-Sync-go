@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"cloudpan-sync-go/internal/auth"
@@ -83,7 +84,15 @@ func (a *App) Run(ctx context.Context) error {
 	}
 
 	go func() {
-		a.logger.Info("http server starting", "addr", a.cfg.Addr, "db_path", a.cfg.DBPath)
+		a.logger.Info(
+			"服务已启动，请打开控制台",
+			"addr", a.cfg.Addr,
+			"db_path", a.cfg.DBPath,
+			"local_url", localConsoleURL(a.cfg.Addr),
+			"lan_hint", "局域网访问时，请把 127.0.0.1 替换成运行这台服务机器的局域网 IP。",
+			"data_dir", a.cfg.DataDir,
+			"password_hint", "如未修改管理员密码，默认密码仍为 admin，建议尽快修改。",
+		)
 		if err := a.server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			errCh <- err
 			return
@@ -169,4 +178,21 @@ func (a *App) loggingMiddleware(next http.Handler) http.Handler {
 		next.ServeHTTP(w, r)
 		a.logger.Info("request completed", "method", r.Method, "path", r.URL.Path, "elapsed_ms", time.Since(start).Milliseconds())
 	})
+}
+
+func localConsoleURL(addr string) string {
+	trimmed := strings.TrimSpace(addr)
+	if trimmed == "" {
+		return "http://127.0.0.1:8080/"
+	}
+	if strings.HasPrefix(trimmed, ":") {
+		return fmt.Sprintf("http://127.0.0.1%s/", trimmed)
+	}
+	if strings.HasPrefix(trimmed, "0.0.0.0:") {
+		return fmt.Sprintf("http://127.0.0.1:%s/", strings.TrimPrefix(trimmed, "0.0.0.0:"))
+	}
+	if strings.HasPrefix(trimmed, "localhost:") || strings.HasPrefix(trimmed, "127.0.0.1:") {
+		return fmt.Sprintf("http://%s/", trimmed)
+	}
+	return fmt.Sprintf("http://%s/", trimmed)
 }
