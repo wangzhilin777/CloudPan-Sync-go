@@ -71,6 +71,18 @@ func TestHandleIndexServesHTML(t *testing.T) {
 	if !strings.Contains(body, `id="plan-target-browser-breadcrumbs"`) {
 		t.Fatalf("expected target browser breadcrumbs in html body, got %q", body)
 	}
+	if !strings.Contains(body, `id="plan-source-browser-hint"`) {
+		t.Fatalf("expected source browser hint in html body, got %q", body)
+	}
+	if !strings.Contains(body, `id="plan-target-browser-hint"`) {
+		t.Fatalf("expected target browser hint in html body, got %q", body)
+	}
+	if !strings.Contains(body, `id="plan-selected-roots-hint"`) {
+		t.Fatalf("expected selected roots manual hint in html body, got %q", body)
+	}
+	if !strings.Contains(body, `id="plan-target-root-hint"`) {
+		t.Fatalf("expected target root manual hint in html body, got %q", body)
+	}
 	if !strings.Contains(body, `id="plan-target-browser-create"`) {
 		t.Fatalf("expected target browser create button in html body, got %q", body)
 	}
@@ -257,6 +269,24 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	}
 	if !strings.Contains(body, "根目录") {
 		t.Fatalf("expected breadcrumb root label in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "directoryBrowserHint") {
+		t.Fatalf("expected directoryBrowserHint helper in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "目录浏览能力") {
+		t.Fatalf("expected browser compatibility hint text in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "spotlightDirectoryBrowserSelection") {
+		t.Fatalf("expected directory browser spotlight helper in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "selection-spotlight") {
+		t.Fatalf("expected directory browser selection spotlight class in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "syncManualDirectoryInputHints") {
+		t.Fatalf("expected manual directory input hint helper in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "建议直接手动填写 JSON 路径数组") {
+		t.Fatalf("expected manual selected roots guidance in app.js, got %q", body)
 	}
 	if !strings.Contains(body, "设为目标目录") {
 		t.Fatalf("expected target directory picker label in app.js, got %q", body)

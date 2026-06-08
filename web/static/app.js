@@ -2821,6 +2821,60 @@ function directoryBrowserScope(kind) {
   };
 }
 
+function directoryBrowserHint(kind, browser, providerKey) {
+  const provider = findProviderEntry(providerKey);
+  const displayName = provider?.meta?.displayName || providerKey || "当前网盘源";
+  const capability = provider?.capability || {};
+  if (!providerKey) {
+    return "请先选择网盘源，再继续浏览目录。";
+  }
+  if (!capability.supportsList) {
+    return `${displayName} 当前未声明目录浏览能力，可能只能手动填写路径。`;
+  }
+  if (!browser.currentFileId && normalizeComparePath(browser.currentPath) !== "/") {
+    return `${displayName} 当前目录未返回稳定 fileId / parentId，子目录创建或部分跳转可能受限。`;
+  }
+  if (browser.error) {
+    return `${displayName} 目录加载失败时，可先验证授权档案、切回根目录，或手动填写路径。`;
+  }
+  return `${displayName} 已启用目录浏览，可直接点选目录回填到任务向导。`;
+}
+
+function syncManualDirectoryInputHints() {
+  const selectedRootsHint = $("#plan-selected-roots-hint");
+  const targetRootHint = $("#plan-target-root-hint");
+  if (!selectedRootsHint || !targetRootHint) {
+    return;
+  }
+  const sourceScope = directoryBrowserScope("source");
+  const targetScope = directoryBrowserScope("target");
+  const sourceProvider = findProviderEntry(sourceScope.providerKey);
+  const targetProvider = findProviderEntry(targetScope.providerKey);
+  const sourceSupportsList = Boolean(sourceProvider?.capability?.supportsList);
+  const targetSupportsList = Boolean(targetProvider?.capability?.supportsList);
+  selectedRootsHint.textContent = sourceSupportsList
+    ? '也可手动填写，例如 ["/电影","/相册/旅行"]；只同步整个根目录时填写 ["/"]。'
+    : '当前源网盘源可能不支持目录浏览，建议直接手动填写 JSON 路径数组，例如 ["/电影","/相册/旅行"]；只同步根目录时填写 ["/"]。';
+  targetRootHint.textContent = targetSupportsList
+    ? "也可手动填写目标目录，例如 /归档/2026；如果直接写入目标根目录，可保留 /。"
+    : "当前目标网盘源可能不支持目录浏览，建议直接手动填写目标目录路径，例如 /归档/2026；如果直接写入目标根目录，可保留 /。";
+}
+
+function spotlightDirectoryBrowserSelection(kind) {
+  const listNode = $(kind === "target" ? "#plan-target-browser-list" : "#plan-source-browser-list");
+  if (!listNode) {
+    return;
+  }
+  const activeItem = listNode.querySelector(".directory-browser-item.active");
+  if (!activeItem) {
+    return;
+  }
+  activeItem.scrollIntoView({ block: "center", behavior: "smooth" });
+  activeItem.classList.remove("selection-spotlight");
+  void activeItem.offsetWidth;
+  activeItem.classList.add("selection-spotlight");
+}
+
 function resetDirectoryBrowser(kind) {
   state.directoryBrowsers[kind] = {
     currentPath: "/",
@@ -2883,8 +2937,9 @@ function renderDirectoryBrowser(kind) {
   const pathNode = $(config.pathSelector);
   const breadcrumbsNode = $(kind === "target" ? "#plan-target-browser-breadcrumbs" : "#plan-source-browser-breadcrumbs");
   const selectionNode = $(config.selectionSelector);
+  const hintNode = $(kind === "target" ? "#plan-target-browser-hint" : "#plan-source-browser-hint");
   const listNode = $(config.listSelector);
-  if (!pathNode || !breadcrumbsNode || !selectionNode || !listNode) {
+  if (!pathNode || !breadcrumbsNode || !selectionNode || !hintNode || !listNode) {
     return;
   }
 
@@ -2911,6 +2966,7 @@ function renderDirectoryBrowser(kind) {
   });
   breadcrumbsNode.innerHTML = breadcrumbParts.join("");
   selectionNode.innerHTML = `<code>${escapeHTML(selectedPath || "/")}</code>`;
+  hintNode.textContent = directoryBrowserHint(kind, browser, providerKey);
   const refreshButton = kind === "target" ? $("#plan-target-browser-refresh") : $("#plan-source-browser-refresh");
   const upButton = kind === "target" ? $("#plan-target-browser-up") : $("#plan-source-browser-up");
   const selectCurrentButton = kind === "target" ? $("#plan-target-browser-select-current") : $("#plan-source-browser-select-current");
@@ -2954,7 +3010,7 @@ function renderDirectoryBrowser(kind) {
         const isSelected = normalizeComparePath(item.path) === normalizeComparePath(selectedPath);
         const isCurrent = normalizeComparePath(item.path) === normalizeComparePath(browser.currentPath);
         return `
-        <article class="directory-browser-item${isSelected ? " active" : ""}">
+        <article class="directory-browser-item${isSelected ? " active" : ""}" data-directory-path="${escapeHTML(item.path)}">
           <strong>${escapeHTML(item.name)}</strong>
           <div class="muted"><code>${escapeHTML(item.path)}</code></div>
           <div class="meta-row">
@@ -2981,11 +3037,14 @@ function renderDirectoryBrowser(kind) {
       },
     )
     .join("");
+  spotlightDirectoryBrowserSelection(kind);
+  syncManualDirectoryInputHints();
 }
 
 function renderAllDirectoryBrowsers() {
   renderDirectoryBrowser("source");
   renderDirectoryBrowser("target");
+  syncManualDirectoryInputHints();
 }
 
 async function loadDirectoryBrowser(kind, path = "/", options = {}) {

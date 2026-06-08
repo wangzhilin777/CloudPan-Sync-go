@@ -220,6 +220,9 @@
                         <div id="plan-source-browser-selection">会写入选定根目录(JSON)</div>
                       </div>
                     </div>
+                    <div id="plan-source-browser-hint" class="inline-note">
+                      选择源网盘源和源授权档案后，这里会显示目录浏览兼容提示。
+                    </div>
                     <div id="plan-source-browser-list" class="directory-browser-list">
                       <div class="directory-empty">选择源网盘源和源授权档案后可浏览目录。</div>
                     </div>
@@ -243,6 +246,9 @@
                         <strong>回填结果</strong>
                         <div id="plan-target-browser-selection">会写入目标根目录</div>
                       </div>
+                    </div>
+                    <div id="plan-target-browser-hint" class="inline-note">
+                      选择目标网盘源和目标授权档案后，这里会显示目录浏览兼容提示。
                     </div>
                     <div class="actions compact directory-create-row">
                       <input id="plan-target-browser-create-name" type="text" placeholder="新建子目录名称，例如 archive-2026" />
@@ -358,10 +364,16 @@
                   <span>选定根目录(JSON)</span>
                   <textarea id="plan-selected-roots" rows="2">["/demo"]</textarea>
                 </label>
+                <div id="plan-selected-roots-hint" class="inline-note">
+                  源目录支持手动填写。格式示例：`["/电影","/相册/旅行"]`；如果只同步整个根目录，可填写 `["/"]`。
+                </div>
                 <label>
                   <span>目标根目录</span>
                   <input id="plan-target-root" type="text" value="/" placeholder="/archive/2026" />
                 </label>
+                <div id="plan-target-root-hint" class="inline-note">
+                  目标目录支持手动填写。示例：`/归档/2026`；如果希望直接写入目标根目录，可保留 `/`。
+                </div>
                 <div class="inline-note">
                   上传目标路径会按“目标根目录 + 源端相对路径”生成；留空时默认写到目标端根目录。
                 </div>
