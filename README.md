@@ -75,6 +75,8 @@ Release 页面：
 http://127.0.0.1:8080/
 ```
 
+如果是在其它电脑、手机或 NAS 旁路设备上访问，请把 `127.0.0.1` 换成运行服务那台机器的局域网 IP。
+
 默认管理员密码是 `admin`。正式使用前建议改掉：
 
 ```powershell
@@ -112,6 +114,24 @@ go run ./cmd/cloudpan-sync
 http://127.0.0.1:8080/
 ```
 
+## 访问地址怎么选
+
+服务默认监听 `:8080`，表示监听当前机器或容器的 `8080` 端口，不是只能通过 `127.0.0.1` 访问。
+
+这个地址同时提供浏览器控制台、后端 API 和桌面客户端 `serverBase`，不是只给本机管理面板使用。
+
+- 在运行服务的本机访问：`http://127.0.0.1:8080/`
+- 在局域网其它设备访问：`http://运行服务的电脑IP:8080/`
+- 在 NAS 上部署后访问：`http://NAS的局域网IP:8080/`
+- 通过反向代理或 Tunnel 访问：使用你配置的域名，例如 `https://pan.example.com/`
+
+如果你只想允许本机访问，可以把监听地址显式改成 `127.0.0.1:8080`：
+
+```powershell
+$env:CLOUDPAN_ADDR="127.0.0.1:8080"
+.\cloudpan-sync.exe
+```
+
 ## Docker 使用
 
 ### 方式一：本地构建镜像
@@ -128,11 +148,13 @@ docker build -t cloudpan-sync-go .
 docker run --rm -p 8080:8080 -v ${PWD}/.cloudpan-sync-go:/data -e CLOUDPAN_ADMIN_PASSWORD=admin cloudpan-sync-go
 ```
 
-浏览器打开：
+在运行 Docker 的本机打开：
 
 ```text
 http://127.0.0.1:8080/
 ```
+
+如果 Docker 跑在服务器或 NAS 上，请访问 `http://服务器IP:8080/` 或 `http://NAS的局域网IP:8080/`。
 
 ### 方式二：导入 Release 里的 Docker 镜像
 
@@ -142,6 +164,69 @@ http://127.0.0.1:8080/
 docker load -i cloudpan-sync-go-docker-image.tar.gz
 docker run --rm -p 8080:8080 -v ${PWD}/.cloudpan-sync-go:/data -e CLOUDPAN_ADMIN_PASSWORD=admin cloudpan-sync-go:release
 ```
+
+Docker 标签说明：
+
+- 已发布的 `v0.2.0` Docker 镜像归档使用 `cloudpan-sync-go:release`。
+- 后续 GitHub 打包会同时写入 `cloudpan-sync-go:release` 和 `cloudpan-sync-go:latest`。
+- `latest` 是 Docker 常用标签名，不是 `last`。
+- 如果你导入的是旧包但想使用 `latest`，可以手动补一个别名：
+
+```powershell
+docker tag cloudpan-sync-go:release cloudpan-sync-go:latest
+```
+
+### 方式三：Docker Compose 启动
+
+仓库提供了 `compose.example.yml` 示例。你可以复制成 `compose.yml` 后修改密码：
+
+```powershell
+Copy-Item .\compose.example.yml .\compose.yml
+notepad .\compose.yml
+```
+
+最小示例：
+
+```yaml
+services:
+  cloudpan-sync-go:
+    image: cloudpan-sync-go:release
+    container_name: cloudpan-sync-go
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      CLOUDPAN_ADMIN_PASSWORD: "change-me"
+      CLOUDPAN_LOG_LEVEL: "info"
+    volumes:
+      - ./.cloudpan-sync-go:/data
+```
+
+启动：
+
+```powershell
+docker compose up -d
+```
+
+查看日志：
+
+```powershell
+docker compose logs -f
+```
+
+停止：
+
+```powershell
+docker compose down
+```
+
+在运行 Docker 的本机打开：
+
+```text
+http://127.0.0.1:8080/
+```
+
+如果 Docker 跑在服务器或 NAS 上，请访问对应机器的 IP 或域名。
 
 ### Docker 数据目录
 
@@ -156,6 +241,69 @@ docker run --rm -p 8080:8080 -v ${PWD}/.cloudpan-sync-go:/data -e CLOUDPAN_ADMIN
 ```powershell
 docker run --rm -p 8080:8080 -v "D:\CloudPanSyncData:/data" -e CLOUDPAN_ADMIN_PASSWORD="换成你的强密码" cloudpan-sync-go:release
 ```
+
+## NAS 部署
+
+NAS 上推荐优先使用 Docker Compose 或 NAS 自带的 Container Manager / Container Station / Docker 套件部署。核心原则是：镜像可以重建，数据目录必须持久化挂载。
+
+### NAS 用 Docker Compose
+
+1. 在 NAS 上新建一个目录，例如 `/volume1/docker/cloudpan-sync-go`。
+2. 把 `cloudpan-sync-go-docker-image.tar.gz` 上传到这个目录。
+3. 通过 SSH 进入该目录。
+4. 导入镜像：
+
+```bash
+docker load -i cloudpan-sync-go-docker-image.tar.gz
+```
+
+5. 新建 `compose.yml`：
+
+```yaml
+services:
+  cloudpan-sync-go:
+    image: cloudpan-sync-go:release
+    container_name: cloudpan-sync-go
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      CLOUDPAN_ADMIN_PASSWORD: "change-me"
+      CLOUDPAN_LOG_LEVEL: "info"
+    volumes:
+      - ./data:/data
+```
+
+6. 启动：
+
+```bash
+docker compose up -d
+```
+
+7. 浏览器访问：
+
+```text
+http://NAS的局域网IP:8080/
+```
+
+### NAS 图形界面部署
+
+如果你的 NAS 不方便 SSH，也可以在图形界面操作：
+
+- 先在镜像页面导入 `cloudpan-sync-go-docker-image.tar.gz`。
+- 创建容器时选择镜像 `cloudpan-sync-go:release`。
+- 端口映射填写本机 `8080` 到容器 `8080`。
+- 新增环境变量 `CLOUDPAN_ADMIN_PASSWORD`，不要继续使用默认密码。
+- 新增环境变量 `CLOUDPAN_LOG_LEVEL=info`。
+- 把 NAS 上的固定目录挂载到容器 `/data`。
+- 启动后访问 `http://NAS的局域网IP:8080/`，不是访问你电脑自己的 `127.0.0.1`。
+
+NAS 注意事项：
+
+- 不要把 `/data` 挂到临时目录，否则容器重建后数据库会丢。
+- 如果 NAS 防火墙开启了端口限制，需要放行 `8080` 或你自定义的端口。
+- 如果要从公网访问，优先用 VPN、内网穿透、反向代理或 Cloudflare Tunnel，并务必修改管理员密码。
+- ARM NAS 请确认镜像架构；当前 Dockerfile 默认构建 `linux/amd64`，不同架构 NAS 可能需要本地重新构建。
 
 ## 可选公网访问
 
@@ -177,11 +325,13 @@ docker run --rm -p 8080:8080 -v "D:\CloudPanSyncData:/data" -e CLOUDPAN_ADMIN_PA
 docker run --rm -p 8080:8080 -v ${PWD}/.cloudpan-sync-go:/data -e CLOUDPAN_ADMIN_PASSWORD=admin cloudpan-sync-go:release
 ```
 
-确认本机可以打开：
+确认服务端可以访问。本机部署时打开：
 
 ```text
 http://127.0.0.1:8080/
 ```
+
+如果服务端部署在 NAS 或服务器上，则在浏览器中打开 `http://NAS的局域网IP:8080/` 或你的反代域名。
 
 ### 第二步：启动 cloudflared
 
@@ -208,7 +358,7 @@ https://xxxxx.trycloudflare.com
 
 ## 第一次使用流程
 
-1. 启动服务端，打开 `http://127.0.0.1:8080/`。
+1. 启动服务端，打开控制台地址；本机访问用 `http://127.0.0.1:8080/`，局域网或 NAS 访问用对应机器 IP。
 2. 使用管理员密码登录。
 3. 进入 `Provider / 授权`。
 4. 分别创建源网盘和目标网盘的授权档案。
@@ -251,6 +401,8 @@ $env:CLOUDPAN_DATA_DIR="D:\CloudPanSyncData"
 ```text
 http://127.0.0.1:18080/
 ```
+
+局域网其它设备访问时，把 `127.0.0.1` 换成运行服务那台机器的 IP。
 
 ## 桌面客户端
 

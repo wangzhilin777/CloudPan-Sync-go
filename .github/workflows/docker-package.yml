@@ -38,7 +38,9 @@ jobs:
           file: ./Dockerfile
           push: false
           load: false
-          tags: cloudpan-sync-go:ci
+          tags: |
+            cloudpan-sync-go:ci
+            cloudpan-sync-go:latest
           provenance: false
           sbom: false
           outputs: type=docker,dest=/tmp/cloudpan-sync-go.tar

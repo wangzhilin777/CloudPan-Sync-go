@@ -1,0 +1,12 @@
+services:
+  cloudpan-sync-go:
+    image: cloudpan-sync-go:release
+    container_name: cloudpan-sync-go
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      CLOUDPAN_ADMIN_PASSWORD: "change-me"
+      CLOUDPAN_LOG_LEVEL: "info"
+    volumes:
+      - ./.cloudpan-sync-go:/data
