@@ -199,6 +199,58 @@
                 <div id="plan-target-profile-insight" class="provider-detail-card compact">
                   <div class="muted">选择目标授权档案后，这里会显示账号默认风控模板，并支持一键写入任务覆盖。</div>
                 </div>
+                <div class="grid two compact-grid">
+                  <article class="provider-detail-card compact" id="plan-source-directory-browser">
+                    <div class="section-head compact-head">
+                      <h3>源目录选择</h3>
+                      <div class="actions compact">
+                        <button type="button" class="ghost" id="plan-source-browser-up">返回上级</button>
+                        <button type="button" class="ghost" id="plan-source-browser-refresh">刷新目录</button>
+                        <button type="button" class="ghost" id="plan-source-browser-select-current">使用当前目录</button>
+                      </div>
+                    </div>
+                    <div class="mini-grid browser-meta-grid">
+                      <div class="inline-note">
+                        <strong>当前目录</strong>
+                        <div id="plan-source-browser-path">/</div>
+                      </div>
+                      <div class="inline-note">
+                        <strong>回填结果</strong>
+                        <div id="plan-source-browser-selection">会写入选定根目录(JSON)</div>
+                      </div>
+                    </div>
+                    <div id="plan-source-browser-list" class="directory-browser-list">
+                      <div class="directory-empty">选择源网盘源和源授权档案后可浏览目录。</div>
+                    </div>
+                  </article>
+                  <article class="provider-detail-card compact" id="plan-target-directory-browser">
+                    <div class="section-head compact-head">
+                      <h3>目标目录选择</h3>
+                      <div class="actions compact">
+                        <button type="button" class="ghost" id="plan-target-browser-up">返回上级</button>
+                        <button type="button" class="ghost" id="plan-target-browser-refresh">刷新目录</button>
+                        <button type="button" class="ghost" id="plan-target-browser-select-current">使用当前目录</button>
+                      </div>
+                    </div>
+                    <div class="mini-grid browser-meta-grid">
+                      <div class="inline-note">
+                        <strong>当前目录</strong>
+                        <div id="plan-target-browser-path">/</div>
+                      </div>
+                      <div class="inline-note">
+                        <strong>回填结果</strong>
+                        <div id="plan-target-browser-selection">会写入目标根目录</div>
+                      </div>
+                    </div>
+                    <div class="actions compact directory-create-row">
+                      <input id="plan-target-browser-create-name" type="text" placeholder="新建子目录名称，例如 archive-2026" />
+                      <button type="button" class="ghost" id="plan-target-browser-create">在当前目录新建文件夹</button>
+                    </div>
+                    <div id="plan-target-browser-list" class="directory-browser-list">
+                      <div class="directory-empty">选择目标网盘源和目标授权档案后可浏览目录。</div>
+                    </div>
+                  </article>
+                </div>
                 <label>
                   <span>风控档位</span>
                   <select id="plan-risk-mode" name="riskMode">

@@ -52,6 +52,10 @@ const state = {
     statusPending: { query: "", reason: "", leafOnly: false },
     statusRetry: { query: "", retryClass: "", retryState: "" },
   },
+  directoryBrowsers: {
+    source: { currentPath: "/", items: [], loading: false, lastLoadedPath: "", selectedPath: "" },
+    target: { currentPath: "/", items: [], loading: false, lastLoadedPath: "", selectedPath: "" },
+  },
 };
 
 const treeGroupsStorageKey = "cloudpan_console_tree_groups_collapsed";
@@ -2776,6 +2780,287 @@ function pathMatchesSubtree(candidatePath, rootPath) {
   return candidate === root || candidate.startsWith(`${root}/`);
 }
 
+function parentComparePath(path) {
+  const normalized = normalizeComparePath(path) || "/";
+  if (normalized === "/") {
+    return "/";
+  }
+  const index = normalized.lastIndexOf("/");
+  if (index <= 0) {
+    return "/";
+  }
+  return normalized.slice(0, index);
+}
+
+function getDirectoryBrowserConfig(kind) {
+  if (kind === "target") {
+    return {
+      providerSelector: "#plan-target-provider",
+      profileSelector: "#plan-target-profile",
+      pathSelector: "#plan-target-browser-path",
+      selectionSelector: "#plan-target-browser-selection",
+      listSelector: "#plan-target-browser-list",
+      emptyMessage: "选择目标网盘源和目标授权档案后可浏览目录。",
+    };
+  }
+  return {
+    providerSelector: "#plan-source-provider",
+    profileSelector: "#plan-source-profile",
+    pathSelector: "#plan-source-browser-path",
+    selectionSelector: "#plan-source-browser-selection",
+    listSelector: "#plan-source-browser-list",
+    emptyMessage: "选择源网盘源和源授权档案后可浏览目录。",
+  };
+}
+
+function directoryBrowserScope(kind) {
+  const config = getDirectoryBrowserConfig(kind);
+  return {
+    providerKey: $(config.providerSelector)?.value || "",
+    profileId: $(config.profileSelector)?.value || "",
+  };
+}
+
+function resetDirectoryBrowser(kind) {
+  state.directoryBrowsers[kind] = {
+    currentPath: "/",
+    items: [],
+    loading: false,
+    lastLoadedPath: "",
+    selectedPath: "",
+    error: "",
+    scopeKey: "",
+    currentFileId: "",
+    currentParentId: "",
+  };
+}
+
+function readSourceBrowserSelection() {
+  try {
+    const parsed = parseJSONInput($("#plan-selected-roots").value, []);
+    return Array.isArray(parsed) && parsed.length ? normalizeComparePath(parsed[0]) || "/" : "/";
+  } catch (error) {
+    return "/";
+  }
+}
+
+function readTargetBrowserSelection() {
+  return normalizeComparePath($("#plan-target-root").value) || "/";
+}
+
+function directoryBrowserSelection(kind) {
+  return kind === "target" ? readTargetBrowserSelection() : readSourceBrowserSelection();
+}
+
+function normalizeDirectoryBrowserItems(items, currentPath) {
+  if (!Array.isArray(items)) {
+    return [];
+  }
+  return items
+    .filter((item) => item && typeof item === "object")
+    .map((item) => {
+      const name = String(item.name || "").trim();
+      const basePath = normalizeComparePath(currentPath) || "/";
+      const fallbackPath = name ? (basePath === "/" ? `/${name}` : `${basePath}/${name}`) : basePath;
+      const path = normalizeComparePath(item.path || fallbackPath) || "/";
+      return {
+        name: name || (path === "/" ? "/" : path.split("/").pop() || path),
+        path,
+        isDir: Boolean(item.isDir),
+        fileId: String(item.fileId || ""),
+        parentId: String(item.parentId || ""),
+      };
+    })
+    .filter((item) => item.isDir)
+    .sort((left, right) => left.path.localeCompare(right.path, "zh-CN"));
+}
+
+function renderDirectoryBrowser(kind) {
+  const browser = state.directoryBrowsers[kind];
+  const config = getDirectoryBrowserConfig(kind);
+  const { providerKey, profileId } = directoryBrowserScope(kind);
+  const selectedPath = directoryBrowserSelection(kind);
+  const pathNode = $(config.pathSelector);
+  const selectionNode = $(config.selectionSelector);
+  const listNode = $(config.listSelector);
+  if (!pathNode || !selectionNode || !listNode) {
+    return;
+  }
+
+  pathNode.innerHTML = `<code>${escapeHTML(browser.currentPath || "/")}</code>`;
+  selectionNode.innerHTML = `<code>${escapeHTML(selectedPath || "/")}</code>`;
+  const refreshButton = kind === "target" ? $("#plan-target-browser-refresh") : $("#plan-source-browser-refresh");
+  const upButton = kind === "target" ? $("#plan-target-browser-up") : $("#plan-source-browser-up");
+  const selectCurrentButton = kind === "target" ? $("#plan-target-browser-select-current") : $("#plan-source-browser-select-current");
+  const createButton = kind === "target" ? $("#plan-target-browser-create") : null;
+  const createInput = kind === "target" ? $("#plan-target-browser-create-name") : null;
+  if (refreshButton) {
+    refreshButton.disabled = browser.loading || !providerKey || !profileId;
+  }
+  if (upButton) {
+    upButton.disabled = browser.loading || !providerKey || !profileId || normalizeComparePath(browser.currentPath) === "/";
+  }
+  if (selectCurrentButton) {
+    selectCurrentButton.disabled = browser.loading || !providerKey || !profileId;
+  }
+  if (createButton) {
+    createButton.disabled = browser.loading || !providerKey || !profileId;
+  }
+  if (createInput) {
+    createInput.disabled = browser.loading || !providerKey || !profileId;
+  }
+
+  if (!providerKey || !profileId) {
+    listNode.innerHTML = `<div class="directory-empty">${escapeHTML(config.emptyMessage)}</div>`;
+    return;
+  }
+  if (browser.loading) {
+    listNode.innerHTML = `<div class="directory-empty">正在加载目录列表...</div>`;
+    return;
+  }
+  if (browser.error) {
+    listNode.innerHTML = `<div class="directory-empty">目录加载失败：${escapeHTML(browser.error)}</div>`;
+    return;
+  }
+  if (!Array.isArray(browser.items) || !browser.items.length) {
+    listNode.innerHTML = `<div class="directory-empty">当前目录下没有可继续浏览的子目录。</div>`;
+    return;
+  }
+  listNode.innerHTML = browser.items
+    .map(
+      (item) => `
+        <article class="directory-browser-item">
+          <strong>${escapeHTML(item.name)}</strong>
+          <div class="muted"><code>${escapeHTML(item.path)}</code></div>
+          <div class="actions compact">
+            <button
+              type="button"
+              class="ghost"
+              data-browser-open="${escapeHTML(kind)}"
+              data-browser-path="${escapeHTML(item.path)}"
+              data-browser-file-id="${escapeHTML(item.fileId)}"
+            >打开目录</button>
+            <button
+              type="button"
+              class="ghost"
+              data-browser-select="${escapeHTML(kind)}"
+              data-browser-path="${escapeHTML(item.path)}"
+            >${kind === "target" ? "设为目标目录" : "设为源目录"}</button>
+          </div>
+        </article>
+      `,
+    )
+    .join("");
+}
+
+function renderAllDirectoryBrowsers() {
+  renderDirectoryBrowser("source");
+  renderDirectoryBrowser("target");
+}
+
+async function loadDirectoryBrowser(kind, path = "/", options = {}) {
+  const { providerKey, profileId } = directoryBrowserScope(kind);
+  const config = getDirectoryBrowserConfig(kind);
+  if (!providerKey || !profileId) {
+    resetDirectoryBrowser(kind);
+    renderDirectoryBrowser(kind);
+    return;
+  }
+  const scopeKey = `${providerKey}:${profileId}`;
+  if (state.directoryBrowsers[kind].scopeKey !== scopeKey) {
+    resetDirectoryBrowser(kind);
+    state.directoryBrowsers[kind].scopeKey = scopeKey;
+  }
+  const browser = state.directoryBrowsers[kind];
+  const targetPath = normalizeComparePath(path || browser.currentPath || "/") || "/";
+  browser.loading = true;
+  browser.error = "";
+  renderDirectoryBrowser(kind);
+  try {
+    const listResult = await api(`/api/providers/${encodeURIComponent(providerKey)}/list`, {
+      method: "POST",
+      body: {
+        profileId,
+        path: targetPath,
+        parentId: options.parentId || "",
+        pageSize: 200,
+      },
+    });
+    let metadataResult = null;
+    try {
+      metadataResult = await api(`/api/providers/${encodeURIComponent(providerKey)}/metadata`, {
+        method: "POST",
+        body: {
+          profileId,
+          path: targetPath,
+        },
+      });
+    } catch (error) {
+      metadataResult = null;
+    }
+    browser.currentPath = targetPath;
+    browser.lastLoadedPath = targetPath;
+    browser.currentFileId = String(metadataResult?.entry?.fileId || options.fileId || "");
+    browser.currentParentId = String(metadataResult?.entry?.parentId || "");
+    browser.items = normalizeDirectoryBrowserItems(listResult.items || [], targetPath);
+    browser.loading = false;
+    browser.error = "";
+    renderDirectoryBrowser(kind);
+  } catch (error) {
+    browser.loading = false;
+    browser.error = error.message;
+    renderDirectoryBrowser(kind);
+  }
+}
+
+async function refreshDirectoryBrowsers() {
+  await Promise.all([loadDirectoryBrowser("source"), loadDirectoryBrowser("target")]);
+}
+
+function applyDirectoryBrowserSelection(kind, path) {
+  const normalized = normalizeComparePath(path) || "/";
+  if (kind === "target") {
+    setInputValueIfPresent("#plan-target-root", normalized);
+    state.directoryBrowsers.target.selectedPath = normalized;
+    renderDirectoryBrowser("target");
+    showFlash(`已将 ${normalized} 设为目标根目录`);
+    return;
+  }
+  $("#plan-selected-roots").value = JSON.stringify([normalized], null, 2);
+  state.directoryBrowsers.source.selectedPath = normalized;
+  renderDirectoryBrowser("source");
+  showFlash(`已将 ${normalized} 设为源根目录`);
+}
+
+async function createTargetBrowserDirectory() {
+  const { providerKey, profileId } = directoryBrowserScope("target");
+  const browser = state.directoryBrowsers.target;
+  const dirName = $("#plan-target-browser-create-name").value.trim();
+  if (!providerKey || !profileId) {
+    showFlash("请先选择目标网盘源和目标授权档案", true);
+    return;
+  }
+  if (!dirName) {
+    showFlash("请先输入新建目录名称", true);
+    return;
+  }
+  if (browser.currentPath !== "/" && !browser.currentFileId) {
+    showFlash("当前目录缺少 parentId / fileId，暂时无法创建子目录", true);
+    return;
+  }
+  await api(`/api/providers/${encodeURIComponent(providerKey)}/create_dir`, {
+    method: "POST",
+    body: {
+      profileId,
+      parentId: browser.currentPath === "/" ? "" : browser.currentFileId,
+      dirName,
+    },
+  });
+  $("#plan-target-browser-create-name").value = "";
+  showFlash(`已在 ${browser.currentPath} 下创建目录 ${dirName}`);
+  await loadDirectoryBrowser("target", browser.currentPath, { fileId: browser.currentFileId });
+}
+
 function buildCreatePayloadFromPayloadPath(payload, path, options = {}) {
   const normalizedPath = normalizeComparePath(path);
   if (!payload || !normalizedPath) {
@@ -3227,6 +3512,7 @@ function renderProviders() {
   syncExecutionModeHint();
   renderProviderCapabilityDetail();
   syncTargetProviderInsight();
+  renderAllDirectoryBrowsers();
 }
 
 function prefillWizardFromTaskPath(detail, path, options = {}) {
@@ -3258,6 +3544,8 @@ function prefillWizardFromPayload(payload) {
   setInputValueIfPresent("#plan-target-root", payload.targetRoot || "/");
   $("#plan-entries").value = JSON.stringify(payload.entries || [], null, 2);
   syncExecutionModeHint();
+  loadDirectoryBrowser("source", readSourceBrowserSelection()).catch(() => {});
+  loadDirectoryBrowser("target", readTargetBrowserSelection()).catch(() => {});
 }
 
 function prefillWizardFromTaskPaths(detail, paths, label = "当前筛选", options = {}) {
@@ -3464,8 +3752,10 @@ function syncTargetProfiles() {
   if ([...select.options].some((option) => option.value === current)) {
     select.value = current;
   }
+  resetDirectoryBrowser("target");
   syncTargetProviderInsight();
   syncTargetProfileInsight();
+  renderDirectoryBrowser("target");
 }
 
 function syncSourceProfiles() {
@@ -3479,6 +3769,8 @@ function syncSourceProfiles() {
   if ([...select.options].some((option) => option.value === current)) {
     select.value = current;
   }
+  resetDirectoryBrowser("source");
+  renderDirectoryBrowser("source");
 }
 
 function syncAutoRecoverProviders() {
@@ -7252,6 +7544,8 @@ async function loadProviderSmokeMarkdown(id) {
 
 async function bootstrapData() {
   await Promise.all([loadProviders(), loadProfiles(), loadTasks(), loadStatus()]);
+  renderAllDirectoryBrowsers();
+  await refreshDirectoryBrowsers();
 }
 
 function wireLogin() {
@@ -7285,10 +7579,24 @@ function wireLogin() {
 
 function wireProfiles() {
   $("#profile-provider").addEventListener("change", syncAuthModes);
-  $("#plan-source-provider").addEventListener("change", syncSourceProfiles);
-  $("#plan-target-profile").addEventListener("change", syncTargetProfileInsight);
+  $("#plan-source-provider").addEventListener("change", async () => {
+    syncSourceProfiles();
+    await loadDirectoryBrowser("source");
+  });
+  $("#plan-source-profile").addEventListener("change", async () => {
+    resetDirectoryBrowser("source");
+    renderDirectoryBrowser("source");
+    await loadDirectoryBrowser("source");
+  });
+  $("#plan-target-profile").addEventListener("change", async () => {
+    syncTargetProfileInsight();
+    resetDirectoryBrowser("target");
+    renderDirectoryBrowser("target");
+    await loadDirectoryBrowser("target");
+  });
   $("#plan-target-provider").addEventListener("change", async () => {
     syncTargetProfiles();
+    await loadDirectoryBrowser("target");
     const providerKey = $("#plan-target-provider").value;
     if (!providerKey) {
       return;
@@ -7328,6 +7636,7 @@ function wireProfiles() {
   $("#refresh-profiles").addEventListener("click", async () => {
     try {
       await loadProfiles();
+      await refreshDirectoryBrowsers();
       showFlash("授权档案已刷新");
     } catch (error) {
       showFlash(error.message, true);
@@ -7382,6 +7691,7 @@ function wireProfiles() {
       });
       resetProfileForm();
       await loadProfiles();
+      await refreshDirectoryBrowsers();
       showFlash(profileID ? "授权档案已更新" : "授权档案已创建");
     } catch (error) {
       showFlash(error.message, true);
@@ -7427,6 +7737,65 @@ function wirePlanner() {
     hydrateRiskOverrideForm(null);
     $("#plan-risk-override").value = "";
     showFlash("风控覆盖已清空，将使用默认档位和网盘源校准");
+  });
+  $("#plan-selected-roots").addEventListener("input", () => renderDirectoryBrowser("source"));
+  $("#plan-target-root").addEventListener("input", () => renderDirectoryBrowser("target"));
+  $("#plan-source-browser-refresh").addEventListener("click", async () => {
+    await loadDirectoryBrowser("source");
+    showFlash("源目录已刷新");
+  });
+  $("#plan-target-browser-refresh").addEventListener("click", async () => {
+    await loadDirectoryBrowser("target");
+    showFlash("目标目录已刷新");
+  });
+  $("#plan-source-browser-up").addEventListener("click", async () => {
+    await loadDirectoryBrowser("source", parentComparePath(state.directoryBrowsers.source.currentPath));
+  });
+  $("#plan-target-browser-up").addEventListener("click", async () => {
+    await loadDirectoryBrowser("target", parentComparePath(state.directoryBrowsers.target.currentPath));
+  });
+  $("#plan-source-browser-select-current").addEventListener("click", () => {
+    applyDirectoryBrowserSelection("source", state.directoryBrowsers.source.currentPath);
+  });
+  $("#plan-target-browser-select-current").addEventListener("click", () => {
+    applyDirectoryBrowserSelection("target", state.directoryBrowsers.target.currentPath);
+  });
+  $("#plan-target-browser-create").addEventListener("click", async () => {
+    try {
+      await createTargetBrowserDirectory();
+    } catch (error) {
+      showFlash(error.message, true);
+    }
+  });
+  $("#plan-source-browser-list").addEventListener("click", async (event) => {
+    const openButton = event.target.closest("[data-browser-open='source']");
+    const selectButton = event.target.closest("[data-browser-select='source']");
+    if (openButton) {
+      try {
+        await loadDirectoryBrowser("source", openButton.dataset.browserPath || "/", { fileId: openButton.dataset.browserFileId || "" });
+      } catch (error) {
+        showFlash(error.message, true);
+      }
+      return;
+    }
+    if (selectButton) {
+      applyDirectoryBrowserSelection("source", selectButton.dataset.browserPath || "/");
+    }
+  });
+  $("#plan-target-browser-list").addEventListener("click", async (event) => {
+    const openButton = event.target.closest("[data-browser-open='target']");
+    const selectButton = event.target.closest("[data-browser-select='target']");
+    if (openButton) {
+      try {
+        await loadDirectoryBrowser("target", openButton.dataset.browserPath || "/", { fileId: openButton.dataset.browserFileId || "" });
+      } catch (error) {
+        showFlash(error.message, true);
+      }
+      return;
+    }
+    if (selectButton) {
+      applyDirectoryBrowserSelection("target", selectButton.dataset.browserPath || "/");
+    }
   });
   $("#plan-risk-override").addEventListener("blur", () => {
     try {
@@ -8137,6 +8506,7 @@ async function init() {
   syncExecutionModeHint();
   renderPreview();
   renderStatus();
+  renderAllDirectoryBrowsers();
   window.__cloudpanTestHooks = {
     openTaskByID,
     renderTasks,

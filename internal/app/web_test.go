@@ -59,6 +59,15 @@ func TestHandleIndexServesHTML(t *testing.T) {
 	if !strings.Contains(body, `id="plan-target-root"`) {
 		t.Fatalf("expected target root input in html body, got %q", body)
 	}
+	if !strings.Contains(body, `id="plan-source-directory-browser"`) {
+		t.Fatalf("expected source directory browser in html body, got %q", body)
+	}
+	if !strings.Contains(body, `id="plan-target-directory-browser"`) {
+		t.Fatalf("expected target directory browser in html body, got %q", body)
+	}
+	if !strings.Contains(body, `id="plan-target-browser-create"`) {
+		t.Fatalf("expected target browser create button in html body, got %q", body)
+	}
 	if !strings.Contains(body, `id="profile-id"`) {
 		t.Fatalf("expected profile edit hidden id in html body, got %q", body)
 	}
@@ -227,6 +236,18 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	}
 	if !strings.Contains(body, "目标根目录") {
 		t.Fatalf("expected target root label in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "directoryBrowsers") {
+		t.Fatalf("expected directoryBrowsers state in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "loadDirectoryBrowser") {
+		t.Fatalf("expected loadDirectoryBrowser wiring in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "createTargetBrowserDirectory") {
+		t.Fatalf("expected createTargetBrowserDirectory wiring in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "设为目标目录") {
+		t.Fatalf("expected target directory picker label in app.js, got %q", body)
 	}
 	if !strings.Contains(body, "recommendedRiskModeReason") {
 		t.Fatalf("expected recommendedRiskModeReason wiring in app.js, got %q", body)
