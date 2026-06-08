@@ -1,22 +1,23 @@
 # CloudPan-Sync-go
 
-CloudPan Sync 多网盘互传控制台。
+CloudPan Sync Go 是一个多网盘互传控制台，用来在浏览器里管理网盘授权、预览同步计划、创建同步任务、查看运行证据，并处理补传、重试和恢复。
 
-这是一个面向常用网盘之间互传的服务端控制台，重点提供：授权管理、任务预览、任务运行、运行证据、状态矩阵、后台补传，以及浏览器控制台操作入口。
+如果你只是想使用，不需要自己编译。推荐直接到 GitHub Releases 下载对应平台的服务端包，启动后用浏览器打开控制台即可。
 
-GitHub Releases 会提供现成安装包；如果你不想自己编译，直接下载对应平台的压缩包即可。
+## 主要功能
 
-## 能做什么
+- 多网盘授权管理：为不同 provider 创建独立授权档案，方便源端和目标端分开管理。
+- 同步任务向导：选择源 provider、目标 provider、目录范围、执行模式和冲突策略后，先预览再创建任务。
+- 同步运行控制：支持任务启动、暂停、恢复、重试，并记录最近运行结果。
+- 风险与冲突提示：根据 provider 能力、风险档位和任务参数展示推荐执行方式。
+- 证据与状态矩阵：在控制台查看运行证据、provider 状态、异常原因、待补传项和 smoke 记录。
+- 后台补传与恢复：对失败、缺会话、待人工处理、上传 checkpoint 等情况提供恢复入口。
+- Docker 部署：可以本地构建镜像，也可以下载 Release 里的 Docker 镜像归档导入运行。
+- GitHub 自动打包：推送版本标签后，GitHub Actions 会自动生成多平台服务端包、Docker 包和 Windows 桌面客户端包。
 
-- 管理多 provider 授权档案
-- 预览同步任务并查看执行模式、风险参数和冲突策略
-- 运行、暂停、恢复、重试同步任务
-- 查看运行证据、最近结果、最近 probe、状态矩阵
-- 记录源端删除，不默认删除目标端文件
-- 通过 Docker、本地可执行文件或 `go run` 启动服务端
-- 通过 GitHub Releases 下载服务端包和桌面客户端包
+## 支持的 Provider
 
-## 支持的 provider
+当前控制台内置这些 provider 标识：
 
 - `guangya`
 - `aliyundrive_open`
@@ -29,237 +30,294 @@ GitHub Releases 会提供现成安装包；如果你不想自己编译，直接�
 - `pikpak`
 - `123_open`
 
-## 下载方式
+不同 provider 的登录方式、风控限制和可用能力不完全相同。创建任务前，建议先在控制台的 Provider 页面查看能力声明和默认风控模板，再用小目录试跑。
 
-推荐直接从 GitHub Releases 下载已打包好的文件：
+## 下载
 
-- Releases 页面：<https://github.com/wangzhilin777/CloudPan-Sync-go/releases>
-- Actions 页面：<https://github.com/wangzhilin777/CloudPan-Sync-go/actions>
+Release 页面：
 
-当前 Release 提供这些资产：
+<https://github.com/wangzhilin777/CloudPan-Sync-go/releases>
 
-- 服务端 Windows 包：`cloudpan-sync-go-windows-amd64.zip`
-- 服务端 Linux 包：`cloudpan-sync-go-linux-amd64.tar.gz`
-- 服务端 Linux ARM64 包：`cloudpan-sync-go-linux-arm64.tar.gz`
-- 服务端 macOS Intel 包：`cloudpan-sync-go-darwin-amd64.tar.gz`
-- 服务端 macOS Apple Silicon 包：`cloudpan-sync-go-darwin-arm64.tar.gz`
-- Docker 镜像归档：`cloudpan-sync-go-docker-image.tar.gz`
-- 桌面客户端 Windows 包：`cloud-clipboard-desktop-windows-amd64.zip`
-- 校验文件：`SHA256SUMS.txt`
+常见下载项说明：
 
-如果你不想自己编译，直接下载 Release 包即可。
+- `cloudpan-sync-go-windows-amd64.zip`：Windows 服务端。
+- `cloudpan-sync-go-linux-amd64.tar.gz`：Linux x64 服务端。
+- `cloudpan-sync-go-linux-arm64.tar.gz`：Linux ARM64 服务端。
+- `cloudpan-sync-go-darwin-amd64.tar.gz`：macOS Intel 服务端。
+- `cloudpan-sync-go-darwin-arm64.tar.gz`：macOS Apple Silicon 服务端。
+- `cloudpan-sync-go-docker-image.tar.gz`：Docker 镜像归档，可用 `docker load` 导入。
+- `cloud-clipboard-desktop-windows-amd64.zip`：Windows 桌面客户端包。
+- `SHA256SUMS.txt`：文件校验值。
+
+不知道下哪个时：
+
+- Windows 普通用户下载 `cloudpan-sync-go-windows-amd64.zip`。
+- Linux 服务器常规 x64 下载 `cloudpan-sync-go-linux-amd64.tar.gz`。
+- NAS、树莓派、ARM 服务器优先看系统架构，通常可试 `linux-arm64`。
+- 只想用 Docker 时下载 `cloudpan-sync-go-docker-image.tar.gz`，或者直接本地构建镜像。
 
 ## 最快启动
 
-### 方式 1：直接运行本地 Go 服务
+### Windows 服务端
+
+1. 下载 `cloudpan-sync-go-windows-amd64.zip`。
+2. 解压到一个固定目录，例如 `D:\Apps\cloudpan-sync-go`。
+3. 在目录里打开 PowerShell。
+4. 启动服务：
+
+```powershell
+.\cloudpan-sync.exe
+```
+
+5. 浏览器打开：
+
+```text
+http://127.0.0.1:8080/
+```
+
+默认管理员密码是 `admin`。正式使用前建议改掉：
+
+```powershell
+$env:CLOUDPAN_ADMIN_PASSWORD="换成你的强密码"
+.\cloudpan-sync.exe
+```
+
+### Linux / macOS 服务端
+
+下载对应平台的 `.tar.gz` 包后：
+
+```bash
+tar -xzf cloudpan-sync-go-linux-amd64.tar.gz
+chmod +x ./cloudpan-sync
+CLOUDPAN_ADMIN_PASSWORD="换成你的强密码" ./cloudpan-sync
+```
+
+然后打开：
+
+```text
+http://127.0.0.1:8080/
+```
+
+### 从源码运行
+
+适合开发者或想本地调试的人：
 
 ```powershell
 go run ./cmd/cloudpan-sync
 ```
 
-默认地址：`http://127.0.0.1:8080`
+默认地址：
 
-默认管理员密码：`admin`
-
-启动后浏览器打开：`http://127.0.0.1:8080/`
-
-### 方式 2：运行打包后的可执行文件
-
-Windows 下下载并解压 `cloudpan-sync-go-windows-amd64.zip` 后，直接运行：
-
-```powershell
-.\cloudpan-sync.exe
+```text
+http://127.0.0.1:8080/
 ```
 
-Linux / macOS 下下载对应平台的 `.tar.gz` 包，解压后运行：
+## Docker 使用
 
-```bash
-./cloudpan-sync
-```
+### 方式一：本地构建镜像
 
-如果端口被占用，可以先改监听端口再启动：
-
-```powershell
-$env:CLOUDPAN_ADDR=":18080"
-.\cloudpan-sync.exe
-```
-
-### 方式 3：Docker 启动
-
-如果你本机已经克隆了仓库，可以直接本地构建镜像：
+在仓库根目录执行：
 
 ```powershell
 docker build -t cloudpan-sync-go .
 ```
 
-然后运行容器：
+运行：
 
 ```powershell
 docker run --rm -p 8080:8080 -v ${PWD}/.cloudpan-sync-go:/data -e CLOUDPAN_ADMIN_PASSWORD=admin cloudpan-sync-go
 ```
 
-说明：
+浏览器打开：
 
-- 容器默认监听 `8080`
-- 数据目录默认是 `/data`
-- SQLite 文件默认是 `/data/cloudpan-sync.db`
-- 浏览器访问 `http://127.0.0.1:8080/`
-- 停止容器后，数据仍保存在你挂载的本地目录 `${PWD}/.cloudpan-sync-go`
+```text
+http://127.0.0.1:8080/
+```
 
-如果你不想本地构建，也可以直接下载 Release 里的 `cloudpan-sync-go-docker-image.tar.gz`，再导入并运行：
+### 方式二：导入 Release 里的 Docker 镜像
+
+先下载 `cloudpan-sync-go-docker-image.tar.gz`，然后在文件所在目录执行：
 
 ```powershell
 docker load -i cloudpan-sync-go-docker-image.tar.gz
 docker run --rm -p 8080:8080 -v ${PWD}/.cloudpan-sync-go:/data -e CLOUDPAN_ADMIN_PASSWORD=admin cloudpan-sync-go:release
 ```
 
-## Cloudflare 暴露（CF）
+### Docker 数据目录
 
-如果你想把本机服务临时暴露到公网，最简单的是用 `cloudflared` Quick Tunnel。这个方式适合自己异地访问，或者临时给别人演示。
+容器内默认数据目录是 `/data`，上面的命令会把它挂载到当前目录的 `.cloudpan-sync-go`：
 
-### 第一步：先在本机启动服务
+- SQLite 数据库：`.cloudpan-sync-go/cloudpan-sync.db`
+- 停止容器后，数据仍保留在本地挂载目录。
+- 如果你换目录运行，挂载出来的数据目录也会变。
 
-```powershell
-go run ./cmd/cloudpan-sync
-```
-
-或者用 Docker：
+长期使用时建议把挂载目录换成固定路径，例如：
 
 ```powershell
-docker run --rm -p 8080:8080 -v ${PWD}/.cloudpan-sync-go:/data -e CLOUDPAN_ADMIN_PASSWORD=admin cloudpan-sync-go
+docker run --rm -p 8080:8080 -v "D:\CloudPanSyncData:/data" -e CLOUDPAN_ADMIN_PASSWORD="换成你的强密码" cloudpan-sync-go:release
 ```
 
-### 第二步：安装 `cloudflared`
+## Cloudflare 暴露到公网
 
-安装完成后执行：
+如果你想在外网临时访问本机控制台，可以使用 Cloudflare Quick Tunnel。它适合临时演示、自己异地访问或短时间远程联调。
+
+### 第一步：启动 CloudPan Sync Go
+
+任选一种启动方式，例如：
+
+```powershell
+.\cloudpan-sync.exe
+```
+
+或：
+
+```powershell
+docker run --rm -p 8080:8080 -v ${PWD}/.cloudpan-sync-go:/data -e CLOUDPAN_ADMIN_PASSWORD=admin cloudpan-sync-go:release
+```
+
+确认本机可以打开：
+
+```text
+http://127.0.0.1:8080/
+```
+
+### 第二步：启动 cloudflared
+
+安装 `cloudflared` 后执行：
 
 ```powershell
 cloudflared tunnel --url http://127.0.0.1:8080
 ```
 
-执行后终端会返回一个 `https://xxxxx.trycloudflare.com` 地址，外部浏览器即可访问这个控制台。
+终端会输出一个类似下面的地址：
 
-常见用法：
+```text
+https://xxxxx.trycloudflare.com
+```
 
-- 你自己在外网电脑或手机上访问这个地址
-- 让协作者打开这个地址帮你一起看控制台
-- 配合桌面客户端，把服务端先临时挂到公网再做远程联调
+外部设备打开这个地址，就能访问你的本机控制台。
 
-说明：
+注意事项：
 
-- Quick Tunnel 适合临时演示和临时远程访问
-- 关闭 `cloudflared` 进程后，临时公网地址会失效
-- 如果你有自己的 Cloudflare 域名和正式 Tunnel，也可以把本机 `127.0.0.1:8080` 挂到自定义域名上
+- Quick Tunnel 是临时地址，关闭 `cloudflared` 后地址会失效。
+- 公网暴露前一定要修改 `CLOUDPAN_ADMIN_PASSWORD`，不要继续使用默认密码。
+- 如果你有正式 Cloudflare Tunnel 和自己的域名，也可以把公网域名转发到本机 `127.0.0.1:8080`。
 
-## 第一次使用怎么操作
+## 第一次使用流程
 
-1. 打开控制台首页并登录。
-2. 使用默认密码 `admin` 登录，或在启动前用环境变量覆盖管理员密码。
-3. 第一件事先去 `Provider / 授权`，分别创建源网盘和目标网盘的授权档案。
-4. 确认两个 provider 都授权成功后，再进入 `任务向导`。
-5. 选择源 provider、目标 provider、风险模式和执行模式。
-6. 填写 `Selected Roots` 和 `Entries`，点击“预览计划”。
-7. 先看预览结果，确认同步方向、冲突策略、删除记录提示和推荐执行模式都符合预期。
-8. 确认无误后创建任务，到 `任务列表详情` 中手动启动。
-9. 任务执行后，到 `运行结果`、`证据`、`状态矩阵` 查看是否成功，以及有没有待补传项。
+1. 启动服务端，打开 `http://127.0.0.1:8080/`。
+2. 使用管理员密码登录。
+3. 进入 `Provider / 授权`。
+4. 分别创建源网盘和目标网盘的授权档案。
+5. 确认授权可用后，进入 `任务向导`。
+6. 选择源 provider、目标 provider、源目录、目标目录、风险档位和执行模式。
+7. 点击预览计划，先检查同步方向、冲突策略、删除记录提示和推荐执行模式。
+8. 确认无误后创建任务。
+9. 到任务列表或任务详情里启动任务。
+10. 运行后到 `运行结果`、`证据`、`状态矩阵` 查看结果。
+11. 如果有待补传、缺会话、风控暂停或上传 checkpoint，按控制台提示处理后再恢复或重试。
 
-如果你只是第一次试跑，建议先做一个小目录：
+第一次试跑建议：
 
-- 源端先准备几个测试文件
-- 目标端先建一个空目录
-- 先同步小范围内容，确认逻辑符合预期后再扩大范围
+- 先准备一个很小的测试目录。
+- 源端放几个普通文件，不要一开始就跑大目录。
+- 目标端用空目录，方便观察结果。
+- 确认方向和冲突策略都正确后，再扩大同步范围。
 
 ## 常用环境变量
 
-- `CLOUDPAN_ADDR`
-  - 服务监听地址，默认 `:8080`
-- `CLOUDPAN_DATA_DIR`
-  - 数据目录，默认 `./.cloudpan-sync-go`
-- `CLOUDPAN_DB_PATH`
-  - SQLite 文件路径，默认 `./.cloudpan-sync-go/cloudpan-sync.db`
-- `CLOUDPAN_ADMIN_PASSWORD`
-  - 管理员密码，默认 `admin`
-- `CLOUDPAN_LOG_LEVEL`
-  - 日志级别，默认 `info`
+| 变量 | 默认值 | 说明 |
+| --- | --- | --- |
+| `CLOUDPAN_ADDR` | `:8080` | 服务监听地址。 |
+| `CLOUDPAN_DATA_DIR` | `./.cloudpan-sync-go` | 数据目录。 |
+| `CLOUDPAN_DB_PATH` | `./.cloudpan-sync-go/cloudpan-sync.db` | SQLite 数据库路径。 |
+| `CLOUDPAN_ADMIN_PASSWORD` | `admin` | 管理员登录密码。 |
+| `CLOUDPAN_LOG_LEVEL` | `info` | 日志级别。 |
 
 示例：
 
 ```powershell
-$env:CLOUDPAN_ADMIN_PASSWORD="your-password"
+$env:CLOUDPAN_ADMIN_PASSWORD="换成你的强密码"
 $env:CLOUDPAN_ADDR=":18080"
-go run ./cmd/cloudpan-sync
+$env:CLOUDPAN_DATA_DIR="D:\CloudPanSyncData"
+.\cloudpan-sync.exe
 ```
 
-## 桌面客户端包说明
+然后访问：
 
-Release 中附带一个 Windows 桌面客户端包：`cloud-clipboard-desktop-windows-amd64.zip`。
+```text
+http://127.0.0.1:18080/
+```
 
-它适合和服务端配合使用，主要能力包括：
+## 桌面客户端
 
-- 托盘常驻
-- 本地控制面板
-- 连接服务端同步房间
-- 文本剪贴板同步
-- 文件上传、下载、拉取最新文件到本地剪贴板
-- Windows 右键菜单动作
+Release 中附带 `cloud-clipboard-desktop-windows-amd64.zip`，这是配套的 Windows 桌面客户端包。
 
-客户端首次使用时：
+它主要用于和服务端配合：
 
-1. 先启动本仓库的服务端。
-2. 解压客户端包并运行 `cloud-clipboard-desktop.exe`。
-3. 首次运行会生成 `config.json`。
-4. 在客户端控制面板里填写：
-   - `serverBase`
-   - `room`
-   - `roomPassword`
-   - `deviceName`
-5. 保存后客户端会自动重连。
+- 托盘常驻。
+- 本地控制面板。
+- 连接服务端房间。
+- 文本剪贴板同步。
+- 文件上传、下载和拉取。
+- Windows 右键菜单动作。
 
-`serverBase` 可以这样填写：
+首次使用：
 
-- 本机直连时：`http://127.0.0.1:8080`
-- 局域网访问时：`http://你的电脑IP:8080`
-- Cloudflare 暴露时：`https://xxxxx.trycloudflare.com`
+1. 先启动 CloudPan Sync Go 服务端。
+2. 解压 `cloud-clipboard-desktop-windows-amd64.zip`。
+3. 运行 `cloud-clipboard-desktop.exe`。
+4. 首次运行会生成 `config.json`。
+5. 在控制面板里填写 `serverBase`、`room`、`roomPassword`、`deviceName`。
+6. 保存后等待客户端自动重连。
 
-## GitHub 打包与 Releases
+`serverBase` 填写示例：
 
-仓库支持 GitHub 自动打包与发布，不需要每次都在本地手工打包再上传。
+- 本机服务端：`http://127.0.0.1:8080`
+- 局域网服务端：`http://你的电脑IP:8080`
+- Cloudflare 临时地址：`https://xxxxx.trycloudflare.com`
 
-- `docker-package`：打 Docker 镜像归档
-- `release-package`：打服务端多平台包、桌面客户端包，并发布到 GitHub Releases
+## GitHub 打包与发布
 
-你可以通过两种方式触发：
+这个仓库支持 GitHub Actions 自动打包，不需要每次都本地编译后手工上传。
 
-- 推送版本标签，例如 `v0.1.0`
-- 在 GitHub Actions 页面手动触发 `release-package`
+主要工作流：
 
-也就是说，这个项目不是只能本地打包上传，GitHub Actions 可以直接完成构建并发布到 Releases。
+- `docker-package`：构建 Docker 镜像归档。
+- `release-package`：构建服务端多平台包、Docker 镜像归档、Windows 桌面客户端包，并发布到 GitHub Releases。
 
-`release-package` 成功后，Release 中会自动带上：
+触发方式：
 
-- 服务端 Windows / Linux / macOS 包
-- Docker 镜像归档包
-- Windows 桌面客户端包
-- `SHA256SUMS.txt` 校验文件
+- 推送版本标签，例如 `v0.2.0`。
+- 在 GitHub Actions 页面手动运行 `release-package`。
 
-建议后续统一使用正式版本号标签：
+发布成功后，Release 会包含：
 
-- `v1.0.0`：首个正式稳定版
-- `v1.0.1`：仅修复问题，不改主要功能
-- `v1.1.0`：增加功能，但保持兼容
-- `v2.0.0`：存在明显不兼容变更
+- Windows / Linux / macOS 服务端包。
+- Docker 镜像归档包。
+- Windows 桌面客户端包。
+- `SHA256SUMS.txt` 校验文件。
 
-如果只是日常试包，建议不要长期复用同一个标签，避免 Releases 里版本含义混乱。
+建议版本号策略：
 
-## 常用命令
+- `v1.0.0`：首个正式稳定版。
+- `v1.0.1`：只修复问题，不改主要功能。
+- `v1.1.0`：增加功能，但保持兼容。
+- `v2.0.0`：存在明显不兼容变更。
+
+## 开发和测试
+
+常用命令：
 
 ```powershell
 go test ./...
-go build ./...
+go vet ./...
+go build ./cmd/cloudpan-sync
 ```
 
-## 相关文档
+更多开发资料：
 
-- 开发说明：`docs/03-DEVELOPER_GUIDE.md`
-- API 工作流示例：`docs/04-API_WORKFLOW_EXAMPLES.md`
-- Provider 接入指南：`docs/05-PROVIDER_INTEGRATION_GUIDE.md`
+- `docs/03-DEVELOPER_GUIDE.md`：开发说明。
+- `docs/04-API_WORKFLOW_EXAMPLES.md`：API 工作流示例。
+- `docs/05-PROVIDER_INTEGRATION_GUIDE.md`：Provider 接入指南。
+- `web/README.md`：内置 Web 控制台说明。
