@@ -65,6 +65,12 @@ func TestHandleIndexServesHTML(t *testing.T) {
 	if !strings.Contains(body, `id="plan-target-directory-browser"`) {
 		t.Fatalf("expected target directory browser in html body, got %q", body)
 	}
+	if !strings.Contains(body, `id="plan-source-browser-breadcrumbs"`) {
+		t.Fatalf("expected source browser breadcrumbs in html body, got %q", body)
+	}
+	if !strings.Contains(body, `id="plan-target-browser-breadcrumbs"`) {
+		t.Fatalf("expected target browser breadcrumbs in html body, got %q", body)
+	}
 	if !strings.Contains(body, `id="plan-target-browser-create"`) {
 		t.Fatalf("expected target browser create button in html body, got %q", body)
 	}
@@ -245,6 +251,12 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	}
 	if !strings.Contains(body, "createTargetBrowserDirectory") {
 		t.Fatalf("expected createTargetBrowserDirectory wiring in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "data-browser-breadcrumb") {
+		t.Fatalf("expected breadcrumb wiring in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "根目录") {
+		t.Fatalf("expected breadcrumb root label in app.js, got %q", body)
 	}
 	if !strings.Contains(body, "设为目标目录") {
 		t.Fatalf("expected target directory picker label in app.js, got %q", body)

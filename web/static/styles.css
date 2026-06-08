@@ -407,9 +407,32 @@ label {
   font-size: 0.96rem;
 }
 
+.directory-browser-item.active {
+  border-color: rgba(15, 118, 110, 0.36);
+  background: linear-gradient(135deg, rgba(236, 253, 245, 0.8), rgba(255, 255, 255, 0.82));
+}
+
 .directory-browser-item .muted code,
 .browser-current-path code {
   word-break: break-all;
+}
+
+.directory-breadcrumbs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.directory-breadcrumbs button {
+  width: auto;
+  padding: 0.42rem 0.72rem;
+  border-radius: 999px;
+}
+
+.directory-breadcrumbs .separator {
+  color: var(--muted);
+  align-self: center;
 }
 
 .directory-empty {

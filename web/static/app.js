@@ -2881,13 +2881,35 @@ function renderDirectoryBrowser(kind) {
   const { providerKey, profileId } = directoryBrowserScope(kind);
   const selectedPath = directoryBrowserSelection(kind);
   const pathNode = $(config.pathSelector);
+  const breadcrumbsNode = $(kind === "target" ? "#plan-target-browser-breadcrumbs" : "#plan-source-browser-breadcrumbs");
   const selectionNode = $(config.selectionSelector);
   const listNode = $(config.listSelector);
-  if (!pathNode || !selectionNode || !listNode) {
+  if (!pathNode || !breadcrumbsNode || !selectionNode || !listNode) {
     return;
   }
 
   pathNode.innerHTML = `<code>${escapeHTML(browser.currentPath || "/")}</code>`;
+  const currentPath = normalizeComparePath(browser.currentPath) || "/";
+  const segments = currentPath === "/" ? [] : currentPath.split("/").filter(Boolean);
+  const breadcrumbParts = [
+    `
+      <button type="button" class="ghost" data-browser-breadcrumb="${escapeHTML(kind)}" data-browser-path="/">根目录</button>
+    `,
+  ];
+  let partialPath = "";
+  segments.forEach((segment) => {
+    partialPath += `/${segment}`;
+    breadcrumbParts.push(`<span class="separator">/</span>`);
+    breadcrumbParts.push(`
+      <button
+        type="button"
+        class="ghost"
+        data-browser-breadcrumb="${escapeHTML(kind)}"
+        data-browser-path="${escapeHTML(partialPath)}"
+      >${escapeHTML(segment)}</button>
+    `);
+  });
+  breadcrumbsNode.innerHTML = breadcrumbParts.join("");
   selectionNode.innerHTML = `<code>${escapeHTML(selectedPath || "/")}</code>`;
   const refreshButton = kind === "target" ? $("#plan-target-browser-refresh") : $("#plan-source-browser-refresh");
   const upButton = kind === "target" ? $("#plan-target-browser-up") : $("#plan-source-browser-up");
@@ -7803,6 +7825,28 @@ function wirePlanner() {
     }
     if (selectButton) {
       applyDirectoryBrowserSelection("target", selectButton.dataset.browserPath || "/");
+    }
+  });
+  $("#plan-source-browser-breadcrumbs").addEventListener("click", async (event) => {
+    const button = event.target.closest("[data-browser-breadcrumb='source']");
+    if (!button) {
+      return;
+    }
+    try {
+      await loadDirectoryBrowser("source", button.dataset.browserPath || "/");
+    } catch (error) {
+      showFlash(error.message, true);
+    }
+  });
+  $("#plan-target-browser-breadcrumbs").addEventListener("click", async (event) => {
+    const button = event.target.closest("[data-browser-breadcrumb='target']");
+    if (!button) {
+      return;
+    }
+    try {
+      await loadDirectoryBrowser("target", button.dataset.browserPath || "/");
+    } catch (error) {
+      showFlash(error.message, true);
     }
   });
   $("#plan-risk-override").addEventListener("blur", () => {
