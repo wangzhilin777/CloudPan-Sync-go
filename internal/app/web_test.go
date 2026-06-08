@@ -264,6 +264,9 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "createTargetBrowserDirectory") {
 		t.Fatalf("expected createTargetBrowserDirectory wiring in app.js, got %q", body)
 	}
+	if !strings.Contains(body, "并自动设为目标目录") {
+		t.Fatalf("expected target directory auto-select message in app.js, got %q", body)
+	}
 	if !strings.Contains(body, "data-browser-breadcrumb") {
 		t.Fatalf("expected breadcrumb wiring in app.js, got %q", body)
 	}
