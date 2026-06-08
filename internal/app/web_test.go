@@ -300,8 +300,14 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "renderDirectoryBrowserLevel") {
 		t.Fatalf("expected directory browser level helper in app.js, got %q", body)
 	}
+	if !strings.Contains(body, "renderDirectoryBrowserEmptyState") {
+		t.Fatalf("expected directory browser empty-state helper in app.js, got %q", body)
+	}
 	if !strings.Contains(body, "当前层级：根目录") {
 		t.Fatalf("expected directory browser root level text in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "你可以直接使用当前目录，或在这里新建子目录") {
+		t.Fatalf("expected target directory empty-state guidance in app.js, got %q", body)
 	}
 	if !strings.Contains(body, "设为目标目录") {
 		t.Fatalf("expected target directory picker label in app.js, got %q", body)

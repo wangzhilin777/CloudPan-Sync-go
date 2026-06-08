@@ -2885,6 +2885,19 @@ function renderDirectoryBrowserLevel(path) {
   return `当前层级：第 ${segments.length} 层目录（${currentName}）`;
 }
 
+function renderDirectoryBrowserEmptyState(kind, browser) {
+  if (browser.loading) {
+    return "正在加载目录列表...";
+  }
+  if (browser.error) {
+    return `目录加载失败：${browser.error}`;
+  }
+  if (kind === "target") {
+    return "当前目录下没有可继续浏览的子目录。你可以直接使用当前目录，或在这里新建子目录。";
+  }
+  return "当前目录下没有可继续浏览的子目录。你可以直接使用当前目录作为源目录。";
+}
+
 function resetDirectoryBrowser(kind) {
   state.directoryBrowsers[kind] = {
     currentPath: "/",
@@ -3005,15 +3018,15 @@ function renderDirectoryBrowser(kind) {
     return;
   }
   if (browser.loading) {
-    listNode.innerHTML = `<div class="directory-empty">正在加载目录列表...</div>`;
+    listNode.innerHTML = `<div class="directory-empty">${escapeHTML(renderDirectoryBrowserEmptyState(kind, browser))}</div>`;
     return;
   }
   if (browser.error) {
-    listNode.innerHTML = `<div class="directory-empty">目录加载失败：${escapeHTML(browser.error)}</div>`;
+    listNode.innerHTML = `<div class="directory-empty">${escapeHTML(renderDirectoryBrowserEmptyState(kind, browser))}</div>`;
     return;
   }
   if (!Array.isArray(browser.items) || !browser.items.length) {
-    listNode.innerHTML = `<div class="directory-empty">当前目录下没有可继续浏览的子目录。</div>`;
+    listNode.innerHTML = `<div class="directory-empty">${escapeHTML(renderDirectoryBrowserEmptyState(kind, browser))}</div>`;
     return;
   }
   listNode.innerHTML = browser.items
