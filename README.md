@@ -13,7 +13,7 @@ CloudPan Sync Go 是一个多网盘互传控制台，用来在浏览器里管理
 - 证据与状态矩阵：在控制台查看运行证据、provider 状态、异常原因、待补传项和 smoke 记录。
 - 后台补传与恢复：对失败、缺会话、待人工处理、上传 checkpoint 等情况提供恢复入口。
 - Docker 部署：可以本地构建镜像，也可以下载 Release 里的 Docker 镜像归档导入运行。
-- GitHub 自动打包：推送版本标签后，GitHub Actions 会自动生成多平台服务端包、Docker 包和 Windows 桌面客户端包。
+- GitHub 自动打包：推送版本标签后，GitHub Actions 会自动生成多平台服务端包和 Docker 包。
 
 ## 支持的 Provider
 
@@ -46,7 +46,6 @@ Release 页面：
 - `cloudpan-sync-go-darwin-amd64.tar.gz`：macOS Intel 服务端。
 - `cloudpan-sync-go-darwin-arm64.tar.gz`：macOS Apple Silicon 服务端。
 - `cloudpan-sync-go-docker-image.tar.gz`：Docker 镜像归档，可用 `docker load` 导入。
-- `cloud-clipboard-desktop-windows-amd64.zip`：Windows 桌面客户端包。
 - `SHA256SUMS.txt`：文件校验值。
 
 不知道下哪个时：
@@ -118,7 +117,7 @@ http://127.0.0.1:8080/
 
 服务默认监听 `:8080`，表示监听当前机器或容器的 `8080` 端口，不是只能通过 `127.0.0.1` 访问。
 
-这个地址同时提供浏览器控制台、后端 API 和桌面客户端 `serverBase`，不是只给本机管理面板使用。
+这个地址同时提供浏览器控制台和后端 API，不是只给本机管理面板使用。
 
 - 在运行服务的本机访问：`http://127.0.0.1:8080/`
 - 在局域网其它设备访问：`http://运行服务的电脑IP:8080/`
@@ -404,34 +403,6 @@ http://127.0.0.1:18080/
 
 局域网其它设备访问时，把 `127.0.0.1` 换成运行服务那台机器的 IP。
 
-## 桌面客户端
-
-Release 中附带 `cloud-clipboard-desktop-windows-amd64.zip`，这是配套的 Windows 桌面客户端包。
-
-它主要用于和服务端配合：
-
-- 托盘常驻。
-- 本地控制面板。
-- 连接服务端房间。
-- 文本剪贴板同步。
-- 文件上传、下载和拉取。
-- Windows 右键菜单动作。
-
-首次使用：
-
-1. 先启动 CloudPan Sync Go 服务端。
-2. 解压 `cloud-clipboard-desktop-windows-amd64.zip`。
-3. 运行 `cloud-clipboard-desktop.exe`。
-4. 首次运行会生成 `config.json`。
-5. 在控制面板里填写 `serverBase`、`room`、`roomPassword`、`deviceName`。
-6. 保存后等待客户端自动重连。
-
-`serverBase` 填写示例：
-
-- 本机服务端：`http://127.0.0.1:8080`
-- 局域网服务端：`http://你的电脑IP:8080`
-- Cloudflare 临时地址：`https://xxxxx.trycloudflare.com`
-
 ## GitHub 打包与发布
 
 这个仓库支持 GitHub Actions 自动打包，不需要每次都本地编译后手工上传。
@@ -439,7 +410,7 @@ Release 中附带 `cloud-clipboard-desktop-windows-amd64.zip`，这是配套的 
 主要工作流：
 
 - `docker-package`：构建 Docker 镜像归档。
-- `release-package`：构建服务端多平台包、Docker 镜像归档、Windows 桌面客户端包，并发布到 GitHub Releases。
+- `release-package`：构建服务端多平台包、Docker 镜像归档，并发布到 GitHub Releases。
 
 触发方式：
 
@@ -450,7 +421,6 @@ Release 中附带 `cloud-clipboard-desktop-windows-amd64.zip`，这是配套的 
 
 - Windows / Linux / macOS 服务端包。
 - Docker 镜像归档包。
-- Windows 桌面客户端包。
 - `SHA256SUMS.txt` 校验文件。
 
 建议版本号策略：
