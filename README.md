@@ -157,9 +157,11 @@ docker run --rm -p 8080:8080 -v ${PWD}/.cloudpan-sync-go:/data -e CLOUDPAN_ADMIN
 docker run --rm -p 8080:8080 -v "D:\CloudPanSyncData:/data" -e CLOUDPAN_ADMIN_PASSWORD="换成你的强密码" cloudpan-sync-go:release
 ```
 
-## Cloudflare 暴露到公网
+## 可选公网访问
 
-如果你想在外网临时访问本机控制台，可以使用 Cloudflare Quick Tunnel。它适合临时演示、自己异地访问或短时间远程联调。
+项目本身没有 Cloudflare Worker 功能，也不需要部署到 Cloudflare Workers。服务端仍然运行在你的本机、服务器或 Docker 容器里。
+
+如果你想在外网临时访问本机控制台，可以额外使用 Cloudflare Quick Tunnel、正式 Cloudflare Tunnel、Nginx、Caddy 或其它反向代理工具。下面只以 Cloudflare Quick Tunnel 举例，它适合临时演示、自己异地访问或短时间远程联调。
 
 ### 第一步：启动 CloudPan Sync Go
 
@@ -202,6 +204,7 @@ https://xxxxx.trycloudflare.com
 - Quick Tunnel 是临时地址，关闭 `cloudflared` 后地址会失效。
 - 公网暴露前一定要修改 `CLOUDPAN_ADMIN_PASSWORD`，不要继续使用默认密码。
 - 如果你有正式 Cloudflare Tunnel 和自己的域名，也可以把公网域名转发到本机 `127.0.0.1:8080`。
+- 这只是外部访问入口，不是项目内置的 CF Worker、边缘函数或托管后端。
 
 ## 第一次使用流程
 
