@@ -2894,7 +2894,9 @@ function renderDirectoryBrowserEmptyState(kind, browser) {
     return "正在加载目录列表...";
   }
   if (browser.error) {
-    return `目录加载失败：${browser.error}`;
+    return kind === "target"
+      ? `目录加载失败：${browser.error}。建议先刷新目录、切回根目录；如果仍失败，可直接改填“目标根目录”。`
+      : `目录加载失败：${browser.error}。建议先刷新目录、切回根目录；如果仍失败，可直接改填“选定根目录(JSON)”。`;
   }
   if (kind === "target") {
     return "当前目录下没有可继续浏览的子目录。你可以直接使用当前目录，或在这里新建子目录。";

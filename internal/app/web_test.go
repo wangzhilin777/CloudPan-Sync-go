@@ -312,6 +312,9 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "你可以直接使用当前目录，或在这里新建子目录") {
 		t.Fatalf("expected target directory empty-state guidance in app.js, got %q", body)
 	}
+	if !strings.Contains(body, "建议先刷新目录、切回根目录；如果仍失败，可直接改填“目标根目录”") {
+		t.Fatalf("expected target directory error recovery guidance in app.js, got %q", body)
+	}
 	if !strings.Contains(body, "设为目标目录") {
 		t.Fatalf("expected target directory picker label in app.js, got %q", body)
 	}
