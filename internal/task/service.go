@@ -22,6 +22,7 @@ type CreateRequest struct {
 	SourceProfileID    string                       `json:"sourceProfileId"`
 	TargetProvider     string                       `json:"targetProvider"`
 	TargetProfileID    string                       `json:"targetProfileId"`
+	TargetRoot         string                       `json:"targetRoot,omitempty"`
 	ThresholdMB        int                          `json:"thresholdMB"`
 	RiskMode           planner.RiskMode             `json:"riskMode"`
 	RiskOverride       *planner.RiskProfileOverride `json:"riskOverride,omitempty"`
@@ -543,6 +544,7 @@ func (s *Service) Create(ctx context.Context, req CreateRequest) (Detail, error)
 		SourceProvider:       req.SourceProvider,
 		TargetProvider:       req.TargetProvider,
 		TargetProfileID:      req.TargetProfileID,
+		TargetRoot:           req.TargetRoot,
 		ThresholdMB:          req.ThresholdMB,
 		RiskMode:             req.RiskMode,
 		ProfileRiskDefaults:  profileRiskDefaults,
@@ -681,8 +683,10 @@ func (s *Service) Run(ctx context.Context, id string) (Detail, bool, error) {
 		}
 		updateRuntimeBeforeItem(&detail, item.Path, i)
 		localPath := lookupLocalPath(detail.SourceEntries, item.Path)
-		targetState := s.inspectTargetState(entry, providerProfile, detail.SourceEntries, item.Path, item.Size)
+		remotePath := targetUploadPath(item.Path, detail.Plan.Metadata)
+		targetState := s.inspectTargetState(entry, providerProfile, detail.SourceEntries, item.Path, remotePath, item.Size)
 		result.Payload["targetState"] = targetState
+		result.Payload["targetPath"] = remotePath
 		attachPlanContextToResult(&result, detail.Plan.Metadata)
 		switch targetState.Decision {
 		case "skip":
@@ -723,9 +727,9 @@ func (s *Service) Run(ctx context.Context, id string) (Detail, bool, error) {
 		conflictPolicy, conflictAction := resolveConflictPolicy(entry.Meta, provider.ConflictPolicy(detail.ConflictPolicy))
 		uploadReq := provider.UploadRequest{
 			Profile:        providerProfile,
-			Path:           item.Path,
+			Path:           remotePath,
 			ParentID:       "",
-			Name:           inferUploadName(item.Path),
+			Name:           inferUploadName(remotePath),
 			Size:           item.Size,
 			LocalPath:      localPath,
 			ConflictPolicy: conflictPolicy,
@@ -877,13 +881,13 @@ type recoverCandidate struct {
 
 const recoverDecisionPreviewLimit = 20
 
-func (s *Service) inspectTargetState(entry provider.Entry, profile provider.AuthProfile, sourceEntries []planner.SourceEntry, path string, size int64) targetInspection {
+func (s *Service) inspectTargetState(entry provider.Entry, profile provider.AuthProfile, sourceEntries []planner.SourceEntry, sourcePath string, targetPath string, size int64) targetInspection {
 	if !entry.Capability.SupportsMetadata {
 		return targetInspection{Decision: "create", Reason: "target_metadata_unsupported"}
 	}
 	metadata := entry.Adapter.Metadata(provider.MetadataRequest{
 		Profile: profile,
-		Path:    path,
+		Path:    targetPath,
 	})
 	if !metadata.OK {
 		return targetInspection{Decision: "create", Reason: "target_missing_or_metadata_unavailable"}
@@ -892,7 +896,7 @@ func (s *Service) inspectTargetState(entry provider.Entry, profile provider.Auth
 		return targetInspection{Decision: "create", Reason: "target_missing_or_metadata_unavailable"}
 	}
 
-	sourceFingerprint := sourceFingerprintForPath(sourceEntries, path, size)
+	sourceFingerprint := sourceFingerprintForPath(sourceEntries, sourcePath, size)
 	targetFingerprint := fingerprintFromMetadata(metadata.Entry)
 	if fingerprintsMatch(sourceFingerprint, targetFingerprint) {
 		return targetInspection{
@@ -944,6 +948,7 @@ func (s *Service) materializeTaskEntriesIfNeeded(ctx context.Context, detail *De
 		SourceProvider:       detail.Task.SourceProvider,
 		TargetProvider:       detail.Task.TargetProvider,
 		TargetProfileID:      detail.TargetProfileID,
+		TargetRoot:           metadataString(detail.Plan.Metadata, "targetRoot"),
 		ThresholdMB:          detail.Plan.ThresholdMB,
 		RiskMode:             planner.RiskMode(metadataStringFromRisk(riskProfile, "mode")),
 		ProfileRiskDefaults:  profileRiskDefaultsFromMetadata(detail.Plan.Metadata),
@@ -1156,6 +1161,7 @@ func (s *Service) buildRetryDetail(detail Detail, opts RetryOptions) (Detail, er
 			SourceProvider:       detail.Task.SourceProvider,
 			TargetProvider:       detail.Task.TargetProvider,
 			TargetProfileID:      detail.TargetProfileID,
+			TargetRoot:           metadataString(detail.Plan.Metadata, "targetRoot"),
 			ThresholdMB:          detail.Plan.ThresholdMB,
 			RiskMode:             riskProfile.Mode,
 			ProfileRiskDefaults:  profileRiskDefaultsFromMetadata(detail.Plan.Metadata),
@@ -3394,6 +3400,29 @@ func matchRootPath(path string, roots []string) string {
 		return normalizeScanPath(roots[0])
 	}
 	return parentDirectory(normalized)
+}
+
+func targetUploadPath(sourcePath string, metadata map[string]interface{}) string {
+	return mapTargetPath(sourcePath, metadataStringSlice(metadata, "selectedRoots"), metadataString(metadata, "targetRoot"))
+}
+
+func mapTargetPath(sourcePath string, selectedRoots []string, targetRoot string) string {
+	sourcePath = normalizeScanPath(sourcePath)
+	targetRoot = normalizeScanPath(targetRoot)
+	if targetRoot == "/" {
+		return sourcePath
+	}
+	root := matchRootPath(sourcePath, selectedRoots)
+	root = normalizeScanPath(root)
+	relativePath := strings.TrimPrefix(sourcePath, "/")
+	if root != "/" {
+		relativePath = strings.TrimPrefix(sourcePath, root)
+		relativePath = strings.TrimPrefix(relativePath, "/")
+	}
+	if relativePath == "" {
+		return targetRoot
+	}
+	return targetRoot + "/" + relativePath
 }
 
 func targetEntryExists(metadata provider.MetadataResult) bool {

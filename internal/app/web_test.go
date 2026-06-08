@@ -56,6 +56,9 @@ func TestHandleIndexServesHTML(t *testing.T) {
 	if !strings.Contains(body, `id="plan-selected-roots"`) {
 		t.Fatalf("expected selected roots input in html body, got %q", body)
 	}
+	if !strings.Contains(body, `id="plan-target-root"`) {
+		t.Fatalf("expected target root input in html body, got %q", body)
+	}
 	if !strings.Contains(body, `id="profile-id"`) {
 		t.Fatalf("expected profile edit hidden id in html body, got %q", body)
 	}
@@ -218,6 +221,12 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	}
 	if !strings.Contains(body, "recommendedRiskMode") {
 		t.Fatalf("expected recommendedRiskMode wiring in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "targetRoot") {
+		t.Fatalf("expected targetRoot wiring in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "目标根目录") {
+		t.Fatalf("expected target root label in app.js, got %q", body)
 	}
 	if !strings.Contains(body, "recommendedRiskModeReason") {
 		t.Fatalf("expected recommendedRiskModeReason wiring in app.js, got %q", body)

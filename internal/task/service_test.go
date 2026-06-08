@@ -7806,6 +7806,112 @@ func TestServiceRunSupportsPreScanFlatExecutionMode(t *testing.T) {
 	}
 }
 
+func TestServiceRunMapsSelectedRootIntoTargetRoot(t *testing.T) {
+	ctx := context.Background()
+	store, err := sqlitestore.New(ctx, filepath.Join(t.TempDir(), "target-root.db"))
+	if err != nil {
+		t.Fatalf("new store: %v", err)
+	}
+	defer func() { _ = store.Close() }()
+
+	metadataPaths := make([]string, 0, 1)
+	uploadPaths := make([]string, 0, 1)
+	targetAdapter := &scriptedAdapter{
+		meta: provider.Provider{
+			Key:              "target_root_provider",
+			DisplayName:      "Target Root Provider",
+			ProtocolGroup:    "fake",
+			AuthModes:        []string{"manual_token"},
+			FastUploadInputs: []string{"md5", "size"},
+			FallbackModes:    []string{"download_upload"},
+			Status:           "planned",
+		},
+		capability: provider.CapabilitySet{
+			SupportsAuthValidation: true,
+			SupportsMetadata:       true,
+			SupportsUpload:         true,
+		},
+		metadataFunc: func(req provider.MetadataRequest) provider.MetadataResult {
+			metadataPaths = append(metadataPaths, req.Path)
+			return provider.MetadataResult{
+				OperationResult: provider.OperationResult{
+					OK:      false,
+					Status:  "not_found",
+					Message: "missing",
+					Mode:    "scripted_metadata",
+				},
+			}
+		},
+		uploadFunc: func(req provider.UploadRequest) provider.UploadResult {
+			uploadPaths = append(uploadPaths, req.Path)
+			return provider.UploadResult{
+				OperationResult: provider.OperationResult{
+					OK:      true,
+					Status:  "ok",
+					Message: "uploaded",
+					Mode:    "scripted_upload",
+				},
+			}
+		},
+	}
+
+	registry := provider.NewRegistry(targetAdapter)
+	authSvc := auth.NewService(store, registry)
+	svc := NewService(store, registry, authSvc)
+	targetProfile, err := authSvc.CreateProfile(ctx, auth.CreateProfileInput{
+		ProviderKey: "target_root_provider",
+		AuthMode:    "manual_token",
+		DisplayName: "target-root-profile",
+		Token:       "target-root-token",
+	})
+	if err != nil {
+		t.Fatalf("CreateProfile(target) error = %v", err)
+	}
+
+	detail, err := svc.Create(ctx, CreateRequest{
+		SourceProvider:  "guangya",
+		TargetProvider:  "target_root_provider",
+		TargetProfileID: targetProfile.ID,
+		TargetRoot:      "/archive/2026",
+		ThresholdMB:     10,
+		SelectedRoots:   []string{"/demo"},
+		Entries: []planner.SourceEntry{
+			{Path: "/demo/folder/a.bin", Size: 2048, MD5: "md5-a"},
+		},
+	})
+	if err != nil {
+		t.Fatalf("Create() error = %v", err)
+	}
+	if got := detail.Plan.Metadata["targetRoot"]; got != "/archive/2026" {
+		t.Fatalf("expected targetRoot metadata /archive/2026, got %#v", got)
+	}
+
+	running, ok, err := svc.Run(ctx, detail.Task.ID)
+	if err != nil {
+		t.Fatalf("Run() error = %v", err)
+	}
+	if !ok {
+		t.Fatal("expected task to exist")
+	}
+
+	wantPath := "/archive/2026/folder/a.bin"
+	if len(metadataPaths) != 1 || metadataPaths[0] != wantPath {
+		t.Fatalf("expected metadata path %s, got %#v", wantPath, metadataPaths)
+	}
+	if len(uploadPaths) != 1 || uploadPaths[0] != wantPath {
+		t.Fatalf("expected upload path %s, got %#v", wantPath, uploadPaths)
+	}
+	if len(running.Results) != 1 {
+		t.Fatalf("expected 1 result, got %d", len(running.Results))
+	}
+	if got := stringValue(running.Results[0].Payload["path"]); got != "/demo/folder/a.bin" {
+		t.Fatalf("expected result source path /demo/folder/a.bin, got %s", got)
+	}
+	if got := stringValue(running.Results[0].Payload["targetPath"]); got != wantPath {
+		t.Fatalf("expected result targetPath %s, got %s", wantPath, got)
+	}
+}
+
 type scriptedAdapter struct {
 	meta          provider.Provider
 	capability    provider.CapabilitySet

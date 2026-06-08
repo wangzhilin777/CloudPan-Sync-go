@@ -2741,6 +2741,7 @@ function buildCreatePayloadFromTask(detail) {
     sourceProfileId: detail.sourceProfileId || "",
     targetProvider: detail.task.targetProvider,
     targetProfileId: detail.targetProfileId || "",
+    targetRoot: detail.plan.metadata?.targetRoot || "/",
     thresholdMB: Number(detail.plan.thresholdMB || 0),
     riskMode: detail.plan.metadata?.riskProfile?.mode || "balanced",
     riskOverride: detail.plan.metadata?.riskOverride || null,
@@ -2835,6 +2836,7 @@ function prefillWizardFromTask(detail) {
     ? JSON.stringify(detail.plan.metadata.riskOverride, null, 2)
     : "";
   $("#plan-selected-roots").value = JSON.stringify(detail.plan.metadata?.selectedRoots || ["/"], null, 2);
+  setInputValueIfPresent("#plan-target-root", detail.plan.metadata?.targetRoot || "/");
   $("#plan-entries").value = JSON.stringify(detail.sourceEntries || [], null, 2);
   syncExecutionModeHint();
 }
@@ -3253,6 +3255,7 @@ function prefillWizardFromPayload(payload) {
   hydrateRiskOverrideForm(payload.riskOverride || null);
   $("#plan-risk-override").value = payload.riskOverride ? JSON.stringify(payload.riskOverride, null, 2) : "";
   $("#plan-selected-roots").value = JSON.stringify(payload.selectedRoots || ["/"], null, 2);
+  setInputValueIfPresent("#plan-target-root", payload.targetRoot || "/");
   $("#plan-entries").value = JSON.stringify(payload.entries || [], null, 2);
   syncExecutionModeHint();
 }
@@ -3726,6 +3729,10 @@ function renderSelectedTask() {
       <span>${stringifyValue(metadata.executionMode)}</span>
     </div>
     ${renderRuntimePathChips("选定根目录", metadata.selectedRoots || [], "task", "roots")}
+    <div class="insight-card">
+      <strong>目标根目录</strong>
+      <span><code>${escapeHTML(stringifyValue(metadata.targetRoot, "/"))}</code></span>
+    </div>
     ${renderRuntimePathChips("扫描轨迹", metadata.scanTrace || [], "task", "scan")}
     <div class="insight-card">
       <strong>推荐模式</strong>
@@ -3863,6 +3870,10 @@ function renderPreview() {
     <div class="insight-card">
       <strong>选定根目录</strong>
       <span><code>${escapeHTML(summarizePathList(metadata.selectedRoots || []))}</code></span>
+    </div>
+    <div class="insight-card">
+      <strong>目标根目录</strong>
+      <span><code>${escapeHTML(stringifyValue(metadata.targetRoot, "/"))}</code></span>
     </div>
     <div class="insight-card">
       <strong>推荐模式</strong>
@@ -7385,6 +7396,7 @@ function buildPlanPayload() {
     sourceProfileId: $("#plan-source-profile").value,
     targetProvider: $("#plan-target-provider").value,
     targetProfileId: $("#plan-target-profile").value,
+    targetRoot: $("#plan-target-root").value.trim() || "/",
     thresholdMB: Number($("#plan-threshold").value || "0"),
     riskMode: $("#plan-risk-mode").value,
     riskOverride,
@@ -7450,6 +7462,7 @@ function wirePlanner() {
         body: {
           sourceProvider: payload.sourceProvider,
           targetProvider: payload.targetProvider,
+          targetRoot: payload.targetRoot,
           thresholdMB: payload.thresholdMB,
           riskMode: payload.riskMode,
           riskOverride: payload.riskOverride,

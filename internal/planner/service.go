@@ -36,6 +36,7 @@ type PreviewRequest struct {
 	SourceProvider       string                  `json:"sourceProvider"`
 	TargetProvider       string                  `json:"targetProvider"`
 	TargetProfileID      string                  `json:"targetProfileId,omitempty"`
+	TargetRoot           string                  `json:"targetRoot,omitempty"`
 	ThresholdMB          int                     `json:"thresholdMB"`
 	RiskMode             RiskMode                `json:"riskMode"`
 	ProfileRiskDefaults  *RiskProfileOverride    `json:"profileRiskDefaults,omitempty"`
@@ -104,6 +105,7 @@ func BuildPreview(registry *provider.Registry, req PreviewRequest) (Plan, error)
 		Summary:        summary,
 		Metadata: map[string]interface{}{
 			"selectedRoots":                  req.SelectedRoots,
+			"targetRoot":                     normalizePlannerTargetRoot(req.TargetRoot),
 			"entryCount":                     len(req.Entries),
 			"activeEntryCount":               len(items),
 			"deletedEntryCount":              len(deletedRecords),
@@ -123,6 +125,10 @@ func BuildPreview(registry *provider.Registry, req PreviewRequest) (Plan, error)
 			"riskOverride":                   req.RiskOverride,
 		},
 	}, nil
+}
+
+func normalizePlannerTargetRoot(path string) string {
+	return normalizePlannerPath(path)
 }
 
 func buildDeletedEntryMetadata(entries []SourceEntry, selectedRoots []string) []map[string]interface{} {

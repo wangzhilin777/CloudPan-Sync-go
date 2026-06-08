@@ -305,6 +305,13 @@
                   <textarea id="plan-selected-roots" rows="2">["/demo"]</textarea>
                 </label>
                 <label>
+                  <span>目标根目录</span>
+                  <input id="plan-target-root" type="text" value="/" placeholder="/archive/2026" />
+                </label>
+                <div class="inline-note">
+                  上传目标路径会按“目标根目录 + 源端相对路径”生成；留空时默认写到目标端根目录。
+                </div>
+                <label>
                   <span>条目(JSON)</span>
                   <textarea id="plan-entries" rows="12">[
   {
