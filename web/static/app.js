@@ -2829,13 +2829,17 @@ function directoryBrowserHint(kind, browser, providerKey) {
     return "请先选择网盘源，再继续浏览目录。";
   }
   if (!capability.supportsList) {
-    return `${displayName} 当前未声明目录浏览能力，可能只能手动填写路径。`;
+    return kind === "target"
+      ? `${displayName} 当前未声明目录浏览能力，请直接在“目标根目录”输入框手动填写目标路径。`
+      : `${displayName} 当前未声明目录浏览能力，请直接在“选定根目录(JSON)”输入框手动填写源目录路径。`;
   }
   if (!browser.currentFileId && normalizeComparePath(browser.currentPath) !== "/") {
     return `${displayName} 当前目录未返回稳定 fileId / parentId，子目录创建或部分跳转可能受限。`;
   }
   if (browser.error) {
-    return `${displayName} 目录加载失败时，可先验证授权档案、切回根目录，或手动填写路径。`;
+    return kind === "target"
+      ? `${displayName} 目录加载失败时，可先验证授权档案、切回根目录，或直接在“目标根目录”输入框手动填写路径。`
+      : `${displayName} 目录加载失败时，可先验证授权档案、切回根目录，或直接在“选定根目录(JSON)”输入框手动填写路径。`;
   }
   return `${displayName} 已启用目录浏览，可直接点选目录回填到任务向导。`;
 }

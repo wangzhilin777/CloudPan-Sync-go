@@ -297,6 +297,9 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "建议直接手动填写 JSON 路径数组") {
 		t.Fatalf("expected manual selected roots guidance in app.js, got %q", body)
 	}
+	if !strings.Contains(body, "请直接在“目标根目录”输入框手动填写目标路径") {
+		t.Fatalf("expected provider fallback target-root guidance in app.js, got %q", body)
+	}
 	if !strings.Contains(body, "renderDirectoryBrowserLevel") {
 		t.Fatalf("expected directory browser level helper in app.js, got %q", body)
 	}
