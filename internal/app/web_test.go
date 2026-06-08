@@ -77,6 +77,12 @@ func TestHandleIndexServesHTML(t *testing.T) {
 	if !strings.Contains(body, `id="plan-target-browser-hint"`) {
 		t.Fatalf("expected target browser hint in html body, got %q", body)
 	}
+	if !strings.Contains(body, `id="plan-source-browser-level"`) {
+		t.Fatalf("expected source browser level hint in html body, got %q", body)
+	}
+	if !strings.Contains(body, `id="plan-target-browser-level"`) {
+		t.Fatalf("expected target browser level hint in html body, got %q", body)
+	}
 	if !strings.Contains(body, `id="plan-selected-roots-hint"`) {
 		t.Fatalf("expected selected roots manual hint in html body, got %q", body)
 	}
@@ -290,6 +296,12 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	}
 	if !strings.Contains(body, "建议直接手动填写 JSON 路径数组") {
 		t.Fatalf("expected manual selected roots guidance in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "renderDirectoryBrowserLevel") {
+		t.Fatalf("expected directory browser level helper in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "当前层级：根目录") {
+		t.Fatalf("expected directory browser root level text in app.js, got %q", body)
 	}
 	if !strings.Contains(body, "设为目标目录") {
 		t.Fatalf("expected target directory picker label in app.js, got %q", body)

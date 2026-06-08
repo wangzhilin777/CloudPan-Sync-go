@@ -440,6 +440,18 @@ label {
   align-self: center;
 }
 
+.browser-level-note {
+  margin-top: 10px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0.38rem 0.7rem;
+  border-radius: 999px;
+  background: rgba(15, 118, 110, 0.08);
+  color: var(--accent);
+  font-size: 0.86rem;
+  font-weight: 600;
+}
+
 .directory-empty {
   padding: 16px;
   border-radius: var(--radius-md);

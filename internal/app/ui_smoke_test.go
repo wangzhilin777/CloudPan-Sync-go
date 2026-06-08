@@ -247,6 +247,8 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 		setSelectValue(`#plan-risk-mode`, "fast"),
 		setSelectValue(`#plan-execution-mode`, "pre_scan_flat"),
 		waitForText(`#plan-execution-hint`, "pre_scan_flat"),
+		waitForText(`#plan-source-browser-level`, "当前层级：根目录"),
+		waitForText(`#plan-target-browser-level`, "当前层级：根目录"),
 		chromedp.SetValue(`#plan-threshold`, "10", chromedp.ByID),
 		chromedp.SetValue(`#plan-selected-roots`, `["/demo","/archive"]`, chromedp.ByID),
 		chromedp.SetValue(`#plan-entries`, entriesJSON, chromedp.ByID),

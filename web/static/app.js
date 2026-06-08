@@ -2875,6 +2875,16 @@ function spotlightDirectoryBrowserSelection(kind) {
   activeItem.classList.add("selection-spotlight");
 }
 
+function renderDirectoryBrowserLevel(path) {
+  const currentPath = normalizeComparePath(path) || "/";
+  if (currentPath === "/") {
+    return "当前层级：根目录";
+  }
+  const segments = currentPath.split("/").filter(Boolean);
+  const currentName = segments[segments.length - 1] || "/";
+  return `当前层级：第 ${segments.length} 层目录（${currentName}）`;
+}
+
 function resetDirectoryBrowser(kind) {
   state.directoryBrowsers[kind] = {
     currentPath: "/",
@@ -2936,10 +2946,11 @@ function renderDirectoryBrowser(kind) {
   const selectedPath = directoryBrowserSelection(kind);
   const pathNode = $(config.pathSelector);
   const breadcrumbsNode = $(kind === "target" ? "#plan-target-browser-breadcrumbs" : "#plan-source-browser-breadcrumbs");
+  const levelNode = $(kind === "target" ? "#plan-target-browser-level" : "#plan-source-browser-level");
   const selectionNode = $(config.selectionSelector);
   const hintNode = $(kind === "target" ? "#plan-target-browser-hint" : "#plan-source-browser-hint");
   const listNode = $(config.listSelector);
-  if (!pathNode || !breadcrumbsNode || !selectionNode || !hintNode || !listNode) {
+  if (!pathNode || !breadcrumbsNode || !levelNode || !selectionNode || !hintNode || !listNode) {
     return;
   }
 
@@ -2965,6 +2976,7 @@ function renderDirectoryBrowser(kind) {
     `);
   });
   breadcrumbsNode.innerHTML = breadcrumbParts.join("");
+  levelNode.textContent = renderDirectoryBrowserLevel(currentPath);
   selectionNode.innerHTML = `<code>${escapeHTML(selectedPath || "/")}</code>`;
   hintNode.textContent = directoryBrowserHint(kind, browser, providerKey);
   const refreshButton = kind === "target" ? $("#plan-target-browser-refresh") : $("#plan-source-browser-refresh");
