@@ -2928,10 +2928,17 @@ function renderDirectoryBrowser(kind) {
   }
   listNode.innerHTML = browser.items
     .map(
-      (item) => `
-        <article class="directory-browser-item">
+      (item) => {
+        const isSelected = normalizeComparePath(item.path) === normalizeComparePath(selectedPath);
+        const isCurrent = normalizeComparePath(item.path) === normalizeComparePath(browser.currentPath);
+        return `
+        <article class="directory-browser-item${isSelected ? " active" : ""}">
           <strong>${escapeHTML(item.name)}</strong>
           <div class="muted"><code>${escapeHTML(item.path)}</code></div>
+          <div class="meta-row">
+            ${isCurrent ? `<span class="pill">当前目录</span>` : ""}
+            ${isSelected ? `<span class="pill">已选目录</span>` : ""}
+          </div>
           <div class="actions compact">
             <button
               type="button"
@@ -2948,7 +2955,8 @@ function renderDirectoryBrowser(kind) {
             >${kind === "target" ? "设为目标目录" : "设为源目录"}</button>
           </div>
         </article>
-      `,
+      `;
+      },
     )
     .join("");
 }
