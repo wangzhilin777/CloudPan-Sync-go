@@ -390,7 +390,49 @@ const translations = {
       smoke_view_markdown: "查看 Markdown",
       smoke_download_markdown: "下载 Markdown",
       acceptance_matrix_view: "验收矩阵视图",
-      acceptance_matrix_hint: "可按验收状态快速筛选，也能直接跳到对应 smoke 样本或样本任务，方便继续补齐真实联调样本。"
+      acceptance_matrix_hint: "可按验收状态快速筛选，也能直接跳到对应 smoke 样本或样本任务，方便继续补齐真实联调样本。",
+      protocol_sampled: "已取样",
+      protocol_pending_sample: "待取样",
+      protocol_related_providers: "涉及网盘源",
+      protocol_sample_context: "样本上下文",
+      risk_calibration_title: "Provider 默认风控校准",
+      risk_calibration_empty: "暂无 provider 默认模板校准数据，请先刷新 provider 列表。",
+      risk_calibration_ready: "校准就绪",
+      risk_calibration_gap_summary: "默认模板缺口速览",
+      risk_calibration_missing_counts: "校准缺失字段统计",
+      risk_calibration_priority_counts: "校准优先动作统计",
+      risk_calibration_readiness: "校准就绪度",
+      risk_calibration_priority_action: "优先校准",
+      risk_calibration_window_source: "时间窗来源",
+      risk_calibration_window_advice: "时间窗建议",
+      risk_calibration_missing: "校准缺失",
+      risk_calibration_coverage: "校准覆盖",
+      risk_calibration_covered_fields: "已覆盖字段",
+      risk_calibration_sample_advice: "校准样本建议",
+      risk_calibration_default_action: "优先校准动作",
+      provider_smoke_acceptance_title: "网盘源级真实样本验收",
+      provider_smoke_acceptance_empty: "暂无 providerSmokeProviders 数据，请先刷新或保存新版验收报告。",
+      provider_smoke_ready: "网盘就绪",
+      provider_smoke_gap_summary: "网盘源验收缺口速览",
+      provider_smoke_missing_basic_providers: "缺基础样本网盘源",
+      provider_smoke_missing_upload_providers: "缺上传样本网盘源",
+      provider_smoke_missing_anomaly_providers: "缺异常样本网盘源",
+      provider_smoke_missing_representative_providers: "缺代表样本网盘源",
+      provider_smoke_priority_counts: "网盘源优先动作统计",
+      provider_smoke_basic_sample: "优先基础样本",
+      provider_smoke_upload_sample: "优先上传样本",
+      provider_smoke_anomaly_sample: "优先异常样本",
+      provider_smoke_representative_sample: "优先代表样本",
+      provider_smoke_representative_missing: "代表样本缺口",
+      provider_smoke_representative_actions: "代表样本动作建议",
+      provider_smoke_representative_advice: "代表样本补齐建议",
+      provider_smoke_default_action: "网盘源优先动作",
+      matrix_open_smoke_record: "打开 smoke 样本",
+      matrix_open_task_sample: "打开任务样本",
+      matrix_prefill_smoke_form: "预填 smoke 表单",
+      matrix_prefill_profile_risk: "预填账号默认风控",
+      matrix_focus_group_records: "只看该组记录",
+      matrix_focus_acceptance_type: "只看此类"
     },
     providers: {
       profile_title: "授权档案",
@@ -914,7 +956,49 @@ const translations = {
       smoke_view_markdown: "View Markdown",
       smoke_download_markdown: "Download Markdown",
       acceptance_matrix_view: "Acceptance Matrix View",
-      acceptance_matrix_hint: "You can filter quickly by acceptance state and jump to the related smoke sample or sample task to keep filling real integration evidence."
+      acceptance_matrix_hint: "You can filter quickly by acceptance state and jump to the related smoke sample or sample task to keep filling real integration evidence.",
+      protocol_sampled: "Sampled",
+      protocol_pending_sample: "Pending Sample",
+      protocol_related_providers: "Related Providers",
+      protocol_sample_context: "Sample Context",
+      risk_calibration_title: "Provider Default Risk Calibration",
+      risk_calibration_empty: "No provider default-template calibration data is available yet. Refresh the provider list first.",
+      risk_calibration_ready: "Calibration Ready",
+      risk_calibration_gap_summary: "Default Template Gap Summary",
+      risk_calibration_missing_counts: "Calibration Missing Field Counts",
+      risk_calibration_priority_counts: "Calibration Priority Counts",
+      risk_calibration_readiness: "Calibration Readiness",
+      risk_calibration_priority_action: "Priority Calibration Action",
+      risk_calibration_window_source: "Window Source",
+      risk_calibration_window_advice: "Window Advice",
+      risk_calibration_missing: "Calibration Missing",
+      risk_calibration_coverage: "Calibration Coverage",
+      risk_calibration_covered_fields: "Covered Fields",
+      risk_calibration_sample_advice: "Calibration Sample Advice",
+      risk_calibration_default_action: "Priority Calibration Action",
+      provider_smoke_acceptance_title: "Provider-Level Real Sample Acceptance",
+      provider_smoke_acceptance_empty: "No providerSmokeProviders data is available yet. Refresh or save a new acceptance report first.",
+      provider_smoke_ready: "Providers Ready",
+      provider_smoke_gap_summary: "Provider Acceptance Gap Summary",
+      provider_smoke_missing_basic_providers: "Providers Missing Basic Samples",
+      provider_smoke_missing_upload_providers: "Providers Missing Upload Samples",
+      provider_smoke_missing_anomaly_providers: "Providers Missing Anomaly Samples",
+      provider_smoke_missing_representative_providers: "Providers Missing Representative Samples",
+      provider_smoke_priority_counts: "Provider Priority Action Counts",
+      provider_smoke_basic_sample: "Preferred Basic Sample",
+      provider_smoke_upload_sample: "Preferred Upload Sample",
+      provider_smoke_anomaly_sample: "Preferred Anomaly Sample",
+      provider_smoke_representative_sample: "Preferred Representative Sample",
+      provider_smoke_representative_missing: "Representative Gaps",
+      provider_smoke_representative_actions: "Representative Actions",
+      provider_smoke_representative_advice: "Representative Advice",
+      provider_smoke_default_action: "Provider Priority Action",
+      matrix_open_smoke_record: "Open Smoke Sample",
+      matrix_open_task_sample: "Open Task Sample",
+      matrix_prefill_smoke_form: "Prefill Smoke Form",
+      matrix_prefill_profile_risk: "Prefill Profile Risk Defaults",
+      matrix_focus_group_records: "Show Group Records",
+      matrix_focus_acceptance_type: "Show This Type"
     },
     providers: {
       profile_title: "Auth Profiles",
@@ -7470,16 +7554,20 @@ function renderProtocolCoverageSummary(items) {
         <div class="directory-row tree-node">
           <div class="directory-row-header">
             <strong>${escapeHTML(stringifyValue(item.protocolGroup))}</strong>
-            <code>${escapeHTML(item.hasRealSuccessSample ? "已取样" : "待取样")}</code>
+            <code>${escapeHTML(
+              item.hasRealSuccessSample
+                ? t("status.protocol_sampled", "已取样")
+                : t("status.protocol_pending_sample", "待取样"),
+            )}</code>
           </div>
           <div class="directory-metrics">
-            <span class="pill">网盘源 ${stringifyValue(item.providerCount, "0")}</span>
-            <span class="pill">任务 ${stringifyValue(item.taskCount, "0")}</span>
-            <span class="pill">已完成 ${stringifyValue(item.completedTaskCount, "0")}</span>
-            <span class="pill">真实成功 ${stringifyValue(item.realSuccessTaskCount, "0")}</span>
+            <span class="pill">${escapeHTML(t("common.provider", "网盘源"))} ${stringifyValue(item.providerCount, "0")}</span>
+            <span class="pill">${escapeHTML(t("common.tasks", "任务"))} ${stringifyValue(item.taskCount, "0")}</span>
+            <span class="pill">${escapeHTML(t("status.completed_tasks", "已完成任务"))} ${stringifyValue(item.completedTaskCount, "0")}</span>
+            <span class="pill">${escapeHTML(t("common.real_success", "真实成功"))} ${stringifyValue(item.realSuccessTaskCount, "0")}</span>
           </div>
-          <div class="muted">涉及网盘源：${escapeHTML((item.providerKeys || []).join(", ") || "-")}</div>
-          <div class="muted">样本上下文：${escapeHTML(stringifyValue(item.sampleProviderKey, "-"))} / ${escapeHTML(stringifyValue(item.sampleTaskId, "-"))}</div>
+          <div class="muted">${escapeHTML(t("status.protocol_related_providers", "涉及网盘源："))}${escapeHTML((item.providerKeys || []).join(", ") || "-")}</div>
+          <div class="muted">${escapeHTML(t("status.protocol_sample_context", "样本上下文："))}${escapeHTML(stringifyValue(item.sampleProviderKey, "-"))} / ${escapeHTML(stringifyValue(item.sampleTaskId, "-"))}</div>
         </div>
       `,
     )
@@ -7794,8 +7882,8 @@ function renderEvidenceProviderSmokeProviders(report) {
   if (!items.length) {
     return `
       <div class="insight-card">
-        <strong>网盘源级真实样本验收</strong>
-        <span>暂无 providerSmokeProviders 数据，请先刷新或保存新版验收报告。</span>
+        <strong>${escapeHTML(t("status.provider_smoke_acceptance_title", "网盘源级真实样本验收"))}</strong>
+        <span>${escapeHTML(t("status.provider_smoke_acceptance_empty", "暂无 providerSmokeProviders 数据，请先刷新或保存新版验收报告。"))}</span>
       </div>
     `;
   }
@@ -7851,28 +7939,28 @@ function renderEvidenceProviderSmokeProviders(report) {
     .slice(0, 6);
   return `
     <div class="insight-card">
-      <strong>网盘源级真实样本验收</strong>
-      <span>网盘就绪 ${counts.ready} / ${counts.total}</span>
+      <strong>${escapeHTML(t("status.provider_smoke_acceptance_title", "网盘源级真实样本验收"))}</strong>
+      <span>${escapeHTML(t("status.provider_smoke_ready", "网盘就绪"))} ${counts.ready} / ${counts.total}</span>
     </div>
     <div class="directory-row tree-node">
       <div class="directory-row-header">
-        <strong>网盘源验收缺口速览</strong>
+        <strong>${escapeHTML(t("status.provider_smoke_gap_summary", "网盘源验收缺口速览"))}</strong>
         <code>providerSmokeProviders</code>
       </div>
       <div class="directory-metrics">
-        <span class="pill">就绪 ${counts.ready}</span>
-        <span class="pill">部分就绪 ${counts.partial}</span>
-        <span class="pill">待补齐 ${counts.pending}</span>
-        <span class="pill">缺基础样本 ${counts.missingBasic}</span>
-        <span class="pill">缺上传样本 ${counts.missingUpload}</span>
-        <span class="pill">缺异常样本 ${counts.missingAnomaly}</span>
-        <span class="pill">缺代表样本 ${counts.missingRepresentative}</span>
+        <span class="pill">${escapeHTML(t("status.risk_calibration_ready", "校准就绪").replace("校准", "")) || "就绪"} ${counts.ready}</span>
+        <span class="pill">${escapeHTML(t("common.partial_ready", "部分就绪"))} ${counts.partial}</span>
+        <span class="pill">${escapeHTML(t("common.pending_completion", "待补齐"))} ${counts.pending}</span>
+        <span class="pill">${escapeHTML(t("status.provider_smoke_missing_basic_providers", "缺基础样本网盘源").replace("网盘源", ""))} ${counts.missingBasic}</span>
+        <span class="pill">${escapeHTML(t("status.provider_smoke_missing_upload_providers", "缺上传样本网盘源").replace("网盘源", ""))} ${counts.missingUpload}</span>
+        <span class="pill">${escapeHTML(t("status.provider_smoke_missing_anomaly_providers", "缺异常样本网盘源").replace("网盘源", ""))} ${counts.missingAnomaly}</span>
+        <span class="pill">${escapeHTML(t("status.provider_smoke_missing_representative_providers", "缺代表样本网盘源").replace("网盘源", ""))} ${counts.missingRepresentative}</span>
       </div>
-      <div class="muted">缺基础样本网盘源: ${escapeHTML(summarizePathList(counts.missingBasicProviders, 8))}</div>
-      <div class="muted">缺上传样本网盘源: ${escapeHTML(summarizePathList(counts.missingUploadProviders, 8))}</div>
-      <div class="muted">缺异常样本网盘源: ${escapeHTML(summarizePathList(counts.missingAnomalyProviders, 8))}</div>
-      <div class="muted">缺代表样本网盘源: ${escapeHTML(summarizePathList(counts.missingRepresentativeProviders, 8))}</div>
-      <div class="muted">网盘源优先动作统计: ${escapeHTML(providerPriorityActionSummary || "-")}</div>
+      <div class="muted">${escapeHTML(t("status.provider_smoke_missing_basic_providers", "缺基础样本网盘源:"))} ${escapeHTML(summarizePathList(counts.missingBasicProviders, 8))}</div>
+      <div class="muted">${escapeHTML(t("status.provider_smoke_missing_upload_providers", "缺上传样本网盘源:"))} ${escapeHTML(summarizePathList(counts.missingUploadProviders, 8))}</div>
+      <div class="muted">${escapeHTML(t("status.provider_smoke_missing_anomaly_providers", "缺异常样本网盘源:"))} ${escapeHTML(summarizePathList(counts.missingAnomalyProviders, 8))}</div>
+      <div class="muted">${escapeHTML(t("status.provider_smoke_missing_representative_providers", "缺代表样本网盘源:"))} ${escapeHTML(summarizePathList(counts.missingRepresentativeProviders, 8))}</div>
+      <div class="muted">${escapeHTML(t("status.provider_smoke_priority_counts", "网盘源优先动作统计:"))} ${escapeHTML(providerPriorityActionSummary || "-")}</div>
       ${
         focusItems.length
           ? focusItems
@@ -7885,15 +7973,15 @@ function renderEvidenceProviderSmokeProviders(report) {
                     / 上传 ${item.hasUploadSuccessSample ? "已就绪" : "待补齐"}
                     / 异常 ${escapeHTML(stringifyValue(item.anomalyCompletedCount, "0"))}/${escapeHTML(stringifyValue(item.anomalyTargetCount, "0"))}
                     / 代表 ${escapeHTML(stringifyValue(item.representativeCompletedCount, "0"))}/${escapeHTML(stringifyValue(item.representativeTargetCount, "0"))}
-                    / 优先动作 ${escapeHTML(stringifyValue(item.priorityAction, "complete"))}
+                    / ${escapeHTML(t("status.provider_smoke_default_action", "网盘源优先动作"))} ${escapeHTML(stringifyValue(item.priorityAction, "complete"))}
                   </div>
-                  <div class="muted">优先基础样本: ${escapeHTML(stringifyValue(item.preferredSampleTitle, "-"))} / ${escapeHTML(stringifyValue(item.preferredSamplePriority, "-"))}</div>
-                  <div class="muted">优先上传样本: ${escapeHTML(stringifyValue(item.preferredUploadSampleTitle, "-"))} / ${escapeHTML(stringifyValue(item.preferredUploadPriority, "-"))}</div>
-                  <div class="muted">优先异常样本: ${escapeHTML(stringifyValue(item.preferredAnomalySampleTitle, "-"))} / ${escapeHTML(stringifyValue(item.preferredAnomalyPriority, "-"))}</div>
-                  <div class="muted">优先代表样本: ${escapeHTML(stringifyValue(item.preferredRepresentativeSampleTitle, "-"))} / ${escapeHTML(stringifyValue(item.preferredRepresentativePriority, "-"))}</div>
-                  ${Array.isArray(item.representativeMissing) && item.representativeMissing.length ? `<div class="muted">代表样本缺口: ${escapeHTML(item.representativeMissing.join(", "))}</div>` : ""}
-                  ${Array.isArray(item.representativeActions) && item.representativeActions.length ? `<div class="muted">代表样本动作建议: ${escapeHTML(item.representativeActions.join("；"))}</div>` : ""}
-                  ${item.representativeAdvice ? `<div class="muted">代表样本补齐建议: ${escapeHTML(item.representativeAdvice)}</div>` : ""}
+                  <div class="muted">${escapeHTML(t("status.provider_smoke_basic_sample", "优先基础样本:"))} ${escapeHTML(stringifyValue(item.preferredSampleTitle, "-"))} / ${escapeHTML(stringifyValue(item.preferredSamplePriority, "-"))}</div>
+                  <div class="muted">${escapeHTML(t("status.provider_smoke_upload_sample", "优先上传样本:"))} ${escapeHTML(stringifyValue(item.preferredUploadSampleTitle, "-"))} / ${escapeHTML(stringifyValue(item.preferredUploadPriority, "-"))}</div>
+                  <div class="muted">${escapeHTML(t("status.provider_smoke_anomaly_sample", "优先异常样本:"))} ${escapeHTML(stringifyValue(item.preferredAnomalySampleTitle, "-"))} / ${escapeHTML(stringifyValue(item.preferredAnomalyPriority, "-"))}</div>
+                  <div class="muted">${escapeHTML(t("status.provider_smoke_representative_sample", "优先代表样本:"))} ${escapeHTML(stringifyValue(item.preferredRepresentativeSampleTitle, "-"))} / ${escapeHTML(stringifyValue(item.preferredRepresentativePriority, "-"))}</div>
+                  ${Array.isArray(item.representativeMissing) && item.representativeMissing.length ? `<div class="muted">${escapeHTML(t("status.provider_smoke_representative_missing", "代表样本缺口:"))} ${escapeHTML(item.representativeMissing.join(", "))}</div>` : ""}
+                  ${Array.isArray(item.representativeActions) && item.representativeActions.length ? `<div class="muted">${escapeHTML(t("status.provider_smoke_representative_actions", "代表样本动作建议:"))} ${escapeHTML(item.representativeActions.join("；"))}</div>` : ""}
+                  ${item.representativeAdvice ? `<div class="muted">${escapeHTML(t("status.provider_smoke_representative_advice", "代表样本补齐建议:"))} ${escapeHTML(item.representativeAdvice)}</div>` : ""}
                 `,
               )
               .join("")
@@ -7969,8 +8057,8 @@ function renderEvidenceRiskCalibrationSummary(report) {
   if (!items.length) {
     return `
       <div class="insight-card">
-        <strong>Provider 默认风控校准</strong>
-        <span>暂无 provider 默认模板校准数据，请先刷新 provider 列表。</span>
+        <strong>${escapeHTML(t("status.risk_calibration_title", "Provider 默认风控校准"))}</strong>
+        <span>${escapeHTML(t("status.risk_calibration_empty", "暂无 provider 默认模板校准数据，请先刷新 provider 列表。"))}</span>
       </div>
     `;
   }
@@ -8011,21 +8099,21 @@ function renderEvidenceRiskCalibrationSummary(report) {
     .slice(0, 6);
   return `
     <div class="insight-card">
-      <strong>Provider 默认风控校准</strong>
-      <span>校准就绪 ${counts.ready} / ${counts.total}</span>
+      <strong>${escapeHTML(t("status.risk_calibration_title", "Provider 默认风控校准"))}</strong>
+      <span>${escapeHTML(t("status.risk_calibration_ready", "校准就绪"))} ${counts.ready} / ${counts.total}</span>
     </div>
     <div class="directory-row tree-node">
       <div class="directory-row-header">
-        <strong>默认模板缺口速览</strong>
+        <strong>${escapeHTML(t("status.risk_calibration_gap_summary", "默认模板缺口速览"))}</strong>
         <code>defaultRiskTemplate</code>
       </div>
       <div class="directory-metrics">
-        <span class="pill">就绪 ${counts.ready}</span>
-        <span class="pill">部分就绪 ${counts.partial}</span>
-        <span class="pill">待补齐 ${counts.pending}</span>
+        <span class="pill">${escapeHTML(t("status.risk_calibration_ready", "校准就绪").replace("校准", "")) || "就绪"} ${counts.ready}</span>
+        <span class="pill">${escapeHTML(t("common.partial_ready", "部分就绪"))} ${counts.partial}</span>
+        <span class="pill">${escapeHTML(t("common.pending_completion", "待补齐"))} ${counts.pending}</span>
       </div>
-      <div class="muted">校准缺失字段统计: ${escapeHTML(calibrationMissingFieldSummary || "-")}</div>
-      <div class="muted">校准优先动作统计: ${escapeHTML(calibrationPriorityActionSummary || "-")}</div>
+      <div class="muted">${escapeHTML(t("status.risk_calibration_missing_counts", "校准缺失字段统计:"))} ${escapeHTML(calibrationMissingFieldSummary || "-")}</div>
+      <div class="muted">${escapeHTML(t("status.risk_calibration_priority_counts", "校准优先动作统计:"))} ${escapeHTML(calibrationPriorityActionSummary || "-")}</div>
       ${
         focusItems.length
           ? focusItems
@@ -8034,29 +8122,29 @@ function renderEvidenceRiskCalibrationSummary(report) {
                 return `
                   <div class="muted">
                     ${escapeHTML(stringifyValue(item?.meta?.key, "-"))}:
-                    校准就绪度 ${escapeHTML(stringifyValue(template.calibrationReadiness, "pending"))}
-                    / 推荐风控 ${escapeHTML(stringifyValue(template.recommendedMode, "-"))}
-                    / 优先校准 ${escapeHTML(stringifyValue(template.calibrationPriorityAction, "-"))}
+                    ${escapeHTML(t("status.risk_calibration_readiness", "校准就绪度"))} ${escapeHTML(stringifyValue(template.calibrationReadiness, "pending"))}
+                    / ${escapeHTML(t("common.recommended_risk", "推荐风控"))} ${escapeHTML(stringifyValue(template.recommendedMode, "-"))}
+                    / ${escapeHTML(t("status.risk_calibration_priority_action", "优先校准"))} ${escapeHTML(stringifyValue(template.calibrationPriorityAction, "-"))}
                   </div>
                   <div class="muted">
-                    时间窗来源 ${escapeHTML(renderAutoRetryWindowSource(template.autoRetryWindowSource))}
-                    / 时间窗建议 ${escapeHTML(stringifyValue(template.autoRetryWindowAdvice, "-"))}
+                    ${escapeHTML(t("status.risk_calibration_window_source", "时间窗来源"))} ${escapeHTML(renderAutoRetryWindowSource(template.autoRetryWindowSource))}
+                    / ${escapeHTML(t("status.risk_calibration_window_advice", "时间窗建议"))} ${escapeHTML(stringifyValue(template.autoRetryWindowAdvice, "-"))}
                   </div>
                   <div class="muted">
-                    校准缺失 ${escapeHTML((template.calibrationMissing || []).join(", ") || "-")}
-                    / 校准覆盖 ${escapeHTML(stringifyValue(template.calibrationCoverage, "-"))}
-                    / 已覆盖 ${escapeHTML(stringifyValue(template.calibrationCoveredCount, "0"))}/${escapeHTML(stringifyValue(template.calibrationTargetCount, "0"))}
+                    ${escapeHTML(t("status.risk_calibration_missing", "校准缺失"))} ${escapeHTML((template.calibrationMissing || []).join(", ") || "-")}
+                    / ${escapeHTML(t("status.risk_calibration_coverage", "校准覆盖"))} ${escapeHTML(stringifyValue(template.calibrationCoverage, "-"))}
+                    / ${escapeHTML(t("status.risk_calibration_covered_fields", "已覆盖字段"))} ${escapeHTML(stringifyValue(template.calibrationCoveredCount, "0"))}/${escapeHTML(stringifyValue(template.calibrationTargetCount, "0"))}
                   </div>
                   <div class="muted">
-                    已覆盖字段 ${escapeHTML((template.calibrationCoveredFields || []).join(", ") || "-")}
+                    ${escapeHTML(t("status.risk_calibration_covered_fields", "已覆盖字段"))} ${escapeHTML((template.calibrationCoveredFields || []).join(", ") || "-")}
                   </div>
                   <div class="muted">
-                    校准样本建议 ${escapeHTML(stringifyValue(template.calibrationSampleAdvice, "-"))}
+                    ${escapeHTML(t("status.risk_calibration_sample_advice", "校准样本建议"))} ${escapeHTML(stringifyValue(template.calibrationSampleAdvice, "-"))}
                   </div>
                 `;
               })
               .join("")
-          : `<div class="muted">优先校准动作: complete</div>`
+          : `<div class="muted">${escapeHTML(t("status.risk_calibration_default_action", "优先校准动作:"))} complete</div>`
       }
     </div>
   `;
@@ -8897,13 +8985,13 @@ function renderProviderSmokeMatrix(items) {
           ${Array.isArray(item.acceptanceActions) && item.acceptanceActions.length ? `<div class="muted">actions: ${escapeHTML(item.acceptanceActions.join("；"))}</div>` : ""}
           ${item.acceptanceAdvice ? `<div class="muted">advice: ${escapeHTML(item.acceptanceAdvice)}</div>` : ""}
           <div class="actions compact">
-            ${item.sampleRecordId ? `<button type="button" class="ghost" data-provider-smoke-open-record="${escapeHTML(stringifyValue(item.sampleRecordId))}">打开 smoke 样本</button>` : ""}
-            ${item.coverageSampleTaskId ? `<button type="button" class="ghost" data-provider-smoke-open-task="${escapeHTML(stringifyValue(item.coverageSampleTaskId))}">打开任务样本</button>` : ""}
-            <button type="button" class="ghost" data-provider-smoke-draft="${escapeHTML(stringifyValue(item.protocolGroup))}">预填 smoke 表单</button>
+            ${item.sampleRecordId ? `<button type="button" class="ghost" data-provider-smoke-open-record="${escapeHTML(stringifyValue(item.sampleRecordId))}">${escapeHTML(t("status.matrix_open_smoke_record", "打开 smoke 样本"))}</button>` : ""}
+            ${item.coverageSampleTaskId ? `<button type="button" class="ghost" data-provider-smoke-open-task="${escapeHTML(stringifyValue(item.coverageSampleTaskId))}">${escapeHTML(t("status.matrix_open_task_sample", "打开任务样本"))}</button>` : ""}
+            <button type="button" class="ghost" data-provider-smoke-draft="${escapeHTML(stringifyValue(item.protocolGroup))}">${escapeHTML(t("status.matrix_prefill_smoke_form", "预填 smoke 表单"))}</button>
             <button type="button" class="ghost" data-provider-smoke-draft-action="${escapeHTML(stringifyValue(item.protocolGroup))}">${escapeHTML(providerSmokeDraftActionLabel(item))}</button>
-            <button type="button" class="ghost" data-provider-smoke-prefill-profile-risk="${escapeHTML(stringifyValue(item.protocolGroup))}">预填账号默认风控</button>
-            <button type="button" class="ghost" data-provider-smoke-focus-group="${escapeHTML(stringifyValue(item.protocolGroup))}">只看该组记录</button>
-            <button type="button" class="ghost" data-provider-smoke-filter-status="${escapeHTML(item.accepted ? "accepted" : item.acceptanceStatus || "pending")}">只看此类</button>
+            <button type="button" class="ghost" data-provider-smoke-prefill-profile-risk="${escapeHTML(stringifyValue(item.protocolGroup))}">${escapeHTML(t("status.matrix_prefill_profile_risk", "预填账号默认风控"))}</button>
+            <button type="button" class="ghost" data-provider-smoke-focus-group="${escapeHTML(stringifyValue(item.protocolGroup))}">${escapeHTML(t("status.matrix_focus_group_records", "只看该组记录"))}</button>
+            <button type="button" class="ghost" data-provider-smoke-filter-status="${escapeHTML(item.accepted ? "accepted" : item.acceptanceStatus || "pending")}">${escapeHTML(t("status.matrix_focus_acceptance_type", "只看此类"))}</button>
           </div>
           <div class="muted">latest smoke: <code>${escapeHTML(stringifyValue(item.latestSmokeAt, "-"))}</code> / coverage observed: <code>${escapeHTML(stringifyValue(item.coverageLastObservedAt, "-"))}</code></div>
         </div>
