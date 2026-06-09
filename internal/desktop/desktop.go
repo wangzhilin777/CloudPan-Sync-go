@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"net"
 	"net/http"
 	"os"
@@ -18,6 +19,13 @@ import (
 const desktopLoopbackAddr = "127.0.0.1:0"
 
 var errNoDesktopBrowser = errors.New("未找到可用于独立窗口模式的 Chrome / Edge 浏览器")
+
+type desktopLaunchMode string
+
+const (
+	desktopLaunchModeApp     desktopLaunchMode = "app"
+	desktopLaunchModeBrowser desktopLaunchMode = "browser"
+)
 
 func Run(ctx context.Context, cfg app.Config) error {
 	runCtx, cancel := context.WithCancel(ctx)
@@ -44,11 +52,13 @@ func Run(ctx context.Context, cfg app.Config) error {
 	if err := waitForReady(runCtx, url, 8*time.Second); err != nil {
 		return fmt.Errorf("wait desktop console ready: %w", err)
 	}
-	windowProc, cleanup, err := openDesktopWindow(url)
+	log.Printf("桌面模式服务已就绪：%s", url)
+	windowProc, cleanup, launchMode, err := openDesktopWindow(url)
 	if err != nil {
 		return fmt.Errorf("open desktop window: %w", err)
 	}
 	defer cleanup()
+	log.Print(desktopLaunchMessage(launchMode, url))
 
 	if windowProc != nil {
 		go func() {
@@ -93,15 +103,15 @@ func waitForReady(ctx context.Context, url string, timeout time.Duration) error 
 	}
 }
 
-func openDesktopWindow(url string) (*os.Process, func(), error) {
+func openDesktopWindow(url string) (*os.Process, func(), desktopLaunchMode, error) {
 	process, cleanup, err := openChromeAppWindow(url)
 	if err == nil {
-		return process, cleanup, nil
+		return process, cleanup, desktopLaunchModeApp, nil
 	}
 	if fallbackErr := openSystemBrowser(url); fallbackErr == nil {
-		return nil, func() {}, nil
+		return nil, func() {}, desktopLaunchModeBrowser, nil
 	}
-	return nil, func() {}, buildDesktopWindowOpenError(err, url)
+	return nil, func() {}, "", buildDesktopWindowOpenError(err, url)
 }
 
 func openChromeAppWindow(url string) (*os.Process, func(), error) {
@@ -202,4 +212,15 @@ func buildDesktopWindowOpenError(cause error, url string) error {
 		return fmt.Errorf("未找到 Chrome / Edge 独立窗口浏览器，且系统浏览器兜底也失败，请手动访问 %s", url)
 	}
 	return fmt.Errorf("桌面模式未能打开独立窗口，请手动访问 %s：%w", url, cause)
+}
+
+func desktopLaunchMessage(mode desktopLaunchMode, url string) string {
+	switch mode {
+	case desktopLaunchModeApp:
+		return fmt.Sprintf("已使用 Chrome / Edge 独立窗口打开控制台。关闭窗口后会自动退出本地服务；如窗口未弹出，可手动访问 %s", url)
+	case desktopLaunchModeBrowser:
+		return fmt.Sprintf("当前未使用独立窗口，已退回系统默认浏览器。若浏览器未自动打开，请手动访问 %s", url)
+	default:
+		return fmt.Sprintf("桌面模式已启动。若面板未自动打开，请手动访问 %s", url)
+	}
 }

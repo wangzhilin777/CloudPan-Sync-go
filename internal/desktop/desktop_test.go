@@ -88,3 +88,37 @@ func TestChromeCandidatesIncludeLocalEdgePathOnWindows(t *testing.T) {
 		t.Fatalf("expected LocalAppData Edge candidate in %q", joined)
 	}
 }
+
+func TestDesktopLaunchMessage(t *testing.T) {
+	url := "http://127.0.0.1:18080/"
+
+	testCases := []struct {
+		name string
+		mode desktopLaunchMode
+		want string
+	}{
+		{
+			name: "app window mode",
+			mode: desktopLaunchModeApp,
+			want: "已使用 Chrome / Edge 独立窗口打开控制台。关闭窗口后会自动退出本地服务；如窗口未弹出，可手动访问 http://127.0.0.1:18080/",
+		},
+		{
+			name: "system browser fallback",
+			mode: desktopLaunchModeBrowser,
+			want: "当前未使用独立窗口，已退回系统默认浏览器。若浏览器未自动打开，请手动访问 http://127.0.0.1:18080/",
+		},
+		{
+			name: "unknown mode fallback",
+			mode: "",
+			want: "桌面模式已启动。若面板未自动打开，请手动访问 http://127.0.0.1:18080/",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := desktopLaunchMessage(tc.mode, url); got != tc.want {
+				t.Fatalf("desktopLaunchMessage() = %q, want %q", got, tc.want)
+			}
+		})
+	}
+}
