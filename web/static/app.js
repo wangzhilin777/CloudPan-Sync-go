@@ -104,6 +104,15 @@ function stringifyValue(value, fallback = "-") {
   return String(value);
 }
 
+function localizeRecommendationReason(reason, fallback) {
+  const normalized = stringifyValue(reason, fallback);
+  const knownReasons = {
+    "Multiple top-level roots are safer to process subtree by subtree.": "检测到多个顶层目录，按子树逐个推进会更稳妥，也更方便分批处理。",
+    "Large transfer sets benefit from a balanced pacing profile.": "传输条目较多时，使用 balanced 风控档位更稳妥，能兼顾速度与稳定性。",
+  };
+  return knownReasons[normalized] || normalized;
+}
+
 function renderSourceDeletePolicy(value, fallback = "record_only") {
   const policy = stringifyValue(value, fallback);
   if (policy === "record_only") {
@@ -4030,8 +4039,8 @@ function updateExecutionRecommendationAction(metadata = {}) {
     return;
   }
 
-  const executionReason = stringifyValue(metadata.recommendedExecutionModeReason, "暂无执行模式推荐原因");
-  const riskReason = stringifyValue(metadata.recommendedRiskModeReason, "暂无风控推荐原因");
+  const executionReason = localizeRecommendationReason(metadata.recommendedExecutionModeReason, "暂无执行模式推荐原因");
+  const riskReason = localizeRecommendationReason(metadata.recommendedRiskModeReason, "暂无风控推荐原因");
   const aggressiveWarning = stringifyValue(metadata.aggressiveRiskWarning, "-");
   card.classList.remove("hidden");
 

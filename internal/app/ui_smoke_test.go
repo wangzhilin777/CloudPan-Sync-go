@@ -269,7 +269,7 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 		chromedp.SetValue(`#plan-entries`, entriesJSON, chromedp.ByID),
 		chromedp.Click(`#preview-plan`, chromedp.ByID),
 		waitForText(`#plan-recommendation-title`, "建议执行模式：leaf_first_lazy / 建议风控档位：balanced"),
-		waitForText(`#plan-recommendation-reason`, "Multiple top-level roots are safer to process subtree by subtree."),
+		waitForText(`#plan-recommendation-reason`, "检测到多个顶层目录，按子树逐个推进会更稳妥，也更方便分批处理。"),
 		chromedp.Click(`#apply-recommended-execution`, chromedp.ByID),
 		waitForValue(`#plan-execution-mode`, "leaf_first_lazy"),
 		waitForText(`#flash`, "已采用推荐执行模式：leaf_first_lazy"),
