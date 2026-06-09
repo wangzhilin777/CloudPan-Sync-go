@@ -245,7 +245,7 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 		waitForText(`#plan-target-provider-insight`, "网盘源默认模板"),
 		waitForText(`#plan-target-profile`, profileName),
 		setSelectValueByText(`#plan-target-profile`, profileName),
-		waitForText(`#plan-target-profile-insight`, "auth profile riskDefaults"),
+		waitForText(`#plan-target-profile-insight`, "授权档案内置账号默认风控"),
 		waitForText(`#plan-target-profile-insight`, "req 1666ms"),
 		chromedp.Click(`#apply-profile-default-risk`, chromedp.ByID),
 		waitForText(`#flash`, "已将账号默认风控写入任务覆盖"),
@@ -888,4 +888,3 @@ func runStep(t *testing.T, ctx context.Context, name string, actions ...chromedp
 		t.Fatalf("ui smoke step %q failed: %v\nbody:\n%s", name, err, bodyText)
 	}
 }
-

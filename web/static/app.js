@@ -516,7 +516,7 @@ function syncTargetProfileInsight() {
       </div>
       <div class="insight-card">
         <strong>来源</strong>
-        <span>${riskDefaults ? escapeHTML(riskDefaultSource || "auth profile riskDefaults") : "未配置，使用网盘源默认模板"}</span>
+        <span>${riskDefaults ? escapeHTML(riskDefaultSource || "授权档案内置账号默认风控") : "未配置，使用网盘源默认模板"}</span>
         <div class="muted">${escapeHTML(renderProfileRiskDefaultSourceAdvice(riskDefaultSource || ""))}</div>
       </div>
       <div class="insight-card">
