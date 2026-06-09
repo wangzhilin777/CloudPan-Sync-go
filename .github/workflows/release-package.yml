@@ -76,6 +76,21 @@ jobs:
             tar -C dist/server -czf "out/${{ matrix.asset_name }}" "${{ matrix.binary_name }}"
           fi
 
+      - name: Verify server archive contents
+        shell: bash
+        run: |
+          set -euo pipefail
+          expected='${{ matrix.binary_name }}'
+          if [ '${{ matrix.archive }}' = 'zip' ]; then
+            actual="$(unzip -Z -1 "out/${{ matrix.asset_name }}")"
+          else
+            actual="$(tar -tzf "out/${{ matrix.asset_name }}")"
+          fi
+          if [ "$actual" != "$expected" ]; then
+            echo "Unexpected server archive contents: $actual"
+            exit 1
+          fi
+
       - name: Upload server artifact
         uses: actions/upload-artifact@v4
         with:
@@ -141,6 +156,21 @@ jobs:
             zip -9 "../../out/${{ matrix.asset_name }}" "${{ matrix.binary_name }}"
           else
             tar -C dist/desktop -czf "out/${{ matrix.asset_name }}" "${{ matrix.binary_name }}"
+          fi
+
+      - name: Verify desktop archive contents
+        shell: bash
+        run: |
+          set -euo pipefail
+          expected='${{ matrix.binary_name }}'
+          if [ '${{ matrix.archive }}' = 'zip' ]; then
+            actual="$(unzip -Z -1 "out/${{ matrix.asset_name }}")"
+          else
+            actual="$(tar -tzf "out/${{ matrix.asset_name }}")"
+          fi
+          if [ "$actual" != "$expected" ]; then
+            echo "Unexpected desktop archive contents: $actual"
+            exit 1
           fi
 
       - name: Upload desktop artifact
