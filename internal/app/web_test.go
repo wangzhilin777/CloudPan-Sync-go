@@ -83,6 +83,12 @@ func TestHandleIndexServesHTML(t *testing.T) {
 	if !strings.Contains(body, `id="plan-target-browser-level"`) {
 		t.Fatalf("expected target browser level hint in html body, got %q", body)
 	}
+	if !strings.Contains(body, `id="plan-source-browser-selection"`) {
+		t.Fatalf("expected source browser selection summary in html body, got %q", body)
+	}
+	if !strings.Contains(body, `id="plan-target-browser-selection"`) {
+		t.Fatalf("expected target browser selection summary in html body, got %q", body)
+	}
 	if !strings.Contains(body, `id="plan-selected-roots-hint"`) {
 		t.Fatalf("expected selected roots manual hint in html body, got %q", body)
 	}
@@ -306,6 +312,9 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "renderDirectoryBrowserEmptyState") {
 		t.Fatalf("expected directory browser empty-state helper in app.js, got %q", body)
 	}
+	if !strings.Contains(body, "renderDirectoryBrowserSelectionSummary") {
+		t.Fatalf("expected directory browser selection summary helper in app.js, got %q", body)
+	}
 	if !strings.Contains(body, "当前层级：根目录") {
 		t.Fatalf("expected directory browser root level text in app.js, got %q", body)
 	}
@@ -329,6 +338,9 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	}
 	if !strings.Contains(body, "已将 ") || !strings.Contains(body, "回填到“目标根目录”") {
 		t.Fatalf("expected target directory selection result flash in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "已回填到目标根目录：") {
+		t.Fatalf("expected target directory selection summary text in app.js, got %q", body)
 	}
 	if !strings.Contains(body, "并自动进入该目录回填到“目标根目录”") {
 		t.Fatalf("expected target directory create result flash in app.js, got %q", body)

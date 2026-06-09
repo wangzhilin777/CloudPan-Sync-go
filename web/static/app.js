@@ -2904,6 +2904,14 @@ function renderDirectoryBrowserEmptyState(kind, browser) {
   return "当前目录下没有可继续浏览的子目录。你可以直接使用当前目录作为源目录。";
 }
 
+function renderDirectoryBrowserSelectionSummary(kind, selectedPath) {
+  const normalized = normalizeComparePath(selectedPath) || "/";
+  if (kind === "target") {
+    return `已回填到目标根目录：${normalized}`;
+  }
+  return `已回填到选定根目录(JSON)：${normalized}`;
+}
+
 function resetDirectoryBrowser(kind) {
   state.directoryBrowsers[kind] = {
     currentPath: "/",
@@ -2996,7 +3004,10 @@ function renderDirectoryBrowser(kind) {
   });
   breadcrumbsNode.innerHTML = breadcrumbParts.join("");
   levelNode.textContent = renderDirectoryBrowserLevel(currentPath);
-  selectionNode.innerHTML = `<code>${escapeHTML(selectedPath || "/")}</code>`;
+  selectionNode.innerHTML = `
+    <div class="browser-selection-note">${escapeHTML(renderDirectoryBrowserSelectionSummary(kind, selectedPath || "/"))}</div>
+    <code>${escapeHTML(selectedPath || "/")}</code>
+  `;
   hintNode.textContent = directoryBrowserHint(kind, browser, providerKey);
   const refreshButton = kind === "target" ? $("#plan-target-browser-refresh") : $("#plan-source-browser-refresh");
   const upButton = kind === "target" ? $("#plan-target-browser-up") : $("#plan-source-browser-up");
