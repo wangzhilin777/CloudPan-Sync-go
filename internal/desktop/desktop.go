@@ -18,9 +18,12 @@ import (
 const desktopLoopbackAddr = "127.0.0.1:0"
 
 func Run(ctx context.Context, cfg app.Config) error {
+	runCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
 	cfg.Addr = desktopLoopbackAddr
 
-	application, err := app.New(ctx, cfg)
+	application, err := app.New(runCtx, cfg)
 	if err != nil {
 		return fmt.Errorf("create desktop app: %w", err)
 	}
@@ -33,18 +36,27 @@ func Run(ctx context.Context, cfg app.Config) error {
 
 	runErrCh := make(chan error, 1)
 	go func() {
-		runErrCh <- application.RunWithListener(ctx, listener)
+		runErrCh <- application.RunWithListener(runCtx, listener)
 	}()
 
-	if err := waitForReady(ctx, url, 8*time.Second); err != nil {
+	if err := waitForReady(runCtx, url, 8*time.Second); err != nil {
 		return fmt.Errorf("wait desktop console ready: %w", err)
 	}
-	if err := openDesktopWindow(url); err != nil {
+	windowProc, cleanup, err := openDesktopWindow(url)
+	if err != nil {
 		return fmt.Errorf("open desktop window: %w", err)
+	}
+	defer cleanup()
+
+	if windowProc != nil {
+		go func() {
+			_, _ = windowProc.Wait()
+			cancel()
+		}()
 	}
 
 	select {
-	case <-ctx.Done():
+	case <-runCtx.Done():
 		return nil
 	case err := <-runErrCh:
 		return err
@@ -79,26 +91,44 @@ func waitForReady(ctx context.Context, url string, timeout time.Duration) error 
 	}
 }
 
-func openDesktopWindow(url string) error {
-	if err := openChromeAppWindow(url); err == nil {
-		return nil
+func openDesktopWindow(url string) (*os.Process, func(), error) {
+	process, cleanup, err := openChromeAppWindow(url)
+	if err == nil {
+		return process, cleanup, nil
 	}
-	return openSystemBrowser(url)
+	if fallbackErr := openSystemBrowser(url); fallbackErr == nil {
+		return nil, func() {}, nil
+	}
+	return nil, func() {}, err
 }
 
-func openChromeAppWindow(url string) error {
+func openChromeAppWindow(url string) (*os.Process, func(), error) {
 	chromePath, err := findChromeExecutable()
 	if err != nil {
-		return err
+		return nil, func() {}, err
 	}
-	cmd := exec.Command(chromePath, buildChromeAppArgs(url)...)
-	return cmd.Start()
+	profileDir, err := os.MkdirTemp("", "cloudpan-sync-desktop-*")
+	if err != nil {
+		return nil, func() {}, fmt.Errorf("create desktop browser profile: %w", err)
+	}
+	cleanup := func() {
+		_ = os.RemoveAll(profileDir)
+	}
+	cmd := exec.Command(chromePath, buildChromeAppArgs(url, profileDir)...)
+	if err := cmd.Start(); err != nil {
+		cleanup()
+		return nil, func() {}, err
+	}
+	return cmd.Process, cleanup, nil
 }
 
-func buildChromeAppArgs(url string) []string {
+func buildChromeAppArgs(url string, profileDir string) []string {
 	return []string{
 		"--app=" + url,
 		"--new-window",
+		"--user-data-dir=" + profileDir,
+		"--no-first-run",
+		"--no-default-browser-check",
 		"--disable-features=Translate,msEdgeSidebarV2",
 	}
 }

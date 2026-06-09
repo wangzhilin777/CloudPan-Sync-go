@@ -10,12 +10,15 @@ import (
 )
 
 func TestBuildChromeAppArgs(t *testing.T) {
-	args := buildChromeAppArgs("http://127.0.0.1:8080/")
-	if len(args) < 2 {
+	args := buildChromeAppArgs("http://127.0.0.1:8080/", "/tmp/cloudpan-sync-desktop-profile")
+	if len(args) < 4 {
 		t.Fatalf("expected chrome app args, got %v", args)
 	}
 	if args[0] != "--app=http://127.0.0.1:8080/" {
 		t.Fatalf("expected app mode arg, got %v", args)
+	}
+	if args[2] != "--user-data-dir=/tmp/cloudpan-sync-desktop-profile" {
+		t.Fatalf("expected dedicated user-data-dir arg, got %v", args)
 	}
 }
 
