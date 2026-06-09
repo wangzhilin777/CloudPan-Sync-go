@@ -17,6 +17,8 @@ import (
 
 const desktopLoopbackAddr = "127.0.0.1:0"
 
+var errNoDesktopBrowser = errors.New("未找到可用于独立窗口模式的 Chrome / Edge 浏览器")
+
 func Run(ctx context.Context, cfg app.Config) error {
 	runCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
@@ -99,7 +101,7 @@ func openDesktopWindow(url string) (*os.Process, func(), error) {
 	if fallbackErr := openSystemBrowser(url); fallbackErr == nil {
 		return nil, func() {}, nil
 	}
-	return nil, func() {}, err
+	return nil, func() {}, buildDesktopWindowOpenError(err, url)
 }
 
 func openChromeAppWindow(url string) (*os.Process, func(), error) {
@@ -149,7 +151,7 @@ func findChromeExecutable() (string, error) {
 	if path, err := exec.LookPath("msedge"); err == nil {
 		return path, nil
 	}
-	return "", errors.New("no Chrome-compatible browser found")
+	return "", errNoDesktopBrowser
 }
 
 func chromeCandidates() []string {
@@ -161,6 +163,7 @@ func chromeCandidates() []string {
 			filepath.Join(os.Getenv("LocalAppData"), "Google", "Chrome", "Application", "chrome.exe"),
 			filepath.Join(os.Getenv("ProgramFiles"), "Microsoft", "Edge", "Application", "msedge.exe"),
 			filepath.Join(os.Getenv("ProgramFiles(x86)"), "Microsoft", "Edge", "Application", "msedge.exe"),
+			filepath.Join(os.Getenv("LocalAppData"), "Microsoft", "Edge", "Application", "msedge.exe"),
 		}
 	case "darwin":
 		return []string{
@@ -189,4 +192,14 @@ func openSystemBrowser(url string) error {
 		cmd = exec.Command("xdg-open", url)
 	}
 	return cmd.Start()
+}
+
+func buildDesktopWindowOpenError(cause error, url string) error {
+	if cause == nil {
+		return fmt.Errorf("桌面模式未能打开控制台窗口，请手动访问 %s", url)
+	}
+	if errors.Is(cause, errNoDesktopBrowser) {
+		return fmt.Errorf("未找到 Chrome / Edge 独立窗口浏览器，且系统浏览器兜底也失败，请手动访问 %s", url)
+	}
+	return fmt.Errorf("桌面模式未能打开独立窗口，请手动访问 %s：%w", url, cause)
 }

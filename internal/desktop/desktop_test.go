@@ -2,8 +2,10 @@ package desktop
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -40,5 +42,49 @@ func TestChromeCandidatesContainKnownBrowserNames(t *testing.T) {
 	joined := strings.Join(chromeCandidates(), "\n")
 	if !strings.Contains(strings.ToLower(joined), "chrome") && !strings.Contains(strings.ToLower(joined), "edge") {
 		t.Fatalf("expected Chrome-compatible candidates, got %q", joined)
+	}
+}
+
+func TestBuildDesktopWindowOpenError(t *testing.T) {
+	url := "http://127.0.0.1:18080/"
+
+	testCases := []struct {
+		name  string
+		cause error
+		want  string
+	}{
+		{
+			name:  "no dedicated browser",
+			cause: errNoDesktopBrowser,
+			want:  "未找到 Chrome / Edge 独立窗口浏览器，且系统浏览器兜底也失败，请手动访问 http://127.0.0.1:18080/",
+		},
+		{
+			name:  "generic open failure",
+			cause: errors.New("browser start failed"),
+			want:  "桌面模式未能打开独立窗口，请手动访问 http://127.0.0.1:18080/：browser start failed",
+		},
+		{
+			name:  "nil cause",
+			cause: nil,
+			want:  "桌面模式未能打开控制台窗口，请手动访问 http://127.0.0.1:18080/",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := buildDesktopWindowOpenError(tc.cause, url).Error(); got != tc.want {
+				t.Fatalf("buildDesktopWindowOpenError() = %q, want %q", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestChromeCandidatesIncludeLocalEdgePathOnWindows(t *testing.T) {
+	if runtime.GOOS != "windows" {
+		t.Skip("windows-only candidate assertion")
+	}
+	joined := strings.Join(chromeCandidates(), "\n")
+	if !strings.Contains(joined, `Microsoft\Edge\Application\msedge.exe`) {
+		t.Fatalf("expected LocalAppData Edge candidate in %q", joined)
 	}
 }
