@@ -3849,7 +3849,7 @@ function renderProfiles() {
               <tr class="${profile.id === state.focusedProfileId ? "active" : ""}" data-profile-row="${profile.id}">
                 <td>${profile.displayName}</td>
                 <td>${profile.providerKey}</td>
-                <td>${profile.authMode}</td>
+                <td>${escapeHTML(renderAuthModeLabel(profile.authMode))}</td>
                 <td>
                   <div>${escapeHTML(profileRisk)}</div>
                   <div class="muted">账号默认来源: ${escapeHTML(renderRiskDefaultsSourceBadge(profileSource))}</div>

@@ -230,6 +230,7 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 		waitForValueContains(`#profile-extra`, `riskDefaults`),
 		chromedp.Click(`#profile-form button[type="submit"]`, chromedp.ByQuery),
 		waitForText(`#profiles-table`, profileName),
+		waitForText(`#profiles-table`, "手动令牌（manual_token）"),
 		chromedp.Click(`[data-profile-validate]`, chromedp.ByQuery),
 		waitForText(`#profiles-table`, "verified"),
 	)
