@@ -3143,13 +3143,13 @@ function applyDirectoryBrowserSelection(kind, path) {
     setInputValueIfPresent("#plan-target-root", normalized);
     state.directoryBrowsers.target.selectedPath = normalized;
     renderDirectoryBrowser("target");
-    showFlash(`已将 ${normalized} 设为目标根目录`);
+    showFlash(`已将 ${normalized} 回填到“目标根目录”`);
     return;
   }
   $("#plan-selected-roots").value = JSON.stringify([normalized], null, 2);
   state.directoryBrowsers.source.selectedPath = normalized;
   renderDirectoryBrowser("source");
-  showFlash(`已将 ${normalized} 设为源根目录`);
+  showFlash(`已将 ${normalized} 回填到“选定根目录(JSON)”`);
 }
 
 async function createTargetBrowserDirectory() {

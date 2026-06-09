@@ -327,6 +327,9 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "已跳转到目标目录：") {
 		t.Fatalf("expected target directory breadcrumb success flash in app.js, got %q", body)
 	}
+	if !strings.Contains(body, "已将 ") || !strings.Contains(body, "回填到“目标根目录”") {
+		t.Fatalf("expected target directory selection result flash in app.js, got %q", body)
+	}
 	if !strings.Contains(body, "设为目标目录") {
 		t.Fatalf("expected target directory picker label in app.js, got %q", body)
 	}
