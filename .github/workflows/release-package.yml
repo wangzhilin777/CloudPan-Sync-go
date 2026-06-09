@@ -182,6 +182,14 @@ jobs:
           set -euo pipefail
           gzip -c /tmp/cloudpan-sync-go-docker-image.tar > /tmp/cloudpan-sync-go-docker-image.tar.gz
 
+      - name: Verify Docker archive tags
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker load -i /tmp/cloudpan-sync-go-docker-image.tar >/tmp/cloudpan-docker-load.log
+          docker image inspect cloudpan-sync-go:release >/dev/null
+          docker image inspect cloudpan-sync-go:latest >/dev/null
+
       - name: Upload Docker artifact
         uses: actions/upload-artifact@v4
         with:
