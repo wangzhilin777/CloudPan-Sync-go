@@ -157,40 +157,40 @@
                   </div>
                   <div class="mini-grid">
                     <label>
-                      <span>请求间隔(ms)</span>
-                      <input id="profile-risk-request-interval" type="number" min="0" placeholder="例如 1600" />
+                      <span data-i18n-text="wizard.risk_request_interval">请求间隔(ms)</span>
+                      <input id="profile-risk-request-interval" type="number" min="0" placeholder="例如 1600" data-i18n-placeholder="wizard.number_example_1600" />
                     </label>
                     <label>
-                      <span>目录间隔(ms)</span>
-                      <input id="profile-risk-directory-interval" type="number" min="0" placeholder="例如 2600" />
+                      <span data-i18n-text="wizard.risk_directory_interval">目录间隔(ms)</span>
+                      <input id="profile-risk-directory-interval" type="number" min="0" placeholder="例如 2600" data-i18n-placeholder="wizard.number_example_2600" />
                     </label>
                     <label>
-                      <span>分页大小</span>
-                      <input id="profile-risk-page-size" type="number" min="1" placeholder="例如 100" />
+                      <span data-i18n-text="wizard.risk_page_size">分页大小</span>
+                      <input id="profile-risk-page-size" type="number" min="1" placeholder="例如 100" data-i18n-placeholder="wizard.number_example_100" />
                     </label>
                     <label>
-                      <span>冷却时间(s)</span>
-                      <input id="profile-risk-cooldown-seconds" type="number" min="0" placeholder="例如 600" />
+                      <span data-i18n-text="wizard.risk_cooldown_seconds">冷却时间(s)</span>
+                      <input id="profile-risk-cooldown-seconds" type="number" min="0" placeholder="例如 600" data-i18n-placeholder="wizard.number_example_600" />
                     </label>
                     <label>
-                      <span>重试次数</span>
-                      <input id="profile-risk-retry-limit" type="number" min="0" placeholder="例如 2" />
+                      <span data-i18n-text="wizard.risk_retry_limit">重试次数</span>
+                      <input id="profile-risk-retry-limit" type="number" min="0" placeholder="例如 2" data-i18n-placeholder="wizard.number_example_2" />
                     </label>
                     <label>
-                      <span>最大并发</span>
-                      <input id="profile-risk-max-concurrent" type="number" min="0" placeholder="例如 1" />
+                      <span data-i18n-text="wizard.risk_max_concurrent">最大并发</span>
+                      <input id="profile-risk-max-concurrent" type="number" min="0" placeholder="例如 1" data-i18n-placeholder="wizard.number_example_1" />
                     </label>
                     <label>
-                      <span>自动补传开始时段</span>
-                      <input id="profile-risk-auto-retry-start-hour" type="number" min="0" max="23" placeholder="例如 1" />
+                      <span data-i18n-text="wizard.risk_auto_retry_start_hour">自动补传开始时段</span>
+                      <input id="profile-risk-auto-retry-start-hour" type="number" min="0" max="23" placeholder="例如 1" data-i18n-placeholder="wizard.number_example_1" />
                     </label>
                     <label>
-                      <span>自动补传结束时段</span>
-                      <input id="profile-risk-auto-retry-end-hour" type="number" min="0" max="24" placeholder="例如 7" />
+                      <span data-i18n-text="wizard.risk_auto_retry_end_hour">自动补传结束时段</span>
+                      <input id="profile-risk-auto-retry-end-hour" type="number" min="0" max="24" placeholder="例如 7" data-i18n-placeholder="wizard.number_example_7" />
                     </label>
                     <label>
-                      <span>风险关键词</span>
-                      <input id="profile-risk-keywords" type="text" placeholder="rate_limit,captcha,profile_limit" />
+                      <span data-i18n-text="wizard.risk_keywords">风险关键词</span>
+                      <input id="profile-risk-keywords" type="text" placeholder="rate_limit,captcha,profile_limit" data-i18n-placeholder="providers.risk_keywords_placeholder" />
                     </label>
                   </div>
                   <div class="actions compact-actions">
@@ -718,17 +718,17 @@
                 <input id="provider-smoke-protocol-group" type="text" placeholder="protocolGroup，例如 aliyun_123_open" data-i18n-placeholder="status.provider_smoke_protocol_group_placeholder" />
                 <input id="provider-smoke-auth-mode" type="text" placeholder="authMode，例如 manual_token" data-i18n-placeholder="status.provider_smoke_auth_mode_placeholder" />
                 <select id="provider-smoke-category">
-                  <option value="">自动分类</option>
-                  <option value="auth_only">auth_only</option>
-                  <option value="browse_only">browse_only</option>
-                  <option value="fast_upload_success">fast_upload_success</option>
-                  <option value="binary_upload_success">binary_upload_success</option>
-                  <option value="partial_blocked">partial_blocked</option>
-                  <option value="failed">failed</option>
+                  <option value="" data-i18n-text="status.smoke_category_auto">自动分类</option>
+                  <option value="auth_only" data-i18n-text="status.smoke_category_auth_only">auth_only</option>
+                  <option value="browse_only" data-i18n-text="status.smoke_category_browse_only">browse_only</option>
+                  <option value="fast_upload_success" data-i18n-text="status.smoke_category_fast_upload_success">fast_upload_success</option>
+                  <option value="binary_upload_success" data-i18n-text="status.smoke_category_binary_upload_success">binary_upload_success</option>
+                  <option value="partial_blocked" data-i18n-text="status.smoke_category_partial_blocked">partial_blocked</option>
+                  <option value="failed" data-i18n-text="status.smoke_category_failed">failed</option>
                 </select>
                 <select id="provider-smoke-result">
-                  <option value="success">success</option>
-                  <option value="failure">failure</option>
+                  <option value="success" data-i18n-text="status.result_success">success</option>
+                  <option value="failure" data-i18n-text="status.result_failure">failure</option>
                 </select>
               </div>
               <div class="filter-bar">
@@ -762,9 +762,9 @@
                 </div>
               </div>
               <div class="filter-bar">
-                <input id="status-retry-filter-query" type="text" placeholder="筛选路径 / reason / provider status" />
+                <input id="status-retry-filter-query" type="text" placeholder="筛选路径 / reason / provider status" data-i18n-placeholder="tasks.retry_filter_query_placeholder" />
                 <select id="status-retry-filter-class">
-                  <option value="">全部分类</option>
+                  <option value="" data-i18n-text="tasks.all_classes">全部分类</option>
                   <option value="pending_manual">pending_manual</option>
                   <option value="provider_session_missing">provider_session_missing</option>
                   <option value="rate_limited">rate_limited</option>
@@ -772,13 +772,13 @@
                   <option value="local_file_missing">local_file_missing</option>
                 </select>
                 <select id="status-retry-filter-state">
-                  <option value="">全部状态</option>
+                  <option value="" data-i18n-text="tasks.all_states">全部状态</option>
                   <option value="retryable">retryable</option>
                   <option value="blocked">blocked</option>
                   <option value="exhausted">exhausted</option>
                 </select>
               </div>
-              <div id="status-retry-filter-summary" class="filter-summary muted">等待状态数据...</div>
+              <div id="status-retry-filter-summary" class="filter-summary muted" data-i18n-text="status.waiting_status_data">等待状态数据...</div>
               <div id="status-retry-queue" class="directory-state-list"></div>
             </article>
           </div>
