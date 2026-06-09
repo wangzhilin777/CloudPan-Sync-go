@@ -56,6 +56,7 @@ const state = {
     source: { currentPath: "/", items: [], loading: false, lastLoadedPath: "", selectedPath: "" },
     target: { currentPath: "/", items: [], loading: false, lastLoadedPath: "", selectedPath: "" },
   },
+  authAssistDiscovery: null,
 };
 
 const treeGroupsStorageKey = "cloudpan_console_tree_groups_collapsed";
@@ -341,13 +342,102 @@ function renderAuthAssistDiscovery(response) {
   return `${response.kind === "alist" ? "Alist" : "OpenList"} 已连通，当前可见存储：${summary}${suffix}。`;
 }
 
+function renderAuthAssistDiscoveryHTML(response) {
+  if (!response || typeof response !== "object") {
+    return `<div>检测结果会在这里显示；如果能列出可见存储，说明当前 OpenList / Alist 地址和令牌基本可用。</div>`;
+  }
+  const kind = response.kind === "alist" ? "alist" : "openlist";
+  const kindLabel = kind === "alist" ? "Alist" : "OpenList";
+  const storages = Array.isArray(response.storages) ? response.storages : [];
+  if (!storages.length) {
+    return `<div>${escapeHTML(renderAuthAssistDiscovery(response))}</div>`;
+  }
+  const items = storages
+    .slice(0, 12)
+    .map((item, index) => {
+      const name = stringifyValue(item.name, "未命名存储");
+      const driver = stringifyValue(item.driver, "未知驱动");
+      const mountPath = stringifyValue(item.mountPath, "/");
+      const status = stringifyValue(item.status, "状态未知");
+      return `
+        <div class="auth-assist-discovery-item">
+          <button type="button" class="ghost" data-assist-select-index="${index}">
+            选用 ${escapeHTML(name)}
+          </button>
+          <div class="muted">${escapeHTML(driver)} / <code>${escapeHTML(mountPath)}</code> / ${escapeHTML(status)}</div>
+        </div>
+      `;
+    })
+    .join("");
+  const moreNotice =
+    storages.length > 12
+      ? `<div class="muted">仅展示前 12 项，其余 ${escapeHTML(String(storages.length - 12))} 项请缩小权限范围后重试。</div>`
+      : "";
+  return `
+    <div><strong>${kindLabel}</strong> 已连通，请先从下方选择一个可见存储，再继续补当前网盘源需要的 Token、Cookie 或 Extra JSON。</div>
+    <div class="auth-assist-discovery-list">${items}</div>
+    ${moreNotice}
+  `;
+}
+
+function updateProfileExtraWithAssist(extra, payload) {
+  const next = extra && typeof extra === "object" ? { ...extra } : {};
+  Object.entries(payload || {}).forEach(([key, value]) => {
+    if (value === undefined || value === null || value === "") {
+      delete next[key];
+      return;
+    }
+    next[key] = value;
+  });
+  return next;
+}
+
+function applyAuthAssistDiscoverySelection(index) {
+  const discovery = state.authAssistDiscovery;
+  const storages = Array.isArray(discovery?.storages) ? discovery.storages : [];
+  const item = storages[index];
+  if (!item) {
+    showFlash("没有找到对应的发现结果，请重新检测一次", true);
+    return;
+  }
+  const kind = discovery.kind === "alist" ? "alist" : "openlist";
+  const kindLabel = kind === "alist" ? "Alist" : "OpenList";
+  const displayName = stringifyValue(item.name, "").trim();
+  if (displayName) {
+    $("#profile-display-name").value = displayName;
+  }
+  const extra = parseJSONInput($("#profile-extra").value, {});
+  const merged = updateProfileExtraWithAssist(extra, {
+    assistKind: kind,
+    assistBaseUrl: stringifyValue(discovery.baseUrl, ""),
+    assistStorageId: stringifyValue(item.id, ""),
+    assistStorageDriver: stringifyValue(item.driver, ""),
+    assistStorageMountPath: stringifyValue(item.mountPath, ""),
+    assistStorageName: stringifyValue(item.name, ""),
+    assistStorageStatus: stringifyValue(item.status, ""),
+  });
+  $("#profile-extra").value = Object.keys(merged).length ? JSON.stringify(merged, null, 2) : "";
+  syncAuthAssistDiscovery(discovery);
+  showFlash(`已从 ${kindLabel} 回填存储“${stringifyValue(item.name, "未命名存储")}”，可继续补当前网盘源需要的授权字段`);
+}
+
 function syncAuthAssistDiscovery(message) {
   const wrap = $("#profile-assist-discovery");
   if (!wrap) {
     return;
   }
-  wrap.textContent =
-    message || "检测结果会在这里显示；如果能列出可见存储，说明当前 OpenList / Alist 地址和令牌基本可用。";
+  if (message && typeof message === "object") {
+    state.authAssistDiscovery = message;
+    wrap.innerHTML = renderAuthAssistDiscoveryHTML(message);
+    return;
+  }
+  if (typeof message === "string" && message.trim()) {
+    state.authAssistDiscovery = null;
+    wrap.textContent = message;
+    return;
+  }
+  state.authAssistDiscovery = null;
+  wrap.innerHTML = renderAuthAssistDiscoveryHTML(null);
 }
 
 async function discoverAuthAssist(kind) {
@@ -366,7 +456,7 @@ async function discoverAuthAssist(kind) {
       token,
     },
   });
-  syncAuthAssistDiscovery(renderAuthAssistDiscovery(result));
+  syncAuthAssistDiscovery(result);
   return result;
 }
 
@@ -8100,6 +8190,17 @@ function wireProfiles() {
     persistAuthAssistState(defaultAuthAssistState());
     syncAuthAssistDiscovery("");
     showFlash("授权引导配置已清空，已恢复 OpenList 优先");
+  });
+  $("#profile-assist-discovery").addEventListener("click", (event) => {
+    const button = event.target.closest("[data-assist-select-index]");
+    if (!button) {
+      return;
+    }
+    try {
+      applyAuthAssistDiscoverySelection(Number(button.dataset.assistSelectIndex));
+    } catch (error) {
+      showFlash(`回填发现结果失败：${error.message}`, true);
+    }
   });
   $("#plan-source-provider").addEventListener("change", async () => {
     syncSourceProfiles();

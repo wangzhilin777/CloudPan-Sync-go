@@ -220,6 +220,32 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 	runStep(t, runCtx, "create and validate profile",
 		chromedp.Click(`button[data-view="providers"]`, chromedp.ByQuery),
 		waitForText(`#profile-assist-summary`, "当前优先走 OpenList"),
+		chromedp.Evaluate(`(() => {
+			if (typeof syncAuthAssistDiscovery !== 'function') {
+				return false;
+			}
+			syncAuthAssistDiscovery({
+				kind: 'openlist',
+				baseUrl: 'http://127.0.0.1:5244',
+				reachable: true,
+				storages: [
+					{
+						id: 'storage-openlist-main',
+						name: 'OpenList 主存储',
+						driver: 'WebDAV',
+						mountPath: '/dav',
+						status: 'work',
+					},
+				],
+			});
+			return true;
+		})()`, nil),
+		waitForText(`#profile-assist-discovery`, "OpenList 已连通"),
+		chromedp.Click(`[data-assist-select-index="0"]`, chromedp.ByQuery),
+		waitForValue(`#profile-display-name`, "OpenList 主存储"),
+		waitForValueContains(`#profile-extra`, `"assistKind": "openlist"`),
+		waitForValueContains(`#profile-extra`, `"assistStorageMountPath": "/dav"`),
+		waitForText(`#flash`, "已从 OpenList 回填存储"),
 		setSelectValue(`#profile-provider`, "123_open"),
 		waitForText(`#profile-auth-guide`, "domainId"),
 		waitForText(`#profile-auth-guide`, "driveId"),

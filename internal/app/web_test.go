@@ -1557,6 +1557,15 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "已检测 Alist，可见存储") {
 		t.Fatalf("expected auth assist Alist discover flash text in app.js, got %q", body)
 	}
+	if !strings.Contains(body, "data-assist-select-index") {
+		t.Fatalf("expected auth assist discovery selection button in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "已从 ") || !strings.Contains(body, "回填存储") {
+		t.Fatalf("expected auth assist discovery apply flash text in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "assistStorageMountPath") {
+		t.Fatalf("expected auth assist discovery extra payload fields in app.js, got %q", body)
+	}
 	if !strings.Contains(body, "localizeAPIError") {
 		t.Fatalf("expected api error localization helper in app.js, got %q", body)
 	}
