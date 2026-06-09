@@ -240,6 +240,9 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 		waitForText(`#plan-source-profile`, sourceProfileName),
 		setSelectValue(`#plan-source-profile`, sourceWizardProfileID),
 		setSelectValue(`#plan-target-provider`, "123_open"),
+		waitForText(`#plan-target-provider-insight`, "推荐风控档位"),
+		waitForText(`#plan-target-provider-insight`, "平衡（balanced）"),
+		waitForText(`#plan-target-provider-insight`, "网盘源默认模板"),
 		waitForText(`#plan-target-profile`, profileName),
 		setSelectValueByText(`#plan-target-profile`, profileName),
 		waitForText(`#plan-target-profile-insight`, "auth profile riskDefaults"),
@@ -885,3 +888,4 @@ func runStep(t *testing.T, ctx context.Context, name string, actions ...chromedp
 		t.Fatalf("ui smoke step %q failed: %v\nbody:\n%s", name, err, bodyText)
 	}
 }
+

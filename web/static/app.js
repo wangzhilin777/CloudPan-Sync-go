@@ -122,6 +122,17 @@ function renderExecutionModeLabel(mode) {
   return labels[normalized] || normalized;
 }
 
+function renderRiskModeLabel(mode) {
+  const normalized = stringifyValue(mode, "-");
+  const labels = {
+    safe: "稳妥（safe）",
+    balanced: "平衡（balanced）",
+    fast: "快速（fast）",
+    custom: "自定义（custom）",
+  };
+  return labels[normalized] || normalized;
+}
+
 function renderSourceDeletePolicy(value, fallback = "record_only") {
   const policy = stringifyValue(value, fallback);
   if (policy === "record_only") {
@@ -345,27 +356,27 @@ function renderProviderRiskTemplateDetail(template, { title = "默认风控模�
     `<div class="insight-card">`,
     `<strong>${escapeHTML(title)}</strong>`,
     `<span>${escapeHTML(renderRiskProfileCompact(template.calibrated))}</span>`,
-    `<div class="muted">auto retry window ${escapeHTML(renderRiskWindow(template.calibrated))}</div>`,
+    `<div class="muted">自动补传时段 ${escapeHTML(renderRiskWindow(template.calibrated))}</div>`,
     `<div class="muted">时间窗来源 ${escapeHTML(renderAutoRetryWindowSource(template.autoRetryWindowSource))}</div>`,
-    `<div class="muted">calibration coverage ${escapeHTML(stringifyValue(template.calibrationCoverage, "-"))}</div>
-    <div class="muted">calibration covered ${escapeHTML(stringifyValue(template.calibrationCoveredCount, "0"))}/${escapeHTML(stringifyValue(template.calibrationTargetCount, "0"))} / missing ${escapeHTML(stringifyValue(template.calibrationMissingCount, "0"))}</div>
-    <div class="muted">calibration covered fields ${escapeHTML((template.calibrationCoveredFields || []).join(", ") || "-")}</div>
+    `<div class="muted">校准覆盖 ${escapeHTML(stringifyValue(template.calibrationCoverage, "-"))}</div>
+    <div class="muted">校准完成 ${escapeHTML(stringifyValue(template.calibrationCoveredCount, "0"))}/${escapeHTML(stringifyValue(template.calibrationTargetCount, "0"))} / 缺失 ${escapeHTML(stringifyValue(template.calibrationMissingCount, "0"))}</div>
+    <div class="muted">已覆盖字段 ${escapeHTML((template.calibrationCoveredFields || []).join(", ") || "-")}</div>
     <div class="muted">校准就绪度 ${escapeHTML(stringifyValue(template.calibrationReadiness, "-"))}</div>
     <div class="muted">校准样本建议 ${escapeHTML(stringifyValue(template.calibrationSampleAdvice, "-"))}</div>`,
-    `<div class="muted">recommended ${escapeHTML(stringifyValue(template.recommendedMode, "-"))}</div>`,
-    `<div class="muted">recover budget ${escapeHTML(renderRecoverBudgetCompact(template.recoverBudget))}</div>`,
-    `<div class="muted">budget advice ${escapeHTML(renderRecoverBudgetAdvice(template.recoverBudget, template.providerKey || ""))}</div>`,
+    `<div class="muted">推荐档位 ${escapeHTML(renderRiskModeLabel(template.recommendedMode))}</div>`,
+    `<div class="muted">恢复预算 ${escapeHTML(renderRecoverBudgetCompact(template.recoverBudget))}</div>`,
+    `<div class="muted">预算建议 ${escapeHTML(renderRecoverBudgetAdvice(template.recoverBudget, template.providerKey || ""))}</div>`,
   ];
   if (!compact) {
-    parts.push(`<div class="muted">base ${escapeHTML(renderRiskProfileCompact(template.base))}</div>`);
-    parts.push(`<div class="muted">reasons ${escapeHTML(reasons.join(" / ") || "-")}</div>`);
-    parts.push(`<div class="muted">risk hints ${escapeHTML(providerHints.join(" / ") || "-")}</div>`);
-    parts.push(`<div class="muted">risk traits ${escapeHTML(providerTraits.join(", ") || "-")}</div>`);
+    parts.push(`<div class="muted">基线模板 ${escapeHTML(renderRiskProfileCompact(template.base))}</div>`);
+    parts.push(`<div class="muted">校准依据 ${escapeHTML(reasons.join(" / ") || "-")}</div>`);
+    parts.push(`<div class="muted">风控提示 ${escapeHTML(providerHints.join(" / ") || "-")}</div>`);
+    parts.push(`<div class="muted">风控特征 ${escapeHTML(providerTraits.join(", ") || "-")}</div>`);
     parts.push(`<div class="muted">校准缺失 ${escapeHTML((template.calibrationMissing || []).join(", ") || "-")}</div>`);
-    parts.push(`<div class="muted">优先校准动作: ${escapeHTML(stringifyValue(template.calibrationPriorityAction, "-"))}</div>`);
+    parts.push(`<div class="muted">优先校准动作 ${escapeHTML(stringifyValue(template.calibrationPriorityAction, "-"))}</div>`);
     parts.push(`<div class="muted">时间窗建议 ${escapeHTML(stringifyValue(template.autoRetryWindowAdvice, "-"))}</div>`);
-    parts.push(`<div class="muted">advice ${escapeHTML(stringifyValue(template.recommendedReason, "-"))}</div>`);
-    parts.push(`<div class="muted">warning ${escapeHTML(stringifyValue(template.aggressiveRiskWarning, "-"))}</div>`);
+    parts.push(`<div class="muted">推荐说明 ${escapeHTML(stringifyValue(template.recommendedReason, "-"))}</div>`);
+    parts.push(`<div class="muted">风险提示 ${escapeHTML(stringifyValue(template.aggressiveRiskWarning, "-"))}</div>`);
   }
   parts.push(`</div>`);
   return parts.join("");
@@ -442,13 +453,13 @@ function syncTargetProviderInsight() {
     <div class="insight-grid">
       <div class="insight-card">
         <strong>推荐风控档位</strong>
-        <span>${escapeHTML(stringifyValue(entry.meta.defaultRiskTemplate?.recommendedMode, "-"))}</span>
+        <span>${escapeHTML(renderRiskModeLabel(entry.meta.defaultRiskTemplate?.recommendedMode))}</span>
       </div>
       <div class="insight-card">
         <strong>能力摘要</strong>
         <span>${escapeHTML(renderProviderCapabilityCompact(entry.capability))}</span>
       </div>
-      ${renderProviderRiskTemplateDetail({ ...(entry.meta.defaultRiskTemplate || {}), providerKey }, { title: "Provider 默认模板", compact: true })}
+      ${renderProviderRiskTemplateDetail({ ...(entry.meta.defaultRiskTemplate || {}), providerKey }, { title: "网盘源默认模板", compact: true })}
     </div>
     <div class="actions compact-actions">
       <button type="button" class="ghost" id="apply-provider-default-risk">采用网盘源推荐风控</button>

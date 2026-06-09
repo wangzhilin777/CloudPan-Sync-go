@@ -1446,28 +1446,28 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "default risk:") {
 		t.Fatalf("expected provider default risk text in app.js, got %q", body)
 	}
-	if !strings.Contains(body, "recommended risk:") {
+	if !strings.Contains(body, "推荐档位") {
 		t.Fatalf("expected provider recommended risk text in app.js, got %q", body)
 	}
 	if !strings.Contains(body, "校准覆盖") {
 		t.Fatalf("expected provider calibration coverage text in app.js, got %q", body)
 	}
-	if !strings.Contains(body, "calibration covered") {
+	if !strings.Contains(body, "校准完成") {
 		t.Fatalf("expected provider calibration covered-count text in app.js, got %q", body)
 	}
-	if !strings.Contains(body, "calibration covered fields") {
+	if !strings.Contains(body, "已覆盖字段") {
 		t.Fatalf("expected provider calibration covered-fields text in app.js, got %q", body)
 	}
 	if !strings.Contains(body, "校准样本建议") {
 		t.Fatalf("expected provider calibration sample advice text in app.js, got %q", body)
 	}
-	if !strings.Contains(body, "优先校准动作:") {
+	if !strings.Contains(body, "优先校准动作") {
 		t.Fatalf("expected provider risk calibration text in app.js, got %q", body)
 	}
 	if !strings.Contains(body, "校准缺失") {
 		t.Fatalf("expected provider calibration missing text in app.js, got %q", body)
 	}
-	if !strings.Contains(body, "recover budget:") {
+	if !strings.Contains(body, "恢复预算") {
 		t.Fatalf("expected provider recover budget text in app.js, got %q", body)
 	}
 	if !strings.Contains(body, "profile risk source:") {
@@ -1485,7 +1485,7 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "账号默认建议:") {
 		t.Fatalf("expected profile list risk advice text in app.js, got %q", body)
 	}
-	if !strings.Contains(body, "budget advice") {
+	if !strings.Contains(body, "预算建议") {
 		t.Fatalf("expected provider budget advice text in app.js, got %q", body)
 	}
 	if !strings.Contains(body, "账号恢复预算建议") {
