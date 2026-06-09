@@ -142,6 +142,18 @@ function renderAuthModeLabel(mode) {
   return labels[normalized] || normalized;
 }
 
+function renderProfileStatusLabel(status) {
+  const normalized = stringifyValue(status, "-");
+  const labels = {
+    saved: "已保存（saved）",
+    verified: "已校验（verified）",
+    pending: "待校验（pending）",
+    failed: "校验失败（failed）",
+    invalid: "已失效（invalid）",
+  };
+  return labels[normalized] || normalized;
+}
+
 function renderSourceDeletePolicy(value, fallback = "record_only") {
   const policy = stringifyValue(value, fallback);
   if (policy === "record_only") {
@@ -3831,10 +3843,10 @@ function renderProfiles() {
       <thead>
         <tr>
           <th>显示名称</th>
-          <th>Provider</th>
+          <th>网盘源</th>
           <th>授权方式</th>
           <th>账号默认风控</th>
-          <th>Status</th>
+          <th>状态</th>
           <th>操作</th>
         </tr>
       </thead>
@@ -3855,12 +3867,12 @@ function renderProfiles() {
                   <div class="muted">账号默认来源: ${escapeHTML(renderRiskDefaultsSourceBadge(profileSource))}</div>
                   <div class="muted">账号默认建议: ${escapeHTML(profileAdvice)}</div>
                 </td>
-                <td>${profile.status}</td>
+                <td>${escapeHTML(renderProfileStatusLabel(profile.status))}</td>
                 <td>
                   <div class="actions compact">
-                    <button type="button" class="ghost" data-profile-edit="${profile.id}">Edit</button>
-                    <button type="button" class="ghost" data-profile-validate="${profile.id}">Validate</button>
-                    <button type="button" class="ghost" data-profile-delete="${profile.id}">Delete</button>
+                    <button type="button" class="ghost" data-profile-edit="${profile.id}">编辑</button>
+                    <button type="button" class="ghost" data-profile-validate="${profile.id}">验证授权</button>
+                    <button type="button" class="ghost" data-profile-delete="${profile.id}">删除</button>
                   </div>
                 </td>
               </tr>
@@ -3889,7 +3901,7 @@ function renderProfiles() {
     button.addEventListener("click", async () => {
       try {
         const result = await api(`/api/auth/profiles/${button.dataset.profileValidate}/validate`, { method: "POST" });
-        showFlash(`Validate 完成：${result.status}`);
+        showFlash(`授权校验完成：${renderProfileStatusLabel(result.status)}`);
         await loadProfiles();
       } catch (error) {
         showFlash(error.message, true);
@@ -8723,3 +8735,4 @@ async function init() {
   }
 }
 window.addEventListener("DOMContentLoaded", init);
+

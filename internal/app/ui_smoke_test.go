@@ -230,9 +230,13 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 		waitForValueContains(`#profile-extra`, `riskDefaults`),
 		chromedp.Click(`#profile-form button[type="submit"]`, chromedp.ByQuery),
 		waitForText(`#profiles-table`, profileName),
+		waitForText(`#profiles-table`, "网盘源"),
+		waitForText(`#profiles-table`, "状态"),
 		waitForText(`#profiles-table`, "手动令牌（manual_token）"),
+		waitForText(`#profiles-table`, "已保存（saved）"),
+		waitForText(`#profiles-table`, "验证授权"),
 		chromedp.Click(`[data-profile-validate]`, chromedp.ByQuery),
-		waitForText(`#profiles-table`, "verified"),
+		waitForText(`#profiles-table`, "已校验（verified）"),
 	)
 
 	runStep(t, runCtx, "preview and create task",
@@ -892,3 +896,4 @@ func runStep(t *testing.T, ctx context.Context, name string, actions ...chromedp
 		t.Fatalf("ui smoke step %q failed: %v\nbody:\n%s", name, err, bodyText)
 	}
 }
+
