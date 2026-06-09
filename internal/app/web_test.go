@@ -387,7 +387,7 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "并自动进入该目录回填到“目标根目录”") {
 		t.Fatalf("expected target directory create result flash in app.js, got %q", body)
 	}
-	if !strings.Contains(body, "设为目标目录") {
+	if !strings.Contains(body, "使用此目录") {
 		t.Fatalf("expected target directory picker label in app.js, got %q", body)
 	}
 	if !strings.Contains(body, "recommendedRiskModeReason") {

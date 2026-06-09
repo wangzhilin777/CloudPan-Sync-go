@@ -153,6 +153,148 @@ const translations = {
       flash_cancel_edit: "已退出授权档案编辑",
       flash_profile_created: "授权档案已创建",
       flash_profile_updated: "授权档案已更新"
+    },
+    wizard: {
+      title: "任务预览 / 创建",
+      source_provider: "源网盘源",
+      target_provider: "目标网盘源",
+      target_provider_insight_default: "选择目标网盘源后，这里会显示默认风控模板、推荐档位和恢复预算。",
+      source_profile: "源授权档案",
+      target_profile: "目标授权档案",
+      target_profile_insight_default: "选择目标授权档案后，这里会显示账号默认风控模板，并支持一键写入任务覆盖。",
+      source_directory: "源目录选择",
+      target_directory: "目标目录选择",
+      browser_up: "返回上级",
+      browser_refresh: "刷新目录",
+      browser_select_current: "使用当前目录",
+      browser_current_path: "当前目录",
+      browser_selection_result: "回填结果",
+      browser_level_root: "当前层级：根目录",
+      source_browser_selection_default: "将回填到选定根目录(JSON)",
+      target_browser_selection_default: "将回填到目标根目录",
+      source_browser_hint_default: "选择源网盘源和源授权档案后，这里会显示目录浏览兼容提示。",
+      target_browser_hint_default: "选择目标网盘源和目标授权档案后，这里会显示目录浏览兼容提示。",
+      source_browser_empty_default: "选择源网盘源和源授权档案后可浏览目录。",
+      target_browser_empty_default: "选择目标网盘源和目标授权档案后可浏览目录。",
+      target_browser_create_placeholder: "新建子目录名称，例如 archive-2026",
+      target_browser_create: "在当前目录新建文件夹",
+      risk_mode: "风控档位",
+      risk_override_title: "任务级风控覆盖",
+      risk_override_desc: "可选。留空时使用当前档位 + 网盘源默认校准。",
+      risk_override_json: "风控覆盖(JSON)",
+      execution_mode: "执行模式",
+      source_delete_policy: "源端删除策略",
+      execution_hint_default: "默认优先推荐 `leaf_first_lazy`，适合大目录、风控敏感网盘源和按需扫描场景。",
+      delete_policy_hint: "当前首版仅支持 `record_only`，用于显式记录源端删除事件，不会默认删除目标端已有文件。",
+      recommendation_title_default: "等待预览推荐",
+      recommendation_reason_default: "生成预览后会显示推荐模式、推荐风控与当前选择是否一致。",
+      apply_recommended_execution: "采用推荐模式",
+      apply_recommended_risk: "采用推荐风控",
+      selected_roots: "选定根目录(JSON)",
+      selected_roots_hint_default: "源目录支持手动填写。格式示例：`[\"/电影\",\"/相册/旅行\"]`；如果只同步整个根目录，可填写 `[\"/\"]`。",
+      target_root: "目标根目录",
+      target_root_hint_default: "目标目录支持手动填写。示例：`/归档/2026`；如果希望直接写入目标根目录，可保留 `/`。",
+      target_path_mapping_hint: "上传目标路径会按“目标根目录 + 源端相对路径”生成；留空时默认写到目标端根目录。",
+      preview_plan: "预览计划",
+      create_task: "创建任务",
+      preview_result: "预览结果",
+      preview_current_mode: "当前模式",
+      preview_waiting: "等待预览",
+      preview_waiting_text: "等待预览...",
+      provider_recommended_risk: "推荐风控档位",
+      provider_capability_summary: "能力摘要",
+      provider_default_template: "网盘源默认模板",
+      provider_apply_default_risk: "采用网盘源推荐风控",
+      provider_open_capability: "查看网盘源能力详情",
+      profile_default_risk: "账号默认风控",
+      profile_source: "来源",
+      profile_extra_keys: "附加配置项",
+      profile_enabled_fields: "已启用字段",
+      profile_recover_budget: "账号恢复预算建议",
+      profile_apply_default_risk: "应用账号默认到任务覆盖",
+      profile_clear_default_risk: "改回账号默认",
+      execution_mode_prescan: "先完整扫描再执行（pre_scan_flat）适合目录较小、希望先拿到完整扫描结果后再统一执行的场景。",
+      execution_mode_leaf_first: "按目录逐棵推进（leaf_first_lazy）是默认优先推荐模式，会按顶层目录顺序逐棵子树推进，只扫描当前真正需要传的目录。",
+      recommendation_no_execution_reason: "暂无执行模式推荐原因",
+      recommendation_no_risk_reason: "暂无风控推荐原因",
+      recommendation_execution_applied: "执行模式已采用推荐值：{mode}",
+      recommendation_execution_suggested: "建议执行模式：{mode}",
+      recommendation_risk_applied: "风控档位已采用推荐值：{mode}",
+      recommendation_risk_suggested: "建议风控档位：{mode}",
+      recommendation_execution_reason: "执行模式：{reason}",
+      recommendation_risk_reason: "风控档位：{reason}",
+      recommendation_warning: "提示：{warning}",
+      preview_meta_current_mode: "当前模式",
+      preview_meta_selected_roots: "选定根目录",
+      preview_meta_target_root: "目标根目录",
+      preview_meta_recommended_mode: "推荐模式",
+      preview_meta_recommended_reason: "推荐原因",
+      preview_meta_execution_order: "执行顺序",
+      preview_meta_risk_mode: "风险档位",
+      preview_meta_risk_throttle: "风险节流",
+      preview_meta_recommended_risk: "推荐风控",
+      preview_meta_recommended_risk_reason: "推荐风控原因",
+      preview_meta_aggressive_warning: "激进风险提示",
+      preview_meta_risk_resolution: "风险模板解释",
+      preview_meta_retry_window: "自动补传时间窗",
+      preview_meta_source_delete_policy: "源端删除策略",
+      preview_meta_entry_counts: "有效条目 / 删除记录",
+      preview_meta_delete_only: "删除记录仅用于定位",
+      preview_meta_delete_only_hint: "当前预览只剩删除记录，没有可执行条目；请先恢复源文件并重新预览。",
+      preview_meta_delete_mix_hint: "当前预览包含删除记录，它们只会用于定位，不会生成可执行条目。",
+      browser_root: "根目录",
+      browser_level_named: "当前层级：第 {level} 层目录（{name}）",
+      browser_target_manual_fill: "将回填到目标根目录：{path}",
+      browser_source_manual_fill: "将回填到选定根目录(JSON)：{path}",
+      browser_choose_provider_first: "请先选择网盘源，再继续浏览目录。",
+      browser_no_list_target: "{provider} 当前未声明目录浏览能力，请直接在“目标根目录”输入框手动填写目标路径。",
+      browser_no_list_source: "{provider} 当前未声明目录浏览能力，请直接在“选定根目录(JSON)”输入框手动填写源目录路径。",
+      browser_missing_ids: "{provider} 当前目录未返回稳定 fileId / parentId，子目录创建或部分跳转可能受限。",
+      browser_load_fail_target: "{provider} 目录加载失败时，可先验证授权档案、切回根目录，或直接在“目标根目录”输入框手动填写路径。",
+      browser_load_fail_source: "{provider} 目录加载失败时，可先验证授权档案、切回根目录，或直接在“选定根目录(JSON)”输入框手动填写路径。",
+      browser_ready: "{provider} 已启用目录浏览，可直接点选目录回填到任务向导。",
+      selected_roots_manual_supported: "也可手动填写，例如 [\"/电影\",\"/相册/旅行\"]；只同步整个根目录时填写 [\"/\"]。",
+      selected_roots_manual_required: "当前源网盘源可能不支持目录浏览，建议直接手动填写 JSON 路径数组，例如 [\"/电影\",\"/相册/旅行\"]；只同步根目录时填写 [\"/\"]。",
+      target_root_manual_supported: "也可手动填写目标目录，例如 /归档/2026；如果直接写入目标根目录，可保留 /。",
+      target_root_manual_required: "当前目标网盘源可能不支持目录浏览，建议直接手动填写目标目录路径，例如 /归档/2026；如果直接写入目标根目录，可保留 /。",
+      browser_loading: "正在加载目录列表...",
+      browser_error_target: "目录加载失败：{error}。建议先刷新目录、切回根目录；如果仍失败，可直接改填“目标根目录”。",
+      browser_error_source: "目录加载失败：{error}。建议先刷新目录、切回根目录；如果仍失败，可直接改填“选定根目录(JSON)”。",
+      browser_empty_target: "当前目录下没有可继续浏览的子目录。你可以直接使用当前目录，或在这里新建子目录。",
+      browser_empty_source: "当前目录下没有可继续浏览的子目录。你可以直接使用当前目录作为源目录。",
+      browser_pill_current: "当前目录",
+      browser_pill_selected: "已选目录",
+      browser_open: "打开目录",
+      browser_use_this: "使用此目录",
+      flash_provider_no_recommended_risk: "当前网盘源没有可用的推荐风控档位",
+      flash_provider_risk_applied: "已采用网盘源推荐风控：{mode}",
+      flash_provider_opened: "已打开 {provider} 网盘源能力详情",
+      flash_profile_no_default_risk: "当前授权档案没有账号默认风控可写入",
+      flash_profile_risk_applied: "已将账号默认风控写入任务覆盖，可继续按任务单独微调",
+      flash_profile_risk_cleared: "已清空任务覆盖，将回到账号默认 / 网盘源默认链路",
+      flash_risk_override_synced: "风控覆盖已同步到 JSON",
+      flash_risk_override_cleared: "风控覆盖已清空，将使用默认档位和网盘源校准",
+      flash_source_browser_refreshed: "源目录已刷新：{path}",
+      flash_target_browser_refreshed: "目标目录已刷新：{path}",
+      flash_source_browser_up: "已返回上级源目录：{path}",
+      flash_target_browser_up: "已返回上级目标目录：{path}",
+      flash_source_browser_opened: "已打开源目录：{path}",
+      flash_target_browser_opened: "已打开目标目录：{path}",
+      flash_source_browser_jumped: "已跳转到源目录：{path}",
+      flash_target_browser_jumped: "已跳转到目标目录：{path}",
+      flash_target_root_selected: "已将 {path} 回填到“目标根目录”",
+      flash_source_root_selected: "已将 {path} 回填到“选定根目录(JSON)”",
+      flash_choose_target_profile_first: "请先选择目标网盘源和目标授权档案",
+      flash_enter_new_dir_name: "请先输入新建目录名称",
+      flash_browser_missing_parent_id: "当前目录缺少 parentId / fileId，暂时无法创建子目录",
+      flash_target_dir_created: "已在 {path} 下创建目录 {name}，并自动进入该目录回填到“目标根目录”",
+      flash_risk_override_parse_error: "风控覆盖 JSON 无法解析：{error}",
+      flash_preview_required_execution: "请先生成计划预览",
+      flash_execution_applied: "已采用推荐执行模式：{mode}",
+      flash_risk_applied: "已采用推荐风控档位：{mode}",
+      flash_preview_generated: "计划预览已生成",
+      flash_delete_only_blocked: "当前只有删除记录，没有可执行条目；请先恢复源文件并重新预览",
+      flash_task_created: "任务已创建"
     }
   },
   "en-US": {
@@ -244,6 +386,148 @@ const translations = {
       flash_cancel_edit: "Auth profile edit cancelled",
       flash_profile_created: "Auth profile created",
       flash_profile_updated: "Auth profile updated"
+    },
+    wizard: {
+      title: "Task Preview / Create",
+      source_provider: "Source Provider",
+      target_provider: "Target Provider",
+      target_provider_insight_default: "After you choose the target provider, this panel shows the default risk template, recommended mode, and recovery budget.",
+      source_profile: "Source Auth Profile",
+      target_profile: "Target Auth Profile",
+      target_profile_insight_default: "After you choose the target auth profile, this panel shows account-level default risk settings and lets you apply them to the task override.",
+      source_directory: "Source Directory",
+      target_directory: "Target Directory",
+      browser_up: "Up One Level",
+      browser_refresh: "Refresh Directories",
+      browser_select_current: "Use Current Directory",
+      browser_current_path: "Current Directory",
+      browser_selection_result: "Selection Result",
+      browser_level_root: "Current Level: Root Directory",
+      source_browser_selection_default: "Will fill Selected Roots (JSON)",
+      target_browser_selection_default: "Will fill Target Root",
+      source_browser_hint_default: "Choose the source provider and source auth profile to see directory-browser compatibility hints here.",
+      target_browser_hint_default: "Choose the target provider and target auth profile to see directory-browser compatibility hints here.",
+      source_browser_empty_default: "Choose the source provider and source auth profile to browse directories.",
+      target_browser_empty_default: "Choose the target provider and target auth profile to browse directories.",
+      target_browser_create_placeholder: "New subdirectory name, for example archive-2026",
+      target_browser_create: "Create Folder Here",
+      risk_mode: "Risk Mode",
+      risk_override_title: "Task-Level Risk Override",
+      risk_override_desc: "Optional. Leave it empty to use the current mode plus provider-default calibration.",
+      risk_override_json: "Risk Override (JSON)",
+      execution_mode: "Execution Mode",
+      source_delete_policy: "Source Delete Policy",
+      execution_hint_default: "The default recommendation is `leaf_first_lazy`, which fits large directories, risk-sensitive providers, and on-demand scanning.",
+      delete_policy_hint: "This release only supports `record_only`: source deletions are recorded explicitly and will not delete existing target files by default.",
+      recommendation_title_default: "Waiting for preview recommendations",
+      recommendation_reason_default: "After preview generation, this panel shows the recommended execution mode, recommended risk mode, and whether they match your current choices.",
+      apply_recommended_execution: "Use Recommended Mode",
+      apply_recommended_risk: "Use Recommended Risk",
+      selected_roots: "Selected Roots (JSON)",
+      selected_roots_hint_default: "You can also enter paths manually, for example `[\"/Movies\",\"/Albums/Trips\"]`. Use `[\"/\"]` to sync the entire root.",
+      target_root: "Target Root",
+      target_root_hint_default: "You can also enter the target directory manually, for example `/Archive/2026`. Keep `/` to write directly to the target root.",
+      target_path_mapping_hint: "Upload targets are generated as “target root + source relative path”. Leave it empty to write directly under the target root.",
+      preview_plan: "Preview Plan",
+      create_task: "Create Task",
+      preview_result: "Preview Result",
+      preview_current_mode: "Current Mode",
+      preview_waiting: "Waiting for preview",
+      preview_waiting_text: "Waiting for preview...",
+      provider_recommended_risk: "Recommended Risk Mode",
+      provider_capability_summary: "Capability Summary",
+      provider_default_template: "Provider Default Template",
+      provider_apply_default_risk: "Apply Provider Recommended Risk",
+      provider_open_capability: "Open Provider Capabilities",
+      profile_default_risk: "Account Default Risk",
+      profile_source: "Source",
+      profile_extra_keys: "Extra Config Keys",
+      profile_enabled_fields: "Enabled Fields",
+      profile_recover_budget: "Account Recovery Budget Advice",
+      profile_apply_default_risk: "Apply Account Default Risk",
+      profile_clear_default_risk: "Revert to Account Default",
+      execution_mode_prescan: "Scan everything first, then execute (`pre_scan_flat`). This fits smaller directory sets when you want a complete scan result before execution starts.",
+      execution_mode_leaf_first: "Process one directory tree at a time (`leaf_first_lazy`). This is the default recommendation and scans only directories that really need to transfer.",
+      recommendation_no_execution_reason: "No execution-mode recommendation yet",
+      recommendation_no_risk_reason: "No risk-mode recommendation yet",
+      recommendation_execution_applied: "Execution mode already matches the recommendation: {mode}",
+      recommendation_execution_suggested: "Recommended execution mode: {mode}",
+      recommendation_risk_applied: "Risk mode already matches the recommendation: {mode}",
+      recommendation_risk_suggested: "Recommended risk mode: {mode}",
+      recommendation_execution_reason: "Execution mode: {reason}",
+      recommendation_risk_reason: "Risk mode: {reason}",
+      recommendation_warning: "Note: {warning}",
+      preview_meta_current_mode: "Current Mode",
+      preview_meta_selected_roots: "Selected Roots",
+      preview_meta_target_root: "Target Root",
+      preview_meta_recommended_mode: "Recommended Mode",
+      preview_meta_recommended_reason: "Recommendation Reason",
+      preview_meta_execution_order: "Execution Order",
+      preview_meta_risk_mode: "Risk Mode",
+      preview_meta_risk_throttle: "Risk Throttle",
+      preview_meta_recommended_risk: "Recommended Risk",
+      preview_meta_recommended_risk_reason: "Recommended Risk Reason",
+      preview_meta_aggressive_warning: "Aggressive Risk Warning",
+      preview_meta_risk_resolution: "Risk Template Resolution",
+      preview_meta_retry_window: "Auto-Recovery Window",
+      preview_meta_source_delete_policy: "Source Delete Policy",
+      preview_meta_entry_counts: "Active Entries / Delete Records",
+      preview_meta_delete_only: "Delete Records Are Only Used for Location",
+      preview_meta_delete_only_hint: "This preview only contains delete records and no runnable items. Restore the source files and regenerate the preview first.",
+      preview_meta_delete_mix_hint: "This preview includes delete records. They are only used for location and will not generate runnable items.",
+      browser_root: "Root",
+      browser_level_named: "Current Level: Depth {level} ({name})",
+      browser_target_manual_fill: "Filled into Target Root: {path}",
+      browser_source_manual_fill: "Filled into Selected Roots (JSON): {path}",
+      browser_choose_provider_first: "Choose a provider before browsing directories.",
+      browser_no_list_target: "{provider} does not currently declare directory-browsing capability. Enter the target path manually in “Target Root”.",
+      browser_no_list_source: "{provider} does not currently declare directory-browsing capability. Enter the source path manually in “Selected Roots (JSON)”.",
+      browser_missing_ids: "{provider} did not return a stable fileId / parentId for the current directory, so creating subdirectories or partial navigation may be limited.",
+      browser_load_fail_target: "If loading directories for {provider} fails, validate the auth profile, return to root, or fill the path manually in “Target Root”.",
+      browser_load_fail_source: "If loading directories for {provider} fails, validate the auth profile, return to root, or fill the path manually in “Selected Roots (JSON)”.",
+      browser_ready: "{provider} supports directory browsing. You can click directories to fill the task wizard.",
+      selected_roots_manual_supported: "You can also enter paths manually, for example [\"/Movies\",\"/Albums/Trips\"]. Use [\"/\"] to sync the entire root.",
+      selected_roots_manual_required: "This source provider may not support directory browsing. Enter a JSON path array manually, for example [\"/Movies\",\"/Albums/Trips\"]. Use [\"/\"] for the whole root.",
+      target_root_manual_supported: "You can also enter the target path manually, for example /Archive/2026. Keep / to write directly to the target root.",
+      target_root_manual_required: "This target provider may not support directory browsing. Enter the target path manually, for example /Archive/2026. Keep / to write directly to the target root.",
+      browser_loading: "Loading directory list...",
+      browser_error_target: "Directory loading failed: {error}. Try refreshing, returning to root, or filling “Target Root” manually.",
+      browser_error_source: "Directory loading failed: {error}. Try refreshing, returning to root, or filling “Selected Roots (JSON)” manually.",
+      browser_empty_target: "No subdirectories are available here. You can use the current directory directly or create a new subdirectory here.",
+      browser_empty_source: "No subdirectories are available here. You can use the current directory directly as the source directory.",
+      browser_pill_current: "Current",
+      browser_pill_selected: "Selected",
+      browser_open: "Open",
+      browser_use_this: "Use This Directory",
+      flash_provider_no_recommended_risk: "This provider does not expose a recommended risk mode right now",
+      flash_provider_risk_applied: "Applied the provider recommended risk mode: {mode}",
+      flash_provider_opened: "Opened provider capabilities for {provider}",
+      flash_profile_no_default_risk: "This auth profile does not contain account-level default risk settings",
+      flash_profile_risk_applied: "Applied the account default risk settings to the task override. You can continue fine-tuning them for this task.",
+      flash_profile_risk_cleared: "Cleared the task override and reverted to the account-default / provider-default chain",
+      flash_risk_override_synced: "Risk override synced to JSON",
+      flash_risk_override_cleared: "Risk override cleared. The current mode plus provider calibration will be used again.",
+      flash_source_browser_refreshed: "Source directory refreshed: {path}",
+      flash_target_browser_refreshed: "Target directory refreshed: {path}",
+      flash_source_browser_up: "Moved to the parent source directory: {path}",
+      flash_target_browser_up: "Moved to the parent target directory: {path}",
+      flash_source_browser_opened: "Opened source directory: {path}",
+      flash_target_browser_opened: "Opened target directory: {path}",
+      flash_source_browser_jumped: "Jumped to source directory: {path}",
+      flash_target_browser_jumped: "Jumped to target directory: {path}",
+      flash_target_root_selected: "Filled “Target Root” with {path}",
+      flash_source_root_selected: "Filled “Selected Roots (JSON)” with {path}",
+      flash_choose_target_profile_first: "Choose the target provider and target auth profile first",
+      flash_enter_new_dir_name: "Enter a name for the new directory first",
+      flash_browser_missing_parent_id: "The current directory is missing parentId / fileId, so creating a subdirectory is not available yet",
+      flash_target_dir_created: "Created directory {name} under {path}, entered it automatically, and filled it into “Target Root”",
+      flash_risk_override_parse_error: "Risk override JSON cannot be parsed: {error}",
+      flash_preview_required_execution: "Generate a plan preview first",
+      flash_execution_applied: "Applied the recommended execution mode: {mode}",
+      flash_risk_applied: "Applied the recommended risk mode: {mode}",
+      flash_preview_generated: "Plan preview generated",
+      flash_delete_only_blocked: "This payload only contains delete records and no runnable items. Restore the source files and regenerate the preview first.",
+      flash_task_created: "Task created"
     }
   }
 };
@@ -364,6 +648,10 @@ function tf(key, params = {}, fallback = "") {
     text = text.replaceAll(`{${name}}`, String(value));
   });
   return text;
+}
+
+function ti18n(key, fallback = "", params = {}) {
+  return tf(key, params, fallback);
 }
 
 function applyI18n() {
@@ -1162,7 +1450,7 @@ function syncTargetProviderInsight() {
   const providerKey = $("#plan-target-provider")?.value || "";
   const entry = findProviderEntry(providerKey);
   if (!providerKey || !entry) {
-    wrap.innerHTML = `<div class="muted">选择目标网盘源后，这里会显示默认风控模板、推荐档位和恢复预算。</div>`;
+    wrap.innerHTML = `<div class="muted">${escapeHTML(t("wizard.target_provider_insight_default", "选择目标网盘源后，这里会显示默认风控模板、推荐档位和恢复预算。"))}</div>`;
     return;
   }
   wrap.innerHTML = `
@@ -1172,34 +1460,34 @@ function syncTargetProviderInsight() {
     </div>
     <div class="insight-grid">
       <div class="insight-card">
-        <strong>推荐风控档位</strong>
+        <strong>${escapeHTML(t("wizard.provider_recommended_risk", "推荐风控档位"))}</strong>
         <span>${escapeHTML(renderRiskModeLabel(entry.meta.defaultRiskTemplate?.recommendedMode))}</span>
       </div>
       <div class="insight-card">
-        <strong>能力摘要</strong>
+        <strong>${escapeHTML(t("wizard.provider_capability_summary", "能力摘要"))}</strong>
         <span>${escapeHTML(renderProviderCapabilityCompact(entry.capability))}</span>
       </div>
-      ${renderProviderRiskTemplateDetail({ ...(entry.meta.defaultRiskTemplate || {}), providerKey }, { title: "网盘源默认模板", compact: true })}
+      ${renderProviderRiskTemplateDetail({ ...(entry.meta.defaultRiskTemplate || {}), providerKey }, { title: t("wizard.provider_default_template", "网盘源默认模板"), compact: true })}
     </div>
     <div class="actions compact-actions">
-      <button type="button" class="ghost" id="apply-provider-default-risk">采用网盘源推荐风控</button>
-      <button type="button" class="ghost" id="open-target-provider-capability">查看网盘源能力详情</button>
+      <button type="button" class="ghost" id="apply-provider-default-risk">${escapeHTML(t("wizard.provider_apply_default_risk", "采用网盘源推荐风控"))}</button>
+      <button type="button" class="ghost" id="open-target-provider-capability">${escapeHTML(t("wizard.provider_open_capability", "查看网盘源能力详情"))}</button>
     </div>
   `;
   $("#apply-provider-default-risk").onclick = () => {
     const recommended = entry.meta.defaultRiskTemplate?.recommendedMode || "";
     if (!recommended) {
-      showFlash("当前网盘源没有可用的推荐风控档位", true);
+      showFlash(t("wizard.flash_provider_no_recommended_risk", "当前网盘源没有可用的推荐风控档位"), true);
       return;
     }
     setSelectValueIfPresent("#plan-risk-mode", recommended);
-    showFlash(`已采用网盘源推荐风控：${recommended}`);
+    showFlash(tf("wizard.flash_provider_risk_applied", { mode: recommended }, `已采用网盘源推荐风控：${recommended}`));
   };
   $("#open-target-provider-capability").onclick = async () => {
     try {
       await loadProviderCapabilityDetail(providerKey);
       activateTab("providers");
-      showFlash(`已打开 ${providerKey} 网盘源能力详情`);
+      showFlash(tf("wizard.flash_provider_opened", { provider: providerKey }, `已打开 ${providerKey} 网盘源能力详情`));
     } catch (error) {
       showFlash(error.message, true);
     }
@@ -1214,7 +1502,7 @@ function syncTargetProfileInsight() {
   const profileID = $("#plan-target-profile")?.value || "";
   const profile = (state.profiles || []).find((item) => item?.id === profileID);
   if (!profile) {
-    wrap.innerHTML = `<div class="muted">选择目标授权档案后，这里会显示账号默认风控模板。</div>`;
+    wrap.innerHTML = `<div class="muted">${escapeHTML(t("wizard.target_profile_insight_default", "选择目标授权档案后，这里会显示账号默认风控模板，并支持一键写入任务覆盖。"))}</div>`;
     return;
   }
   const riskDefaults = parseProfileRiskDefaultsFromExtra(profile.extra);
@@ -1230,44 +1518,44 @@ function syncTargetProfileInsight() {
     </div>
     <div class="insight-grid">
       <div class="insight-card">
-        <strong>账号默认风控</strong>
+        <strong>${escapeHTML(t("wizard.profile_default_risk", "账号默认风控"))}</strong>
         <span>${escapeHTML(renderRiskProfileCompact(riskDefaults))}</span>
         <div class="muted">可直接写入本次任务覆盖，便于在此基础上再细调。</div>
       </div>
       <div class="insight-card">
-        <strong>来源</strong>
+        <strong>${escapeHTML(t("wizard.profile_source", "来源"))}</strong>
         <span>${riskDefaults ? escapeHTML(riskDefaultSource || "授权档案内置账号默认风控") : "未配置，使用网盘源默认模板"}</span>
         <div class="muted">${escapeHTML(renderProfileRiskDefaultSourceAdvice(riskDefaultSource || ""))}</div>
       </div>
       <div class="insight-card">
-        <strong>附加配置项</strong>
+        <strong>${escapeHTML(t("wizard.profile_extra_keys", "附加配置项"))}</strong>
         <span>${escapeHTML(extraKeys.join(", ") || "-")}</span>
       </div>
       <div class="insight-card">
-        <strong>已启用字段</strong>
+        <strong>${escapeHTML(t("wizard.profile_enabled_fields", "已启用字段"))}</strong>
         <span>${escapeHTML(profileDefaultFields.join(", ") || "-")}</span>
       </div>
       <div class="insight-card">
-        <strong>账号恢复预算建议</strong>
+        <strong>${escapeHTML(t("wizard.profile_recover_budget", "账号恢复预算建议"))}</strong>
         <span>${escapeHTML(renderRecoverBudgetAdvice(recoverBudget, profile.providerKey || ""))}</span>
       </div>
     </div>
     <div class="actions compact-actions">
-      <button type="button" class="ghost" id="apply-profile-default-risk"${riskDefaults ? "" : " disabled"}>应用账号默认到任务覆盖</button>
-      <button type="button" class="ghost" id="clear-profile-default-risk">改回账号默认</button>
+      <button type="button" class="ghost" id="apply-profile-default-risk"${riskDefaults ? "" : " disabled"}>${escapeHTML(t("wizard.profile_apply_default_risk", "应用账号默认到任务覆盖"))}</button>
+      <button type="button" class="ghost" id="clear-profile-default-risk">${escapeHTML(t("wizard.profile_clear_default_risk", "改回账号默认"))}</button>
     </div>
   `;
   const applyButton = $("#apply-profile-default-risk");
   if (applyButton) {
     applyButton.onclick = () => {
       if (!riskDefaults) {
-        showFlash("当前授权档案没有账号默认风控可写入", true);
+        showFlash(t("wizard.flash_profile_no_default_risk", "当前授权档案没有账号默认风控可写入"), true);
         return;
       }
       hydrateRiskOverrideForm(riskDefaults);
       $("#plan-risk-override").value = JSON.stringify(riskDefaults, null, 2);
       setSelectValueIfPresent("#plan-risk-mode", "custom");
-      showFlash("已将账号默认风控写入任务覆盖，可继续按任务单独微调");
+      showFlash(t("wizard.flash_profile_risk_applied", "已将账号默认风控写入任务覆盖，可继续按任务单独微调"));
     };
   }
   const clearButton = $("#clear-profile-default-risk");
@@ -1275,7 +1563,7 @@ function syncTargetProfileInsight() {
     clearButton.onclick = () => {
       hydrateRiskOverrideForm(null);
       $("#plan-risk-override").value = "";
-      showFlash("已清空任务覆盖，将回到账号默认 / 网盘源默认链路");
+      showFlash(t("wizard.flash_profile_risk_cleared", "已清空任务覆盖，将回到账号默认 / 网盘源默认链路"));
     };
   }
 }
@@ -3553,7 +3841,7 @@ function getDirectoryBrowserConfig(kind) {
       pathSelector: "#plan-target-browser-path",
       selectionSelector: "#plan-target-browser-selection",
       listSelector: "#plan-target-browser-list",
-      emptyMessage: "选择目标网盘源和目标授权档案后可浏览目录。",
+      emptyMessage: t("wizard.target_browser_empty_default", "选择目标网盘源和目标授权档案后可浏览目录。"),
     };
   }
   return {
@@ -3562,7 +3850,7 @@ function getDirectoryBrowserConfig(kind) {
     pathSelector: "#plan-source-browser-path",
     selectionSelector: "#plan-source-browser-selection",
     listSelector: "#plan-source-browser-list",
-    emptyMessage: "选择源网盘源和源授权档案后可浏览目录。",
+    emptyMessage: t("wizard.source_browser_empty_default", "选择源网盘源和源授权档案后可浏览目录。"),
   };
 }
 
@@ -3579,22 +3867,22 @@ function directoryBrowserHint(kind, browser, providerKey) {
   const displayName = provider?.meta?.displayName || providerKey || "当前网盘源";
   const capability = provider?.capability || {};
   if (!providerKey) {
-    return "请先选择网盘源，再继续浏览目录。";
+    return t("wizard.browser_choose_provider_first", "请先选择网盘源，再继续浏览目录。");
   }
   if (!capability.supportsList) {
     return kind === "target"
-      ? `${displayName} 当前未声明目录浏览能力，请直接在“目标根目录”输入框手动填写目标路径。`
-      : `${displayName} 当前未声明目录浏览能力，请直接在“选定根目录(JSON)”输入框手动填写源目录路径。`;
+      ? tf("wizard.browser_no_list_target", { provider: displayName }, `${displayName} 当前未声明目录浏览能力，请直接在“目标根目录”输入框手动填写目标路径。`)
+      : tf("wizard.browser_no_list_source", { provider: displayName }, `${displayName} 当前未声明目录浏览能力，请直接在“选定根目录(JSON)”输入框手动填写源目录路径。`);
   }
   if (!browser.currentFileId && normalizeComparePath(browser.currentPath) !== "/") {
-    return `${displayName} 当前目录未返回稳定 fileId / parentId，子目录创建或部分跳转可能受限。`;
+    return tf("wizard.browser_missing_ids", { provider: displayName }, `${displayName} 当前目录未返回稳定 fileId / parentId，子目录创建或部分跳转可能受限。`);
   }
   if (browser.error) {
     return kind === "target"
-      ? `${displayName} 目录加载失败时，可先验证授权档案、切回根目录，或直接在“目标根目录”输入框手动填写路径。`
-      : `${displayName} 目录加载失败时，可先验证授权档案、切回根目录，或直接在“选定根目录(JSON)”输入框手动填写路径。`;
+      ? tf("wizard.browser_load_fail_target", { provider: displayName }, `${displayName} 目录加载失败时，可先验证授权档案、切回根目录，或直接在“目标根目录”输入框手动填写路径。`)
+      : tf("wizard.browser_load_fail_source", { provider: displayName }, `${displayName} 目录加载失败时，可先验证授权档案、切回根目录，或直接在“选定根目录(JSON)”输入框手动填写路径。`);
   }
-  return `${displayName} 已启用目录浏览，可直接点选目录回填到任务向导。`;
+  return tf("wizard.browser_ready", { provider: displayName }, `${displayName} 已启用目录浏览，可直接点选目录回填到任务向导。`);
 }
 
 function syncManualDirectoryInputHints() {
@@ -3610,11 +3898,11 @@ function syncManualDirectoryInputHints() {
   const sourceSupportsList = Boolean(sourceProvider?.capability?.supportsList);
   const targetSupportsList = Boolean(targetProvider?.capability?.supportsList);
   selectedRootsHint.textContent = sourceSupportsList
-    ? '也可手动填写，例如 ["/电影","/相册/旅行"]；只同步整个根目录时填写 ["/"]。'
-    : '当前源网盘源可能不支持目录浏览，建议直接手动填写 JSON 路径数组，例如 ["/电影","/相册/旅行"]；只同步根目录时填写 ["/"]。';
+    ? t("wizard.selected_roots_manual_supported", '也可手动填写，例如 ["/电影","/相册/旅行"]；只同步整个根目录时填写 ["/"]。')
+    : t("wizard.selected_roots_manual_required", '当前源网盘源可能不支持目录浏览，建议直接手动填写 JSON 路径数组，例如 ["/电影","/相册/旅行"]；只同步根目录时填写 ["/"]。');
   targetRootHint.textContent = targetSupportsList
-    ? "也可手动填写目标目录，例如 /归档/2026；如果直接写入目标根目录，可保留 /。"
-    : "当前目标网盘源可能不支持目录浏览，建议直接手动填写目标目录路径，例如 /归档/2026；如果直接写入目标根目录，可保留 /。";
+    ? t("wizard.target_root_manual_supported", "也可手动填写目标目录，例如 /归档/2026；如果直接写入目标根目录，可保留 /。")
+    : t("wizard.target_root_manual_required", "当前目标网盘源可能不支持目录浏览，建议直接手动填写目标目录路径，例如 /归档/2026；如果直接写入目标根目录，可保留 /。");
 }
 
 function spotlightDirectoryBrowserSelection(kind) {
@@ -3635,34 +3923,34 @@ function spotlightDirectoryBrowserSelection(kind) {
 function renderDirectoryBrowserLevel(path) {
   const currentPath = normalizeComparePath(path) || "/";
   if (currentPath === "/") {
-    return "当前层级：根目录";
+    return t("wizard.browser_level_root", "当前层级：根目录");
   }
   const segments = currentPath.split("/").filter(Boolean);
   const currentName = segments[segments.length - 1] || "/";
-  return `当前层级：第 ${segments.length} 层目录（${currentName}）`;
+  return tf("wizard.browser_level_named", { level: segments.length, name: currentName }, `当前层级：第 ${segments.length} 层目录（${currentName}）`);
 }
 
 function renderDirectoryBrowserEmptyState(kind, browser) {
   if (browser.loading) {
-    return "正在加载目录列表...";
+    return t("wizard.browser_loading", "正在加载目录列表...");
   }
   if (browser.error) {
     return kind === "target"
-      ? `目录加载失败：${browser.error}。建议先刷新目录、切回根目录；如果仍失败，可直接改填“目标根目录”。`
-      : `目录加载失败：${browser.error}。建议先刷新目录、切回根目录；如果仍失败，可直接改填“选定根目录(JSON)”。`;
+      ? tf("wizard.browser_error_target", { error: browser.error }, `目录加载失败：${browser.error}。建议先刷新目录、切回根目录；如果仍失败，可直接改填“目标根目录”。`)
+      : tf("wizard.browser_error_source", { error: browser.error }, `目录加载失败：${browser.error}。建议先刷新目录、切回根目录；如果仍失败，可直接改填“选定根目录(JSON)”。`);
   }
   if (kind === "target") {
-    return "当前目录下没有可继续浏览的子目录。你可以直接使用当前目录，或在这里新建子目录。";
+    return t("wizard.browser_empty_target", "当前目录下没有可继续浏览的子目录。你可以直接使用当前目录，或在这里新建子目录。");
   }
-  return "当前目录下没有可继续浏览的子目录。你可以直接使用当前目录作为源目录。";
+  return t("wizard.browser_empty_source", "当前目录下没有可继续浏览的子目录。你可以直接使用当前目录作为源目录。");
 }
 
 function renderDirectoryBrowserSelectionSummary(kind, selectedPath) {
   const normalized = normalizeComparePath(selectedPath) || "/";
   if (kind === "target") {
-    return `已回填到目标根目录：${normalized}`;
+    return tf("wizard.browser_target_manual_fill", { path: normalized }, `已回填到目标根目录：${normalized}`);
   }
-  return `已回填到选定根目录(JSON)：${normalized}`;
+  return tf("wizard.browser_source_manual_fill", { path: normalized }, `已回填到选定根目录(JSON)：${normalized}`);
 }
 
 function resetDirectoryBrowser(kind) {
@@ -3739,7 +4027,7 @@ function renderDirectoryBrowser(kind) {
   const segments = currentPath === "/" ? [] : currentPath.split("/").filter(Boolean);
   const breadcrumbParts = [
     `
-      <button type="button" class="ghost" data-browser-breadcrumb="${escapeHTML(kind)}" data-browser-path="/">根目录</button>
+      <button type="button" class="ghost" data-browser-breadcrumb="${escapeHTML(kind)}" data-browser-path="/">${escapeHTML(t("wizard.browser_root", "根目录"))}</button>
     `,
   ];
   let partialPath = "";
@@ -3809,8 +4097,8 @@ function renderDirectoryBrowser(kind) {
           <strong>${escapeHTML(item.name)}</strong>
           <div class="muted"><code>${escapeHTML(item.path)}</code></div>
           <div class="meta-row">
-            ${isCurrent ? `<span class="pill">当前目录</span>` : ""}
-            ${isSelected ? `<span class="pill">已选目录</span>` : ""}
+            ${isCurrent ? `<span class="pill">${escapeHTML(t("wizard.browser_pill_current", "当前目录"))}</span>` : ""}
+            ${isSelected ? `<span class="pill">${escapeHTML(t("wizard.browser_pill_selected", "已选目录"))}</span>` : ""}
           </div>
           <div class="actions compact">
             <button
@@ -3819,13 +4107,13 @@ function renderDirectoryBrowser(kind) {
               data-browser-open="${escapeHTML(kind)}"
               data-browser-path="${escapeHTML(item.path)}"
               data-browser-file-id="${escapeHTML(item.fileId)}"
-            >打开目录</button>
+            >${escapeHTML(t("wizard.browser_open", "打开目录"))}</button>
             <button
               type="button"
               class="ghost"
               data-browser-select="${escapeHTML(kind)}"
               data-browser-path="${escapeHTML(item.path)}"
-            >${kind === "target" ? "设为目标目录" : "设为源目录"}</button>
+            >${escapeHTML(kind === "target" ? t("wizard.browser_use_this", "使用此目录") : t("wizard.browser_use_this", "使用此目录"))}</button>
           </div>
         </article>
       `;
@@ -3907,13 +4195,13 @@ function applyDirectoryBrowserSelection(kind, path) {
     setInputValueIfPresent("#plan-target-root", normalized);
     state.directoryBrowsers.target.selectedPath = normalized;
     renderDirectoryBrowser("target");
-    showFlash(`已将 ${normalized} 回填到“目标根目录”`);
+    showFlash(tf("wizard.flash_target_root_selected", { path: normalized }, `已将 ${normalized} 回填到“目标根目录”`));
     return;
   }
   $("#plan-selected-roots").value = JSON.stringify([normalized], null, 2);
   state.directoryBrowsers.source.selectedPath = normalized;
   renderDirectoryBrowser("source");
-  showFlash(`已将 ${normalized} 回填到“选定根目录(JSON)”`);
+  showFlash(tf("wizard.flash_source_root_selected", { path: normalized }, `已将 ${normalized} 回填到“选定根目录(JSON)”`));
 }
 
 async function createTargetBrowserDirectory() {
@@ -3921,15 +4209,15 @@ async function createTargetBrowserDirectory() {
   const browser = state.directoryBrowsers.target;
   const dirName = $("#plan-target-browser-create-name").value.trim();
   if (!providerKey || !profileId) {
-    showFlash("请先选择目标网盘源和目标授权档案", true);
+    showFlash(t("wizard.flash_choose_target_profile_first", "请先选择目标网盘源和目标授权档案"), true);
     return;
   }
   if (!dirName) {
-    showFlash("请先输入新建目录名称", true);
+    showFlash(t("wizard.flash_enter_new_dir_name", "请先输入新建目录名称"), true);
     return;
   }
   if (browser.currentPath !== "/" && !browser.currentFileId) {
-    showFlash("当前目录缺少 parentId / fileId，暂时无法创建子目录", true);
+    showFlash(t("wizard.flash_browser_missing_parent_id", "当前目录缺少 parentId / fileId，暂时无法创建子目录"), true);
     return;
   }
   await api(`/api/providers/${encodeURIComponent(providerKey)}/create_dir`, {
@@ -3943,7 +4231,7 @@ async function createTargetBrowserDirectory() {
   const createdPath = normalizeComparePath(`${browser.currentPath === "/" ? "" : browser.currentPath}/${dirName}`) || "/";
   $("#plan-target-browser-create-name").value = "";
   state.directoryBrowsers.target.selectedPath = createdPath;
-  showFlash(`已在 ${browser.currentPath} 下创建目录 ${dirName}，并自动进入该目录回填到“目标根目录”`);
+  showFlash(tf("wizard.flash_target_dir_created", { path: browser.currentPath, name: dirName }, `已在 ${browser.currentPath} 下创建目录 ${dirName}，并自动进入该目录回填到“目标根目录”`));
   await loadDirectoryBrowser("target", createdPath);
   applyDirectoryBrowserSelection("target", createdPath);
 }
@@ -4774,10 +5062,10 @@ function syncExecutionModeHint() {
   const mode = $("#plan-execution-mode").value;
   const hint = $("#plan-execution-hint");
   if (mode === "pre_scan_flat") {
-    hint.textContent = "先完整扫描再执行（pre_scan_flat）适合目录较小、希望先拿到完整扫描结果后再统一执行的场景。";
+    hint.textContent = t("wizard.execution_mode_prescan", "先完整扫描再执行（pre_scan_flat）适合目录较小、希望先拿到完整扫描结果后再统一执行的场景。");
     return;
   }
-  hint.textContent = "按目录逐棵推进（leaf_first_lazy）是默认优先推荐模式，会按顶层目录顺序逐棵子树推进，只扫描当前真正需要传的目录。";
+  hint.textContent = t("wizard.execution_mode_leaf_first", "按目录逐棵推进（leaf_first_lazy）是默认优先推荐模式，会按顶层目录顺序逐棵子树推进，只扫描当前真正需要传的目录。");
 }
 
 function updateExecutionRecommendationAction(metadata = {}) {
@@ -4795,8 +5083,8 @@ function updateExecutionRecommendationAction(metadata = {}) {
     return;
   }
 
-  const executionReason = localizeRecommendationReason(metadata.recommendedExecutionModeReason, "暂无执行模式推荐原因");
-  const riskReason = localizeRecommendationReason(metadata.recommendedRiskModeReason, "暂无风控推荐原因");
+  const executionReason = localizeRecommendationReason(metadata.recommendedExecutionModeReason, t("wizard.recommendation_no_execution_reason", "暂无执行模式推荐原因"));
+  const riskReason = localizeRecommendationReason(metadata.recommendedRiskModeReason, t("wizard.recommendation_no_risk_reason", "暂无风控推荐原因"));
   const aggressiveWarning = stringifyValue(metadata.aggressiveRiskWarning, "-");
   card.classList.remove("hidden");
 
@@ -4804,28 +5092,28 @@ function updateExecutionRecommendationAction(metadata = {}) {
   if (recommendedExecution) {
     titleParts.push(
       recommendedExecution === selectedExecution
-        ? `执行模式已采用推荐值：${renderExecutionModeLabel(recommendedExecution)}`
-        : `建议执行模式：${renderExecutionModeLabel(recommendedExecution)}`,
+        ? tf("wizard.recommendation_execution_applied", { mode: renderExecutionModeLabel(recommendedExecution) }, `执行模式已采用推荐值：${renderExecutionModeLabel(recommendedExecution)}`)
+        : tf("wizard.recommendation_execution_suggested", { mode: renderExecutionModeLabel(recommendedExecution) }, `建议执行模式：${renderExecutionModeLabel(recommendedExecution)}`),
     );
   }
   if (recommendedRisk) {
     titleParts.push(
       recommendedRisk === selectedRisk
-        ? `风控档位已采用推荐值：${recommendedRisk}`
-        : `建议风控档位：${recommendedRisk}`,
+        ? tf("wizard.recommendation_risk_applied", { mode: recommendedRisk }, `风控档位已采用推荐值：${recommendedRisk}`)
+        : tf("wizard.recommendation_risk_suggested", { mode: recommendedRisk }, `建议风控档位：${recommendedRisk}`),
     );
   }
   $("#plan-recommendation-title").textContent = titleParts.join(" / ");
 
   const reasonParts = [];
   if (recommendedExecution) {
-    reasonParts.push(`执行模式：${executionReason}`);
+    reasonParts.push(tf("wizard.recommendation_execution_reason", { reason: executionReason }, `执行模式：${executionReason}`));
   }
   if (recommendedRisk) {
-    reasonParts.push(`风控档位：${riskReason}`);
+    reasonParts.push(tf("wizard.recommendation_risk_reason", { reason: riskReason }, `风控档位：${riskReason}`));
   }
   if (aggressiveWarning && aggressiveWarning !== "-") {
-    reasonParts.push(`提示：${aggressiveWarning}`);
+    reasonParts.push(tf("wizard.recommendation_warning", { warning: aggressiveWarning }, `提示：${aggressiveWarning}`));
   }
   $("#plan-recommendation-reason").textContent = reasonParts.join(" | ");
 
@@ -5040,11 +5328,11 @@ function renderPreview() {
     updateExecutionRecommendationAction();
     $("#plan-preview-meta").innerHTML = `
       <div class="insight-card">
-        <strong>当前模式</strong>
-        <span>等待预览</span>
+        <strong>${escapeHTML(t("wizard.preview_meta_current_mode", "当前模式"))}</strong>
+        <span>${escapeHTML(t("wizard.preview_waiting", "等待预览"))}</span>
       </div>
     `;
-    $("#plan-preview").textContent = "等待预览...";
+    $("#plan-preview").textContent = t("wizard.preview_waiting_text", "等待预览...");
     return;
   }
   const metadata = state.preview.metadata || {};
@@ -5055,72 +5343,72 @@ function renderPreview() {
   updateExecutionRecommendationAction(metadata);
   $("#plan-preview-meta").innerHTML = `
     <div class="insight-card">
-      <strong>当前模式</strong>
+      <strong>${escapeHTML(t("wizard.preview_meta_current_mode", "当前模式"))}</strong>
       <span>${stringifyValue(metadata.executionMode)}</span>
     </div>
     <div class="insight-card">
-      <strong>选定根目录</strong>
+      <strong>${escapeHTML(t("wizard.preview_meta_selected_roots", "选定根目录"))}</strong>
       <span><code>${escapeHTML(summarizePathList(metadata.selectedRoots || []))}</code></span>
     </div>
     <div class="insight-card">
-      <strong>目标根目录</strong>
+      <strong>${escapeHTML(t("wizard.preview_meta_target_root", "目标根目录"))}</strong>
       <span><code>${escapeHTML(stringifyValue(metadata.targetRoot, "/"))}</code></span>
     </div>
     <div class="insight-card">
-      <strong>推荐模式</strong>
+      <strong>${escapeHTML(t("wizard.preview_meta_recommended_mode", "推荐模式"))}</strong>
       <span>${stringifyValue(metadata.recommendedExecutionMode)}</span>
     </div>
     <div class="insight-card">
-      <strong>推荐原因</strong>
+      <strong>${escapeHTML(t("wizard.preview_meta_recommended_reason", "推荐原因"))}</strong>
       <span>${stringifyValue(metadata.recommendedExecutionModeReason)}</span>
     </div>
     <div class="insight-card">
-      <strong>执行顺序</strong>
+      <strong>${escapeHTML(t("wizard.preview_meta_execution_order", "执行顺序"))}</strong>
       <span>${stringifyValue(metadata.executionOrder)}</span>
     </div>
     <div class="insight-card">
-      <strong>风险档位</strong>
+      <strong>${escapeHTML(t("wizard.preview_meta_risk_mode", "风险档位"))}</strong>
       <span>${stringifyValue(metadata.riskProfile?.mode, "balanced")}</span>
     </div>
     <div class="insight-card">
-      <strong>风险节流</strong>
+      <strong>${escapeHTML(t("wizard.preview_meta_risk_throttle", "风险节流"))}</strong>
       <span>${stringifyValue(metadata.riskProfile?.requestIntervalMs, "0")}ms / dir ${stringifyValue(metadata.riskProfile?.directoryIntervalMs, "0")}ms / retry ${stringifyValue(metadata.riskProfile?.retryLimit, "0")} / conc ${stringifyValue(metadata.riskProfile?.maxConcurrent, "0")}</span>
     </div>
     ${renderRiskResolutionMetaCards(metadata.riskProfileResolution)}
     <div class="insight-card">
-      <strong>推荐风控</strong>
+      <strong>${escapeHTML(t("wizard.preview_meta_recommended_risk", "推荐风控"))}</strong>
       <span>${stringifyValue(metadata.recommendedRiskMode, "-")}</span>
     </div>
     <div class="insight-card">
-      <strong>推荐风控原因</strong>
+      <strong>${escapeHTML(t("wizard.preview_meta_recommended_risk_reason", "推荐风控原因"))}</strong>
       <span>${stringifyValue(metadata.recommendedRiskModeReason, "-")}</span>
     </div>
     <div class="insight-card">
-      <strong>激进风险提示</strong>
+      <strong>${escapeHTML(t("wizard.preview_meta_aggressive_warning", "激进风险提示"))}</strong>
       <span>${stringifyValue(metadata.aggressiveRiskWarning, "-")}</span>
     </div>
     <div class="insight-card">
-      <strong>风险模板解释</strong>
+      <strong>${escapeHTML(t("wizard.preview_meta_risk_resolution", "风险模板解释"))}</strong>
       <span>${escapeHTML(renderRiskResolutionSummary(metadata.riskProfileResolution))}</span>
       ${renderRiskResolutionDetail(metadata.riskProfileResolution)}
     </div>
     ${renderRiskResolutionFlow(metadata.riskProfileResolution)}
     <div class="insight-card">
-      <strong>自动补传时间窗</strong>
+      <strong>${escapeHTML(t("wizard.preview_meta_retry_window", "自动补传时间窗"))}</strong>
       <span>${escapeHTML(renderRiskWindow(metadata.riskProfile))}</span>
     </div>
     <div class="insight-card">
-      <strong>源端删除策略</strong>
+      <strong>${escapeHTML(t("wizard.preview_meta_source_delete_policy", "源端删除策略"))}</strong>
       <span>${renderSourceDeletePolicy(metadata.sourceDeletePolicy)}</span>
     </div>
     <div class="insight-card">
-      <strong>有效条目 / 删除记录</strong>
+      <strong>${escapeHTML(t("wizard.preview_meta_entry_counts", "有效条目 / 删除记录"))}</strong>
       <span>${stringifyValue(metadata.activeEntryCount, "0")} / ${stringifyValue(metadata.deletedEntryCount, "0")}</span>
     </div>
     ${hasDeletedRecords ? `
       <div class="insight-card checkpoint-card">
-        <strong>删除记录仅用于定位</strong>
-        <div>${deletionOnlyPreview ? "当前预览只剩删除记录，没有可执行条目；请先恢复源文件并重新预览。" : "当前预览包含删除记录，它们只会用于定位，不会生成可执行条目。"}</div>
+        <strong>${escapeHTML(t("wizard.preview_meta_delete_only", "删除记录仅用于定位"))}</strong>
+        <div>${escapeHTML(deletionOnlyPreview ? t("wizard.preview_meta_delete_only_hint", "当前预览只剩删除记录，没有可执行条目；请先恢复源文件并重新预览。") : t("wizard.preview_meta_delete_mix_hint", "当前预览包含删除记录，它们只会用于定位，不会生成可执行条目。"))}</div>
       </div>
     ` : ""}
     ${renderSourceDeletionSummary(metadata.sourceDeletionRecords || [], metadata.deletedEntryCount || 0, "preview", "preview")}

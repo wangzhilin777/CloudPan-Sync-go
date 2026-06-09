@@ -229,94 +229,94 @@
         <section class="panel" data-panel="wizard">
           <div class="grid two">
             <article class="card">
-              <h2>任务预览 / 创建</h2>
+              <h2 data-i18n-text="wizard.title">任务预览 / 创建</h2>
               <form id="plan-form" class="stack">
                 <label>
-                  <span>源网盘源</span>
+                  <span data-i18n-text="wizard.source_provider">源网盘源</span>
                   <select id="plan-source-provider" name="sourceProvider"></select>
                 </label>
                 <label>
-                  <span>目标网盘源</span>
+                  <span data-i18n-text="wizard.target_provider">目标网盘源</span>
                   <select id="plan-target-provider" name="targetProvider"></select>
                 </label>
                 <div id="plan-target-provider-insight" class="provider-detail-card compact">
-                  <div class="muted">选择目标网盘源后，这里会显示默认风控模板、推荐档位和恢复预算。</div>
+                  <div class="muted" data-i18n-text="wizard.target_provider_insight_default">选择目标网盘源后，这里会显示默认风控模板、推荐档位和恢复预算。</div>
                 </div>
                 <label>
-                  <span>源授权档案</span>
+                  <span data-i18n-text="wizard.source_profile">源授权档案</span>
                   <select id="plan-source-profile" name="sourceProfileId"></select>
                 </label>
                 <label>
-                  <span>目标授权档案</span>
+                  <span data-i18n-text="wizard.target_profile">目标授权档案</span>
                   <select id="plan-target-profile" name="targetProfileId"></select>
                 </label>
                 <div id="plan-target-profile-insight" class="provider-detail-card compact">
-                  <div class="muted">选择目标授权档案后，这里会显示账号默认风控模板，并支持一键写入任务覆盖。</div>
+                  <div class="muted" data-i18n-text="wizard.target_profile_insight_default">选择目标授权档案后，这里会显示账号默认风控模板，并支持一键写入任务覆盖。</div>
                 </div>
                 <div class="grid two compact-grid">
                   <article class="provider-detail-card compact" id="plan-source-directory-browser">
                     <div class="section-head compact-head">
-                      <h3>源目录选择</h3>
+                      <h3 data-i18n-text="wizard.source_directory">源目录选择</h3>
                       <div class="actions compact">
-                        <button type="button" class="ghost" id="plan-source-browser-up">返回上级</button>
-                        <button type="button" class="ghost" id="plan-source-browser-refresh">刷新目录</button>
-                        <button type="button" class="ghost" id="plan-source-browser-select-current">使用当前目录</button>
+                        <button type="button" class="ghost" id="plan-source-browser-up" data-i18n-text="wizard.browser_up">返回上级</button>
+                        <button type="button" class="ghost" id="plan-source-browser-refresh" data-i18n-text="wizard.browser_refresh">刷新目录</button>
+                        <button type="button" class="ghost" id="plan-source-browser-select-current" data-i18n-text="wizard.browser_select_current">使用当前目录</button>
                       </div>
                     </div>
                     <div class="mini-grid browser-meta-grid">
                       <div class="inline-note">
-                        <strong>当前目录</strong>
+                        <strong data-i18n-text="wizard.browser_current_path">当前目录</strong>
                         <div id="plan-source-browser-path">/</div>
                         <div id="plan-source-browser-breadcrumbs" class="directory-breadcrumbs"></div>
-                        <div id="plan-source-browser-level" class="browser-level-note">当前层级：根目录</div>
+                        <div id="plan-source-browser-level" class="browser-level-note" data-i18n-text="wizard.browser_level_root">当前层级：根目录</div>
                       </div>
                       <div class="inline-note">
-                        <strong>回填结果</strong>
-                        <div id="plan-source-browser-selection">将回填到选定根目录(JSON)</div>
+                        <strong data-i18n-text="wizard.browser_selection_result">回填结果</strong>
+                        <div id="plan-source-browser-selection" data-i18n-text="wizard.source_browser_selection_default">将回填到选定根目录(JSON)</div>
                       </div>
                     </div>
-                    <div id="plan-source-browser-hint" class="inline-note">
+                    <div id="plan-source-browser-hint" class="inline-note" data-i18n-text="wizard.source_browser_hint_default">
                       选择源网盘源和源授权档案后，这里会显示目录浏览兼容提示。
                     </div>
                     <div id="plan-source-browser-list" class="directory-browser-list">
-                      <div class="directory-empty">选择源网盘源和源授权档案后可浏览目录。</div>
+                      <div class="directory-empty" data-i18n-text="wizard.source_browser_empty_default">选择源网盘源和源授权档案后可浏览目录。</div>
                     </div>
                   </article>
                   <article class="provider-detail-card compact" id="plan-target-directory-browser">
                     <div class="section-head compact-head">
-                      <h3>目标目录选择</h3>
+                      <h3 data-i18n-text="wizard.target_directory">目标目录选择</h3>
                       <div class="actions compact">
-                        <button type="button" class="ghost" id="plan-target-browser-up">返回上级</button>
-                        <button type="button" class="ghost" id="plan-target-browser-refresh">刷新目录</button>
-                        <button type="button" class="ghost" id="plan-target-browser-select-current">使用当前目录</button>
+                        <button type="button" class="ghost" id="plan-target-browser-up" data-i18n-text="wizard.browser_up">返回上级</button>
+                        <button type="button" class="ghost" id="plan-target-browser-refresh" data-i18n-text="wizard.browser_refresh">刷新目录</button>
+                        <button type="button" class="ghost" id="plan-target-browser-select-current" data-i18n-text="wizard.browser_select_current">使用当前目录</button>
                       </div>
                     </div>
                     <div class="mini-grid browser-meta-grid">
                       <div class="inline-note">
-                        <strong>当前目录</strong>
+                        <strong data-i18n-text="wizard.browser_current_path">当前目录</strong>
                         <div id="plan-target-browser-path">/</div>
                         <div id="plan-target-browser-breadcrumbs" class="directory-breadcrumbs"></div>
-                        <div id="plan-target-browser-level" class="browser-level-note">当前层级：根目录</div>
+                        <div id="plan-target-browser-level" class="browser-level-note" data-i18n-text="wizard.browser_level_root">当前层级：根目录</div>
                       </div>
                       <div class="inline-note">
-                        <strong>回填结果</strong>
-                        <div id="plan-target-browser-selection">将回填到目标根目录</div>
+                        <strong data-i18n-text="wizard.browser_selection_result">回填结果</strong>
+                        <div id="plan-target-browser-selection" data-i18n-text="wizard.target_browser_selection_default">将回填到目标根目录</div>
                       </div>
                     </div>
-                    <div id="plan-target-browser-hint" class="inline-note">
+                    <div id="plan-target-browser-hint" class="inline-note" data-i18n-text="wizard.target_browser_hint_default">
                       选择目标网盘源和目标授权档案后，这里会显示目录浏览兼容提示。
                     </div>
                     <div class="actions compact directory-create-row">
-                      <input id="plan-target-browser-create-name" type="text" placeholder="新建子目录名称，例如 archive-2026" />
-                      <button type="button" class="ghost" id="plan-target-browser-create">在当前目录新建文件夹</button>
+                      <input id="plan-target-browser-create-name" type="text" placeholder="新建子目录名称，例如 archive-2026" data-i18n-placeholder="wizard.target_browser_create_placeholder" />
+                      <button type="button" class="ghost" id="plan-target-browser-create" data-i18n-text="wizard.target_browser_create">在当前目录新建文件夹</button>
                     </div>
                     <div id="plan-target-browser-list" class="directory-browser-list">
-                      <div class="directory-empty">选择目标网盘源和目标授权档案后可浏览目录。</div>
+                      <div class="directory-empty" data-i18n-text="wizard.target_browser_empty_default">选择目标网盘源和目标授权档案后可浏览目录。</div>
                     </div>
                   </article>
                 </div>
                 <label>
-                  <span>风控档位</span>
+                  <span data-i18n-text="wizard.risk_mode">风控档位</span>
                   <select id="plan-risk-mode" name="riskMode">
                     <option value="balanced">balanced</option>
                     <option value="safe">safe</option>
@@ -326,8 +326,8 @@
                 </label>
                 <div class="risk-builder">
                   <div class="risk-builder-head">
-                    <strong>任务级风控覆盖</strong>
-                    <span>可选。留空时使用当前档位 + 网盘源默认校准。</span>
+                    <strong data-i18n-text="wizard.risk_override_title">任务级风控覆盖</strong>
+                    <span data-i18n-text="wizard.risk_override_desc">可选。留空时使用当前档位 + 网盘源默认校准。</span>
                   </div>
                   <div class="mini-grid">
                     <label>
@@ -373,36 +373,36 @@
                   </div>
                 </div>
                 <label>
-                  <span>风控覆盖(JSON)</span>
+                  <span data-i18n-text="wizard.risk_override_json">风控覆盖(JSON)</span>
                   <textarea id="plan-risk-override" rows="4" placeholder='例如：{"requestIntervalMs":1200,"directoryIntervalMs":2000,"retryLimit":2,"riskKeywords":["rate_limit","captcha"]}'></textarea>
                 </label>
                 <label>
-                  <span>执行模式</span>
+                  <span data-i18n-text="wizard.execution_mode">执行模式</span>
                   <select id="plan-execution-mode" name="executionMode">
                     <option value="leaf_first_lazy">leaf_first_lazy</option>
                     <option value="pre_scan_flat">pre_scan_flat</option>
                   </select>
                 </label>
                 <label>
-                  <span>源端删除策略</span>
+                  <span data-i18n-text="wizard.source_delete_policy">源端删除策略</span>
                   <select id="plan-source-delete-policy" name="sourceDeletePolicy">
                     <option value="record_only">record_only（只记录，不删目标端）</option>
                   </select>
                 </label>
-                <div id="plan-execution-hint" class="inline-note">
+                <div id="plan-execution-hint" class="inline-note" data-i18n-text="wizard.execution_hint_default">
                   默认优先推荐 `leaf_first_lazy`，适合大目录、风控敏感网盘源和按需扫描场景。
                 </div>
-                <div class="inline-note">
+                <div class="inline-note" data-i18n-text="wizard.delete_policy_hint">
                   当前首版仅支持 `record_only`，用于显式记录源端删除事件，不会默认删除目标端已有文件。
                 </div>
                 <div id="plan-recommendation-action" class="recommendation-card hidden">
                   <div>
-                    <strong id="plan-recommendation-title">等待预览推荐</strong>
-                    <span id="plan-recommendation-reason">生成预览后会显示推荐模式、推荐风控与当前选择是否一致。</span>
+                    <strong id="plan-recommendation-title" data-i18n-text="wizard.recommendation_title_default">等待预览推荐</strong>
+                    <span id="plan-recommendation-reason" data-i18n-text="wizard.recommendation_reason_default">生成预览后会显示推荐模式、推荐风控与当前选择是否一致。</span>
                   </div>
                   <div class="actions compact-actions">
-                    <button type="button" class="ghost" id="apply-recommended-execution">采用推荐模式</button>
-                    <button type="button" class="ghost" id="apply-recommended-risk">采用推荐风控</button>
+                    <button type="button" class="ghost" id="apply-recommended-execution" data-i18n-text="wizard.apply_recommended_execution">采用推荐模式</button>
+                    <button type="button" class="ghost" id="apply-recommended-risk" data-i18n-text="wizard.apply_recommended_risk">采用推荐风控</button>
                   </div>
                 </div>
                 <label>
@@ -417,20 +417,20 @@
                   </select>
                 </label>
                 <label>
-                  <span>选定根目录(JSON)</span>
+                  <span data-i18n-text="wizard.selected_roots">选定根目录(JSON)</span>
                   <textarea id="plan-selected-roots" rows="2">["/demo"]</textarea>
                 </label>
-                <div id="plan-selected-roots-hint" class="inline-note">
+                <div id="plan-selected-roots-hint" class="inline-note" data-i18n-text="wizard.selected_roots_hint_default">
                   源目录支持手动填写。格式示例：`["/电影","/相册/旅行"]`；如果只同步整个根目录，可填写 `["/"]`。
                 </div>
                 <label>
-                  <span>目标根目录</span>
+                  <span data-i18n-text="wizard.target_root">目标根目录</span>
                   <input id="plan-target-root" type="text" value="/" placeholder="/archive/2026" />
                 </label>
-                <div id="plan-target-root-hint" class="inline-note">
+                <div id="plan-target-root-hint" class="inline-note" data-i18n-text="wizard.target_root_hint_default">
                   目标目录支持手动填写。示例：`/归档/2026`；如果希望直接写入目标根目录，可保留 `/`。
                 </div>
-                <div class="inline-note">
+                <div class="inline-note" data-i18n-text="wizard.target_path_mapping_hint">
                   上传目标路径会按“目标根目录 + 源端相对路径”生成；留空时默认写到目标端根目录。
                 </div>
                 <label>
@@ -444,20 +444,20 @@
 ]</textarea>
                 </label>
                 <div class="actions">
-                  <button type="button" id="preview-plan">预览计划</button>
-                  <button type="submit">创建任务</button>
+                  <button type="button" id="preview-plan" data-i18n-text="wizard.preview_plan">预览计划</button>
+                  <button type="submit" data-i18n-text="wizard.create_task">创建任务</button>
                 </div>
               </form>
             </article>
             <article class="card">
-              <h2>预览结果</h2>
+              <h2 data-i18n-text="wizard.preview_result">预览结果</h2>
               <div id="plan-preview-meta" class="insight-grid">
                 <div class="insight-card">
-                  <strong>当前模式</strong>
-                  <span>等待预览</span>
+                  <strong data-i18n-text="wizard.preview_current_mode">当前模式</strong>
+                  <span data-i18n-text="wizard.preview_waiting">等待预览</span>
                 </div>
               </div>
-              <pre id="plan-preview" class="result-box">等待预览...</pre>
+              <pre id="plan-preview" class="result-box" data-i18n-text="wizard.preview_waiting_text">等待预览...</pre>
             </article>
           </div>
         </section>
