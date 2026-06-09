@@ -52,6 +52,7 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 	t.Cleanup(cancelTimeout)
 
 	profileName := "UI Smoke 123"
+	sourceProfileName := "UI Smoke Source 123"
 	localFile := filepath.Join(t.TempDir(), "ui-smoke.bin")
 	if err := os.WriteFile(localFile, []byte("ui-smoke"), 0o644); err != nil {
 		t.Fatalf("write ui smoke local file: %v", err)
@@ -141,6 +142,8 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 
 	profileResp := invokeJSON(t, application.routes(), http.MethodPost, "/api/auth/profiles", map[string]interface{}{"providerKey": "missing_uploadid_target", "authMode": "manual_token", "displayName": "Missing UploadID Target", "token": "token-missing-uploadid"})
 	profileID := profileResp.Data.(map[string]interface{})["id"].(string)
+	sourceWizardProfileResp := invokeJSON(t, application.routes(), http.MethodPost, "/api/auth/profiles", map[string]interface{}{"providerKey": "guangya", "authMode": "manual_token", "displayName": sourceProfileName, "token": "token-ui-smoke-source"})
+	sourceWizardProfileID := sourceWizardProfileResp.Data.(map[string]interface{})["id"].(string)
 	blockedFile := filepath.Join(t.TempDir(), "missing-uploadid.bin")
 	if err := os.WriteFile(blockedFile, []byte("missing-uploadid"), 0o644); err != nil {
 		t.Fatalf("write missing uploadid local file: %v", err)
@@ -234,6 +237,8 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 	runStep(t, runCtx, "preview and create task",
 		chromedp.Click(`button[data-view="wizard"]`, chromedp.ByQuery),
 		setSelectValue(`#plan-source-provider`, "guangya"),
+		waitForText(`#plan-source-profile`, sourceProfileName),
+		setSelectValue(`#plan-source-profile`, sourceWizardProfileID),
 		setSelectValue(`#plan-target-provider`, "123_open"),
 		waitForText(`#plan-target-profile`, profileName),
 		setSelectValueByText(`#plan-target-profile`, profileName),
@@ -249,6 +254,11 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 		waitForText(`#plan-execution-hint`, "pre_scan_flat"),
 		waitForText(`#plan-source-browser-level`, "当前层级：根目录"),
 		waitForText(`#plan-target-browser-level`, "当前层级：根目录"),
+		waitForButtonEnabled(`#plan-source-browser-select-current`),
+		chromedp.SetValue(`#plan-selected-roots`, `["/stale-source"]`, chromedp.ByID),
+		chromedp.Evaluate(`(() => document.querySelector('#plan-source-browser-select-current')?.click())()`, nil),
+		waitForValueContains(`#plan-selected-roots`, `"/"`),
+		waitForText(`#plan-source-browser-selection`, "已回填到选定根目录(JSON)：/"),
 		waitForButtonEnabled(`#plan-target-browser-select-current`),
 		chromedp.SetValue(`#plan-target-root`, "/stale-target", chromedp.ByID),
 		chromedp.Evaluate(`(() => document.querySelector('#plan-target-browser-select-current')?.click())()`, nil),
