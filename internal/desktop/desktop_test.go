@@ -105,7 +105,7 @@ func TestDesktopLaunchMessage(t *testing.T) {
 		{
 			name: "system browser fallback",
 			mode: desktopLaunchModeBrowser,
-			want: "当前未使用独立窗口，已退回系统默认浏览器。若浏览器未自动打开，请手动访问 http://127.0.0.1:18080/",
+			want: "当前未使用独立窗口，已退回系统默认浏览器。关闭浏览器标签页不会自动退出本地服务；如需停止，请关闭当前终端窗口或按 Ctrl+C。若浏览器未自动打开，请手动访问 http://127.0.0.1:18080/",
 		},
 		{
 			name: "unknown mode fallback",

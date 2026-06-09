@@ -63,6 +63,7 @@ func Run(ctx context.Context, cfg app.Config) error {
 	if windowProc != nil {
 		go func() {
 			_, _ = windowProc.Wait()
+			log.Print("桌面独立窗口已关闭，正在退出本地服务。")
 			cancel()
 		}()
 	}
@@ -219,7 +220,7 @@ func desktopLaunchMessage(mode desktopLaunchMode, url string) string {
 	case desktopLaunchModeApp:
 		return fmt.Sprintf("已使用 Chrome / Edge 独立窗口打开控制台。关闭窗口后会自动退出本地服务；如窗口未弹出，可手动访问 %s", url)
 	case desktopLaunchModeBrowser:
-		return fmt.Sprintf("当前未使用独立窗口，已退回系统默认浏览器。若浏览器未自动打开，请手动访问 %s", url)
+		return fmt.Sprintf("当前未使用独立窗口，已退回系统默认浏览器。关闭浏览器标签页不会自动退出本地服务；如需停止，请关闭当前终端窗口或按 Ctrl+C。若浏览器未自动打开，请手动访问 %s", url)
 	default:
 		return fmt.Sprintf("桌面模式已启动。若面板未自动打开，请手动访问 %s", url)
 	}
