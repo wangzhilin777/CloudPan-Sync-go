@@ -604,7 +604,24 @@ const translations = {
       flash_clear_risk: "账号默认风控已清空",
       flash_cancel_edit: "已退出授权档案编辑",
       flash_profile_created: "授权档案已创建",
-      flash_profile_updated: "授权档案已更新"
+      flash_profile_updated: "授权档案已更新",
+      assist_discovery_not_found: "没有找到对应的发现结果，请重新检测一次",
+      assist_discovery_applied: "已从 {kind} 回填存储“{name}”，可继续补当前网盘源需要的授权字段",
+      assist_discovery_apply_failed: "回填发现结果失败：{error}",
+      assist_open_url_required: "请先填写 {display} 地址",
+      assist_open_login_page: "已打开 {display} 登录页",
+      provider_detail_load_failed: "加载网盘能力详情失败：{error}",
+      provider_detail_loaded: "已加载 {provider} 网盘能力详情",
+      risk_override_synced_note: "风控覆盖已同步到 JSON",
+      risk_override_cleared_note: "风控覆盖已清空，将使用默认档位和网盘源校准",
+      browser_source_refreshed: "源目录已刷新：{path}",
+      browser_target_refreshed: "目标目录已刷新：{path}",
+      browser_source_up: "已返回上级源目录：{path}",
+      browser_target_up: "已返回上级目标目录：{path}",
+      browser_source_opened: "已打开源目录：{path}",
+      browser_target_opened: "已打开目标目录：{path}",
+      browser_source_jumped: "已跳转到源目录：{path}",
+      browser_target_jumped: "已跳转到目标目录：{path}"
     },
     wizard: {
       title: "任务预览 / 创建",
@@ -1320,7 +1337,24 @@ const translations = {
       flash_clear_risk: "Default account risk settings cleared",
       flash_cancel_edit: "Auth profile edit cancelled",
       flash_profile_created: "Auth profile created",
-      flash_profile_updated: "Auth profile updated"
+      flash_profile_updated: "Auth profile updated",
+      assist_discovery_not_found: "No matching discovery result was found. Please detect again.",
+      assist_discovery_applied: "Applied storage “{name}” from {kind}; you can continue filling the provider auth fields.",
+      assist_discovery_apply_failed: "Failed to apply the discovery result: {error}",
+      assist_open_url_required: "Please fill the {display} URL first",
+      assist_open_login_page: "Opened the {display} login page",
+      provider_detail_load_failed: "Failed to load provider capabilities: {error}",
+      provider_detail_loaded: "Loaded {provider} provider capabilities",
+      risk_override_synced_note: "Risk override synced to JSON",
+      risk_override_cleared_note: "Risk override cleared. The current mode plus provider calibration will be used again.",
+      browser_source_refreshed: "Source directory refreshed: {path}",
+      browser_target_refreshed: "Target directory refreshed: {path}",
+      browser_source_up: "Moved to the parent source directory: {path}",
+      browser_target_up: "Moved to the parent target directory: {path}",
+      browser_source_opened: "Opened source directory: {path}",
+      browser_target_opened: "Opened target directory: {path}",
+      browser_source_jumped: "Jumped to source directory: {path}",
+      browser_target_jumped: "Jumped to target directory: {path}"
     },
     wizard: {
       title: "Task Preview / Create",
@@ -1981,7 +2015,7 @@ function applyAuthAssistDiscoverySelection(index) {
   const storages = Array.isArray(discovery?.storages) ? discovery.storages : [];
   const item = storages[index];
   if (!item) {
-    showFlash("没有找到对应的发现结果，请重新检测一次", true);
+    showFlash(t("providers.assist_discovery_not_found", "没有找到对应的发现结果，请重新检测一次"), true);
     return;
   }
   const kind = discovery.kind === "alist" ? "alist" : "openlist";
@@ -2002,7 +2036,11 @@ function applyAuthAssistDiscoverySelection(index) {
   });
   $("#profile-extra").value = Object.keys(merged).length ? JSON.stringify(merged, null, 2) : "";
   syncAuthAssistDiscovery(discovery);
-  showFlash(`已从 ${kindLabel} 回填存储“${stringifyValue(item.name, "未命名存储")}”，可继续补当前网盘源需要的授权字段`);
+  showFlash(
+    t("providers.assist_discovery_applied", "已从 {kind} 回填存储“{name}”，可继续补当前网盘源需要的授权字段")
+      .replace("{kind}", kindLabel)
+      .replace("{name}", stringifyValue(item.name, "未命名存储")),
+  );
 }
 
 function syncAuthAssistDiscovery(message) {
@@ -2054,11 +2092,14 @@ function openAuthAssistURL(kind) {
   const url = kind === "alist" ? assist.alistURL : assist.openlistURL;
   const display = kind === "alist" ? "Alist" : "OpenList";
   if (!url) {
-    showFlash(`请先填写 ${display} 地址`, true);
+    showFlash(
+      t("providers.assist_open_url_required", "请先填写 {display} 地址").replace("{display}", display),
+      true,
+    );
     return;
   }
   window.open(url, "_blank", "noopener");
-  showFlash(`已打开 ${display} 登录页`);
+  showFlash(t("providers.assist_open_login_page", "已打开 {display} 登录页").replace("{display}", display));
 }
 
 function localizeAPIError(error, status) {
@@ -9843,7 +9884,10 @@ function wireProfiles() {
     try {
       applyAuthAssistDiscoverySelection(Number(button.dataset.assistSelectIndex));
     } catch (error) {
-      showFlash(`回填发现结果失败：${error.message}`, true);
+      showFlash(
+        t("providers.assist_discovery_apply_failed", "回填发现结果失败：{error}").replace("{error}", error.message),
+        true,
+      );
     }
   });
   $("#plan-source-provider").addEventListener("change", async () => {
@@ -9871,7 +9915,10 @@ function wireProfiles() {
     try {
       await loadProviderCapabilityDetail(providerKey);
     } catch (error) {
-      showFlash(`加载网盘能力详情失败：${error.message}`, true);
+      showFlash(
+        t("providers.provider_detail_load_failed", "加载网盘能力详情失败：{error}").replace("{error}", error.message),
+        true,
+      );
     }
   });
   $("#plan-execution-mode").addEventListener("change", () => {
@@ -9885,7 +9932,12 @@ function wireProfiles() {
     }
     try {
       await loadProviderCapabilityDetail(button.dataset.providerDetailOpen || "");
-      showFlash(`已加载 ${button.dataset.providerDetailOpen} 网盘能力详情`);
+      showFlash(
+        t("providers.provider_detail_loaded", "已加载 {provider} 网盘能力详情").replace(
+          "{provider}",
+          button.dataset.providerDetailOpen || "",
+        ),
+      );
     } catch (error) {
       showFlash(error.message, true);
     }
@@ -9998,30 +10050,50 @@ function wirePlanner() {
   );
   $("#sync-risk-override").addEventListener("click", () => {
     syncRiskOverrideJSON();
-    showFlash("风控覆盖已同步到 JSON");
+    showFlash(t("providers.risk_override_synced_note", "风控覆盖已同步到 JSON"));
   });
   $("#clear-risk-override").addEventListener("click", () => {
     hydrateRiskOverrideForm(null);
     $("#plan-risk-override").value = "";
-    showFlash("风控覆盖已清空，将使用默认档位和网盘源校准");
+    showFlash(t("providers.risk_override_cleared_note", "风控覆盖已清空，将使用默认档位和网盘源校准"));
   });
   $("#plan-selected-roots").addEventListener("input", () => renderDirectoryBrowser("source"));
   $("#plan-target-root").addEventListener("input", () => renderDirectoryBrowser("target"));
   $("#plan-source-browser-refresh").addEventListener("click", async () => {
     await loadDirectoryBrowser("source");
-    showFlash(`源目录已刷新：${state.directoryBrowsers.source.currentPath || "/"}`);
+    showFlash(
+      t("providers.browser_source_refreshed", "源目录已刷新：{path}").replace(
+        "{path}",
+        state.directoryBrowsers.source.currentPath || "/",
+      ),
+    );
   });
   $("#plan-target-browser-refresh").addEventListener("click", async () => {
     await loadDirectoryBrowser("target");
-    showFlash(`目标目录已刷新：${state.directoryBrowsers.target.currentPath || "/"}`);
+    showFlash(
+      t("providers.browser_target_refreshed", "目标目录已刷新：{path}").replace(
+        "{path}",
+        state.directoryBrowsers.target.currentPath || "/",
+      ),
+    );
   });
   $("#plan-source-browser-up").addEventListener("click", async () => {
     await loadDirectoryBrowser("source", parentComparePath(state.directoryBrowsers.source.currentPath));
-    showFlash(`已返回上级源目录：${state.directoryBrowsers.source.currentPath || "/"}`);
+    showFlash(
+      t("providers.browser_source_up", "已返回上级源目录：{path}").replace(
+        "{path}",
+        state.directoryBrowsers.source.currentPath || "/",
+      ),
+    );
   });
   $("#plan-target-browser-up").addEventListener("click", async () => {
     await loadDirectoryBrowser("target", parentComparePath(state.directoryBrowsers.target.currentPath));
-    showFlash(`已返回上级目标目录：${state.directoryBrowsers.target.currentPath || "/"}`);
+    showFlash(
+      t("providers.browser_target_up", "已返回上级目标目录：{path}").replace(
+        "{path}",
+        state.directoryBrowsers.target.currentPath || "/",
+      ),
+    );
   });
   $("#plan-source-browser-select-current").addEventListener("click", () => {
     applyDirectoryBrowserSelection("source", state.directoryBrowsers.source.currentPath);
@@ -10042,7 +10114,12 @@ function wirePlanner() {
     if (openButton) {
       try {
         await loadDirectoryBrowser("source", openButton.dataset.browserPath || "/", { fileId: openButton.dataset.browserFileId || "" });
-        showFlash(`已打开源目录：${state.directoryBrowsers.source.currentPath || "/"}`);
+        showFlash(
+          t("providers.browser_source_opened", "已打开源目录：{path}").replace(
+            "{path}",
+            state.directoryBrowsers.source.currentPath || "/",
+          ),
+        );
       } catch (error) {
         showFlash(error.message, true);
       }
@@ -10058,7 +10135,12 @@ function wirePlanner() {
     if (openButton) {
       try {
         await loadDirectoryBrowser("target", openButton.dataset.browserPath || "/", { fileId: openButton.dataset.browserFileId || "" });
-        showFlash(`已打开目标目录：${state.directoryBrowsers.target.currentPath || "/"}`);
+        showFlash(
+          t("providers.browser_target_opened", "已打开目标目录：{path}").replace(
+            "{path}",
+            state.directoryBrowsers.target.currentPath || "/",
+          ),
+        );
       } catch (error) {
         showFlash(error.message, true);
       }
@@ -10075,7 +10157,12 @@ function wirePlanner() {
     }
     try {
       await loadDirectoryBrowser("source", button.dataset.browserPath || "/");
-      showFlash(`已跳转到源目录：${state.directoryBrowsers.source.currentPath || "/"}`);
+      showFlash(
+        t("providers.browser_source_jumped", "已跳转到源目录：{path}").replace(
+          "{path}",
+          state.directoryBrowsers.source.currentPath || "/",
+        ),
+      );
     } catch (error) {
       showFlash(error.message, true);
     }
@@ -10087,7 +10174,12 @@ function wirePlanner() {
     }
     try {
       await loadDirectoryBrowser("target", button.dataset.browserPath || "/");
-      showFlash(`已跳转到目标目录：${state.directoryBrowsers.target.currentPath || "/"}`);
+      showFlash(
+        t("providers.browser_target_jumped", "已跳转到目标目录：{path}").replace(
+          "{path}",
+          state.directoryBrowsers.target.currentPath || "/",
+        ),
+      );
     } catch (error) {
       showFlash(error.message, true);
     }
