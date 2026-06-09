@@ -253,6 +253,7 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 		chromedp.SetValue(`#plan-target-root`, "/stale-target", chromedp.ByID),
 		chromedp.Evaluate(`(() => document.querySelector('#plan-target-browser-select-current')?.click())()`, nil),
 		waitForValue(`#plan-target-root`, "/"),
+		waitForText(`#plan-target-browser-selection`, "已回填到目标根目录：/"),
 		chromedp.SetValue(`#plan-threshold`, "10", chromedp.ByID),
 		chromedp.SetValue(`#plan-selected-roots`, `["/demo","/archive"]`, chromedp.ByID),
 		chromedp.SetValue(`#plan-entries`, entriesJSON, chromedp.ByID),
