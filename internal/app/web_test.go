@@ -315,6 +315,12 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "建议先刷新目录、切回根目录；如果仍失败，可直接改填“目标根目录”") {
 		t.Fatalf("expected target directory error recovery guidance in app.js, got %q", body)
 	}
+	if !strings.Contains(body, "目标目录已刷新：") {
+		t.Fatalf("expected target directory refresh success flash in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "已返回上级目标目录：") {
+		t.Fatalf("expected target directory up-level success flash in app.js, got %q", body)
+	}
 	if !strings.Contains(body, "设为目标目录") {
 		t.Fatalf("expected target directory picker label in app.js, got %q", body)
 	}

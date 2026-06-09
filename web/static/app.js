@@ -7865,17 +7865,19 @@ function wirePlanner() {
   $("#plan-target-root").addEventListener("input", () => renderDirectoryBrowser("target"));
   $("#plan-source-browser-refresh").addEventListener("click", async () => {
     await loadDirectoryBrowser("source");
-    showFlash("源目录已刷新");
+    showFlash(`源目录已刷新：${state.directoryBrowsers.source.currentPath || "/"}`);
   });
   $("#plan-target-browser-refresh").addEventListener("click", async () => {
     await loadDirectoryBrowser("target");
-    showFlash("目标目录已刷新");
+    showFlash(`目标目录已刷新：${state.directoryBrowsers.target.currentPath || "/"}`);
   });
   $("#plan-source-browser-up").addEventListener("click", async () => {
     await loadDirectoryBrowser("source", parentComparePath(state.directoryBrowsers.source.currentPath));
+    showFlash(`已返回上级源目录：${state.directoryBrowsers.source.currentPath || "/"}`);
   });
   $("#plan-target-browser-up").addEventListener("click", async () => {
     await loadDirectoryBrowser("target", parentComparePath(state.directoryBrowsers.target.currentPath));
+    showFlash(`已返回上级目标目录：${state.directoryBrowsers.target.currentPath || "/"}`);
   });
   $("#plan-source-browser-select-current").addEventListener("click", () => {
     applyDirectoryBrowserSelection("source", state.directoryBrowsers.source.currentPath);
