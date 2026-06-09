@@ -59,6 +59,7 @@ const state = {
 };
 
 const treeGroupsStorageKey = "cloudpan_console_tree_groups_collapsed";
+const authAssistStorageKey = "cloudpan_console_auth_assist";
 
 function $(selector) {
   return document.querySelector(selector);
@@ -89,6 +90,50 @@ function saveTreeGroupsCollapsed() {
 }
 
 Object.assign(state.treeGroupsCollapsed, loadTreeGroupsCollapsed());
+
+function defaultAuthAssistState() {
+  return {
+    preferred: "openlist",
+    openlistURL: "",
+    openlistToken: "",
+    alistURL: "",
+    alistToken: "",
+  };
+}
+
+function loadAuthAssistState() {
+  try {
+    const raw = localStorage.getItem(authAssistStorageKey);
+    if (!raw) {
+      return defaultAuthAssistState();
+    }
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object") {
+      return defaultAuthAssistState();
+    }
+    return {
+      preferred: ["openlist", "alist", "manual"].includes(String(parsed.preferred || "").trim())
+        ? String(parsed.preferred).trim()
+        : "openlist",
+      openlistURL: String(parsed.openlistURL || "").trim(),
+      openlistToken: String(parsed.openlistToken || "").trim(),
+      alistURL: String(parsed.alistURL || "").trim(),
+      alistToken: String(parsed.alistToken || "").trim(),
+    };
+  } catch (error) {
+    return defaultAuthAssistState();
+  }
+}
+
+function saveAuthAssistState() {
+  try {
+    localStorage.setItem(authAssistStorageKey, JSON.stringify(state.authAssist || defaultAuthAssistState()));
+  } catch (error) {
+    // Ignore storage quota / privacy mode failures.
+  }
+}
+
+state.authAssist = loadAuthAssistState();
 
 function formatJSON(value) {
   return JSON.stringify(value, null, 2);
@@ -187,7 +232,21 @@ function renderProfileAuthGuide(provider, authMode) {
     extraHint += " 如果暂时拿不到网页登录辅助入口，可先切到该网盘源支持的手动模式继续。";
   }
 
-  return `${intro} 必填：${required.join("、")}。${optional.length ? ` 可留空：${optional.join("、")}。` : ""} ${extraHint}`;
+  const assist = state.authAssist || defaultAuthAssistState();
+  let bridgeHint = "当前授权入口：OpenList 优先，Alist 兜底，手动模式作为最后兜底。";
+  if (assist.preferred === "openlist") {
+    bridgeHint = assist.openlistURL
+      ? "当前授权入口：优先通过 OpenList 辅助获取登录态、存储和目录信息。若 OpenList 不可用，再切到 Alist 或手动模式。"
+      : "当前授权入口：已选 OpenList 优先，但还没填写 OpenList 地址；可先补地址，或临时切到 Alist / 手动模式。";
+  } else if (assist.preferred === "alist") {
+    bridgeHint = assist.alistURL
+      ? "当前授权入口：当前已切到 Alist 兜底；如果 Alist 能看到目标存储，可先在 Alist 登录后再回填下方授权字段。"
+      : "当前授权入口：已切到 Alist 兜底，但还没填写 Alist 地址；可先补地址，或改回 OpenList / 手动模式。";
+  } else if (assist.preferred === "manual") {
+    bridgeHint = "当前授权入口：已切到手动高级模式，建议只在 OpenList / Alist 都不可用时使用。";
+  }
+
+  return `${bridgeHint} ${intro} 必填：${required.join("、")}。${optional.length ? ` 可留空：${optional.join("、")}。` : ""} ${extraHint}`;
 }
 
 function syncProfileAuthGuide() {
@@ -199,6 +258,83 @@ function syncProfileAuthGuide() {
   const authMode = $("#profile-auth-mode")?.value || "";
   const provider = (state.providers || []).find((item) => item?.meta?.key === providerKey);
   wrap.textContent = renderProfileAuthGuide(provider, authMode);
+}
+
+function normalizeAssistURL(value) {
+  const normalized = String(value || "").trim();
+  if (!normalized) {
+    return "";
+  }
+  if (/^https?:\/\//i.test(normalized)) {
+    return normalized;
+  }
+  return `http://${normalized}`;
+}
+
+function renderAuthAssistSummary() {
+  const assist = state.authAssist || defaultAuthAssistState();
+  const openlistReady = Boolean(assist.openlistURL);
+  const alistReady = Boolean(assist.alistURL);
+  if (assist.preferred === "openlist") {
+    return openlistReady
+      ? `当前优先走 OpenList：${assist.openlistURL}。建议先在 OpenList 登录并确认能看到对应存储；失败后再切到 Alist 或手动模式。`
+      : "当前优先走 OpenList，但还没填写 OpenList 地址。可先填写地址并在新窗口登录；若暂时没有 OpenList，再切到 Alist 兜底。";
+  }
+  if (assist.preferred === "alist") {
+    return alistReady
+      ? `当前已切到 Alist 兜底：${assist.alistURL}。建议先在 Alist 登录并确认能看到对应存储；如果仍拿不到字段，再回到底部手动模式。`
+      : "当前已切到 Alist 兜底，但还没填写 Alist 地址。可先补 Alist 地址；如果也没有 Alist，再使用手动高级模式。";
+  }
+  return "当前已切到手动高级模式。请直接填写下方 Token、Cookie 和附加配置；如果后面补上 OpenList 或 Alist，也可以再切回引导模式。";
+}
+
+function syncAuthAssistInputs() {
+  const assist = state.authAssist || defaultAuthAssistState();
+  setInputValueIfPresent("#profile-assist-openlist-url", assist.openlistURL);
+  setInputValueIfPresent("#profile-assist-openlist-token", assist.openlistToken);
+  setInputValueIfPresent("#profile-assist-alist-url", assist.alistURL);
+  setInputValueIfPresent("#profile-assist-alist-token", assist.alistToken);
+  const summary = $("#profile-assist-summary");
+  if (summary) {
+    summary.textContent = renderAuthAssistSummary();
+  }
+}
+
+function collectAuthAssistStateFromForm() {
+  return {
+    preferred: state.authAssist?.preferred || "openlist",
+    openlistURL: normalizeAssistURL($("#profile-assist-openlist-url")?.value || ""),
+    openlistToken: ($("#profile-assist-openlist-token")?.value || "").trim(),
+    alistURL: normalizeAssistURL($("#profile-assist-alist-url")?.value || ""),
+    alistToken: ($("#profile-assist-alist-token")?.value || "").trim(),
+  };
+}
+
+function persistAuthAssistState(nextState = {}) {
+  state.authAssist = {
+    ...(state.authAssist || defaultAuthAssistState()),
+    ...nextState,
+  };
+  saveAuthAssistState();
+  syncAuthAssistInputs();
+  syncProfileAuthGuide();
+}
+
+function switchAuthAssistMode(mode) {
+  const normalized = ["openlist", "alist", "manual"].includes(String(mode || "").trim()) ? String(mode).trim() : "openlist";
+  persistAuthAssistState({ preferred: normalized, ...collectAuthAssistStateFromForm() });
+}
+
+function openAuthAssistURL(kind) {
+  const assist = collectAuthAssistStateFromForm();
+  const url = kind === "alist" ? assist.alistURL : assist.openlistURL;
+  const display = kind === "alist" ? "Alist" : "OpenList";
+  if (!url) {
+    showFlash(`请先填写 ${display} 地址`, true);
+    return;
+  }
+  window.open(url, "_blank", "noopener");
+  showFlash(`已打开 ${display} 登录页`);
 }
 
 function localizeAPIError(error, status) {
@@ -2777,6 +2913,7 @@ function resetProfileForm() {
   $("#profile-extra").value = "";
   hydrateRiskProfileForm("profile-risk", null);
   $("#profile-submit").textContent = "创建授权档案";
+  syncAuthAssistInputs();
   syncAuthModes();
   syncProfileAuthGuide();
 }
@@ -2797,6 +2934,7 @@ function setProfileFormEditing(profile) {
   $("#profile-extra").value = Object.keys(extra).length ? JSON.stringify(extra, null, 2) : "";
   hydrateRiskProfileForm("profile-risk", parseProfileRiskDefaultsFromExtra(extra));
   $("#profile-submit").textContent = "更新授权档案";
+  syncAuthAssistInputs();
   syncProfileAuthGuide();
 }
 
@@ -7871,6 +8009,29 @@ function wireLogin() {
 function wireProfiles() {
   $("#profile-provider").addEventListener("change", syncAuthModes);
   $("#profile-auth-mode").addEventListener("change", syncProfileAuthGuide);
+  ["#profile-assist-openlist-url", "#profile-assist-openlist-token", "#profile-assist-alist-url", "#profile-assist-alist-token"].forEach((selector) => {
+    $(selector).addEventListener("input", () => {
+      persistAuthAssistState(collectAuthAssistStateFromForm());
+    });
+  });
+  $("#profile-assist-use-openlist").addEventListener("click", () => {
+    switchAuthAssistMode("openlist");
+    showFlash("已切换为 OpenList 优先引导");
+  });
+  $("#profile-assist-use-alist").addEventListener("click", () => {
+    switchAuthAssistMode("alist");
+    showFlash("已切换为 Alist 兜底引导");
+  });
+  $("#profile-assist-use-manual").addEventListener("click", () => {
+    switchAuthAssistMode("manual");
+    showFlash("已切换为手动高级模式");
+  });
+  $("#profile-assist-open-openlist").addEventListener("click", () => openAuthAssistURL("openlist"));
+  $("#profile-assist-open-alist").addEventListener("click", () => openAuthAssistURL("alist"));
+  $("#profile-assist-clear").addEventListener("click", () => {
+    persistAuthAssistState(defaultAuthAssistState());
+    showFlash("授权引导配置已清空，已恢复 OpenList 优先");
+  });
   $("#plan-source-provider").addEventListener("change", async () => {
     syncSourceProfiles();
     await loadDirectoryBrowser("source");
@@ -8823,6 +8984,7 @@ async function init() {
   wireStatus();
   wireTreeFilters();
   syncSessionState();
+  syncAuthAssistInputs();
   syncExecutionModeHint();
   renderPreview();
   renderStatus();

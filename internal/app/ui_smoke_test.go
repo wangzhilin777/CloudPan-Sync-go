@@ -219,6 +219,7 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 
 	runStep(t, runCtx, "create and validate profile",
 		chromedp.Click(`button[data-view="providers"]`, chromedp.ByQuery),
+		waitForText(`#profile-assist-summary`, "当前优先走 OpenList"),
 		setSelectValue(`#profile-provider`, "123_open"),
 		waitForText(`#profile-auth-guide`, "domainId"),
 		waitForText(`#profile-auth-guide`, "driveId"),

@@ -72,6 +72,43 @@
               </div>
               <form id="profile-form" class="stack">
                 <input id="profile-id" name="id" type="hidden" />
+                <div class="risk-builder">
+                  <div class="risk-builder-head">
+                    <strong>授权引导入口</strong>
+                    <span>默认优先通过 OpenList 获取登录态和存储信息，失败后再切到 Alist，最后才使用手动高级模式。</span>
+                  </div>
+                  <div class="mini-grid">
+                    <label>
+                      <span>OpenList 地址</span>
+                      <input id="profile-assist-openlist-url" type="text" placeholder="例如：http://127.0.0.1:5244" />
+                    </label>
+                    <label>
+                      <span>OpenList 访问令牌</span>
+                      <input id="profile-assist-openlist-token" type="text" placeholder="可留空，登录后再补" />
+                    </label>
+                    <label>
+                      <span>Alist 地址</span>
+                      <input id="profile-assist-alist-url" type="text" placeholder="例如：http://127.0.0.1:5244" />
+                    </label>
+                    <label>
+                      <span>Alist 访问令牌</span>
+                      <input id="profile-assist-alist-token" type="text" placeholder="可留空，登录后再补" />
+                    </label>
+                  </div>
+                  <div class="actions compact-actions">
+                    <button type="button" class="ghost" id="profile-assist-use-openlist">优先使用 OpenList</button>
+                    <button type="button" class="ghost" id="profile-assist-use-alist">切到 Alist 兜底</button>
+                    <button type="button" class="ghost" id="profile-assist-use-manual">使用手动高级模式</button>
+                  </div>
+                  <div class="actions compact-actions">
+                    <button type="button" class="ghost" id="profile-assist-open-openlist">打开 OpenList</button>
+                    <button type="button" class="ghost" id="profile-assist-open-alist">打开 Alist</button>
+                    <button type="button" class="ghost" id="profile-assist-clear">清空引导配置</button>
+                  </div>
+                  <div id="profile-assist-summary" class="inline-note auth-guide-card">
+                    当前将优先尝试 OpenList 引导；如未配置地址或令牌，会自动提示切到 Alist 或手动模式。
+                  </div>
+                </div>
                 <label>
                   <span>网盘源</span>
                   <select id="profile-provider" name="providerKey"></select>

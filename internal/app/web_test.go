@@ -110,6 +110,21 @@ func TestHandleIndexServesHTML(t *testing.T) {
 	if !strings.Contains(body, `id="profile-auth-guide"`) {
 		t.Fatalf("expected profile auth guide card in html body, got %q", body)
 	}
+	if !strings.Contains(body, `id="profile-assist-openlist-url"`) {
+		t.Fatalf("expected profile OpenList assist url input in html body, got %q", body)
+	}
+	if !strings.Contains(body, `id="profile-assist-alist-url"`) {
+		t.Fatalf("expected profile Alist assist url input in html body, got %q", body)
+	}
+	if !strings.Contains(body, `id="profile-assist-use-openlist"`) {
+		t.Fatalf("expected profile OpenList assist mode button in html body, got %q", body)
+	}
+	if !strings.Contains(body, `id="profile-assist-use-manual"`) {
+		t.Fatalf("expected profile manual assist mode button in html body, got %q", body)
+	}
+	if !strings.Contains(body, `id="profile-assist-summary"`) {
+		t.Fatalf("expected profile assist summary card in html body, got %q", body)
+	}
 	if !strings.Contains(body, `id="plan-target-profile-insight"`) {
 		t.Fatalf("expected target profile insight panel in html body, got %q", body)
 	}
@@ -1505,6 +1520,24 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	}
 	if !strings.Contains(body, "官方 OAuth（official_oauth）") {
 		t.Fatalf("expected localized official_oauth auth mode in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "cloudpan_console_auth_assist") {
+		t.Fatalf("expected auth assist local storage key in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "当前授权入口：OpenList 优先") {
+		t.Fatalf("expected localized auth assist guide text in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "已切换为 OpenList 优先引导") {
+		t.Fatalf("expected auth assist OpenList flash text in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "已切换为 Alist 兜底引导") {
+		t.Fatalf("expected auth assist Alist flash text in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "已切换为手动高级模式") {
+		t.Fatalf("expected auth assist manual flash text in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "授权引导配置已清空，已恢复 OpenList 优先") {
+		t.Fatalf("expected auth assist reset flash text in app.js, got %q", body)
 	}
 	if !strings.Contains(body, "localizeAPIError") {
 		t.Fatalf("expected api error localization helper in app.js, got %q", body)
