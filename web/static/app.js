@@ -524,6 +524,15 @@ const translations = {
       matrix_filter_in_progress: "进行中",
       matrix_filter_pending: "待补齐",
       matrix_filter_empty: "当前筛选 {filter} 没有真实样本矩阵。",
+      flash_smoke_records_filtered: "已按 {label} 收敛 smoke 记录",
+      flash_smoke_records_result_cleared: "已清空 smoke 记录结果筛选",
+      flash_smoke_records_group_cleared: "已清空 smoke 记录协议组筛选",
+      flash_smoke_records_cleared: "已清空 smoke 记录筛选",
+      flash_smoke_matrix_filtered: "已按 {label} 收敛验收矩阵",
+      flash_smoke_record_opened: "已打开 smoke 样本并回填表单",
+      flash_smoke_gap_prefilled: "已按验收缺口预填 smoke 动作",
+      flash_smoke_matrix_prefilled: "已按验收矩阵预填 smoke 表单",
+      flash_smoke_profile_risk_prefilled: "已按真实样本预填账号默认风控",
       matrix_smoke_count: "smoke",
       matrix_upload_smoke: "上传样本",
       matrix_coverage: "任务覆盖",
@@ -1231,6 +1240,15 @@ const translations = {
       matrix_filter_in_progress: "In Progress",
       matrix_filter_pending: "Pending",
       matrix_filter_empty: "The current filter {filter} has no real sample matrix.",
+      flash_smoke_records_filtered: "Smoke records filtered by {label}",
+      flash_smoke_records_result_cleared: "Smoke record result filter cleared",
+      flash_smoke_records_group_cleared: "Smoke record protocol-group filter cleared",
+      flash_smoke_records_cleared: "Smoke record filters cleared",
+      flash_smoke_matrix_filtered: "Acceptance matrix filtered by {label}",
+      flash_smoke_record_opened: "Smoke sample opened and the form has been prefilled",
+      flash_smoke_gap_prefilled: "Smoke action prefilled from the acceptance gap",
+      flash_smoke_matrix_prefilled: "Smoke form prefilled from the acceptance matrix",
+      flash_smoke_profile_risk_prefilled: "Account default risk prefilled from the real sample",
       matrix_smoke_count: "Smoke",
       matrix_upload_smoke: "Upload Smoke",
       matrix_coverage: "Coverage",
@@ -9536,12 +9554,24 @@ function focusProviderSmokeRecordsByResult(result) {
   state.providerSmokeRecordFilters.result = normalized;
   setFilterControlValue("#provider-smoke-records-filter-result", normalized);
   renderStatus();
-  showFlash(normalized ? `已按 ${normalized} 收敛 smoke 记录` : "已清空 smoke 记录结果筛选");
+  const label = normalized
+    ? t(
+      normalized === "success" ? "status.result_success" : "status.result_failure",
+      normalized === "success" ? "成功（success）" : "失败（failure）",
+    )
+    : "";
+  showFlash(
+    normalized
+      ? tf("status.flash_smoke_records_filtered", { label }, `已按 ${label} 收敛 smoke 记录`)
+      : t("status.flash_smoke_records_result_cleared", "已清空 smoke 记录结果筛选"),
+  );
 }
 
 function focusProviderSmokeMatrixByStatus(status) {
   setProviderSmokeMatrixFilter(status || "all");
-  showFlash(`已按 ${status || "all"} 收敛验收矩阵`);
+  const raw = status || "all";
+  const label = state.language === "en-US" ? providerSmokeMatrixFilterLabel(raw) : raw;
+  showFlash(tf("status.flash_smoke_matrix_filtered", { label }, `已按 ${label} 收敛验收矩阵`));
 }
 
 function openProviderSmokeRecordInMatrix(id) {
@@ -9552,7 +9582,7 @@ function openProviderSmokeRecordInMatrix(id) {
     focusProviderSmokeRecordsByGroup(record.protocolGroup || "");
   }
   return loadProviderSmokeMarkdown(id).then(() => {
-    showFlash("已打开 smoke 样本并回填表单");
+    showFlash(t("status.flash_smoke_record_opened", "已打开 smoke 样本并回填表单"));
   });
 }
 
@@ -9577,10 +9607,10 @@ function draftProviderSmokeAndFocus(item, { fromGap = false } = {}) {
     focusProviderSmokeRecordsByResult(draft.focusResult || draft.result || "");
   }
   if (fromGap) {
-    showFlash("已按验收缺口预填 smoke 动作");
+    showFlash(t("status.flash_smoke_gap_prefilled", "已按验收缺口预填 smoke 动作"));
     return;
   }
-  showFlash("已按验收矩阵预填 smoke 表单");
+  showFlash(t("status.flash_smoke_matrix_prefilled", "已按验收矩阵预填 smoke 表单"));
 }
 
 function buildProviderSmokeDraftByProtocolGroup(protocolGroup, { fromGap = false } = {}) {
@@ -9662,7 +9692,7 @@ function prefillProfileRiskDefaultsFromMatrix(item) {
       2,
     );
   }
-  showFlash("已按真实样本预填账号默认风控");
+  showFlash(t("status.flash_smoke_profile_risk_prefilled", "已按真实样本预填账号默认风控"));
 }
 
 function draftProviderSmokeFromAccepted(item) {
@@ -9680,7 +9710,11 @@ function focusProviderSmokeRecordsByGroup(protocolGroup) {
   state.providerSmokeRecordFilters.protocolGroup = normalized;
   setFilterControlValue("#provider-smoke-records-filter-group", normalized);
   renderStatus();
-  showFlash(normalized ? `已按 ${normalized} 收敛 smoke 记录` : "已清空 smoke 记录协议组筛选");
+  showFlash(
+    normalized
+      ? tf("status.flash_smoke_records_filtered", { label: normalized }, `已按 ${normalized} 收敛 smoke 记录`)
+      : t("status.flash_smoke_records_group_cleared", "已清空 smoke 记录协议组筛选"),
+  );
 }
 
 async function loadProviderSmokeMarkdown(id) {
@@ -10723,7 +10757,7 @@ function wireTreeFilters() {
     setFilterControlValue("#provider-smoke-records-filter-sample-type", "");
     setFilterControlValue("#provider-smoke-records-filter-result", "");
     renderStatus();
-    showFlash("已清空 smoke 记录筛选");
+    showFlash(t("status.flash_smoke_records_cleared", "已清空 smoke 记录筛选"));
   });
   $("#task-directory-copy-visible").addEventListener("click", async () => {
     try {
