@@ -122,8 +122,17 @@ func TestHandleIndexServesHTML(t *testing.T) {
 	if !strings.Contains(body, `id="profile-assist-use-manual"`) {
 		t.Fatalf("expected profile manual assist mode button in html body, got %q", body)
 	}
+	if !strings.Contains(body, `id="profile-assist-discover-openlist"`) {
+		t.Fatalf("expected profile OpenList discover button in html body, got %q", body)
+	}
+	if !strings.Contains(body, `id="profile-assist-discover-alist"`) {
+		t.Fatalf("expected profile Alist discover button in html body, got %q", body)
+	}
 	if !strings.Contains(body, `id="profile-assist-summary"`) {
 		t.Fatalf("expected profile assist summary card in html body, got %q", body)
+	}
+	if !strings.Contains(body, `id="profile-assist-discovery"`) {
+		t.Fatalf("expected profile assist discovery card in html body, got %q", body)
 	}
 	if !strings.Contains(body, `id="plan-target-profile-insight"`) {
 		t.Fatalf("expected target profile insight panel in html body, got %q", body)
@@ -1538,6 +1547,15 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	}
 	if !strings.Contains(body, "授权引导配置已清空，已恢复 OpenList 优先") {
 		t.Fatalf("expected auth assist reset flash text in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "/api/auth/assist/discover") {
+		t.Fatalf("expected auth assist discover api in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "已检测 OpenList，可见存储") {
+		t.Fatalf("expected auth assist OpenList discover flash text in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "已检测 Alist，可见存储") {
+		t.Fatalf("expected auth assist Alist discover flash text in app.js, got %q", body)
 	}
 	if !strings.Contains(body, "localizeAPIError") {
 		t.Fatalf("expected api error localization helper in app.js, got %q", body)

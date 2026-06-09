@@ -320,6 +320,56 @@ function persistAuthAssistState(nextState = {}) {
   syncProfileAuthGuide();
 }
 
+function renderAuthAssistDiscovery(response) {
+  if (!response || typeof response !== "object") {
+    return "检测结果会在这里显示；如果能列出可见存储，说明当前 OpenList / Alist 地址和令牌基本可用。";
+  }
+  const storages = Array.isArray(response.storages) ? response.storages : [];
+  if (!storages.length) {
+    return `${response.kind === "alist" ? "Alist" : "OpenList"} 已连通，但当前没有返回可见存储。可继续确认令牌权限，或直接回到底部手动模式。`;
+  }
+  const summary = storages
+    .slice(0, 6)
+    .map((item) => {
+      const name = stringifyValue(item.name, "-");
+      const driver = stringifyValue(item.driver, "-");
+      const mountPath = stringifyValue(item.mountPath, "-");
+      return `${name}（${driver} / ${mountPath}）`;
+    })
+    .join("；");
+  const suffix = storages.length > 6 ? `；其余 ${storages.length - 6} 项未展开` : "";
+  return `${response.kind === "alist" ? "Alist" : "OpenList"} 已连通，当前可见存储：${summary}${suffix}。`;
+}
+
+function syncAuthAssistDiscovery(message) {
+  const wrap = $("#profile-assist-discovery");
+  if (!wrap) {
+    return;
+  }
+  wrap.textContent =
+    message || "检测结果会在这里显示；如果能列出可见存储，说明当前 OpenList / Alist 地址和令牌基本可用。";
+}
+
+async function discoverAuthAssist(kind) {
+  const assist = collectAuthAssistStateFromForm();
+  const baseUrl = kind === "alist" ? assist.alistURL : assist.openlistURL;
+  const token = kind === "alist" ? assist.alistToken : assist.openlistToken;
+  const display = kind === "alist" ? "Alist" : "OpenList";
+  if (!baseUrl) {
+    throw new Error(`请先填写 ${display} 地址`);
+  }
+  const result = await api("/api/auth/assist/discover", {
+    method: "POST",
+    body: {
+      kind,
+      baseUrl,
+      token,
+    },
+  });
+  syncAuthAssistDiscovery(renderAuthAssistDiscovery(result));
+  return result;
+}
+
 function switchAuthAssistMode(mode) {
   const normalized = ["openlist", "alist", "manual"].includes(String(mode || "").trim()) ? String(mode).trim() : "openlist";
   persistAuthAssistState({ preferred: normalized, ...collectAuthAssistStateFromForm() });
@@ -8026,10 +8076,29 @@ function wireProfiles() {
     switchAuthAssistMode("manual");
     showFlash("已切换为手动高级模式");
   });
+  $("#profile-assist-discover-openlist").addEventListener("click", async () => {
+    try {
+      const result = await discoverAuthAssist("openlist");
+      showFlash(`已检测 OpenList，可见存储 ${Array.isArray(result.storages) ? result.storages.length : 0} 项`);
+    } catch (error) {
+      syncAuthAssistDiscovery(error.message);
+      showFlash(error.message, true);
+    }
+  });
+  $("#profile-assist-discover-alist").addEventListener("click", async () => {
+    try {
+      const result = await discoverAuthAssist("alist");
+      showFlash(`已检测 Alist，可见存储 ${Array.isArray(result.storages) ? result.storages.length : 0} 项`);
+    } catch (error) {
+      syncAuthAssistDiscovery(error.message);
+      showFlash(error.message, true);
+    }
+  });
   $("#profile-assist-open-openlist").addEventListener("click", () => openAuthAssistURL("openlist"));
   $("#profile-assist-open-alist").addEventListener("click", () => openAuthAssistURL("alist"));
   $("#profile-assist-clear").addEventListener("click", () => {
     persistAuthAssistState(defaultAuthAssistState());
+    syncAuthAssistDiscovery("");
     showFlash("授权引导配置已清空，已恢复 OpenList 优先");
   });
   $("#plan-source-provider").addEventListener("change", async () => {

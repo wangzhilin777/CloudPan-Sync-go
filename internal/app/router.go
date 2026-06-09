@@ -119,6 +119,7 @@ func (a *App) routes() http.Handler {
 	mux.HandleFunc("/api/session/login", a.handleLogin)
 	mux.HandleFunc("/api/providers", a.handleProviders)
 	mux.HandleFunc("/api/providers/", a.handleProviderByKey)
+	mux.HandleFunc("/api/auth/assist/discover", a.handleAuthAssistDiscover)
 	mux.HandleFunc("/api/auth/profiles", a.handleAuthProfiles)
 	mux.HandleFunc("/api/auth/profiles/", a.handleAuthProfileByID)
 	mux.HandleFunc("/api/plans/preview", a.handlePlanPreview)

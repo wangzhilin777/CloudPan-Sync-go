@@ -1081,6 +1081,72 @@ func TestAppWorkflowMainline(t *testing.T) {
 	}
 }
 
+func TestAppWorkflowDiscoversAuthAssistStorages(t *testing.T) {
+	ctx := context.Background()
+	application := mustNewTestApp(t, ctx)
+	handler := application.routes()
+
+	assistServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/admin/storage/list" {
+			http.NotFound(w, r)
+			return
+		}
+		if got := strings.TrimSpace(r.Header.Get("Authorization")); got != "token-assist" {
+			w.WriteHeader(http.StatusUnauthorized)
+			_, _ = w.Write([]byte(`{"code":401,"message":"unauthorized"}`))
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"code":200,"message":"success","data":{"content":[{"id":11,"mount_path":"/dav","driver":"WebDAV","remark":"OpenList 主存储","status":"work"},{"id":12,"mount_path":"/media","driver":"AliyundriveOpen","remark":"媒体库","status":"work"}]}}`))
+	}))
+	defer assistServer.Close()
+
+	openlistResp := invokeJSON(t, handler, http.MethodPost, "/api/auth/assist/discover", map[string]interface{}{
+		"kind":    "openlist",
+		"baseUrl": assistServer.URL,
+		"token":   "token-assist",
+	})
+	openlistData := openlistResp.Data.(map[string]interface{})
+	if got := openlistData["kind"].(string); got != "openlist" {
+		t.Fatalf("expected openlist kind, got %s", got)
+	}
+	if got := openlistData["reachable"].(bool); !got {
+		t.Fatalf("expected reachable true")
+	}
+	storages := openlistData["storages"].([]interface{})
+	if len(storages) != 2 {
+		t.Fatalf("expected 2 storages, got %d", len(storages))
+	}
+	first := storages[0].(map[string]interface{})
+	if got := first["name"].(string); got != "OpenList 主存储" {
+		t.Fatalf("expected first storage remark, got %s", got)
+	}
+	if got := first["mountPath"].(string); got != "/dav" {
+		t.Fatalf("expected first storage mount path, got %s", got)
+	}
+
+	alistResp := invokeJSON(t, handler, http.MethodPost, "/api/auth/assist/discover", map[string]interface{}{
+		"kind":    "alist",
+		"baseUrl": assistServer.URL,
+		"token":   "token-assist",
+	})
+	if got := alistResp.Data.(map[string]interface{})["kind"].(string); got != "alist" {
+		t.Fatalf("expected alist kind, got %s", got)
+	}
+
+	errEnvelope, status := invokeJSONError(t, handler, http.MethodPost, "/api/auth/assist/discover", map[string]interface{}{
+		"kind":    "openlist",
+		"baseUrl": assistServer.URL,
+		"token":   "bad-token",
+	})
+	if status != http.StatusBadRequest {
+		t.Fatalf("expected bad request status, got %d", status)
+	}
+	if got := errEnvelope.Error.Code; got != "invalid_assist_token" {
+		t.Fatalf("expected invalid_assist_token, got %s", got)
+	}
+}
+
 func TestAppWorkflowAppliesTargetProfileRiskDefaults(t *testing.T) {
 	ctx := context.Background()
 	application := mustNewTestApp(t, ctx)
