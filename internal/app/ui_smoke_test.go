@@ -437,6 +437,14 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 		chromedp.Evaluate(`(() => document.querySelector('#refresh-tasks')?.click())()`, nil),
 		waitForText(`#flash`, "任务列表已刷新"),
 		waitForText(`#task-detail`, `"state": "completed_with_errors"`),
+		setSelectValue(`#language-select`, "en-US"),
+		waitForText(`body`, "Task List"),
+		waitForText(`body`, "Task Details"),
+		waitForText(`body`, "Run"),
+		waitForText(`body`, "Retry Queue"),
+		waitForText(`body`, "Runtime Checkpoints"),
+		setSelectValue(`#language-select`, "zh-CN"),
+		waitForText(`body`, "任务列表"),
 	)
 
 	runStep(t, runCtx, "status overview",
@@ -447,6 +455,15 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 		waitForText(`body`, "自动补传候选池"),
 		waitForText(`body`, "协议族覆盖"),
 		waitForText(`body`, "最近 Probe"),
+		setSelectValue(`#language-select`, "en-US"),
+		waitForText(`body`, "Runtime Evidence Summary"),
+		waitForText(`body`, "Auto-Recovery Pool"),
+		waitForText(`body`, "Protocol Coverage"),
+		waitForText(`body`, "Provider Status Matrix"),
+		waitForText(`body`, "Recent Probe"),
+		waitForText(`body`, "Recent Results"),
+		setSelectValue(`#language-select`, "zh-CN"),
+		waitForText(`body`, "运行证据摘要"),
 	)
 
 	runStep(t, runCtx, "status snapshot panels",

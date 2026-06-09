@@ -466,49 +466,52 @@
           <div class="grid two">
             <article class="card">
               <div class="section-head">
-                <h2>任务列表</h2>
-                <button type="button" class="ghost" id="refresh-tasks">刷新</button>
+                <h2 data-i18n-text="tasks.list_title">任务列表</h2>
+                <button type="button" class="ghost" id="refresh-tasks" data-i18n-text="common.refresh">刷新</button>
               </div>
               <div id="tasks-list" class="task-list"></div>
             </article>
             <article class="card">
               <div class="section-head">
-                <h2>任务详情</h2>
+                <h2 data-i18n-text="tasks.detail_title">任务详情</h2>
                 <div class="actions compact">
-                  <button type="button" class="ghost" id="task-run">运行</button>
-                  <button type="button" class="ghost" id="task-pause">暂停</button>
-                  <button type="button" class="ghost" id="task-resume">继续</button>
-                  <button type="button" class="ghost" id="task-retry">重试</button>
+                  <button type="button" class="ghost" id="task-run" data-i18n-text="tasks.run">运行</button>
+                  <button type="button" class="ghost" id="task-pause" data-i18n-text="tasks.pause">暂停</button>
+                  <button type="button" class="ghost" id="task-resume" data-i18n-text="tasks.resume">继续</button>
+                  <button type="button" class="ghost" id="task-retry" data-i18n-text="tasks.retry">重试</button>
                 </div>
               </div>
               <div id="task-summary" class="insight-grid">
                 <div class="insight-card">
-                  <strong>执行模式</strong>
-                  <span>选择任务后显示</span>
+                  <strong data-i18n-text="tasks.execution_mode">执行模式</strong>
+                  <span data-i18n-text="tasks.waiting_selected">选择任务后显示</span>
                 </div>
               </div>
               <div class="actions compact">
-                <button type="button" class="ghost" id="task-prefill-wizard">按当前任务重建向导</button>
-                <button type="button" class="ghost" id="task-copy-payload">复制任务创建参数</button>
+                <button type="button" class="ghost" id="task-prefill-wizard" data-i18n-text="tasks.prefill_wizard">按当前任务重建向导</button>
+                <button type="button" class="ghost" id="task-copy-payload" data-i18n-text="tasks.copy_payload">复制任务创建参数</button>
+              </div>
+              <div class="section-head compact-head">
+                <h3 data-i18n-text="tasks.runtime_checkpoint">运行检查点</h3>
               </div>
               <div id="task-runtime" class="insight-grid">
                 <div class="insight-card">
-                  <strong>运行检查点</strong>
-                  <span>选择任务后显示</span>
+                  <strong data-i18n-text="tasks.runtime_checkpoint">运行检查点</strong>
+                  <span data-i18n-text="tasks.waiting_selected">选择任务后显示</span>
                 </div>
               </div>
               <div class="section-head compact-head">
-                <h3>重试队列</h3>
+                <h3 data-i18n-text="tasks.retry_queue">重试队列</h3>
                 <div class="actions compact">
-                  <span class="muted">按失败分类查看 retryable / blocked / exhausted 项</span>
-                  <button type="button" class="ghost" id="task-retry-visible-queue">重试当前筛选</button>
-                  <button type="button" class="ghost" id="task-auto-recover-visible-queue">后台补传当前筛选</button>
+                  <span class="muted" data-i18n-text="tasks.retry_queue_desc">按失败分类查看 retryable / blocked / exhausted 项</span>
+                  <button type="button" class="ghost" id="task-retry-visible-queue" data-i18n-text="tasks.retry_current_filter">重试当前筛选</button>
+                  <button type="button" class="ghost" id="task-auto-recover-visible-queue" data-i18n-text="tasks.auto_recover_current_filter">后台补传当前筛选</button>
                 </div>
               </div>
               <div class="filter-bar">
-                <input id="task-retry-filter-query" type="text" placeholder="筛选路径 / reason / provider status" />
+                <input id="task-retry-filter-query" type="text" placeholder="筛选路径 / reason / provider status" data-i18n-placeholder="tasks.retry_filter_query_placeholder" />
                 <select id="task-retry-filter-class">
-                  <option value="">全部分类</option>
+                  <option value="" data-i18n-text="tasks.all_classes">全部分类</option>
                   <option value="pending_manual">pending_manual</option>
                   <option value="provider_session_missing">provider_session_missing</option>
                   <option value="rate_limited">rate_limited</option>
@@ -516,20 +519,20 @@
                   <option value="local_file_missing">local_file_missing</option>
                 </select>
                 <select id="task-retry-filter-state">
-                  <option value="">全部状态</option>
+                  <option value="" data-i18n-text="tasks.all_states">全部状态</option>
                   <option value="retryable">retryable</option>
                   <option value="blocked">blocked</option>
                   <option value="exhausted">exhausted</option>
                 </select>
               </div>
-              <div id="task-retry-filter-summary" class="filter-summary muted">等待任务数据...</div>
+              <div id="task-retry-filter-summary" class="filter-summary muted" data-i18n-text="tasks.waiting_task_data">等待任务数据...</div>
               <div id="task-retry-queue" class="directory-state-list"></div>
               <div class="section-head compact-head">
-                <h3>下一步处理</h3>
-                <span class="muted">根据 blocked action 给出处理步骤</span>
+                <h3 data-i18n-text="tasks.next_steps">下一步处理</h3>
+                <span class="muted" data-i18n-text="tasks.next_steps_desc">根据 blocked action 给出处理步骤</span>
               </div>
               <div id="task-resolution-guide" class="directory-state-list">
-                <div class="directory-empty">选择任务后显示处理建议。</div>
+                <div class="directory-empty" data-i18n-text="tasks.waiting_task_resolution">选择任务后显示处理建议。</div>
               </div>
               <div class="section-head compact-head">
                 <h3>目录状态</h3>
@@ -584,7 +587,7 @@
               </div>
               <div id="task-pending-filter-summary" class="filter-summary muted">等待任务数据...</div>
               <div id="task-pending-tree" class="directory-state-list"></div>
-              <pre id="task-detail" class="result-box">选择一条任务查看详情...</pre>
+              <pre id="task-detail" class="result-box" data-i18n-text="tasks.detail_waiting">选择一条任务查看详情...</pre>
             </article>
           </div>
         </section>
@@ -593,15 +596,15 @@
           <div class="grid two">
             <article class="card">
               <div class="section-head">
-                <h2>运行证据摘要</h2>
-                <button type="button" class="ghost" id="refresh-status">刷新</button>
+                <h2 data-i18n-text="status.summary_title">运行证据摘要</h2>
+                <button type="button" class="ghost" id="refresh-status" data-i18n-text="common.refresh">刷新</button>
               </div>
               <div id="evidence-summary" class="metrics"></div>
               <div id="auto-retry-policy-summary" class="filter-summary muted">等待自动补传调度策略...</div>
               <div id="blocked-actions-summary" class="directory-state-list"></div>
               <div class="section-head compact-head">
-                <h3>自动补传候选池</h3>
-                <span class="muted">按后台补传模式聚合当前可自动接管或等待窗口的任务</span>
+                <h3 data-i18n-text="status.auto_recover_pool">自动补传候选池</h3>
+                <span class="muted" data-i18n-text="status.auto_recover_pool_desc">按后台补传模式聚合当前可自动接管或等待窗口的任务</span>
               </div>
               <div class="filter-bar">
                 <select id="auto-recover-mode">
@@ -656,9 +659,9 @@
                 <input id="auto-recover-limit-per-protocol-group" type="number" min="1" placeholder="协议族预算，例如 1" />
                 <input id="auto-recover-limit-per-provider" type="number" min="1" placeholder="provider 预算，例如 1" />
                 <input id="auto-recover-limit-per-profile" type="number" min="1" placeholder="账号预算，例如 1" />
-                <button type="button" class="ghost" id="auto-recover-preview">预演当前筛选</button>
-                <button type="button" class="ghost" id="auto-recover-run">执行当前筛选</button>
-                <button type="button" class="ghost" id="auto-recover-reset">清空筛选</button>
+                <button type="button" class="ghost" id="auto-recover-preview" data-i18n-text="status.preview_filtered">预演当前筛选</button>
+                <button type="button" class="ghost" id="auto-recover-run" data-i18n-text="status.run_filtered">执行当前筛选</button>
+                <button type="button" class="ghost" id="auto-recover-reset" data-i18n-text="status.clear_filters">清空筛选</button>
               </div>
               <div id="auto-recover-filter-summary" class="filter-summary muted">显示全部后台补传候选。</div>
               <div id="auto-recover-budget-summary" class="filter-summary muted">等待当前补传预算摘要...</div>
@@ -666,16 +669,16 @@
               <div id="auto-recover-last-result-detail" class="directory-state-list"></div>
               <div id="auto-recover-summary" class="directory-state-list"></div>
               <div class="section-head compact-head">
-                <h3>协议族覆盖</h3>
-                <span class="muted">按 protocol group 聚合真实成功样本</span>
+                <h3 data-i18n-text="status.protocol_coverage">协议族覆盖</h3>
+                <span class="muted" data-i18n-text="status.protocol_coverage_desc">按 protocol group 聚合真实成功样本</span>
               </div>
               <div id="protocol-coverage-summary" class="directory-state-list"></div>
               <div class="section-head compact-head">
-                <h3>验收报告</h3>
+                <h3 data-i18n-text="status.report_title">验收报告</h3>
                 <div class="actions compact">
-                  <button type="button" class="ghost" id="refresh-report">刷新</button>
-                  <button type="button" class="ghost" id="save-report">保存</button>
-                  <button type="button" class="ghost" id="download-report">下载 Markdown</button>
+                  <button type="button" class="ghost" id="refresh-report" data-i18n-text="common.refresh">刷新</button>
+                  <button type="button" class="ghost" id="save-report" data-i18n-text="status.save">保存</button>
+                  <button type="button" class="ghost" id="download-report" data-i18n-text="status.download_markdown">下载 Markdown</button>
                 </div>
               </div>
               <div class="filter-bar">
@@ -685,9 +688,9 @@
               <div id="evidence-report" class="result-box">等待报告数据...</div>
               <div id="report-history" class="directory-state-list"></div>
               <div class="section-head compact-head">
-                <h3>真实 Provider Smoke</h3>
+                <h3 data-i18n-text="status.provider_smoke_title">真实 Provider Smoke</h3>
                 <div class="actions compact">
-                  <button type="button" class="ghost" id="save-provider-smoke">保存</button>
+                  <button type="button" class="ghost" id="save-provider-smoke" data-i18n-text="status.save">保存</button>
                 </div>
               </div>
               <div class="section-head compact-head">
@@ -737,25 +740,25 @@
               <div id="provider-smoke-records" class="directory-state-list"></div>
             </article>
             <article class="card">
-              <h2>Provider 状态矩阵</h2>
+              <h2 data-i18n-text="status.provider_matrix_title">Provider 状态矩阵</h2>
               <div id="status-table" class="table-wrap"></div>
             </article>
           </div>
           <div class="grid two">
             <article class="card">
               <div class="section-head">
-                <h2>运行检查点概览</h2>
-                <span class="muted">来自最近 probe / snapshot</span>
+                <h2 data-i18n-text="status.runtime_overview_title">运行检查点概览</h2>
+                <span class="muted" data-i18n-text="status.runtime_overview_desc">来自最近 probe / snapshot</span>
               </div>
               <div id="status-runtime-checkpoints" class="directory-state-list"></div>
             </article>
             <article class="card">
               <div class="section-head">
-                <h2>最近重试队列</h2>
+                <h2 data-i18n-text="status.retry_queue_title">最近重试队列</h2>
                 <div class="actions compact">
-                  <span class="muted">来自最近 probe / snapshot</span>
-                  <button type="button" class="ghost" id="status-retry-visible-queue">重试当前筛选</button>
-                  <button type="button" class="ghost" id="status-auto-recover-visible-queue">后台补传当前筛选</button>
+                  <span class="muted" data-i18n-text="status.runtime_overview_desc">来自最近 probe / snapshot</span>
+                  <button type="button" class="ghost" id="status-retry-visible-queue" data-i18n-text="status.retry_filtered">重试当前筛选</button>
+                  <button type="button" class="ghost" id="status-auto-recover-visible-queue" data-i18n-text="status.auto_recover_filtered">后台补传当前筛选</button>
                 </div>
               </div>
               <div class="filter-bar">
@@ -781,11 +784,11 @@
           </div>
           <div class="grid two">
             <article class="card">
-              <h2>最近 Probe</h2>
+              <h2 data-i18n-text="status.recent_probe_title">最近 Probe</h2>
               <div id="recent-probes" class="table-wrap"></div>
             </article>
             <article class="card">
-              <h2>最近结果</h2>
+              <h2 data-i18n-text="status.recent_results_title">最近结果</h2>
               <div id="recent-results" class="table-wrap"></div>
             </article>
           </div>

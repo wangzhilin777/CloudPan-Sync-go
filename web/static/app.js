@@ -101,6 +101,146 @@ const translations = {
     common: {
       refresh: "刷新"
     },
+    tasks: {
+      list_title: "任务列表",
+      detail_title: "任务详情",
+      run: "运行",
+      pause: "暂停",
+      resume: "继续",
+      retry: "重试",
+      execution_mode: "执行模式",
+      waiting_selected: "选择任务后显示",
+      prefill_wizard: "按当前任务重建向导",
+      copy_payload: "复制任务创建参数",
+      runtime_checkpoint: "运行检查点",
+      retry_queue: "重试队列",
+      retry_queue_desc: "按失败分类查看 retryable / blocked / exhausted 项",
+      retry_current_filter: "重试当前筛选",
+      auto_recover_current_filter: "后台补传当前筛选",
+      retry_filter_query_placeholder: "筛选路径 / reason / provider status",
+      all_classes: "全部分类",
+      all_states: "全部状态",
+      waiting_task_data: "等待任务数据...",
+      next_steps: "下一步处理",
+      next_steps_desc: "根据 blocked action 给出处理步骤",
+      waiting_task_resolution: "选择任务后显示处理建议。",
+      detail_waiting: "选择一条任务查看详情...",
+      selected_roots: "选定根目录",
+      target_root: "目标根目录",
+      recommended_mode: "推荐模式",
+      recommended_reason: "推荐原因",
+      scan_mode: "扫描方式",
+      risk_throttle: "风险节流",
+      recommended_risk: "推荐风控",
+      recommended_risk_reason: "推荐风控原因",
+      aggressive_warning: "激进风险提示",
+      source_delete_policy: "源端删除策略",
+      risk_resolution: "风险模板解释",
+      retry_window: "自动补传时间窗",
+      retry_scope: "重试范围",
+      retry_mode: "重试模式",
+      retry_source: "重试来源",
+      retry_selected_paths: "重试选中路径",
+      retry_selected_path_count: "重试路径数",
+      retry_checkpoint_count: "重试 checkpoint 数",
+      retry_summary: "重试摘要",
+      next_summary: "下一步摘要",
+      source_deletion_count: "源端删除记录",
+      suggested_action: "建议动作",
+      auto_recover_candidate: "后台补传候选",
+      queue_breakdown: "队列拆分",
+      scan_trace: "扫描轨迹",
+      pending_only_with_count: "仅待处理项 ({count} 项)",
+      full_task: "整个任务",
+      runtime_empty: "暂无运行时信息",
+      runtime_state: "执行状态",
+      pause_request: "暂停请求",
+      requested_at: "请求时间",
+      current_root: "当前根目录",
+      current_directory: "当前目录",
+      last_completed: "上次完成",
+      progress: "处理进度",
+      result_count: "结果计数",
+      risk_hits: "风控命中",
+      retry_queue_label: "重试队列",
+      blocked_reason: "阻塞原因",
+      handling_action: "处理动作",
+      handling_advice: "处理建议",
+      blocked_summary: "阻塞摘要",
+      next_auto_recover: "下次自动补传",
+      auto_recover_advice: "自动补传提示",
+      wait_auth_refresh: "恢复等待 - Auth 刷新",
+      wait_local_restore: "恢复等待 - 本地恢复",
+      wait_provider_session: "恢复等待 - Provider 会话",
+      wait_manual_confirmation: "恢复等待 - 手动确认",
+      wait_retry_limit: "恢复等待 - 限额超限",
+      wait_retry_window: "恢复等待 - 时间窗",
+      task_next_steps_idle: "当前任务没有 blocked 人工处理动作，可直接继续运行或观察状态矩阵。",
+      task_next_steps_title: "下一步处理",
+      auto_recover_takeover_title: "等待后台自动补传接管",
+      upload_checkpoint_resume_title: "等待上传会话自动续跑",
+      auto_recover_takeover_step_1: "当前队列满足后台自动补传条件，系统会在后续 tick 中自动尝试继续执行。",
+      auto_recover_takeover_step_2: "先到状态矩阵查看后台补传候选池，确认该任务是否已经进入 retry_queue_auto_retry lane。",
+      auto_recover_takeover_step_3: "如果长时间未自动推进，再检查 retrySummary、provider 返回状态和风险窗口是否把它留在等待态。",
+      upload_checkpoint_resume_step_1: "当前失败队列携带可恢复的 upload checkpoint，单机 worker 会优先尝试续跑上传会话。",
+      upload_checkpoint_resume_step_2: "先到状态矩阵查看后台补传候选池，确认该任务是否已经进入 upload checkpoint 自动续跑 lane。",
+      upload_checkpoint_resume_step_3: "如果长时间未自动推进，再检查 providerData / uploadId / nextPartNumber 等恢复线索是否完整。",
+      auto_recover_takeover_default_advice: "当前失败队列都带可恢复的 upload checkpoint，单机 worker 会优先尝试续跑上传会话。",
+      focus_auto_recover_only: "只看自动补传候选",
+      focus_checkpoint_only: "只看自动续跑候选",
+      open_status_matrix: "打开状态矩阵"
+    },
+    status: {
+      summary_title: "运行证据摘要",
+      waiting_retry_policy: "等待自动补传调度策略...",
+      auto_recover_pool: "自动补传候选池",
+      auto_recover_pool_desc: "按后台补传模式聚合当前可自动接管或等待窗口的任务",
+      preview_filtered: "预演当前筛选",
+      run_filtered: "执行当前筛选",
+      clear_filters: "清空筛选",
+      auto_recover_all: "显示全部后台补传候选。",
+      waiting_budget_summary: "等待当前补传预算摘要...",
+      no_auto_recover_result: "尚未执行后台补传预演或实际放行。",
+      protocol_coverage: "协议族覆盖",
+      protocol_coverage_desc: "按 protocol group 聚合真实成功样本",
+      report_title: "验收报告",
+      save: "保存",
+      download_markdown: "下载 Markdown",
+      provider_smoke_title: "真实 Provider Smoke",
+      provider_matrix: "Provider 状态矩阵",
+      provider_matrix_title: "Provider 状态矩阵",
+      runtime_checkpoints: "运行检查点概览",
+      runtime_overview_title: "运行检查点概览",
+      from_recent_probe: "来自最近 probe / snapshot",
+      runtime_overview_desc: "来自最近 probe / snapshot",
+      recent_retry_queue: "最近重试队列",
+      retry_queue_title: "最近重试队列",
+      retry_filtered: "重试当前筛选",
+      auto_recover_filtered: "后台补传当前筛选",
+      waiting_status_data: "等待状态数据...",
+      recent_probe: "最近 Probe",
+      recent_probe_title: "最近 Probe",
+      recent_results: "最近结果",
+      recent_results_title: "最近结果",
+      total_tasks: "任务总数",
+      completed_tasks: "已完成任务",
+      blocked_tasks: "阻塞任务",
+      execution_mode: "执行模式",
+      scan_mode: "扫描模式",
+      source_delete_policy: "源端删除策略",
+      auto_recover_tasks: "自动补传任务",
+      runnable_now: "可直接放行",
+      waiting_cooldown: "等待冷却",
+      waiting_retry_window: "等待时间窗",
+      waiting_auth_refresh: "等待授权刷新",
+      waiting_local_restore: "等待本地恢复",
+      waiting_provider_session: "等待会话恢复",
+      waiting_manual_confirmation: "等待人工确认",
+      waiting_retry_limit: "等待重试上限",
+      waiting_other: "其它等待",
+      auto_retry_policy_summary_prefix: "自动补传默认调度",
+      blocked_empty: "当前没有需要人工处理的 blocked 聚合项。"
+    },
     providers: {
       profile_title: "授权档案",
       assist_title: "授权引导入口",
@@ -333,6 +473,146 @@ const translations = {
     },
     common: {
       refresh: "Refresh"
+    },
+    tasks: {
+      list_title: "Task List",
+      detail_title: "Task Details",
+      run: "Run",
+      pause: "Pause",
+      resume: "Resume",
+      retry: "Retry",
+      execution_mode: "Execution Mode",
+      waiting_selected: "Shown after selecting a task",
+      prefill_wizard: "Rebuild Wizard from Task",
+      copy_payload: "Copy Task Payload",
+      runtime_checkpoint: "Runtime Checkpoints",
+      retry_queue: "Retry Queue",
+      retry_queue_desc: "Review retryable / blocked / exhausted items by failure class",
+      retry_current_filter: "Retry Current Filter",
+      auto_recover_current_filter: "Auto Recover Current Filter",
+      retry_filter_query_placeholder: "Filter by path / reason / provider status",
+      all_classes: "All Classes",
+      all_states: "All States",
+      waiting_task_data: "Waiting for task data...",
+      next_steps: "Next Steps",
+      next_steps_desc: "Suggested handling steps grouped by blocked action",
+      waiting_task_resolution: "Suggestions appear after selecting a task.",
+      detail_waiting: "Select a task to inspect details...",
+      selected_roots: "Selected Roots",
+      target_root: "Target Root",
+      recommended_mode: "Recommended Mode",
+      recommended_reason: "Recommendation Reason",
+      scan_mode: "Scan Mode",
+      risk_throttle: "Risk Throttle",
+      recommended_risk: "Recommended Risk",
+      recommended_risk_reason: "Recommended Risk Reason",
+      aggressive_warning: "Aggressive Risk Warning",
+      source_delete_policy: "Source Delete Policy",
+      risk_resolution: "Risk Template Notes",
+      retry_window: "Auto-Recovery Window",
+      retry_scope: "Retry Scope",
+      retry_mode: "Retry Mode",
+      retry_source: "Retry Source",
+      retry_selected_paths: "Selected Retry Paths",
+      retry_selected_path_count: "Retry Path Count",
+      retry_checkpoint_count: "Retry Checkpoint Count",
+      retry_summary: "Retry Summary",
+      next_summary: "Next Step Summary",
+      source_deletion_count: "Source Deletion Records",
+      suggested_action: "Suggested Action",
+      auto_recover_candidate: "Auto-Recovery Candidate",
+      queue_breakdown: "Queue Breakdown",
+      scan_trace: "Scan Trace",
+      pending_only_with_count: "Pending only ({count} items)",
+      full_task: "Full task",
+      runtime_empty: "No runtime information yet",
+      runtime_state: "Execution State",
+      pause_request: "Pause Request",
+      requested_at: "Requested At",
+      current_root: "Current Root",
+      current_directory: "Current Directory",
+      last_completed: "Last Completed",
+      progress: "Progress",
+      result_count: "Result Counts",
+      risk_hits: "Risk Hits",
+      retry_queue_label: "Retry Queue",
+      blocked_reason: "Blocked Reason",
+      handling_action: "Handling Action",
+      handling_advice: "Handling Advice",
+      blocked_summary: "Blocked Summary",
+      next_auto_recover: "Next Auto-Recovery",
+      auto_recover_advice: "Auto-Recovery Advice",
+      wait_auth_refresh: "Recovery Wait - Auth Refresh",
+      wait_local_restore: "Recovery Wait - Local Restore",
+      wait_provider_session: "Recovery Wait - Provider Session",
+      wait_manual_confirmation: "Recovery Wait - Manual Confirmation",
+      wait_retry_limit: "Recovery Wait - Retry Limit",
+      wait_retry_window: "Recovery Wait - Window",
+      task_next_steps_idle: "This task has no blocked action requiring manual handling. You can continue running it or inspect the status matrix.",
+      task_next_steps_title: "Next Steps",
+      auto_recover_takeover_title: "Waiting for Auto-Recovery Takeover",
+      upload_checkpoint_resume_title: "Waiting for Upload Session Resume",
+      auto_recover_takeover_step_1: "The current queue already meets auto-recovery conditions, and the system will try to continue it on a later tick.",
+      auto_recover_takeover_step_2: "Open the status matrix and confirm that this task has entered the retry_queue_auto_retry lane.",
+      auto_recover_takeover_step_3: "If it still does not progress for a long time, inspect retrySummary, provider status, and the recovery window to see why it remains waiting.",
+      upload_checkpoint_resume_step_1: "The current failure queue contains recoverable upload checkpoints, so the worker will try to resume the upload session first.",
+      upload_checkpoint_resume_step_2: "Open the status matrix and confirm that this task has entered the upload-checkpoint auto-resume lane.",
+      upload_checkpoint_resume_step_3: "If it still does not progress for a long time, inspect providerData / uploadId / nextPartNumber and other recovery clues.",
+      auto_recover_takeover_default_advice: "The current failed queue already contains recoverable upload checkpoints, so the worker will try to resume the upload session first.",
+      focus_auto_recover_only: "Show Auto-Recovery Only",
+      focus_checkpoint_only: "Show Auto-Resume Only",
+      open_status_matrix: "Open Status Matrix"
+    },
+    status: {
+      summary_title: "Runtime Evidence Summary",
+      waiting_retry_policy: "Waiting for the auto-recovery scheduling policy...",
+      auto_recover_pool: "Auto-Recovery Pool",
+      auto_recover_pool_desc: "Group tasks that can be auto-taken-over or are waiting for a recovery window",
+      preview_filtered: "Preview Current Filter",
+      run_filtered: "Run Current Filter",
+      clear_filters: "Clear Filters",
+      auto_recover_all: "Showing every auto-recovery candidate.",
+      waiting_budget_summary: "Waiting for the current recovery budget summary...",
+      no_auto_recover_result: "No auto-recovery preview or execution has been run yet.",
+      protocol_coverage: "Protocol Coverage",
+      protocol_coverage_desc: "Aggregate real success samples by protocol group",
+      report_title: "Acceptance Report",
+      save: "Save",
+      download_markdown: "Download Markdown",
+      provider_smoke_title: "Real Provider Smoke",
+      provider_matrix: "Provider Status Matrix",
+      provider_matrix_title: "Provider Status Matrix",
+      runtime_checkpoints: "Runtime Checkpoint Overview",
+      runtime_overview_title: "Runtime Checkpoint Overview",
+      from_recent_probe: "From the latest probe / snapshot",
+      runtime_overview_desc: "From the latest probe / snapshot",
+      recent_retry_queue: "Recent Retry Queue",
+      retry_queue_title: "Recent Retry Queue",
+      retry_filtered: "Retry Current Filter",
+      auto_recover_filtered: "Auto Recover Current Filter",
+      waiting_status_data: "Waiting for status data...",
+      recent_probe: "Recent Probe",
+      recent_probe_title: "Recent Probe",
+      recent_results: "Recent Results",
+      recent_results_title: "Recent Results",
+      total_tasks: "Total Tasks",
+      completed_tasks: "Completed Tasks",
+      blocked_tasks: "Blocked Tasks",
+      execution_mode: "Execution Mode",
+      scan_mode: "Scan Mode",
+      source_delete_policy: "Source Delete Policy",
+      auto_recover_tasks: "Auto-Recovery Tasks",
+      runnable_now: "Runnable Now",
+      waiting_cooldown: "Waiting Cooldown",
+      waiting_retry_window: "Waiting Window",
+      waiting_auth_refresh: "Waiting Auth Refresh",
+      waiting_local_restore: "Waiting Local Restore",
+      waiting_provider_session: "Waiting Session Recovery",
+      waiting_manual_confirmation: "Waiting Manual Confirmation",
+      waiting_retry_limit: "Waiting Retry Limit",
+      waiting_other: "Other Waiting",
+      auto_retry_policy_summary_prefix: "Default auto-recovery scheduling",
+      blocked_empty: "There are no blocked aggregates that need manual handling right now."
     },
     providers: {
       profile_title: "Auth Profiles",
@@ -2232,72 +2512,72 @@ function renderRuntimeCheckpoint(runtime, metadata = null, scope = "task") {
   if (!runtime || typeof runtime !== "object") {
     return `
       <div class="insight-card checkpoint-card">
-        <strong>运行检查点</strong>
-        <span>暂无运行时信息</span>
+        <strong>${escapeHTML(t("tasks.runtime_checkpoint", "运行检查点"))}</strong>
+        <span>${escapeHTML(t("tasks.runtime_empty", "暂无运行时信息"))}</span>
       </div>
     `;
   }
   return `
     <div class="insight-card checkpoint-card">
-      <strong>执行状态</strong>
+      <strong>${escapeHTML(t("tasks.runtime_state", "执行状态"))}</strong>
       <span>${stringifyValue(runtime.executionState)}</span>
     </div>
     <div class="insight-card checkpoint-card">
-      <strong>暂停请求</strong>
+      <strong>${escapeHTML(t("tasks.pause_request", "暂停请求"))}</strong>
       <span>${runtime.pauseRequested ? "waiting_current_item" : "-"}</span>
     </div>
     <div class="insight-card checkpoint-card">
-      <strong>请求时间</strong>
+      <strong>${escapeHTML(t("tasks.requested_at", "请求时间"))}</strong>
       <span>${stringifyValue(runtime.pauseRequestedAt, "-")}</span>
     </div>
     <div class="insight-card checkpoint-card">
-      <strong>当前根目录</strong>
+      <strong>${escapeHTML(t("tasks.current_root", "当前根目录"))}</strong>
       <span><code>${escapeHTML(stringifyValue(runtime.currentRoot, "-"))}</code></span>
     </div>
     <div class="insight-card checkpoint-card">
-      <strong>当前目录</strong>
+      <strong>${escapeHTML(t("tasks.current_directory", "当前目录"))}</strong>
       <span><code>${escapeHTML(stringifyValue(runtime.currentDirectory, "-"))}</code></span>
     </div>
     <div class="insight-card checkpoint-card">
-      <strong>上次完成</strong>
+      <strong>${escapeHTML(t("tasks.last_completed", "上次完成"))}</strong>
       <span><code>${escapeHTML(stringifyValue(runtime.lastCompletedPath, "-"))}</code></span>
     </div>
     <div class="insight-card checkpoint-card">
-      <strong>处理进度</strong>
+      <strong>${escapeHTML(t("tasks.progress", "处理进度"))}</strong>
       <span>${stringifyValue(runtime.processedCount, "0")} / next ${stringifyValue(runtime.nextSequence, "1")}</span>
     </div>
-    ${metadata && typeof metadata === "object" ? renderRuntimePathChips("选定根目录", metadata.selectedRoots || [], scope, "roots") : ""}
-    ${metadata && typeof metadata === "object" ? renderRuntimePathChips("扫描轨迹", metadata.scanTrace || [], scope, "scan") : ""}
+    ${metadata && typeof metadata === "object" ? renderRuntimePathChips(t("tasks.selected_roots", "选定根目录"), metadata.selectedRoots || [], scope, "roots") : ""}
+    ${metadata && typeof metadata === "object" ? renderRuntimePathChips(t("tasks.scan_trace", "扫描轨迹"), metadata.scanTrace || [], scope, "scan") : ""}
     <div class="insight-card checkpoint-card">
-      <strong>结果计数</strong>
+      <strong>${escapeHTML(t("tasks.result_count", "结果计数"))}</strong>
       <span>done ${stringifyValue(runtime.doneCount, "0")} / skipped ${stringifyValue(runtime.skippedCount, "0")} / failed ${stringifyValue(runtime.failedCount, "0")}</span>
     </div>
     <div class="insight-card checkpoint-card">
-      <strong>源端删除记录</strong>
+      <strong>${escapeHTML(t("tasks.source_deletion_count", "源端删除记录"))}</strong>
       <span>${stringifyValue(runtime.sourceDeletionCount, "0")}</span>
     </div>
     <div class="insight-card checkpoint-card">
-      <strong>风控命中</strong>
+      <strong>${escapeHTML(t("tasks.risk_hits", "风控命中"))}</strong>
       <span>${stringifyValue(runtime.riskHitCount, "0")} / last ${stringifyValue(runtime.lastRiskStatus, "-")}</span>
     </div>
     <div class="insight-card checkpoint-card">
-      <strong>重试队列</strong>
+      <strong>${escapeHTML(t("tasks.retry_queue_label", "重试队列"))}</strong>
       <span>可重试 ${stringifyValue(runtime.retryableCount, "0")} / 阻塞 ${stringifyValue(runtime.blockedRetryCount, "0")}</span>
     </div>
     <div class="insight-card checkpoint-card">
-      <strong>阻塞原因</strong>
+      <strong>${escapeHTML(t("tasks.blocked_reason", "阻塞原因"))}</strong>
       <span>${stringifyValue(runtime.blockedReason, "-")}</span>
     </div>
     <div class="insight-card checkpoint-card">
-      <strong>处理动作</strong>
+      <strong>${escapeHTML(t("tasks.handling_action", "处理动作"))}</strong>
       <span>${stringifyValue(runtime.blockedAction, "-")}</span>
     </div>
     <div class="insight-card checkpoint-card">
-      <strong>处理建议</strong>
+      <strong>${escapeHTML(t("tasks.handling_advice", "处理建议"))}</strong>
       <span>${stringifyValue(runtime.blockedAdvice, "-")}</span>
     </div>
     <div class="insight-card checkpoint-card">
-      <strong>阻塞摘要</strong>
+      <strong>${escapeHTML(t("tasks.blocked_summary", "阻塞摘要"))}</strong>
       <span>${escapeHTML(
         renderBlockedSummary(
           runtime.blockedAction,
@@ -2308,46 +2588,46 @@ function renderRuntimeCheckpoint(runtime, metadata = null, scope = "task") {
       )}</span>
     </div>
     <div class="insight-card checkpoint-card">
-      <strong>下次自动补传</strong>
+      <strong>${escapeHTML(t("tasks.next_auto_recover", "下次自动补传"))}</strong>
       <span>${stringifyValue(runtime.nextRetryAt, "-")}</span>
     </div>
     ${
       metadata?.retrySummary
         ? `
           <div class="insight-card checkpoint-card">
-            <strong>后台补传候选</strong>
+            <strong>${escapeHTML(t("tasks.auto_recover_candidate", "后台补传候选"))}</strong>
             <span>${escapeHTML(renderAutoRecoverMode(metadata.retrySummary))}</span>
           </div>
           <div class="insight-card checkpoint-card">
-            <strong>队列拆分</strong>
+            <strong>${escapeHTML(t("tasks.queue_breakdown", "队列拆分"))}</strong>
             <span>${escapeHTML(renderRetrySummaryBreakdown(metadata.retrySummary))}</span>
           </div>
           <div class="insight-card checkpoint-card">
-            <strong>自动补传提示</strong>
+            <strong>${escapeHTML(t("tasks.auto_recover_advice", "自动补传提示"))}</strong>
             <span>${escapeHTML(stringifyValue(metadata.retrySummary.autoRecoverAdvice, "-"))}</span>
           </div>
           <div class="insight-card checkpoint-card">
-            <strong>恢复等待 - Auth 刷新</strong>
+            <strong>${escapeHTML(t("tasks.wait_auth_refresh", "恢复等待 - Auth 刷新"))}</strong>
             <span>${stringifyValue(metadata.retrySummary.autoRecoverWaitingAuthRefreshTasks, "0")}</span>
           </div>
           <div class="insight-card checkpoint-card">
-            <strong>恢复等待 - 本地恢复</strong>
+            <strong>${escapeHTML(t("tasks.wait_local_restore", "恢复等待 - 本地恢复"))}</strong>
             <span>${stringifyValue(metadata.retrySummary.autoRecoverWaitingLocalRestoreTasks, "0")}</span>
           </div>
           <div class="insight-card checkpoint-card">
-            <strong>恢复等待 - Provider 会话</strong>
+            <strong>${escapeHTML(t("tasks.wait_provider_session", "恢复等待 - Provider 会话"))}</strong>
             <span>${stringifyValue(metadata.retrySummary.autoRecoverWaitingProviderSessionTasks, "0")}</span>
           </div>
           <div class="insight-card checkpoint-card">
-            <strong>恢复等待 - 手动确认</strong>
+            <strong>${escapeHTML(t("tasks.wait_manual_confirmation", "恢复等待 - 手动确认"))}</strong>
             <span>${stringifyValue(metadata.retrySummary.autoRecoverWaitingManualTasks, "0")}</span>
           </div>
           <div class="insight-card checkpoint-card">
-            <strong>恢复等待 - 限额超限</strong>
+            <strong>${escapeHTML(t("tasks.wait_retry_limit", "恢复等待 - 限额超限"))}</strong>
             <span>${stringifyValue(metadata.retrySummary.autoRecoverWaitingRetryLimitTasks, "0")}</span>
           </div>
           <div class="insight-card checkpoint-card">
-            <strong>恢复等待 - 时间窗</strong>
+            <strong>${escapeHTML(t("tasks.wait_retry_window", "恢复等待 - 时间窗"))}</strong>
             <span>${stringifyValue(metadata.retrySummary.autoRecoverWaitingRetryWindowTasks, metadata.retrySummary.windowBlocked ? "1" : "0")}</span>
           </div>
         `
@@ -4370,17 +4650,17 @@ function renderTaskResolutionGuide(detail) {
     if (retrySummary.autoRecoverMode === "upload_checkpoint_auto_resume" || retrySummary.autoRecoverMode === "retry_queue_auto_retry" || Number(retrySummary.uploadCheckpointEligible || 0) > 0 || Boolean(retrySummary.autoRecoverEligible)) {
       return `
         <div class="provider-card">
-          <h3>${retrySummary.autoRecoverMode === "retry_queue_auto_retry" ? "等待后台自动补传接管" : "等待上传会话自动续跑"}</h3>
+          <h3>${escapeHTML(retrySummary.autoRecoverMode === "retry_queue_auto_retry" ? t("tasks.auto_recover_takeover_title", "等待后台自动补传接管") : t("tasks.upload_checkpoint_resume_title", "等待上传会话自动续跑"))}</h3>
           <div class="meta-row">
             <span class="pill">${escapeHTML(stringifyValue(retrySummary.autoRecoverMode, "upload_checkpoint_auto_resume"))}</span>
             ${nextRetryAt ? `<span class="pill">${escapeHTML(nextRetryAt)}</span>` : ""}
           </div>
           <ol class="checklist">
-            <li>${escapeHTML(retrySummary.autoRecoverMode === "retry_queue_auto_retry" ? "当前队列满足后台自动补传条件，系统会在后续 tick 中自动尝试继续执行。" : "当前失败队列携带可恢复的 upload checkpoint，单机 worker 会优先尝试续跑上传会话。")}</li>
-            <li>${escapeHTML(retrySummary.autoRecoverMode === "retry_queue_auto_retry" ? "先到状态矩阵查看后台补传候选池，确认该任务是否已经进入 retry_queue_auto_retry lane。" : "先到状态矩阵查看后台补传候选池，确认该任务是否已经进入 upload checkpoint 自动续跑 lane。")}</li>
-            <li>${escapeHTML(retrySummary.autoRecoverMode === "retry_queue_auto_retry" ? "如果长时间未自动推进，再检查 retrySummary、provider 返回状态和风险窗口是否把它留在等待态。" : "如果长时间未自动推进，再检查 providerData / uploadId / nextPartNumber 等恢复线索是否完整。")}</li>
+            <li>${escapeHTML(retrySummary.autoRecoverMode === "retry_queue_auto_retry" ? t("tasks.auto_recover_takeover_step_1", "当前队列满足后台自动补传条件，系统会在后续 tick 中自动尝试继续执行。") : t("tasks.upload_checkpoint_resume_step_1", "当前失败队列携带可恢复的 upload checkpoint，单机 worker 会优先尝试续跑上传会话。"))}</li>
+            <li>${escapeHTML(retrySummary.autoRecoverMode === "retry_queue_auto_retry" ? t("tasks.auto_recover_takeover_step_2", "先到状态矩阵查看后台补传候选池，确认该任务是否已经进入 retry_queue_auto_retry lane。") : t("tasks.upload_checkpoint_resume_step_2", "先到状态矩阵查看后台补传候选池，确认该任务是否已经进入 upload checkpoint 自动续跑 lane。"))}</li>
+            <li>${escapeHTML(retrySummary.autoRecoverMode === "retry_queue_auto_retry" ? t("tasks.auto_recover_takeover_step_3", "如果长时间未自动推进，再检查 retrySummary、provider 返回状态和风险窗口是否把它留在等待态。") : t("tasks.upload_checkpoint_resume_step_3", "如果长时间未自动推进，再检查 providerData / uploadId / nextPartNumber 等恢复线索是否完整。"))}</li>
           </ol>
-          <div class="muted">${escapeHTML(retrySummary.autoRecoverAdvice || "当前失败队列都带可恢复的 upload checkpoint，单机 worker 会优先尝试续跑上传会话。")}</div>
+          <div class="muted">${escapeHTML(retrySummary.autoRecoverAdvice || t("tasks.auto_recover_takeover_default_advice", "当前失败队列都带可恢复的 upload checkpoint，单机 worker 会优先尝试续跑上传会话。"))}</div>
           <div class="actions compact">
             <button
               type="button"
@@ -4390,7 +4670,7 @@ function renderTaskResolutionGuide(detail) {
               data-task-guide-mode="${escapeHTML(stringifyValue(retrySummary.autoRecoverMode, "upload_checkpoint_auto_resume"))}"
               data-task-guide-provider="${escapeHTML(providerKey)}"
               data-task-guide-profile="${escapeHTML(profileId)}"
-            >${escapeHTML(retrySummary.autoRecoverMode === "retry_queue_auto_retry" ? "只看自动补传候选" : "只看自动续跑候选")}</button>
+            >${escapeHTML(retrySummary.autoRecoverMode === "retry_queue_auto_retry" ? t("tasks.focus_auto_recover_only", "只看自动补传候选") : t("tasks.focus_checkpoint_only", "只看自动续跑候选"))}</button>
             <button
               type="button"
               class="ghost"
@@ -4398,15 +4678,15 @@ function renderTaskResolutionGuide(detail) {
               data-task-guide-intent="focus_status_open"
               data-task-guide-provider="${escapeHTML(providerKey)}"
               data-task-guide-profile="${escapeHTML(profileId)}"
-            >打开状态矩阵</button>
+            >${escapeHTML(t("tasks.open_status_matrix", "打开状态矩阵"))}</button>
           </div>
         </div>
       `;
     }
     return `
       <div class="insight-card">
-        <strong>下一步处理</strong>
-        <span>当前任务没有 blocked 人工处理动作，可直接继续运行或观察状态矩阵。</span>
+        <strong>${escapeHTML(t("tasks.task_next_steps_title", "下一步处理"))}</strong>
+        <span>${escapeHTML(t("tasks.task_next_steps_idle", "当前任务没有 blocked 人工处理动作，可直接继续运行或观察状态矩阵。"))}</span>
       </div>
     `;
   }
@@ -5124,24 +5404,24 @@ function updateExecutionRecommendationAction(metadata = {}) {
 function renderTasks() {
   const wrap = $("#tasks-list");
   if (!state.tasks.length) {
-    wrap.innerHTML = `<div class="task-item">暂无任务。</div>`;
+    wrap.innerHTML = `<div class="task-item">${escapeHTML(state.language === "en-US" ? "No tasks yet." : "暂无任务。")}</div>`;
     wireTaskQuickActions(null);
     $("#task-summary").innerHTML = `
       <div class="insight-card">
-        <strong>执行模式</strong>
-        <span>选择任务后显示</span>
+        <strong>${escapeHTML(t("tasks.execution_mode", "执行模式"))}</strong>
+        <span>${escapeHTML(t("tasks.waiting_selected", "选择任务后显示"))}</span>
       </div>
     `;
     $("#task-runtime").innerHTML = `
       <div class="insight-card">
-        <strong>运行检查点</strong>
-        <span>选择任务后显示</span>
+        <strong>${escapeHTML(t("tasks.runtime_checkpoint", "运行检查点"))}</strong>
+        <span>${escapeHTML(t("tasks.waiting_selected", "选择任务后显示"))}</span>
       </div>
     `;
     updateTaskRetryQueue(null);
-    $("#task-resolution-guide").innerHTML = `<div class="directory-empty">选择任务后显示处理建议。</div>`;
+    $("#task-resolution-guide").innerHTML = `<div class="directory-empty">${escapeHTML(t("tasks.waiting_task_resolution", "选择任务后显示处理建议。"))}</div>`;
     updateTaskTreePanels(null);
-    $("#task-detail").textContent = "选择一条任务查看详情...";
+    $("#task-detail").textContent = t("tasks.detail_waiting", "选择一条任务查看详情...");
     return;
   }
 
@@ -5182,20 +5462,20 @@ function renderSelectedTask() {
     wireTaskQuickActions(null);
     $("#task-summary").innerHTML = `
       <div class="insight-card">
-        <strong>执行模式</strong>
-        <span>选择任务后显示</span>
+        <strong>${escapeHTML(t("tasks.execution_mode", "执行模式"))}</strong>
+        <span>${escapeHTML(t("tasks.waiting_selected", "选择任务后显示"))}</span>
       </div>
     `;
     $("#task-runtime").innerHTML = `
       <div class="insight-card">
-        <strong>运行检查点</strong>
-        <span>选择任务后显示</span>
+        <strong>${escapeHTML(t("tasks.runtime_checkpoint", "运行检查点"))}</strong>
+        <span>${escapeHTML(t("tasks.waiting_selected", "选择任务后显示"))}</span>
       </div>
     `;
     updateTaskRetryQueue(null);
     updateTaskTreePanels(null);
-    $("#task-resolution-guide").innerHTML = `<div class="directory-empty">选择任务后显示处理建议。</div>`;
-    $("#task-detail").textContent = "选择一条任务查看详情...";
+    $("#task-resolution-guide").innerHTML = `<div class="directory-empty">${escapeHTML(t("tasks.waiting_task_resolution", "选择任务后显示处理建议。"))}</div>`;
+    $("#task-detail").textContent = t("tasks.detail_waiting", "选择一条任务查看详情...");
     return;
   }
   const metadata = detail.plan?.metadata || {};
@@ -5204,88 +5484,88 @@ function renderSelectedTask() {
   wireTaskQuickActions(detail);
   $("#task-summary").innerHTML = `
     <div class="insight-card">
-      <strong>执行模式</strong>
+      <strong>${escapeHTML(t("tasks.execution_mode", "执行模式"))}</strong>
       <span>${stringifyValue(metadata.executionMode)}</span>
     </div>
-    ${renderRuntimePathChips("选定根目录", metadata.selectedRoots || [], "task", "roots")}
+    ${renderRuntimePathChips(t("tasks.selected_roots", "选定根目录"), metadata.selectedRoots || [], "task", "roots")}
     <div class="insight-card">
-      <strong>目标根目录</strong>
+      <strong>${escapeHTML(t("tasks.target_root", "目标根目录"))}</strong>
       <span><code>${escapeHTML(stringifyValue(metadata.targetRoot, "/"))}</code></span>
     </div>
-    ${renderRuntimePathChips("扫描轨迹", metadata.scanTrace || [], "task", "scan")}
+    ${renderRuntimePathChips(t("tasks.scan_trace", "扫描轨迹"), metadata.scanTrace || [], "task", "scan")}
     <div class="insight-card">
-      <strong>推荐模式</strong>
+      <strong>${escapeHTML(t("tasks.recommended_mode", "推荐模式"))}</strong>
       <span>${stringifyValue(metadata.recommendedExecutionMode)}</span>
     </div>
     <div class="insight-card">
-      <strong>推荐原因</strong>
+      <strong>${escapeHTML(t("tasks.recommended_reason", "推荐原因"))}</strong>
       <span>${stringifyValue(metadata.recommendedExecutionModeReason)}</span>
     </div>
     <div class="insight-card">
-      <strong>扫描方式</strong>
+      <strong>${escapeHTML(t("tasks.scan_mode", "扫描方式"))}</strong>
       <span>${stringifyValue(metadata.scanMode, "尚未运行或无需扫描")}</span>
     </div>
     <div class="insight-card">
-      <strong>风险节流</strong>
+      <strong>${escapeHTML(t("tasks.risk_throttle", "风险节流"))}</strong>
       <span>${stringifyValue(metadata.riskProfile?.requestIntervalMs, "0")}ms / dir ${stringifyValue(metadata.riskProfile?.directoryIntervalMs, "0")}ms / retry ${stringifyValue(metadata.riskProfile?.retryLimit, "0")} / conc ${stringifyValue(metadata.riskProfile?.maxConcurrent, "0")}</span>
     </div>
     ${renderRiskResolutionMetaCards(metadata.riskProfileResolution)}
     <div class="insight-card">
-      <strong>推荐风控</strong>
+      <strong>${escapeHTML(t("tasks.recommended_risk", "推荐风控"))}</strong>
       <span>${stringifyValue(metadata.recommendedRiskMode, "-")}</span>
     </div>
     <div class="insight-card">
-      <strong>推荐风控原因</strong>
+      <strong>${escapeHTML(t("tasks.recommended_risk_reason", "推荐风控原因"))}</strong>
       <span>${stringifyValue(metadata.recommendedRiskModeReason, "-")}</span>
     </div>
     <div class="insight-card">
-      <strong>激进风险提示</strong>
+      <strong>${escapeHTML(t("tasks.aggressive_warning", "激进风险提示"))}</strong>
       <span>${stringifyValue(metadata.aggressiveRiskWarning, "-")}</span>
     </div>
     <div class="insight-card">
-      <strong>源端删除策略</strong>
+      <strong>${escapeHTML(t("tasks.source_delete_policy", "源端删除策略"))}</strong>
       <span>${renderSourceDeletePolicy(metadata.sourceDeletePolicy)}</span>
     </div>
     <div class="insight-card">
-      <strong>风险模板解释</strong>
+      <strong>${escapeHTML(t("tasks.risk_resolution", "风险模板解释"))}</strong>
       <span>${escapeHTML(renderRiskResolutionSummary(metadata.riskProfileResolution))}</span>
       ${renderRiskResolutionDetail(metadata.riskProfileResolution)}
     </div>
     ${renderRiskResolutionFlow(metadata.riskProfileResolution)}
     <div class="insight-card">
-      <strong>自动补传时间窗</strong>
+      <strong>${escapeHTML(t("tasks.retry_window", "自动补传时间窗"))}</strong>
       <span>${escapeHTML(renderRiskWindow(metadata.riskProfile))}</span>
     </div>
     <div class="insight-card">
-      <strong>重试范围</strong>
-      <span>${metadata.retryPendingOnly ? `pending_only (${Array.isArray(metadata.retryPendingPaths) ? metadata.retryPendingPaths.length : 0} items)` : "full_task"}</span>
+      <strong>${escapeHTML(t("tasks.retry_scope", "重试范围"))}</strong>
+      <span>${metadata.retryPendingOnly ? tf("tasks.pending_only_with_count", { count: Array.isArray(metadata.retryPendingPaths) ? metadata.retryPendingPaths.length : 0 }, `pending_only (${Array.isArray(metadata.retryPendingPaths) ? metadata.retryPendingPaths.length : 0} items)`) : t("tasks.full_task", "full_task")}</span>
     </div>
     <div class="insight-card">
-      <strong>重试模式</strong>
+      <strong>${escapeHTML(t("tasks.retry_mode", "重试模式"))}</strong>
       <span>${stringifyValue(metadata.retryMode, "default")}</span>
     </div>
     <div class="insight-card">
-      <strong>重试来源</strong>
+      <strong>${escapeHTML(t("tasks.retry_source", "重试来源"))}</strong>
       <span>${stringifyValue(metadata.retryScope, metadata.retrySelectedPaths ? "selected_subset" : "-")}</span>
     </div>
     <div class="insight-card">
-      <strong>重试选中路径</strong>
+      <strong>${escapeHTML(t("tasks.retry_selected_paths", "重试选中路径"))}</strong>
       <span>${Array.isArray(metadata.retrySelectedPaths) && metadata.retrySelectedPaths.length ? summarizePathList(metadata.retrySelectedPaths, 4) : "-"}</span>
     </div>
     <div class="insight-card">
-      <strong>重试路径数</strong>
+      <strong>${escapeHTML(t("tasks.retry_selected_path_count", "重试路径数"))}</strong>
       <span>${stringifyValue(metadata.retrySelectedPathCount, Array.isArray(metadata.retrySelectedPaths) ? metadata.retrySelectedPaths.length : 0)}</span>
     </div>
     <div class="insight-card">
-      <strong>重试 checkpoint 数</strong>
+      <strong>${escapeHTML(t("tasks.retry_checkpoint_count", "重试 checkpoint 数"))}</strong>
       <span>${stringifyValue(metadata.retryUploadCheckpointCount, "0")}</span>
     </div>
     <div class="insight-card">
-      <strong>重试摘要</strong>
+      <strong>${escapeHTML(t("tasks.retry_summary", "重试摘要"))}</strong>
       <span>${stringifyValue(metadata.retrySummary?.blockedReason || (metadata.retrySummary?.shouldBlock ? "blocked" : "ready"), "-")}</span>
     </div>
     <div class="insight-card">
-      <strong>下一步摘要</strong>
+      <strong>${escapeHTML(t("tasks.next_summary", "下一步摘要"))}</strong>
       <span>${escapeHTML(
         renderBlockedSummary(
           runtime.blockedAction || metadata.retrySummary?.blockedAction,
@@ -5296,19 +5576,19 @@ function renderSelectedTask() {
       )}</span>
     </div>
     <div class="insight-card">
-      <strong>源端删除记录</strong>
+      <strong>${escapeHTML(t("tasks.source_deletion_count", "源端删除记录"))}</strong>
       <span>${stringifyValue(runtime.sourceDeletionCount || metadata.deletedEntryCount, "0")}</span>
     </div>
     <div class="insight-card">
-      <strong>建议动作</strong>
+      <strong>${escapeHTML(t("tasks.suggested_action", "建议动作"))}</strong>
       <span>${stringifyValue(metadata.retrySummary?.blockedAction, "-")}</span>
     </div>
     <div class="insight-card">
-      <strong>后台补传候选</strong>
+      <strong>${escapeHTML(t("tasks.auto_recover_candidate", "后台补传候选"))}</strong>
       <span>${renderAutoRecoverMode(metadata.retrySummary)}</span>
     </div>
     <div class="insight-card">
-      <strong>队列拆分</strong>
+      <strong>${escapeHTML(t("tasks.queue_breakdown", "队列拆分"))}</strong>
       <span>${renderRetrySummaryBreakdown(metadata.retrySummary)}</span>
     </div>
   `;
@@ -5466,22 +5746,22 @@ function renderStatus() {
   syncAutoRecoverProfiles();
   syncAutoRecoverBlockedActions();
   $("#evidence-summary").innerHTML = `
-    <div class="metric"><span>任务总数</span><strong>${evidence.totalTasks}</strong></div>
-    <div class="metric"><span>已完成任务</span><strong>${evidence.completedTasks}</strong></div>
-    <div class="metric"><span>阻塞任务</span><strong>${evidence.blockedTasks}</strong></div>
-    <div class="metric"><span>执行模式</span><strong>${stringifyValue(evidence.executionMode, "-")}</strong></div>
-    <div class="metric"><span>扫描模式</span><strong>${stringifyValue(evidence.scanMode, "-")}</strong></div>
-    <div class="metric"><span>源端删除策略</span><strong>${renderSourceDeletePolicy(evidence.sourceDeletePolicy)}</strong></div>
-    <div class="metric"><span>自动补传任务</span><strong>${stringifyValue(evidence.autoRecoverTasks, "0")}</strong></div>
-    <div class="metric"><span>可直接放行</span><strong>${stringifyValue(evidence.autoRecoverRunnableTasks, "0")}</strong></div>
-    <div class="metric"><span>等待冷却</span><strong>${stringifyValue(evidence.autoRecoverWaitingCooldownTasks, "0")}</strong></div>
-    <div class="metric"><span>等待时间窗</span><strong>${stringifyValue(evidence.autoRecoverWaitingRetryWindowTasks, "0")}</strong></div>
-    <div class="metric"><span>等待授权刷新</span><strong>${stringifyValue(evidence.autoRecoverWaitingAuthRefreshTasks, "0")}</strong></div>
-    <div class="metric"><span>等待本地恢复</span><strong>${stringifyValue(evidence.autoRecoverWaitingLocalRestoreTasks, "0")}</strong></div>
-    <div class="metric"><span>等待会话恢复</span><strong>${stringifyValue(evidence.autoRecoverWaitingProviderSessionTasks, "0")}</strong></div>
-    <div class="metric"><span>等待人工确认</span><strong>${stringifyValue(evidence.autoRecoverWaitingManualTasks, "0")}</strong></div>
-    <div class="metric"><span>等待重试上限</span><strong>${stringifyValue(evidence.autoRecoverWaitingRetryLimitTasks, "0")}</strong></div>
-    <div class="metric"><span>其它等待</span><strong>${stringifyValue(evidence.autoRecoverWaitingOtherTasks, "0")}</strong></div>
+    <div class="metric"><span>${escapeHTML(t("status.total_tasks", "任务总数"))}</span><strong>${evidence.totalTasks}</strong></div>
+    <div class="metric"><span>${escapeHTML(t("status.completed_tasks", "已完成任务"))}</span><strong>${evidence.completedTasks}</strong></div>
+    <div class="metric"><span>${escapeHTML(t("status.blocked_tasks", "阻塞任务"))}</span><strong>${evidence.blockedTasks}</strong></div>
+    <div class="metric"><span>${escapeHTML(t("status.execution_mode", "执行模式"))}</span><strong>${stringifyValue(evidence.executionMode, "-")}</strong></div>
+    <div class="metric"><span>${escapeHTML(t("status.scan_mode", "扫描模式"))}</span><strong>${stringifyValue(evidence.scanMode, "-")}</strong></div>
+    <div class="metric"><span>${escapeHTML(t("status.source_delete_policy", "源端删除策略"))}</span><strong>${renderSourceDeletePolicy(evidence.sourceDeletePolicy)}</strong></div>
+    <div class="metric"><span>${escapeHTML(t("status.auto_recover_tasks", "自动补传任务"))}</span><strong>${stringifyValue(evidence.autoRecoverTasks, "0")}</strong></div>
+    <div class="metric"><span>${escapeHTML(t("status.runnable_now", "可直接放行"))}</span><strong>${stringifyValue(evidence.autoRecoverRunnableTasks, "0")}</strong></div>
+    <div class="metric"><span>${escapeHTML(t("status.waiting_cooldown", "等待冷却"))}</span><strong>${stringifyValue(evidence.autoRecoverWaitingCooldownTasks, "0")}</strong></div>
+    <div class="metric"><span>${escapeHTML(t("status.waiting_retry_window", "等待时间窗"))}</span><strong>${stringifyValue(evidence.autoRecoverWaitingRetryWindowTasks, "0")}</strong></div>
+    <div class="metric"><span>${escapeHTML(t("status.waiting_auth_refresh", "等待授权刷新"))}</span><strong>${stringifyValue(evidence.autoRecoverWaitingAuthRefreshTasks, "0")}</strong></div>
+    <div class="metric"><span>${escapeHTML(t("status.waiting_local_restore", "等待本地恢复"))}</span><strong>${stringifyValue(evidence.autoRecoverWaitingLocalRestoreTasks, "0")}</strong></div>
+    <div class="metric"><span>${escapeHTML(t("status.waiting_provider_session", "等待会话恢复"))}</span><strong>${stringifyValue(evidence.autoRecoverWaitingProviderSessionTasks, "0")}</strong></div>
+    <div class="metric"><span>${escapeHTML(t("status.waiting_manual_confirmation", "等待人工确认"))}</span><strong>${stringifyValue(evidence.autoRecoverWaitingManualTasks, "0")}</strong></div>
+    <div class="metric"><span>${escapeHTML(t("status.waiting_retry_limit", "等待重试上限"))}</span><strong>${stringifyValue(evidence.autoRecoverWaitingRetryLimitTasks, "0")}</strong></div>
+    <div class="metric"><span>${escapeHTML(t("status.waiting_other", "其它等待"))}</span><strong>${stringifyValue(evidence.autoRecoverWaitingOtherTasks, "0")}</strong></div>
     <div class="metric"><span>成功结果</span><strong>${evidence.doneResultCount}</strong></div>
     <div class="metric"><span>跳过结果</span><strong>${evidence.skippedResultCount}</strong></div>
     <div class="metric"><span>待人工处理</span><strong>${evidence.pendingResultCount}</strong></div>
@@ -5523,7 +5803,7 @@ function renderStatus() {
     `provider ${stringifyValue(autoRetryPolicy.limitPerProvider, "-")}`,
     `profile ${stringifyValue(autoRetryPolicy.limitPerProfile, "-")}`,
   ].join(" / ");
-  $("#auto-retry-policy-summary").textContent = `自动补传默认调度：${autoRetryPolicySummary}`;
+  $("#auto-retry-policy-summary").textContent = `${t("status.auto_retry_policy_summary_prefix", "自动补传默认调度")}：${autoRetryPolicySummary}`;
   $("#auto-recover-filter-summary").textContent = renderAutoRecoverFilterSummary(
     filterAutoRecoverItems(evidence.autoRecoverPool || []),
     evidence.autoRecoverPool || [],
@@ -5616,7 +5896,7 @@ function renderStatus() {
 
 function renderBlockedActionsSummary(items) {
   if (!Array.isArray(items) || !items.length) {
-    return `<div class="directory-empty">当前没有需要人工处理的 blocked 聚合项。</div>`;
+    return `<div class="directory-empty">${escapeHTML(t("status.blocked_empty", "当前没有需要人工处理的 blocked 聚合项。"))}</div>`;
   }
   return items
     .map(
@@ -8749,6 +9029,10 @@ function wireLanguage() {
     syncSessionState();
     syncAuthAssistInputs();
     syncProfileAuthGuide();
+    renderPreview();
+    renderTasks();
+    renderStatus();
+    renderAllDirectoryBrowsers();
   });
 }
 
