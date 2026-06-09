@@ -212,6 +212,50 @@ jobs:
           cd dist
           sha256sum * > SHA256SUMS.txt
 
+      - name: Verify release asset whitelist
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd dist
+
+          expected_assets=(
+            "SHA256SUMS.txt"
+            "cloudpan-sync-go-darwin-amd64.tar.gz"
+            "cloudpan-sync-go-darwin-arm64.tar.gz"
+            "cloudpan-sync-go-desktop-darwin-amd64.tar.gz"
+            "cloudpan-sync-go-desktop-darwin-arm64.tar.gz"
+            "cloudpan-sync-go-desktop-linux-amd64.tar.gz"
+            "cloudpan-sync-go-desktop-linux-arm64.tar.gz"
+            "cloudpan-sync-go-desktop-windows-amd64.zip"
+            "cloudpan-sync-go-docker-image.tar.gz"
+            "cloudpan-sync-go-linux-amd64.tar.gz"
+            "cloudpan-sync-go-linux-arm64.tar.gz"
+            "cloudpan-sync-go-windows-amd64.zip"
+          )
+
+          mapfile -t actual_assets < <(find . -maxdepth 1 -type f -printf '%f\n' | sort)
+          mapfile -t expected_sorted < <(printf '%s\n' "${expected_assets[@]}" | sort)
+
+          printf 'Expected assets:\n%s\n' "${expected_sorted[*]}"
+          printf 'Actual assets:\n%s\n' "${actual_assets[*]}"
+
+          if [ "${#actual_assets[@]}" -ne "${#expected_sorted[@]}" ]; then
+            echo "Release asset count mismatch."
+            exit 1
+          fi
+
+          for i in "${!expected_sorted[@]}"; do
+            if [ "${actual_assets[$i]}" != "${expected_sorted[$i]}" ]; then
+              echo "Unexpected release asset: expected ${expected_sorted[$i]}, got ${actual_assets[$i]}"
+              exit 1
+            fi
+          done
+
+          if find . -maxdepth 1 -type f \( -iname '*cloud-clipboard*' -o -iname '*clipboard*' \) | grep -q .; then
+            echo "Detected unexpected foreign artifact name."
+            exit 1
+          fi
+
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
