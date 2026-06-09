@@ -310,6 +310,20 @@ const translations = {
       waiting_retry_policy: "等待自动补传调度策略...",
       auto_recover_pool: "自动补传候选池",
       auto_recover_pool_desc: "按后台补传模式聚合当前可自动接管或等待窗口的任务",
+      all_modes: "全部模式",
+      all_strategies: "全部策略",
+      all_protocol_groups: "全部协议族",
+      all_providers: "全部 provider",
+      all_profiles: "全部授权档案",
+      all_retry_classes: "全部失败类型",
+      all_blocked_actions: "全部阻塞动作",
+      all_execution_states: "全部执行状态",
+      auto_recover_limit_placeholder: "本轮上限，例如 3",
+      auto_recover_limit_per_mode_placeholder: "模式预算，例如 1",
+      auto_recover_limit_per_lane_placeholder: "lane 预算，例如 1",
+      auto_recover_limit_per_protocol_group_placeholder: "协议族预算，例如 1",
+      auto_recover_limit_per_provider_placeholder: "provider 预算，例如 1",
+      auto_recover_limit_per_profile_placeholder: "账号预算，例如 1",
       preview_filtered: "预演当前筛选",
       run_filtered: "执行当前筛选",
       clear_filters: "清空筛选",
@@ -319,9 +333,25 @@ const translations = {
       protocol_coverage: "协议族覆盖",
       protocol_coverage_desc: "按 protocol group 聚合真实成功样本",
       report_title: "验收报告",
+      report_title_placeholder: "报告标题，默认使用标准标题",
+      report_note_placeholder: "报告备注，写交接要点或里程碑说明",
+      waiting_report_data: "等待报告数据...",
       save: "保存",
       download_markdown: "下载 Markdown",
       provider_smoke_title: "真实 Provider Smoke",
+      provider_smoke_summary_desc: "按 protocol group 聚合真实样本",
+      provider_smoke_matrix_desc: "真实样本矩阵，合并 smoke 记录与协议族 coverage",
+      provider_smoke_filter_query_placeholder: "筛选记录标题 / provider / note",
+      provider_smoke_filter_group_placeholder: "筛选 protocolGroup",
+      provider_smoke_filter_sample_placeholder: "筛选 sampleType / reusePriority",
+      all_results: "全部结果",
+      waiting_smoke_records: "等待 smoke 记录...",
+      provider_smoke_provider_key_placeholder: "providerKey，例如 123_open",
+      provider_smoke_protocol_group_placeholder: "protocolGroup，例如 aliyun_123_open",
+      provider_smoke_auth_mode_placeholder: "authMode，例如 manual_token",
+      provider_smoke_title_placeholder: "记录标题，默认使用 provider 名称",
+      provider_smoke_note_placeholder: "备注，例如 验证了 ValidateAuth/List/Metadata",
+      provider_smoke_operations_placeholder: "操作清单，用逗号分隔，例如 ValidateAuth,List,Upload",
       provider_matrix: "Provider 状态矩阵",
       provider_matrix_title: "Provider 状态矩阵",
       runtime_checkpoints: "运行检查点概览",
@@ -934,6 +964,20 @@ const translations = {
       waiting_retry_policy: "Waiting for the auto-recovery scheduling policy...",
       auto_recover_pool: "Auto-Recovery Pool",
       auto_recover_pool_desc: "Group tasks that can be auto-taken-over or are waiting for a recovery window",
+      all_modes: "All Modes",
+      all_strategies: "All Strategies",
+      all_protocol_groups: "All Protocol Groups",
+      all_providers: "All Providers",
+      all_profiles: "All Auth Profiles",
+      all_retry_classes: "All Failure Types",
+      all_blocked_actions: "All Blocked Actions",
+      all_execution_states: "All Execution States",
+      auto_recover_limit_placeholder: "Run limit, for example 3",
+      auto_recover_limit_per_mode_placeholder: "Mode budget, for example 1",
+      auto_recover_limit_per_lane_placeholder: "Lane budget, for example 1",
+      auto_recover_limit_per_protocol_group_placeholder: "Protocol-group budget, for example 1",
+      auto_recover_limit_per_provider_placeholder: "Provider budget, for example 1",
+      auto_recover_limit_per_profile_placeholder: "Profile budget, for example 1",
       preview_filtered: "Preview Current Filter",
       run_filtered: "Run Current Filter",
       clear_filters: "Clear Filters",
@@ -943,9 +987,25 @@ const translations = {
       protocol_coverage: "Protocol Coverage",
       protocol_coverage_desc: "Aggregate real success samples by protocol group",
       report_title: "Acceptance Report",
+      report_title_placeholder: "Report title, default to the standard title",
+      report_note_placeholder: "Report note, handoff details or milestone summary",
+      waiting_report_data: "Waiting for report data...",
       save: "Save",
       download_markdown: "Download Markdown",
       provider_smoke_title: "Real Provider Smoke",
+      provider_smoke_summary_desc: "Aggregate real samples by protocol group",
+      provider_smoke_matrix_desc: "Real sample matrix merged from smoke records and protocol coverage",
+      provider_smoke_filter_query_placeholder: "Filter by title / provider / note",
+      provider_smoke_filter_group_placeholder: "Filter by protocolGroup",
+      provider_smoke_filter_sample_placeholder: "Filter by sampleType / reusePriority",
+      all_results: "All Results",
+      waiting_smoke_records: "Waiting for smoke records...",
+      provider_smoke_provider_key_placeholder: "providerKey, for example 123_open",
+      provider_smoke_protocol_group_placeholder: "protocolGroup, for example aliyun_123_open",
+      provider_smoke_auth_mode_placeholder: "authMode, for example manual_token",
+      provider_smoke_title_placeholder: "Record title, default to the provider name",
+      provider_smoke_note_placeholder: "Note, for example validated ValidateAuth/List/Metadata",
+      provider_smoke_operations_placeholder: "Operations, comma separated, for example ValidateAuth,List,Upload",
       provider_matrix: "Provider Status Matrix",
       provider_matrix_title: "Provider Status Matrix",
       runtime_checkpoints: "Runtime Checkpoint Overview",
@@ -5751,7 +5811,7 @@ function syncAutoRecoverProviders() {
   }
   const current = state.autoRecoverFilters.providerKey || select.value || "";
   const providerKeys = Array.from(new Set((state.providers || []).map((item) => item?.meta?.key).filter(Boolean))).sort();
-  select.innerHTML = `<option value="">全部 provider</option>${providerKeys
+  select.innerHTML = `<option value="">${escapeHTML(t("status.all_providers", "全部 provider"))}</option>${providerKeys
     .map((key) => `<option value="${key}">${key}</option>`)
     .join("")}`;
   setSelectValueIfPresent("#auto-recover-provider", current);
@@ -5780,7 +5840,7 @@ function syncAutoRecoverProtocolGroups() {
     }
   });
   const values = Array.from(groups).sort((left, right) => left.localeCompare(right, "zh-CN"));
-  select.innerHTML = `<option value="">全部协议族</option>${values
+  select.innerHTML = `<option value="">${escapeHTML(t("status.all_protocol_groups", "全部协议族"))}</option>${values
     .map((value) => `<option value="${escapeHTML(value)}">${escapeHTML(value)}</option>`)
     .join("")}`;
   setFilterControlValue("#auto-recover-protocol-group", values.includes(current) ? current : "");
@@ -5805,7 +5865,7 @@ function syncAutoRecoverProfiles() {
     });
   });
   const sorted = [...options.entries()].sort((left, right) => left[1].localeCompare(right[1], "zh-CN"));
-  select.innerHTML = `<option value="">全部授权档案</option>${sorted
+  select.innerHTML = `<option value="">${escapeHTML(t("status.all_profiles", "全部授权档案"))}</option>${sorted
     .map(([value, label]) => `<option value="${escapeHTML(value)}">${escapeHTML(label)}</option>`)
     .join("")}`;
   setFilterControlValue(
@@ -5836,7 +5896,7 @@ function syncAutoRecoverBlockedActions() {
     });
   });
   const values = Array.from(actions).sort();
-  select.innerHTML = `<option value="">全部阻塞动作</option>${values
+  select.innerHTML = `<option value="">${escapeHTML(t("status.all_blocked_actions", "全部阻塞动作"))}</option>${values
     .map((value) => `<option value="${value}">${value}</option>`)
     .join("")}`;
   setFilterControlValue("#auto-recover-blocked-action", values.includes(current) ? current : "");
