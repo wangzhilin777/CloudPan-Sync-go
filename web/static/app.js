@@ -3179,7 +3179,7 @@ async function createTargetBrowserDirectory() {
   const createdPath = normalizeComparePath(`${browser.currentPath === "/" ? "" : browser.currentPath}/${dirName}`) || "/";
   $("#plan-target-browser-create-name").value = "";
   state.directoryBrowsers.target.selectedPath = createdPath;
-  showFlash(`已在 ${browser.currentPath} 下创建目录 ${dirName}，并自动进入该目录设为目标目录`);
+  showFlash(`已在 ${browser.currentPath} 下创建目录 ${dirName}，并自动进入该目录回填到“目标根目录”`);
   await loadDirectoryBrowser("target", createdPath);
   applyDirectoryBrowserSelection("target", createdPath);
 }

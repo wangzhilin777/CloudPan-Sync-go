@@ -270,7 +270,7 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "createTargetBrowserDirectory") {
 		t.Fatalf("expected createTargetBrowserDirectory wiring in app.js, got %q", body)
 	}
-	if !strings.Contains(body, "并自动进入该目录设为目标目录") {
+	if !strings.Contains(body, "并自动进入该目录回填到“目标根目录”") {
 		t.Fatalf("expected target directory auto-enter message in app.js, got %q", body)
 	}
 	if !strings.Contains(body, "data-browser-breadcrumb") {
@@ -329,6 +329,9 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	}
 	if !strings.Contains(body, "已将 ") || !strings.Contains(body, "回填到“目标根目录”") {
 		t.Fatalf("expected target directory selection result flash in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "并自动进入该目录回填到“目标根目录”") {
+		t.Fatalf("expected target directory create result flash in app.js, got %q", body)
 	}
 	if !strings.Contains(body, "设为目标目录") {
 		t.Fatalf("expected target directory picker label in app.js, got %q", body)
