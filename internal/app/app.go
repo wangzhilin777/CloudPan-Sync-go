@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"net"
 	"net/http"
 	"os"
 	"strings"
@@ -26,6 +27,7 @@ type App struct {
 	server    *http.Server
 	webIndex  []byte
 	webStatic http.Handler
+	runtimeAddr string
 
 	recoverBlockedTasksFunc func(context.Context, task.RecoverOptions) (task.RecoverResult, error)
 }
@@ -75,6 +77,20 @@ func New(ctx context.Context, cfg Config) (*App, error) {
 }
 
 func (a *App) Run(ctx context.Context) error {
+	return a.RunWithListener(ctx, nil)
+}
+
+func (a *App) RunWithListener(ctx context.Context, listener net.Listener) error {
+	if listener == nil {
+		var err error
+		listener, err = net.Listen("tcp", a.cfg.Addr)
+		if err != nil {
+			return fmt.Errorf("listen on %s: %w", a.cfg.Addr, err)
+		}
+	}
+	a.runtimeAddr = listener.Addr().String()
+	a.server.Addr = a.runtimeAddr
+
 	errCh := make(chan error, 1)
 	runCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
@@ -86,14 +102,14 @@ func (a *App) Run(ctx context.Context) error {
 	go func() {
 		a.logger.Info(
 			"服务已启动，请打开控制台",
-			"addr", a.cfg.Addr,
+			"addr", a.runtimeAddr,
 			"db_path", a.cfg.DBPath,
-			"local_url", localConsoleURL(a.cfg.Addr),
+			"local_url", a.LocalConsoleURL(),
 			"lan_hint", "局域网访问时，请把 127.0.0.1 替换成运行这台服务机器的局域网 IP。",
 			"data_dir", a.cfg.DataDir,
 			"password_hint", "如未修改管理员密码，默认密码仍为 admin，建议尽快修改。",
 		)
-		if err := a.server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		if err := a.server.Serve(listener); err != nil && err != http.ErrServerClosed {
 			errCh <- err
 			return
 		}
@@ -113,6 +129,13 @@ func (a *App) Run(ctx context.Context) error {
 		}
 		return closeErr
 	}
+}
+
+func (a *App) LocalConsoleURL() string {
+	if strings.TrimSpace(a.runtimeAddr) != "" {
+		return localConsoleURL(a.runtimeAddr)
+	}
+	return localConsoleURL(a.cfg.Addr)
 }
 
 func (a *App) runAutoRetryScheduler(ctx context.Context) {
@@ -184,6 +207,16 @@ func localConsoleURL(addr string) string {
 	trimmed := strings.TrimSpace(addr)
 	if trimmed == "" {
 		return "http://127.0.0.1:8080/"
+	}
+	if host, port, err := net.SplitHostPort(trimmed); err == nil {
+		switch strings.TrimSpace(host) {
+		case "", "0.0.0.0", "::", "[::]":
+			return fmt.Sprintf("http://127.0.0.1:%s/", port)
+		case "localhost", "127.0.0.1":
+			return fmt.Sprintf("http://%s:%s/", host, port)
+		default:
+			return fmt.Sprintf("http://%s/", trimmed)
+		}
 	}
 	if strings.HasPrefix(trimmed, ":") {
 		return fmt.Sprintf("http://127.0.0.1%s/", trimmed)
