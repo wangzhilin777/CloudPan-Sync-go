@@ -107,6 +107,9 @@ func TestHandleIndexServesHTML(t *testing.T) {
 	if !strings.Contains(body, `id="profile-cancel-edit"`) {
 		t.Fatalf("expected profile cancel edit button in html body, got %q", body)
 	}
+	if !strings.Contains(body, `id="profile-auth-guide"`) {
+		t.Fatalf("expected profile auth guide card in html body, got %q", body)
+	}
 	if !strings.Contains(body, `id="plan-target-profile-insight"`) {
 		t.Fatalf("expected target profile insight panel in html body, got %q", body)
 	}
@@ -1487,6 +1490,21 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	}
 	if !strings.Contains(body, "账号默认建议：") {
 		t.Fatalf("expected provider profile risk advice text in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "renderProfileAuthGuide") {
+		t.Fatalf("expected profile auth guide helper in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "Extra JSON 内的 domainId") {
+		t.Fatalf("expected open-family auth guide text in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "分享口令对应的 Extra JSON: pwdId") {
+		t.Fatalf("expected share-family auth guide text in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "网页登录采集（web_login_capture）") {
+		t.Fatalf("expected localized web_login_capture auth mode in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "官方 OAuth（official_oauth）") {
+		t.Fatalf("expected localized official_oauth auth mode in app.js, got %q", body)
 	}
 	if !strings.Contains(body, "renderRiskDefaultsSourceBadge") {
 		t.Fatalf("expected provider risk source badge helper in app.js, got %q", body)

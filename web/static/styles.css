@@ -346,6 +346,11 @@ label {
   line-height: 1.65;
 }
 
+.auth-guide-card {
+  border-style: dashed;
+  background: linear-gradient(135deg, rgba(255, 251, 235, 0.88), rgba(255, 255, 255, 0.76));
+}
+
 .risk-builder {
   display: grid;
   gap: 12px;

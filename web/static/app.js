@@ -138,8 +138,67 @@ function renderAuthModeLabel(mode) {
   const labels = {
     manual_token: "手动令牌（manual_token）",
     manual_cookie: "手动 Cookie（manual_cookie）",
+    official_oauth: "官方 OAuth（official_oauth）",
+    web_login_capture: "网页登录采集（web_login_capture）",
   };
   return labels[normalized] || normalized;
+}
+
+function renderProfileAuthGuide(provider, authMode) {
+  if (!provider || typeof provider !== "object") {
+    return "选择网盘源和授权方式后，这里会提示当前常见必填项、可留空项和 Extra JSON 示例。";
+  }
+  const displayName = stringifyValue(provider.meta?.displayName, provider.meta?.key || "当前网盘源");
+  const mode = String(authMode || "").trim();
+  const required = ["显示名称"];
+  const optional = [];
+  let intro = `当前网盘源：${displayName}。`;
+  let extraHint = "一般情况下 `附加配置(JSON)` 可以先留空。";
+
+  if (mode === "manual_token") {
+    required.push("令牌 Token");
+    optional.push("Cookie");
+    intro += " 当前使用手动令牌模式，优先填写令牌。";
+  } else if (mode === "manual_cookie") {
+    required.push("Cookie");
+    optional.push("令牌 Token");
+    intro += " 当前使用手动 Cookie 模式，优先填写完整 Cookie。";
+  } else if (mode === "official_oauth") {
+    required.push("令牌 Token");
+    optional.push("Cookie");
+    intro += " 当前使用官方 OAuth 模式，通常先填写开放平台返回的 access token。";
+  } else if (mode === "web_login_capture") {
+    required.push("Cookie");
+    optional.push("令牌 Token");
+    intro += " 当前使用网页登录采集模式，通常先从浏览器已登录会话中整理 Cookie。";
+  }
+
+  const providerKey = String(provider.meta?.key || "").trim();
+  if (["aliyundrive_open", "123_open"].includes(providerKey)) {
+    required.push("Extra JSON 内的 domainId", "Extra JSON 内的 driveId");
+    extraHint =
+      'Open 接口通常还需要在 `附加配置(JSON)` 中补 `domainId` 和 `driveId`，例如 `{"domainId":"bj1","driveId":"drive-1"}`。';
+  } else if (["quark", "uc"].includes(providerKey)) {
+    required.push("分享口令对应的 Extra JSON: pwdId");
+    extraHint = 'Quark / UC 常见还需要在 `附加配置(JSON)` 中填写 `pwdId`，例如 `{"pwdId":"分享口令"}`。';
+  }
+
+  if (mode === "web_login_capture") {
+    extraHint += " 如果暂时拿不到网页登录辅助入口，可先切到该网盘源支持的手动模式继续。";
+  }
+
+  return `${intro} 必填：${required.join("、")}。${optional.length ? ` 可留空：${optional.join("、")}。` : ""} ${extraHint}`;
+}
+
+function syncProfileAuthGuide() {
+  const wrap = $("#profile-auth-guide");
+  if (!wrap) {
+    return;
+  }
+  const providerKey = $("#profile-provider")?.value || "";
+  const authMode = $("#profile-auth-mode")?.value || "";
+  const provider = (state.providers || []).find((item) => item?.meta?.key === providerKey);
+  wrap.textContent = renderProfileAuthGuide(provider, authMode);
 }
 
 function renderProfileStatusLabel(status) {
@@ -2696,6 +2755,7 @@ function resetProfileForm() {
   hydrateRiskProfileForm("profile-risk", null);
   $("#profile-submit").textContent = "创建授权档案";
   syncAuthModes();
+  syncProfileAuthGuide();
 }
 
 function setProfileFormEditing(profile) {
@@ -2714,6 +2774,7 @@ function setProfileFormEditing(profile) {
   $("#profile-extra").value = Object.keys(extra).length ? JSON.stringify(extra, null, 2) : "";
   hydrateRiskProfileForm("profile-risk", parseProfileRiskDefaultsFromExtra(extra));
   $("#profile-submit").textContent = "更新授权档案";
+  syncProfileAuthGuide();
 }
 
 function showFlash(message, isError = false) {
@@ -3842,11 +3903,13 @@ function syncAuthModes() {
   const authModeSelect = $("#profile-auth-mode");
   if (!provider) {
     authModeSelect.innerHTML = "";
+    syncProfileAuthGuide();
     return;
   }
   authModeSelect.innerHTML = provider.meta.authModes
-    .map((mode) => `<option value="${mode}">${mode}</option>`)
+    .map((mode) => `<option value="${mode}">${escapeHTML(renderAuthModeLabel(mode))}</option>`)
     .join("");
+  syncProfileAuthGuide();
 }
 
 function renderProfiles() {
@@ -7784,6 +7847,7 @@ function wireLogin() {
 
 function wireProfiles() {
   $("#profile-provider").addEventListener("change", syncAuthModes);
+  $("#profile-auth-mode").addEventListener("change", syncProfileAuthGuide);
   $("#plan-source-provider").addEventListener("change", async () => {
     syncSourceProfiles();
     await loadDirectoryBrowser("source");
