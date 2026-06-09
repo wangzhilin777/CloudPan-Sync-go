@@ -102,12 +102,7 @@ func (a *App) RunWithListener(ctx context.Context, listener net.Listener) error 
 	go func() {
 		a.logger.Info(
 			"服务已启动，请打开控制台",
-			"addr", a.runtimeAddr,
-			"db_path", a.cfg.DBPath,
-			"local_url", a.LocalConsoleURL(),
-			"lan_hint", "局域网访问时，请把 127.0.0.1 替换成运行这台服务机器的局域网 IP。",
-			"data_dir", a.cfg.DataDir,
-			"password_hint", "如未修改管理员密码，默认密码仍为 admin，建议尽快修改。",
+			a.startupLogFields()...,
 		)
 		if err := a.server.Serve(listener); err != nil && err != http.ErrServerClosed {
 			errCh <- err
@@ -136,6 +131,19 @@ func (a *App) LocalConsoleURL() string {
 		return localConsoleURL(a.runtimeAddr)
 	}
 	return localConsoleURL(a.cfg.Addr)
+}
+
+func (a *App) startupLogFields() []any {
+	return []any{
+		"addr", a.runtimeAddr,
+		"db_path", a.cfg.DBPath,
+		"local_url", a.LocalConsoleURL(),
+		"lan_hint", "局域网访问时，请把 127.0.0.1 替换成运行这台服务机器的局域网 IP。",
+		"docker_hint", "Docker 或 NAS 部署时，请把端口映射后的宿主机地址填写到浏览器，例如 http://NAS-IP:8080/ 。",
+		"desktop_hint", "如使用桌面模式，程序会自动打开独立窗口；关闭窗口后会一并清理本地服务。",
+		"data_dir", a.cfg.DataDir,
+		"password_hint", "如未修改管理员密码，默认密码仍为 admin，建议尽快修改。",
+	}
 }
 
 func (a *App) runAutoRetryScheduler(ctx context.Context) {
