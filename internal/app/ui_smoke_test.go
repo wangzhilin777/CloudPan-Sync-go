@@ -375,7 +375,7 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 
 	runStep(t, runCtx, "status overview",
 		chromedp.Evaluate(`(() => document.querySelector('.tabs button[data-view="status"]')?.click())()`, nil),
-		waitForText(`#evidence-summary`, "Auto Recover"),
+		waitForText(`#evidence-summary`, "自动补传任务"),
 		waitForText(`#auto-retry-policy-summary`, "group 1"),
 		waitForText(`#auto-recover-budget-summary`, "当前生效预算（默认）"),
 		waitForText(`body`, "自动补传候选池"),

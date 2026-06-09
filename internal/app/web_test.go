@@ -1,4 +1,4 @@
-package app
+﻿package app
 
 import (
 	"io"
@@ -765,8 +765,8 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "renderAutoRecoverPriorityAction") {
 		t.Fatalf("expected auto recover priority-action helper in app.js, got %q", body)
 	}
-	if !strings.Contains(body, "Recover Priority") {
-		t.Fatalf("expected auto recover priority metric in app.js, got %q", body)
+	if !strings.Contains(body, "补传优先动作") {
+		t.Fatalf("expected localized auto recover priority metric in app.js, got %q", body)
 	}
 	if !strings.Contains(body, "renderAutoRecoverReadiness") {
 		t.Fatalf("expected auto recover readiness helper in app.js, got %q", body)
@@ -780,17 +780,17 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "renderAutoRecoverFairnessMissing") {
 		t.Fatalf("expected auto recover fairness missing helper in app.js, got %q", body)
 	}
-	if !strings.Contains(body, "Recover Ready") {
-		t.Fatalf("expected auto recover readiness metric in app.js, got %q", body)
+	if !strings.Contains(body, "补传就绪度") {
+		t.Fatalf("expected localized auto recover readiness metric in app.js, got %q", body)
 	}
-	if !strings.Contains(body, "Fairness Ready") {
-		t.Fatalf("expected auto recover fairness readiness metric in app.js, got %q", body)
+	if !strings.Contains(body, "公平性就绪度") {
+		t.Fatalf("expected localized auto recover fairness readiness metric in app.js, got %q", body)
 	}
-	if !strings.Contains(body, "Fairness Missing") {
-		t.Fatalf("expected auto recover fairness missing metric in app.js, got %q", body)
+	if !strings.Contains(body, "公平性缺口") {
+		t.Fatalf("expected localized auto recover fairness missing metric in app.js, got %q", body)
 	}
-	if !strings.Contains(body, "Fairness Priority") {
-		t.Fatalf("expected auto recover fairness priority metric in app.js, got %q", body)
+	if !strings.Contains(body, "公平性优先动作") {
+		t.Fatalf("expected localized auto recover fairness priority metric in app.js, got %q", body)
 	}
 	if !strings.Contains(body, "readiness:") {
 		t.Fatalf("expected provider smoke readiness summary in app.js, got %q", body)
@@ -1155,8 +1155,8 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "smokeMatrixMissingUploadGroups") || !strings.Contains(body, "smokeMatrixMissingCoverageGroups") || !strings.Contains(body, "smokeMatrixMissingAnomalyGroups") || !strings.Contains(body, "smokeMatrixMissingRepresentativeGroups") {
 		t.Fatalf("expected smoke matrix missing group summaries in app.js, got %q", body)
 	}
-	if !strings.Contains(body, "smokeMatrixPriorityActionCounts") || !strings.Contains(body, "Smoke Priority Actions") {
-		t.Fatalf("expected smoke matrix priority action counts in app.js, got %q", body)
+	if !strings.Contains(body, "smokeMatrixPriorityActionCounts") || !strings.Contains(body, "验收优先动作") {
+		t.Fatalf("expected localized smoke matrix priority action counts in app.js, got %q", body)
 	}
 	if !strings.Contains(body, "provider preferred representative:") || !strings.Contains(body, "provider representative missing:") || !strings.Contains(body, "provider representative actions:") || !strings.Contains(body, "provider representative advice:") {
 		t.Fatalf("expected provider-level representative summaries in app.js, got %q", body)
@@ -1604,5 +1604,20 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	}
 	if !strings.Contains(body, "样本上下文：") {
 		t.Fatalf("expected localized protocol coverage sample summary in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "任务总数") {
+		t.Fatalf("expected localized evidence total-tasks label in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "自动补传任务") {
+		t.Fatalf("expected localized evidence auto-recover label in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "已验收协议组") {
+		t.Fatalf("expected localized evidence accepted-groups label in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "补传优先动作") {
+		t.Fatalf("expected localized evidence recover-priority label in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "验收动作汇总") {
+		t.Fatalf("expected localized evidence acceptance-action summary label in app.js, got %q", body)
 	}
 }
