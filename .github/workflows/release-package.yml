@@ -83,6 +83,73 @@ jobs:
           path: out/${{ matrix.asset_name }}
           if-no-files-found: error
 
+  desktop-build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - goos: windows
+            goarch: amd64
+            archive: zip
+            binary_name: cloudpan-sync-desktop.exe
+            asset_name: cloudpan-sync-go-desktop-windows-amd64.zip
+          - goos: linux
+            goarch: amd64
+            archive: tar.gz
+            binary_name: cloudpan-sync-desktop
+            asset_name: cloudpan-sync-go-desktop-linux-amd64.tar.gz
+          - goos: linux
+            goarch: arm64
+            archive: tar.gz
+            binary_name: cloudpan-sync-desktop
+            asset_name: cloudpan-sync-go-desktop-linux-arm64.tar.gz
+          - goos: darwin
+            goarch: amd64
+            archive: tar.gz
+            binary_name: cloudpan-sync-desktop
+            asset_name: cloudpan-sync-go-desktop-darwin-amd64.tar.gz
+          - goos: darwin
+            goarch: arm64
+            archive: tar.gz
+            binary_name: cloudpan-sync-desktop
+            asset_name: cloudpan-sync-go-desktop-darwin-arm64.tar.gz
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.26.0'
+
+      - name: Build desktop binary
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist/desktop
+          GOOS='${{ matrix.goos }}' GOARCH='${{ matrix.goarch }}' CGO_ENABLED=0 go build -trimpath -ldflags='-s -w' -o "dist/desktop/${{ matrix.binary_name }}" ./cmd/cloudpan-sync-desktop
+
+      - name: Package desktop binary
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p out
+          if [ '${{ matrix.archive }}' = 'zip' ]; then
+            cd dist/desktop
+            zip -9 "../../out/${{ matrix.asset_name }}" "${{ matrix.binary_name }}"
+          else
+            tar -C dist/desktop -czf "out/${{ matrix.asset_name }}" "${{ matrix.binary_name }}"
+          fi
+
+      - name: Upload desktop artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.asset_name }}
+          path: out/${{ matrix.asset_name }}
+          if-no-files-found: error
+
   docker-image:
     runs-on: ubuntu-latest
 
@@ -126,6 +193,7 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - server-build
+      - desktop-build
       - docker-image
     permissions:
       contents: write
@@ -156,6 +224,7 @@ jobs:
 
             本次发布包含：
             - Windows / Linux / macOS 服务端包
+            - Windows / Linux / macOS 桌面客户端包
             - Docker 镜像归档包
             - SHA256 校验文件
 
@@ -167,5 +236,10 @@ jobs:
             dist/cloudpan-sync-go-linux-arm64.tar.gz
             dist/cloudpan-sync-go-darwin-amd64.tar.gz
             dist/cloudpan-sync-go-darwin-arm64.tar.gz
+            dist/cloudpan-sync-go-desktop-windows-amd64.zip
+            dist/cloudpan-sync-go-desktop-linux-amd64.tar.gz
+            dist/cloudpan-sync-go-desktop-linux-arm64.tar.gz
+            dist/cloudpan-sync-go-desktop-darwin-amd64.tar.gz
+            dist/cloudpan-sync-go-desktop-darwin-arm64.tar.gz
             dist/cloudpan-sync-go-docker-image.tar.gz
             dist/SHA256SUMS.txt

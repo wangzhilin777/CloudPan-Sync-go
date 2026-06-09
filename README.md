@@ -2,7 +2,7 @@
 
 CloudPan Sync Go 是一个多网盘互传控制台，用来在浏览器里管理网盘授权、预览同步计划、创建同步任务、查看运行证据，并处理补传、重试和恢复。
 
-如果你只是想使用，不需要自己编译。推荐直接到 GitHub Releases 下载对应平台的服务端包，启动后用浏览器打开控制台即可。
+如果你只是想使用，不需要自己编译。推荐直接到 GitHub Releases 下载对应平台的桌面包、服务端包或 Docker 包。
 
 ## 主要功能
 
@@ -13,7 +13,8 @@ CloudPan Sync Go 是一个多网盘互传控制台，用来在浏览器里管理
 - 证据与状态矩阵：在控制台查看运行证据、provider 状态、异常原因、待补传项和 smoke 记录。
 - 后台补传与恢复：对失败、缺会话、待人工处理、上传 checkpoint 等情况提供恢复入口。
 - Docker 部署：可以本地构建镜像，也可以下载 Release 里的 Docker 镜像归档导入运行。
-- GitHub 自动打包：推送版本标签后，GitHub Actions 会自动生成多平台服务端包和 Docker 包。
+- 图形桌面入口：桌面模式会自动启动本地服务并弹出独立窗口，减少手动打开浏览器的步骤。
+- GitHub 自动打包：推送版本标签后，GitHub Actions 会自动生成多平台服务端包、桌面包和 Docker 包。
 
 ## 支持的 Provider
 
@@ -40,6 +41,11 @@ Release 页面：
 
 常见下载项说明：
 
+- `cloudpan-sync-go-desktop-windows-amd64.zip`：Windows 桌面客户端。
+- `cloudpan-sync-go-desktop-linux-amd64.tar.gz`：Linux x64 桌面客户端。
+- `cloudpan-sync-go-desktop-linux-arm64.tar.gz`：Linux ARM64 桌面客户端。
+- `cloudpan-sync-go-desktop-darwin-amd64.tar.gz`：macOS Intel 桌面客户端。
+- `cloudpan-sync-go-desktop-darwin-arm64.tar.gz`：macOS Apple Silicon 桌面客户端。
 - `cloudpan-sync-go-windows-amd64.zip`：Windows 服务端。
 - `cloudpan-sync-go-linux-amd64.tar.gz`：Linux x64 服务端。
 - `cloudpan-sync-go-linux-arm64.tar.gz`：Linux ARM64 服务端。
@@ -50,10 +56,45 @@ Release 页面：
 
 不知道下哪个时：
 
+- Windows、macOS、Linux 普通电脑优先下载对应的 `desktop` 桌面包。
 - Windows 普通用户下载 `cloudpan-sync-go-windows-amd64.zip`。
 - Linux 服务器常规 x64 下载 `cloudpan-sync-go-linux-amd64.tar.gz`。
 - NAS、树莓派、ARM 服务器优先看系统架构，通常可试 `linux-arm64`。
 - 只想用 Docker 时下载 `cloudpan-sync-go-docker-image.tar.gz`，或者直接本地构建镜像。
+
+怎么区分桌面包和服务端包：
+
+- `desktop`：更像普通软件，启动后会自动打开独立窗口，适合个人电脑日常使用。
+- `服务端包`：更像后台服务，启动后你再自己用浏览器打开控制台，适合服务器、远程主机、NAS 或想自己配反向代理的人。
+- `Docker 包`：适合容器化部署、NAS Docker 套件和长期后台运行。
+
+## 桌面模式
+
+桌面模式是三期正在推进的图形化客户端入口。当前实现会先启动本地服务，再优先用 Chrome / Edge 的独立 app 窗口打开控制台；如果没有找到兼容浏览器，再退回系统默认浏览器。
+
+### Windows 桌面包
+
+1. 下载 `cloudpan-sync-go-desktop-windows-amd64.zip`。
+2. 解压到固定目录，例如 `D:\Apps\cloudpan-sync-go-desktop`。
+3. 双击 `cloudpan-sync-desktop.exe`，或在 PowerShell 中执行：
+
+```powershell
+.\cloudpan-sync-desktop.exe
+```
+
+启动后会自动选择可用本地端口，并打开独立窗口或浏览器页面。默认管理员密码仍是 `admin`，正式使用前建议改掉。
+
+### Linux / macOS 桌面包
+
+下载对应平台的桌面包后：
+
+```bash
+tar -xzf cloudpan-sync-go-desktop-linux-amd64.tar.gz
+chmod +x ./cloudpan-sync-desktop
+./cloudpan-sync-desktop
+```
+
+如果当前系统装有 Chrome、Chromium 或 Edge，通常会直接打开独立 app 窗口；否则会回退到系统浏览器。
 
 ## 最快启动
 
