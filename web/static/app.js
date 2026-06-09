@@ -361,6 +361,17 @@ function renderProviderCapabilityCompact(capability) {
   return enabled.length ? enabled.join(", ") : "-";
 }
 
+function renderProviderLifecycleStatusLabel(status) {
+  const normalized = stringifyValue(status, "-");
+  const labels = {
+    planned: "规划中（planned）",
+    active: "可用（active）",
+    beta: "测试中（beta）",
+    deprecated: "已废弃（deprecated）",
+  };
+  return labels[normalized] || normalized;
+}
+
 function renderProviderRiskTemplateDetail(template, { title = "默认风控模板", compact = false } = {}) {
   if (!template || typeof template !== "object") {
     return `
@@ -3656,23 +3667,33 @@ function renderProviders() {
           <div class="meta-row">
             <span class="pill">${entry.meta.key}</span>
             <span class="pill">${entry.meta.protocolGroup}</span>
-            <span class="pill">${entry.meta.status}</span>
+            <span class="pill">${escapeHTML(renderProviderLifecycleStatusLabel(entry.meta.status))}</span>
           </div>
           <div class="meta-row">
-            ${entry.meta.authModes.map((mode) => `<span class="pill">${mode}</span>`).join("")}
+            ${entry.meta.authModes.map((mode) => `<span class="pill">${escapeHTML(renderAuthModeLabel(mode))}</span>`).join("")}
           </div>
-          <div class="muted">fallback: ${escapeHTML(fallbackModes.join(", ") || "-")}</div>
-          <div class="muted">conflict: ${escapeHTML(conflictPolicies.join(", ") || "-")}</div>
-          <div class="muted">risk traits: ${escapeHTML(riskTraits.join(", ") || "-")}</div>
-          <div class="muted">risk hints: ${escapeHTML(riskHints.join(" / ") || "-")}</div>
-          <div class="muted">default risk: ${escapeHTML(renderRiskProfileCompact(defaultRiskTemplate?.calibrated))}</div>
-          <div class="muted">recommended risk: ${escapeHTML(stringifyValue(defaultRiskTemplate?.recommendedMode, "-"))}</div>
-          <div class="muted">risk calibration: ${escapeHTML((defaultRiskTemplate?.calibrationReasons || []).join(" / ") || "-")}</div>
-          <div class="muted">校准就绪度: ${escapeHTML(stringifyValue(defaultRiskTemplate?.calibrationReadiness, "-"))}</div>
-          <div class="muted">优先校准动作: ${escapeHTML(stringifyValue(defaultRiskTemplate?.calibrationPriorityAction, "-"))}</div>
-          <div class="muted">recover budget: ${escapeHTML(renderRecoverBudgetCompact(defaultRiskTemplate?.recoverBudget))}</div>
-          <div class="muted">profile risk source: ${escapeHTML(renderRiskDefaultsSourceBadge(profileSource))}</div>
-          <div class="muted">profile risk advice: ${escapeHTML(renderProfileRiskDefaultSourceAdvice(profileSource))}</div>
+          <div class="provider-card-summary">
+            <div class="muted">核心能力：${escapeHTML(renderProviderCapabilityCompact(entry.capability))}</div>
+            <div class="muted">推荐风控：${escapeHTML(renderRiskModeLabel(defaultRiskTemplate?.recommendedMode))}</div>
+            <div class="muted">授权入口：先创建授权档案，再继续目录选择与任务创建。</div>
+          </div>
+          <details class="provider-card-advanced">
+            <summary>展开高级信息</summary>
+            <div class="provider-card-advanced-body">
+              <div class="muted">兜底策略：${escapeHTML(fallbackModes.join(", ") || "-")}</div>
+              <div class="muted">冲突策略：${escapeHTML(conflictPolicies.join(", ") || "-")}</div>
+              <div class="muted">风控特征：${escapeHTML(riskTraits.join(", ") || "-")}</div>
+              <div class="muted">风控提示：${escapeHTML(riskHints.join(" / ") || "-")}</div>
+              <div class="muted">默认风控：${escapeHTML(renderRiskProfileCompact(defaultRiskTemplate?.calibrated))}</div>
+              <div class="muted">推荐档位：${escapeHTML(renderRiskModeLabel(defaultRiskTemplate?.recommendedMode))}</div>
+              <div class="muted">校准依据：${escapeHTML((defaultRiskTemplate?.calibrationReasons || []).join(" / ") || "-")}</div>
+              <div class="muted">校准就绪度：${escapeHTML(stringifyValue(defaultRiskTemplate?.calibrationReadiness, "-"))}</div>
+              <div class="muted">优先校准动作：${escapeHTML(stringifyValue(defaultRiskTemplate?.calibrationPriorityAction, "-"))}</div>
+              <div class="muted">恢复预算：${escapeHTML(renderRecoverBudgetCompact(defaultRiskTemplate?.recoverBudget))}</div>
+              <div class="muted">账号默认来源：${escapeHTML(renderRiskDefaultsSourceBadge(profileSource))}</div>
+              <div class="muted">账号默认建议：${escapeHTML(renderProfileRiskDefaultSourceAdvice(profileSource))}</div>
+            </div>
+          </details>
           <div class="actions compact">
             <button type="button" class="ghost" data-provider-detail-open="${escapeHTML(entry.meta.key)}">查看能力详情</button>
           </div>

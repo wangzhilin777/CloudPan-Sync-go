@@ -545,6 +545,47 @@ label {
   font-size: 1rem;
 }
 
+.provider-card-summary {
+  display: grid;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.provider-card-advanced {
+  margin-top: 12px;
+  border-top: 1px dashed rgba(31, 27, 23, 0.12);
+  padding-top: 10px;
+}
+
+.provider-card-advanced summary {
+  cursor: pointer;
+  color: var(--accent);
+  font-weight: 600;
+  list-style: none;
+}
+
+.provider-card-advanced summary::-webkit-details-marker {
+  display: none;
+}
+
+.provider-card-advanced summary::after {
+  content: "展开";
+  margin-left: 8px;
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 400;
+}
+
+.provider-card-advanced[open] summary::after {
+  content: "收起";
+}
+
+.provider-card-advanced-body {
+  display: grid;
+  gap: 6px;
+  margin-top: 10px;
+}
+
 .meta-row {
   display: flex;
   gap: 8px;
