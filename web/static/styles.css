@@ -706,6 +706,18 @@ tr.active td {
   gap: 8px;
 }
 
+.language-switch {
+  display: grid;
+  gap: 0.35rem;
+  margin-top: 0.65rem;
+  font-size: 0.88rem;
+}
+
+.language-switch select {
+  min-width: 132px;
+  padding: 0.7rem 0.85rem;
+}
+
 .directory-group-summary {
   display: flex;
   gap: 8px;

@@ -211,6 +211,29 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 	runStep(t, runCtx, "login and bootstrap",
 		chromedp.Navigate(server.URL),
 		chromedp.WaitVisible(`#login-form`, chromedp.ByID),
+		chromedp.Evaluate(`(() => {
+			const el = document.querySelector('#language-select');
+			if (!el) {
+				return false;
+			}
+			el.value = 'en-US';
+			el.dispatchEvent(new Event('change', { bubbles: true }));
+			return true;
+		})()`, nil),
+		waitForText(`body`, "A multi-cloud transfer console focused on tasks, status, and evidence."),
+		waitForText(`#login-form button[type="submit"]`, "Sign In"),
+		waitForText(`#session-state`, "Signed Out"),
+		chromedp.Evaluate(`(() => {
+			const el = document.querySelector('#language-select');
+			if (!el) {
+				return false;
+			}
+			el.value = 'zh-CN';
+			el.dispatchEvent(new Event('change', { bubbles: true }));
+			return true;
+		})()`, nil),
+		waitForText(`#login-form button[type="submit"]`, "验证登录"),
+		waitForText(`#session-state`, "未登录"),
 		chromedp.SetValue(`#login-password`, "admin", chromedp.ByID),
 		chromedp.Click(`#login-form button[type="submit"]`, chromedp.ByQuery),
 		waitForText(`#session-state`, "已登录"),

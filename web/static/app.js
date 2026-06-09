@@ -61,6 +61,81 @@ const state = {
 
 const treeGroupsStorageKey = "cloudpan_console_tree_groups_collapsed";
 const authAssistStorageKey = "cloudpan_console_auth_assist";
+const languageStorageKey = "cloudpan_console_language";
+
+const translations = {
+  "zh-CN": {
+    page_title: "CloudPan Sync Go 控制台",
+    session_logged_in: "已登录",
+    session_logged_out: "未登录",
+    flash_login_success: "登录验证成功",
+    flash_logout_success: "本地控制台会话已清理",
+    hero: {
+      eyebrow: "CloudPan Sync Go",
+      title: "多网盘互传控制台，围绕任务、状态和证据做日常操作。",
+      lede1: "当前页面覆盖登录、网盘授权、任务向导、任务列表、状态矩阵与运行证据，适合统一管理多网盘之间的同步任务。",
+      lede2: "当前控制台会直接展示叶子目录优先、后台补传，以及“源端删除仅记录、不默认删除目标端”等核心同步语义，方便查看任务策略和处理结果。"
+    },
+    badge: { local_console: "本地控制台" },
+    language: { label: "界面语言" },
+    tabs: {
+      login: "登录",
+      providers: "网盘源 / 授权",
+      wizard: "任务向导",
+      tasks: "任务列表详情",
+      status: "状态矩阵 / 证据"
+    },
+    login: {
+      title: "登录验证",
+      desc: "当前登录只调用 `POST /api/session/login` 做控制台访问确认，不依赖旧 Python 会话模型。",
+      password_label: "管理员密码",
+      password_placeholder: "默认是 admin",
+      submit: "验证登录",
+      logout: "退出本地会话",
+      constraints_title: "当前约束",
+      constraint_api: "前端只走 Go API",
+      constraint_python: "不兼容 Python 旧页面",
+      constraint_entry: "适合作为后续真实联调入口",
+      waiting: "等待登录验证..."
+    }
+  },
+  "en-US": {
+    page_title: "CloudPan Sync Go Console",
+    session_logged_in: "Signed In",
+    session_logged_out: "Signed Out",
+    flash_login_success: "Console login verified",
+    flash_logout_success: "Local console session cleared",
+    hero: {
+      eyebrow: "CloudPan Sync Go",
+      title: "A multi-cloud transfer console focused on tasks, status, and evidence.",
+      lede1: "This page covers sign-in, provider authorization, task planning, task details, status matrix, and runtime evidence for managing sync jobs across multiple cloud drives.",
+      lede2: "The console highlights core sync semantics such as leaf-first execution, background retry, and record-only source deletions so task strategy and outcomes are easier to understand."
+    },
+    badge: { local_console: "Local Console" },
+    language: { label: "Language" },
+    tabs: {
+      login: "Login",
+      providers: "Providers / Auth",
+      wizard: "Task Wizard",
+      tasks: "Task Details",
+      status: "Status / Evidence"
+    },
+    login: {
+      title: "Login Verification",
+      desc: "The current sign-in flow only calls `POST /api/session/login` to confirm console access and does not depend on the legacy Python session model.",
+      password_label: "Admin Password",
+      password_placeholder: "Default is admin",
+      submit: "Sign In",
+      logout: "Clear Local Session",
+      constraints_title: "Current Constraints",
+      constraint_api: "Frontend only calls the Go API",
+      constraint_python: "Legacy Python pages are not supported",
+      constraint_entry: "Suitable as the primary entry for real integration work",
+      waiting: "Waiting for login verification..."
+    }
+  }
+};
+
 
 function $(selector) {
   return document.querySelector(selector);
@@ -135,6 +210,64 @@ function saveAuthAssistState() {
 }
 
 state.authAssist = loadAuthAssistState();
+state.language = loadLanguage();
+
+function loadLanguage() {
+  try {
+    const raw = String(localStorage.getItem(languageStorageKey) || "zh-CN").trim();
+    return translations[raw] ? raw : "zh-CN";
+  } catch (error) {
+    return "zh-CN";
+  }
+}
+
+function saveLanguage() {
+  try {
+    localStorage.setItem(languageStorageKey, state.language || "zh-CN");
+  } catch (error) {
+    // Ignore storage failures.
+  }
+}
+
+function translationValue(key, fallback = "") {
+  const locale = translations[state.language] || translations["zh-CN"];
+  const segments = String(key || "").split(".");
+  let current = locale;
+  for (const segment of segments) {
+    if (!current || typeof current !== "object" || !(segment in current)) {
+      return fallback || key;
+    }
+    current = current[segment];
+  }
+  return typeof current === "string" ? current : fallback || key;
+}
+
+function t(key, fallback = "") {
+  return translationValue(key, fallback);
+}
+
+function applyI18n() {
+  document.documentElement.lang = state.language || "zh-CN";
+  document.title = t("page_title", document.title || "CloudPan Sync Go");
+  document.querySelectorAll("[data-i18n-text]").forEach((node) => {
+    const key = node.dataset.i18nText;
+    if (!key) {
+      return;
+    }
+    node.textContent = t(key, node.textContent || "");
+  });
+  document.querySelectorAll("[data-i18n-placeholder]").forEach((node) => {
+    const key = node.dataset.i18nPlaceholder;
+    if (!key) {
+      return;
+    }
+    node.setAttribute("placeholder", t(key, node.getAttribute("placeholder") || ""));
+  });
+  const select = $("#language-select");
+  if (select) {
+    select.value = state.language || "zh-CN";
+  }
+}
 
 function formatJSON(value) {
   return JSON.stringify(value, null, 2);
@@ -3107,7 +3240,7 @@ async function api(path, options = {}) {
 }
 
 function syncSessionState() {
-  $("#session-state").textContent = state.authenticated ? "已登录" : "未登录";
+  $("#session-state").textContent = state.authenticated ? t("session_logged_in", "已登录") : t("session_logged_out", "未登录");
 }
 
 function setupTabs() {
@@ -8117,6 +8250,21 @@ async function bootstrapData() {
   await refreshDirectoryBrowsers();
 }
 
+function wireLanguage() {
+  const select = $("#language-select");
+  if (!select) {
+    return;
+  }
+  select.value = state.language || "zh-CN";
+  select.addEventListener("change", () => {
+    const next = String(select.value || "zh-CN").trim();
+    state.language = translations[next] ? next : "zh-CN";
+    saveLanguage();
+    applyI18n();
+    syncSessionState();
+  });
+}
+
 function wireLogin() {
   $("#login-form").addEventListener("submit", async (event) => {
     event.preventDefault();
@@ -8130,7 +8278,7 @@ function wireLogin() {
       state.authenticated = true;
       syncSessionState();
       $("#login-result").textContent = formatJSON(result);
-      showFlash("登录验证成功");
+      showFlash(t("flash_login_success", "登录验证成功"));
       await bootstrapData();
     } catch (error) {
       $("#login-result").textContent = error.message;
@@ -8142,7 +8290,7 @@ function wireLogin() {
     localStorage.removeItem("cloudpan_console_session");
     state.authenticated = false;
     syncSessionState();
-    showFlash("本地控制台会话已清理");
+    showFlash(t("flash_logout_success", "本地控制台会话已清理"));
   });
 }
 
@@ -9146,7 +9294,9 @@ function wireTreeFilters() {
 }
 
 async function init() {
+  applyI18n();
   setupTabs();
+  wireLanguage();
   wireLogin();
   wireProfiles();
   wirePlanner();
@@ -9175,4 +9325,5 @@ async function init() {
   }
 }
 window.addEventListener("DOMContentLoaded", init);
+
 

@@ -134,6 +134,12 @@ func TestHandleIndexServesHTML(t *testing.T) {
 	if !strings.Contains(body, `id="profile-assist-discovery"`) {
 		t.Fatalf("expected profile assist discovery card in html body, got %q", body)
 	}
+	if !strings.Contains(body, `id="language-select"`) {
+		t.Fatalf("expected language switcher in html body, got %q", body)
+	}
+	if !strings.Contains(body, `data-i18n-text="hero.title"`) {
+		t.Fatalf("expected hero title i18n binding in html body, got %q", body)
+	}
 	if !strings.Contains(body, `id="plan-target-profile-insight"`) {
 		t.Fatalf("expected target profile insight panel in html body, got %q", body)
 	}
@@ -1565,6 +1571,21 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	}
 	if !strings.Contains(body, "assistStorageMountPath") {
 		t.Fatalf("expected auth assist discovery extra payload fields in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "cloudpan_console_language") {
+		t.Fatalf("expected language local storage key in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "\"en-US\"") {
+		t.Fatalf("expected en-US translation dictionary in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "function applyI18n()") {
+		t.Fatalf("expected applyI18n helper in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "function wireLanguage()") {
+		t.Fatalf("expected wireLanguage helper in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "Signed In") {
+		t.Fatalf("expected English session translation in app.js, got %q", body)
 	}
 	if !strings.Contains(body, "localizeAPIError") {
 		t.Fatalf("expected api error localization helper in app.js, got %q", body)

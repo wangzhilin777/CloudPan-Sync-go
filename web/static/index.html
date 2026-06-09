@@ -10,55 +10,62 @@
     <div class="shell">
       <header class="hero">
         <div class="hero-copy">
-          <p class="eyebrow">CloudPan Sync Go</p>
-          <h1>多网盘互传控制台，围绕任务、状态和证据做日常操作。</h1>
-          <p class="lede">
+          <p class="eyebrow" data-i18n-text="hero.eyebrow">CloudPan Sync Go</p>
+          <h1 data-i18n-text="hero.title">多网盘互传控制台，围绕任务、状态和证据做日常操作。</h1>
+          <p class="lede" data-i18n-text="hero.lede1">
             当前页面覆盖登录、网盘授权、任务向导、任务列表、状态矩阵与运行证据，适合统一管理多网盘之间的同步任务。
           </p>
-          <p class="lede">
+          <p class="lede" data-i18n-text="hero.lede2">
             当前控制台会直接展示叶子目录优先、后台补传，以及“源端删除仅记录、不默认删除目标端”等核心同步语义，方便查看任务策略和处理结果。
           </p>
         </div>
         <div class="hero-badge">
           <span class="dot"></span>
           <strong id="session-state">未登录</strong>
-          <span>本地控制台</span>
+          <span data-i18n-text="badge.local_console">本地控制台</span>
+          <label class="language-switch">
+            <span data-i18n-text="language.label">界面语言</span>
+            <select id="language-select" aria-label="Language">
+              <option value="zh-CN">中文</option>
+              <option value="en-US">English</option>
+            </select>
+          </label>
         </div>
       </header>
 
       <nav class="tabs" aria-label="Primary">
-        <button class="tab active" data-view="login">登录</button>
-        <button class="tab" data-view="providers">网盘源 / 授权</button>
-        <button class="tab" data-view="wizard">任务向导</button>
-        <button class="tab" data-view="tasks">任务列表详情</button>
-        <button class="tab" data-view="status">状态矩阵 / 证据</button>
+        <button class="tab active" data-view="login" data-i18n-text="tabs.login">登录</button>
+        <button class="tab" data-view="providers" data-i18n-text="tabs.providers">网盘源 / 授权</button>
+        <button class="tab" data-view="wizard" data-i18n-text="tabs.wizard">任务向导</button>
+        <button class="tab" data-view="tasks" data-i18n-text="tabs.tasks">任务列表详情</button>
+        <button class="tab" data-view="status" data-i18n-text="tabs.status">状态矩阵 / 证据</button>
       </nav>
 
       <main class="panels">
         <section class="panel active" data-panel="login">
           <div class="grid two">
             <article class="card spotlight">
-              <h2>登录验证</h2>
-              <p>当前登录只调用 `POST /api/session/login` 做控制台访问确认，不依赖旧 Python 会话模型。</p>
+              <h2 data-i18n-text="login.title">登录验证</h2>
+              <p data-i18n-text="login.desc">当前登录只调用 `POST /api/session/login` 做控制台访问确认，不依赖旧 Python 会话模型。</p>
               <form id="login-form" class="stack">
                 <label>
-                  <span>管理员密码</span>
-                  <input id="login-password" name="password" type="password" placeholder="默认是 admin" />
+                  <span data-i18n-text="login.password_label">管理员密码</span>
+                  <input id="login-password" name="password" type="password" placeholder="默认是 admin" data-i18n-placeholder="login.password_placeholder" />
                 </label>
                 <div class="actions">
-                  <button type="submit">验证登录</button>
-                  <button type="button" class="ghost" id="logout-button">退出本地会话</button>
+                  <button type="submit" data-i18n-text="login.submit">验证登录</button>
+                  <button type="button" class="ghost" id="logout-button" data-i18n-text="login.logout">退出本地会话</button>
                 </div>
               </form>
             </article>
             <article class="card">
-              <h2>当前约束</h2>
+              <h2 data-i18n-text="login.constraints_title">当前约束</h2>
               <ul class="checklist">
-                <li>前端只走 Go API</li>
-                <li>不兼容 Python 旧页面</li>
-                <li>适合作为后续真实联调入口</li>
+                <li data-i18n-text="login.constraint_api">前端只走 Go API</li>
+                <li data-i18n-text="login.constraint_python">不兼容 Python 旧页面</li>
+                <li data-i18n-text="login.constraint_entry">适合作为后续真实联调入口</li>
               </ul>
-              <pre id="login-result" class="result-box">等待登录验证...</pre>
+              <pre id="login-result" class="result-box" data-i18n-text="login.waiting">等待登录验证...</pre>
             </article>
           </div>
         </section>
