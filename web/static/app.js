@@ -4573,9 +4573,9 @@ function renderStatus() {
     <div class="metric"><span>Total Tasks</span><strong>${evidence.totalTasks}</strong></div>
     <div class="metric"><span>Completed</span><strong>${evidence.completedTasks}</strong></div>
     <div class="metric"><span>Blocked Tasks</span><strong>${evidence.blockedTasks}</strong></div>
-    <div class="metric"><span>Execution Mode</span><strong>${stringifyValue(evidence.executionMode, "-")}</strong></div>
-    <div class="metric"><span>Scan Mode</span><strong>${stringifyValue(evidence.scanMode, "-")}</strong></div>
-    <div class="metric"><span>Source Delete</span><strong>${renderSourceDeletePolicy(evidence.sourceDeletePolicy)}</strong></div>
+    <div class="metric"><span>执行模式</span><strong>${stringifyValue(evidence.executionMode, "-")}</strong></div>
+    <div class="metric"><span>扫描模式</span><strong>${stringifyValue(evidence.scanMode, "-")}</strong></div>
+    <div class="metric"><span>源端删除策略</span><strong>${renderSourceDeletePolicy(evidence.sourceDeletePolicy)}</strong></div>
     <div class="metric"><span>Auto Recover</span><strong>${stringifyValue(evidence.autoRecoverTasks, "0")}</strong></div>
     <div class="metric"><span>Recover Runnable</span><strong>${stringifyValue(evidence.autoRecoverRunnableTasks, "0")}</strong></div>
     <div class="metric"><span>Recover Cooldown</span><strong>${stringifyValue(evidence.autoRecoverWaitingCooldownTasks, "0")}</strong></div>
@@ -4589,13 +4589,13 @@ function renderStatus() {
     <div class="metric"><span>Done Results</span><strong>${evidence.doneResultCount}</strong></div>
     <div class="metric"><span>Skipped Results</span><strong>${evidence.skippedResultCount}</strong></div>
     <div class="metric"><span>Pending Manual</span><strong>${evidence.pendingResultCount}</strong></div>
-    <div class="metric"><span>Source Deletes</span><strong>${stringifyValue(evidence.sourceDeletionCount, "0")}</strong></div>
+    <div class="metric"><span>源端删除记录</span><strong>${stringifyValue(evidence.sourceDeletionCount, "0")}</strong></div>
     <div class="metric"><span>Failed Results</span><strong>${evidence.failedResultCount}</strong></div>
     <div class="metric"><span>Risk Hits</span><strong>${evidence.riskHitCount}</strong></div>
     <div class="metric"><span>Auto Tick</span><strong>${escapeHTML(stringifyValue(autoRetryPolicy.tick, "-"))}</strong></div>
     <div class="metric"><span>Auto Batch</span><strong>${stringifyValue(autoRetryPolicy.batchLimit, "-")}</strong></div>
     <div class="metric"><span>Auto Lane Limit</span><strong>${stringifyValue(autoRetryPolicy.limitPerLane, "-")}</strong></div>
-    <div class="metric"><span>Protocol Groups</span><strong>${protocolCoverage.length}</strong></div>
+    <div class="metric"><span>协议组数量</span><strong>${protocolCoverage.length}</strong></div>
     <div class="metric"><span>Sampled Groups</span><strong>${protocolCoverageWithSamples}</strong></div>
     <div class="metric"><span>Accepted Groups</span><strong>${acceptedSmokeGroups}</strong></div>
     <div class="metric"><span>In Progress</span><strong>${inProgressSmokeGroups}</strong></div>
@@ -4657,22 +4657,22 @@ function renderStatus() {
     <table>
       <thead>
         <tr>
-          <th>Provider</th>
-          <th>Protocol Group</th>
-          <th>Profiles</th>
-          <th>Tasks</th>
-          <th>Completed</th>
-          <th>Coverage</th>
-          <th>Execution Mode</th>
-          <th>Scan Mode</th>
-          <th>Source Delete</th>
-          <th>Risk Mode</th>
-          <th>Latest Probe</th>
-          <th>Last Task State</th>
-          <th>Blocked</th>
-          <th>Auto Recover</th>
-          <th>Main Action</th>
-          <th>Snapshot Summary</th>
+          <th>网盘源</th>
+          <th>协议组</th>
+          <th>授权档案数</th>
+          <th>任务数</th>
+          <th>已完成</th>
+          <th>覆盖情况</th>
+          <th>执行模式</th>
+          <th>扫描模式</th>
+          <th>源端删除策略</th>
+          <th>风控档位</th>
+          <th>最近 Probe</th>
+          <th>最近任务状态</th>
+          <th>阻塞数</th>
+          <th>自动补传数</th>
+          <th>当前主动作</th>
+          <th>快照摘要</th>
         </tr>
       </thead>
       <tbody>
@@ -5986,16 +5986,16 @@ function renderProtocolCoverageSummary(items) {
         <div class="directory-row tree-node">
           <div class="directory-row-header">
             <strong>${escapeHTML(stringifyValue(item.protocolGroup))}</strong>
-            <code>${escapeHTML(item.hasRealSuccessSample ? "sampled" : "pending")}</code>
+            <code>${escapeHTML(item.hasRealSuccessSample ? "已取样" : "待取样")}</code>
           </div>
           <div class="directory-metrics">
-            <span class="pill">providers ${stringifyValue(item.providerCount, "0")}</span>
-            <span class="pill">tasks ${stringifyValue(item.taskCount, "0")}</span>
-            <span class="pill">completed ${stringifyValue(item.completedTaskCount, "0")}</span>
-            <span class="pill">real ${stringifyValue(item.realSuccessTaskCount, "0")}</span>
+            <span class="pill">网盘源 ${stringifyValue(item.providerCount, "0")}</span>
+            <span class="pill">任务 ${stringifyValue(item.taskCount, "0")}</span>
+            <span class="pill">已完成 ${stringifyValue(item.completedTaskCount, "0")}</span>
+            <span class="pill">真实成功 ${stringifyValue(item.realSuccessTaskCount, "0")}</span>
           </div>
-          <div class="muted">providers: ${escapeHTML((item.providerKeys || []).join(", ") || "-")}</div>
-          <div class="muted">sample: ${escapeHTML(stringifyValue(item.sampleProviderKey, "-"))} / ${escapeHTML(stringifyValue(item.sampleTaskId, "-"))}</div>
+          <div class="muted">涉及网盘源：${escapeHTML((item.providerKeys || []).join(", ") || "-")}</div>
+          <div class="muted">样本上下文：${escapeHTML(stringifyValue(item.sampleProviderKey, "-"))} / ${escapeHTML(stringifyValue(item.sampleTaskId, "-"))}</div>
         </div>
       `,
     )
@@ -6066,19 +6066,19 @@ function renderRecentResultsTable(items) {
     <table>
       <thead>
         <tr>
-          <th>Status</th>
-          <th>Mode</th>
-          <th>Execution Mode</th>
-          <th>Retry Mode</th>
-          <th>Retry Scope</th>
-          <th>Retry Path Count</th>
-          <th>Retry Paths</th>
-          <th>Source Delete</th>
-          <th>Recommended</th>
-          <th>Message</th>
-          <th>Risk Hit</th>
-          <th>Conflict</th>
-          <th>Created</th>
+          <th>状态</th>
+          <th>模式</th>
+          <th>执行模式</th>
+          <th>重试模式</th>
+          <th>重试范围</th>
+          <th>重试路径数</th>
+          <th>重试路径</th>
+          <th>源端删除策略</th>
+          <th>推荐结果</th>
+          <th>消息</th>
+          <th>风控命中</th>
+          <th>冲突处理</th>
+          <th>创建时间</th>
         </tr>
       </thead>
       <tbody>
@@ -6116,19 +6116,19 @@ function renderRecentProbesTable(items) {
     <table>
       <thead>
         <tr>
-          <th>Provider</th>
-          <th>Status</th>
-          <th>Profile</th>
-          <th>Execution Mode</th>
-          <th>Scan Mode</th>
-          <th>Retry Mode</th>
-          <th>Retry Scope</th>
-          <th>Retry Path Count</th>
-          <th>Retry Paths</th>
-          <th>Source Delete</th>
-          <th>Risk Hit</th>
-          <th>Payload</th>
-          <th>Created</th>
+          <th>网盘源</th>
+          <th>状态</th>
+          <th>授权档案</th>
+          <th>执行模式</th>
+          <th>扫描模式</th>
+          <th>重试模式</th>
+          <th>重试范围</th>
+          <th>重试路径数</th>
+          <th>重试路径</th>
+          <th>源端删除策略</th>
+          <th>风控命中</th>
+          <th>载荷</th>
+          <th>创建时间</th>
         </tr>
       </thead>
       <tbody>

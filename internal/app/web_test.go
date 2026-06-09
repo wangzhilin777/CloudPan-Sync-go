@@ -1584,10 +1584,25 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "waiting_retry_limit") {
 		t.Fatalf("expected waiting_retry_limit recoverState affordance in app.js, got %q", body)
 	}
-	if !strings.Contains(body, "<th>Retry Scope</th>") {
-		t.Fatalf("expected Retry Scope column in app.js, got %q", body)
+	if !strings.Contains(body, "<th>重试范围</th>") {
+		t.Fatalf("expected localized retry-scope column in app.js, got %q", body)
 	}
-	if !strings.Contains(body, "<th>Retry Paths</th>") {
-		t.Fatalf("expected Retry Paths column in app.js, got %q", body)
+	if !strings.Contains(body, "<th>重试路径</th>") {
+		t.Fatalf("expected localized retry-paths column in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "<th>网盘源</th>") {
+		t.Fatalf("expected localized provider column in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "<th>协议组</th>") {
+		t.Fatalf("expected localized protocol-group column in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "<th>源端删除策略</th>") {
+		t.Fatalf("expected localized source-delete column in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "涉及网盘源：") {
+		t.Fatalf("expected localized protocol coverage provider summary in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "样本上下文：") {
+		t.Fatalf("expected localized protocol coverage sample summary in app.js, got %q", body)
 	}
 }
