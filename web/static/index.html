@@ -535,19 +535,19 @@
                 <div class="directory-empty" data-i18n-text="tasks.waiting_task_resolution">选择任务后显示处理建议。</div>
               </div>
               <div class="section-head compact-head">
-                <h3>目录状态</h3>
+                <h3 data-i18n-text="tasks.directory_states">目录状态</h3>
                 <div class="actions compact">
-                  <button type="button" class="ghost" data-tree-bulk-scope="task" data-tree-bulk-panel="directory" data-tree-bulk-action="collapse">收起全部</button>
-                  <button type="button" class="ghost" data-tree-bulk-scope="task" data-tree-bulk-panel="directory" data-tree-bulk-action="expand">展开全部</button>
-                  <button type="button" class="ghost" id="task-directory-prefill-visible">按当前筛选重建向导</button>
-                  <button type="button" class="ghost" id="task-retry-visible-directory">重试当前筛选</button>
-                  <button type="button" class="ghost" id="task-directory-copy-visible">复制当前路径</button>
+                  <button type="button" class="ghost" data-tree-bulk-scope="task" data-tree-bulk-panel="directory" data-tree-bulk-action="collapse" data-i18n-text="tasks.collapse_all">收起全部</button>
+                  <button type="button" class="ghost" data-tree-bulk-scope="task" data-tree-bulk-panel="directory" data-tree-bulk-action="expand" data-i18n-text="tasks.expand_all">展开全部</button>
+                  <button type="button" class="ghost" id="task-directory-prefill-visible" data-i18n-text="tasks.prefill_current_filter">按当前筛选重建向导</button>
+                  <button type="button" class="ghost" id="task-retry-visible-directory" data-i18n-text="tasks.retry_current_filter">重试当前筛选</button>
+                  <button type="button" class="ghost" id="task-directory-copy-visible" data-i18n-text="tasks.copy_current_paths">复制当前路径</button>
                 </div>
               </div>
               <div class="filter-bar">
-                <input id="task-directory-filter-query" type="text" placeholder="筛选路径 / last item" />
+                <input id="task-directory-filter-query" type="text" placeholder="筛选路径 / last item" data-i18n-placeholder="tasks.directory_filter_placeholder" />
                 <select id="task-directory-filter-status">
-                  <option value="">全部状态</option>
+                  <option value="" data-i18n-text="tasks.all_statuses">全部状态</option>
                   <option value="pending">pending</option>
                   <option value="running">running</option>
                   <option value="blocked">blocked</option>
@@ -555,37 +555,37 @@
                 </select>
                 <label class="toggle-chip">
                   <input id="task-directory-filter-leaf-only" type="checkbox" />
-                  <span>仅叶子节点</span>
+                  <span data-i18n-text="tasks.leaf_only">仅叶子节点</span>
                 </label>
                 <label class="toggle-chip">
                   <input id="task-directory-filter-problem-only" type="checkbox" />
-                  <span>仅问题节点</span>
+                  <span data-i18n-text="tasks.problem_only">仅问题节点</span>
                 </label>
-                <button type="button" class="ghost" id="task-directory-filter-clear">清空筛选</button>
+                <button type="button" class="ghost" id="task-directory-filter-clear" data-i18n-text="tasks.clear_filters">清空筛选</button>
               </div>
-              <div id="task-directory-filter-summary" class="filter-summary muted">等待任务数据...</div>
+              <div id="task-directory-filter-summary" class="filter-summary muted" data-i18n-text="tasks.waiting_directory_data">等待任务数据...</div>
               <div id="task-directory-states" class="directory-state-list"></div>
               <div class="section-head compact-head">
-                <h3>待补传树</h3>
+                <h3 data-i18n-text="tasks.pending_tree">待补传树</h3>
                 <div class="actions compact">
-                  <button type="button" class="ghost" data-tree-bulk-scope="task" data-tree-bulk-panel="pending" data-tree-bulk-action="collapse">收起全部</button>
-                  <button type="button" class="ghost" data-tree-bulk-scope="task" data-tree-bulk-panel="pending" data-tree-bulk-action="expand">展开全部</button>
-                  <button type="button" class="ghost" id="task-pending-prefill-visible">按当前筛选重建向导</button>
-                  <button type="button" class="ghost" id="task-pending-copy-visible">复制当前路径</button>
-                  <button type="button" class="ghost" id="task-retry-visible-pending">重试当前筛选</button>
-                  <button type="button" class="ghost" id="task-auto-recover-visible-pending">后台补传当前筛选</button>
+                  <button type="button" class="ghost" data-tree-bulk-scope="task" data-tree-bulk-panel="pending" data-tree-bulk-action="collapse" data-i18n-text="tasks.collapse_all">收起全部</button>
+                  <button type="button" class="ghost" data-tree-bulk-scope="task" data-tree-bulk-panel="pending" data-tree-bulk-action="expand" data-i18n-text="tasks.expand_all">展开全部</button>
+                  <button type="button" class="ghost" id="task-pending-prefill-visible" data-i18n-text="tasks.prefill_current_filter">按当前筛选重建向导</button>
+                  <button type="button" class="ghost" id="task-pending-copy-visible" data-i18n-text="tasks.copy_current_paths">复制当前路径</button>
+                  <button type="button" class="ghost" id="task-retry-visible-pending" data-i18n-text="tasks.retry_current_filter">重试当前筛选</button>
+                  <button type="button" class="ghost" id="task-auto-recover-visible-pending" data-i18n-text="tasks.auto_recover_current_filter">后台补传当前筛选</button>
                 </div>
               </div>
               <div class="filter-bar">
-                <input id="task-pending-filter-query" type="text" placeholder="筛选路径 / 文件名" />
-                <input id="task-pending-filter-reason" type="text" placeholder="筛选 reason / provider status" />
+                <input id="task-pending-filter-query" type="text" placeholder="筛选路径 / 文件名" data-i18n-placeholder="tasks.pending_filter_placeholder" />
+                <input id="task-pending-filter-reason" type="text" placeholder="筛选 reason / provider status" data-i18n-placeholder="tasks.pending_reason_placeholder" />
                 <label class="toggle-chip">
                   <input id="task-pending-filter-leaf-only" type="checkbox" />
-                  <span>仅叶子节点</span>
+                  <span data-i18n-text="tasks.leaf_only">仅叶子节点</span>
                 </label>
-                <button type="button" class="ghost" id="task-pending-filter-clear">清空筛选</button>
+                <button type="button" class="ghost" id="task-pending-filter-clear" data-i18n-text="tasks.clear_filters">清空筛选</button>
               </div>
-              <div id="task-pending-filter-summary" class="filter-summary muted">等待任务数据...</div>
+              <div id="task-pending-filter-summary" class="filter-summary muted" data-i18n-text="tasks.waiting_directory_data">等待任务数据...</div>
               <div id="task-pending-tree" class="directory-state-list"></div>
               <pre id="task-detail" class="result-box" data-i18n-text="tasks.detail_waiting">选择一条任务查看详情...</pre>
             </article>
@@ -795,19 +795,19 @@
           <div class="grid two">
             <article class="card">
               <div class="section-head">
-                <h2>最近目录状态</h2>
+                <h2 data-i18n-text="tasks.recent_directory_states">最近目录状态</h2>
                 <div class="actions compact">
-                  <button type="button" class="ghost" data-tree-bulk-scope="status" data-tree-bulk-panel="directory" data-tree-bulk-action="collapse">收起全部</button>
-                  <button type="button" class="ghost" data-tree-bulk-scope="status" data-tree-bulk-panel="directory" data-tree-bulk-action="expand">展开全部</button>
-                  <button type="button" class="ghost" id="status-directory-prefill-visible">按当前筛选重建向导</button>
-                  <button type="button" class="ghost" id="status-retry-visible-directory">重试当前筛选</button>
-                  <button type="button" class="ghost" id="status-directory-copy-visible">复制当前路径</button>
+                  <button type="button" class="ghost" data-tree-bulk-scope="status" data-tree-bulk-panel="directory" data-tree-bulk-action="collapse" data-i18n-text="tasks.collapse_all">收起全部</button>
+                  <button type="button" class="ghost" data-tree-bulk-scope="status" data-tree-bulk-panel="directory" data-tree-bulk-action="expand" data-i18n-text="tasks.expand_all">展开全部</button>
+                  <button type="button" class="ghost" id="status-directory-prefill-visible" data-i18n-text="tasks.prefill_current_filter">按当前筛选重建向导</button>
+                  <button type="button" class="ghost" id="status-retry-visible-directory" data-i18n-text="status.retry_filtered">重试当前筛选</button>
+                  <button type="button" class="ghost" id="status-directory-copy-visible" data-i18n-text="tasks.copy_current_paths">复制当前路径</button>
                 </div>
               </div>
               <div class="filter-bar">
-                <input id="status-directory-filter-query" type="text" placeholder="筛选路径 / last item" />
+                <input id="status-directory-filter-query" type="text" placeholder="筛选路径 / last item" data-i18n-placeholder="tasks.directory_filter_placeholder" />
                 <select id="status-directory-filter-status">
-                  <option value="">全部状态</option>
+                  <option value="" data-i18n-text="tasks.all_statuses">全部状态</option>
                   <option value="pending">pending</option>
                   <option value="running">running</option>
                   <option value="blocked">blocked</option>
@@ -815,27 +815,27 @@
                 </select>
                 <label class="toggle-chip">
                   <input id="status-directory-filter-leaf-only" type="checkbox" />
-                  <span>仅叶子节点</span>
+                  <span data-i18n-text="tasks.leaf_only">仅叶子节点</span>
                 </label>
                 <label class="toggle-chip">
                   <input id="status-directory-filter-problem-only" type="checkbox" />
-                  <span>仅问题节点</span>
+                  <span data-i18n-text="tasks.problem_only">仅问题节点</span>
                 </label>
-                <button type="button" class="ghost" id="status-directory-filter-clear">清空筛选</button>
+                <button type="button" class="ghost" id="status-directory-filter-clear" data-i18n-text="tasks.clear_filters">清空筛选</button>
               </div>
-              <div id="status-directory-filter-summary" class="filter-summary muted">等待状态数据...</div>
+              <div id="status-directory-filter-summary" class="filter-summary muted" data-i18n-text="tasks.waiting_status_directory_data">等待状态数据...</div>
               <div id="status-directory-states" class="directory-state-list"></div>
             </article>
             <article class="card">
               <div class="section-head">
-                <h2>最近待补传树</h2>
+                <h2 data-i18n-text="tasks.recent_pending_tree">最近待补传树</h2>
                 <div class="actions compact">
-                  <button type="button" class="ghost" data-tree-bulk-scope="status" data-tree-bulk-panel="pending" data-tree-bulk-action="collapse">收起全部</button>
-                  <button type="button" class="ghost" data-tree-bulk-scope="status" data-tree-bulk-panel="pending" data-tree-bulk-action="expand">展开全部</button>
-                  <button type="button" class="ghost" id="status-pending-prefill-visible">按当前筛选重建向导</button>
-                  <button type="button" class="ghost" id="status-pending-copy-visible">复制当前路径</button>
-                  <button type="button" class="ghost" id="status-retry-visible-pending">重试当前筛选</button>
-                  <button type="button" class="ghost" id="status-auto-recover-visible-pending">后台补传当前筛选</button>
+                  <button type="button" class="ghost" data-tree-bulk-scope="status" data-tree-bulk-panel="pending" data-tree-bulk-action="collapse" data-i18n-text="tasks.collapse_all">收起全部</button>
+                  <button type="button" class="ghost" data-tree-bulk-scope="status" data-tree-bulk-panel="pending" data-tree-bulk-action="expand" data-i18n-text="tasks.expand_all">展开全部</button>
+                  <button type="button" class="ghost" id="status-pending-prefill-visible" data-i18n-text="tasks.prefill_current_filter">按当前筛选重建向导</button>
+                  <button type="button" class="ghost" id="status-pending-copy-visible" data-i18n-text="tasks.copy_current_paths">复制当前路径</button>
+                  <button type="button" class="ghost" id="status-retry-visible-pending" data-i18n-text="status.retry_filtered">重试当前筛选</button>
+                  <button type="button" class="ghost" id="status-auto-recover-visible-pending" data-i18n-text="status.auto_recover_filtered">后台补传当前筛选</button>
                 </div>
               </div>
               <div class="filter-bar">

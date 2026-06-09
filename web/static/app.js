@@ -189,6 +189,53 @@ const translations = {
       focus_auto_recover_only: "只看自动补传候选",
       focus_checkpoint_only: "只看自动续跑候选",
       open_status_matrix: "打开状态矩阵"
+      ,
+      deletion_summary: "删除记录摘要",
+      prefill_from_deletion: "用此删除记录重建向导",
+      prefill_all_deletions: "按全部删除记录重建向导",
+      deletion_summary_desc: "{count} 条，默认只记录，不会自动删除目标端真实文件。",
+      no_deletion_samples: "暂无可展开样本。",
+      more_deletion_samples: "还有 {count} 条未展开。",
+      reason_label: "原因",
+      deleted_at_label: "删除时间",
+      directory_states: "目录状态",
+      pending_tree: "待补传树",
+      collapse_all: "收起全部",
+      expand_all: "展开全部",
+      prefill_current_filter: "按当前筛选重建向导",
+      copy_current_paths: "复制当前路径",
+      directory_filter_placeholder: "筛选路径 / last item",
+      pending_filter_placeholder: "筛选路径 / 文件名",
+      pending_reason_placeholder: "筛选 reason / provider status",
+      all_statuses: "全部状态",
+      leaf_only: "仅叶子节点",
+      problem_only: "仅问题节点",
+      clear_filters: "清空筛选",
+      waiting_directory_data: "等待任务数据...",
+      waiting_status_directory_data: "等待状态数据...",
+      no_directory_states: "暂无目录状态。",
+      no_pending_items: "暂无待补传项。",
+      no_pending_nodes: "暂无待补传节点。",
+      rebuild_from_current_path: "按当前路径重建向导",
+      retry_current_path: "重试当前路径",
+      auto_recover_current_path: "后台补传当前路径",
+      copy_current_subtree: "复制当前子树",
+      focus_parent: "只看父级",
+      focus_current_path: "只看当前路径",
+      sync_to_tree: "同步到{label}",
+      sync_to_pending_tree: "待补传树",
+      sync_to_directory_tree: "目录树",
+      expand_subtree: "展开子树",
+      collapse_subtree: "收起子树",
+      rebuild_from_root: "按当前 root 重建向导",
+      retry_current_root: "重试当前 root",
+      auto_recover_current_root: "后台补传当前 root",
+      focus_root: "只看 root",
+      sync_other_tree: "同步另一棵树",
+      expand: "展开",
+      collapse: "收起",
+      recent_directory_states: "最近目录状态",
+      recent_pending_tree: "最近待补传树"
     },
     status: {
       summary_title: "运行证据摘要",
@@ -562,6 +609,53 @@ const translations = {
       focus_auto_recover_only: "Show Auto-Recovery Only",
       focus_checkpoint_only: "Show Auto-Resume Only",
       open_status_matrix: "Open Status Matrix"
+      ,
+      deletion_summary: "Deletion Summary",
+      prefill_from_deletion: "Rebuild Wizard from This Deletion",
+      prefill_all_deletions: "Rebuild Wizard from All Deletions",
+      deletion_summary_desc: "{count} records. They are recorded only and will not delete real files on the target side automatically.",
+      no_deletion_samples: "No sample records to expand.",
+      more_deletion_samples: "{count} more records are not expanded yet.",
+      reason_label: "reason",
+      deleted_at_label: "deletedAt",
+      directory_states: "Directory States",
+      pending_tree: "Pending Retry Tree",
+      collapse_all: "Collapse All",
+      expand_all: "Expand All",
+      prefill_current_filter: "Rebuild Wizard from Current Filter",
+      copy_current_paths: "Copy Current Paths",
+      directory_filter_placeholder: "Filter by path / last item",
+      pending_filter_placeholder: "Filter by path / file name",
+      pending_reason_placeholder: "Filter by reason / provider status",
+      all_statuses: "All Statuses",
+      leaf_only: "Leaf Only",
+      problem_only: "Problem Only",
+      clear_filters: "Clear Filters",
+      waiting_directory_data: "Waiting for task data...",
+      waiting_status_directory_data: "Waiting for status data...",
+      no_directory_states: "No directory states yet.",
+      no_pending_items: "No pending retry items yet.",
+      no_pending_nodes: "No pending retry nodes yet.",
+      rebuild_from_current_path: "Rebuild Wizard from This Path",
+      retry_current_path: "Retry This Path",
+      auto_recover_current_path: "Auto Recover This Path",
+      copy_current_subtree: "Copy This Subtree",
+      focus_parent: "Focus Parent",
+      focus_current_path: "Focus This Path",
+      sync_to_tree: "Sync to {label}",
+      sync_to_pending_tree: "Pending Retry Tree",
+      sync_to_directory_tree: "Directory Tree",
+      expand_subtree: "Expand Subtree",
+      collapse_subtree: "Collapse Subtree",
+      rebuild_from_root: "Rebuild Wizard from This Root",
+      retry_current_root: "Retry This Root",
+      auto_recover_current_root: "Auto Recover This Root",
+      focus_root: "Focus Root",
+      sync_other_tree: "Sync the Other Tree",
+      expand: "Expand",
+      collapse: "Collapse",
+      recent_directory_states: "Recent Directory States",
+      recent_pending_tree: "Recent Pending Retry Tree"
     },
     status: {
       summary_title: "Runtime Evidence Summary",
@@ -2681,18 +2775,18 @@ function renderSourceDeletionSummary(records, count = 0, scope = "task", prefill
                 class="ghost"
                 data-source-delete-prefill-path="${escapeHTML(path)}"
                 data-source-delete-prefill-scope="${escapeHTML(prefillScope)}"
-              >用此删除记录重建向导</button>
+              >${escapeHTML(t("tasks.prefill_from_deletion", "用此删除记录重建向导"))}</button>
             ` : ""}
           </div>
-          <span> | reason ${escapeHTML(reason)} | deletedAt ${escapeHTML(deletedAt)}</span>
+          <span> | ${escapeHTML(t("tasks.reason_label", "原因"))} ${escapeHTML(reason)} | ${escapeHTML(t("tasks.deleted_at_label", "删除时间"))} ${escapeHTML(deletedAt)}</span>
         </div>
       `;
     })
     .join("");
   return `
     <div class="insight-card checkpoint-card">
-      <strong>删除记录摘要</strong>
-      <div>${resolvedCount} 条，默认只记录，不会自动删除目标端真实文件。</div>
+      <strong>${escapeHTML(t("tasks.deletion_summary", "删除记录摘要"))}</strong>
+      <div>${escapeHTML(tf("tasks.deletion_summary_desc", { count: resolvedCount }, `${resolvedCount} 条，默认只记录，不会自动删除目标端真实文件。`))}</div>
       ${canPrefill ? `
         <div class="actions compact">
           <button
@@ -2701,11 +2795,11 @@ function renderSourceDeletionSummary(records, count = 0, scope = "task", prefill
             data-source-delete-prefill-paths="${escapeHTML(JSON.stringify(paths))}"
             data-source-delete-prefill-scope="${escapeHTML(prefillScope)}"
             data-source-delete-prefill-label="全部删除记录"
-          >按全部删除记录重建向导</button>
+          >${escapeHTML(t("tasks.prefill_all_deletions", "按全部删除记录重建向导"))}</button>
         </div>
       ` : ""}
-      ${rows || '<div class="muted">暂无可展开样本。</div>'}
-      ${items.length > shown.length ? `<div class="muted">还有 ${items.length - shown.length} 条未展开。</div>` : ""}
+      ${rows || `<div class="muted">${escapeHTML(t("tasks.no_deletion_samples", "暂无可展开样本。"))}</div>`}
+      ${items.length > shown.length ? `<div class="muted">${escapeHTML(tf("tasks.more_deletion_samples", { count: items.length - shown.length }, `还有 ${items.length - shown.length} 条未展开。`))}</div>` : ""}
     </div>
   `;
 }
@@ -3003,7 +3097,9 @@ function renderTreeNodes(nodes, options = {}) {
     const children = hasChildren
       ? `<div class="directory-children ${collapsed ? "is-collapsed" : ""}">${childrenList.map((child) => renderNode(child)).join("")}</div>`
       : "";
-    const syncLabel = panel === "directory" ? "待补传树" : "目录树";
+    const syncLabel = panel === "directory"
+      ? t("tasks.sync_to_pending_tree", "待补传树")
+      : t("tasks.sync_to_directory_tree", "目录树");
 
     return `
       <div class="directory-row tree-node ${collapsed ? "is-collapsed" : ""}">
@@ -3024,7 +3120,7 @@ function renderTreeNodes(nodes, options = {}) {
                   data-tree-group-panel="${escapeHTML(panel)}"
                   data-tree-group-path="${escapeHTML(node.path)}"
                   aria-expanded="${collapsed ? "false" : "true"}"
-                >${collapsed ? "展开子树" : "收起子树"}</button>
+                >${escapeHTML(collapsed ? t("tasks.expand_subtree", "展开子树") : t("tasks.collapse_subtree", "收起子树"))}</button>
               `
               : ""
           }
@@ -3037,7 +3133,7 @@ function renderTreeNodes(nodes, options = {}) {
                   data-tree-prefill-path="${escapeHTML(node.path)}"
                   data-tree-prefill-scope="${escapeHTML(scope)}"
                   data-tree-prefill-panel="${escapeHTML(panel)}"
-                >按当前路径重建向导</button>
+                >${escapeHTML(t("tasks.rebuild_from_current_path", "按当前路径重建向导"))}</button>
               `
               : ""
           }
@@ -3050,7 +3146,7 @@ function renderTreeNodes(nodes, options = {}) {
                   data-tree-retry-path="${escapeHTML(node.path)}"
                   data-tree-retry-scope="${escapeHTML(scope)}"
                   data-tree-retry-panel="${escapeHTML(panel)}"
-                >重试当前路径</button>
+                >${escapeHTML(t("tasks.retry_current_path", "重试当前路径"))}</button>
               `
               : ""
           }
@@ -3062,7 +3158,7 @@ function renderTreeNodes(nodes, options = {}) {
                   class="ghost"
                   data-tree-auto-recover-path="${escapeHTML(node.path)}"
                   data-tree-auto-recover-panel="${escapeHTML(panel)}"
-                >后台补传当前路径</button>
+                >${escapeHTML(t("tasks.auto_recover_current_path", "后台补传当前路径"))}</button>
               `
               : ""
           }
@@ -3072,7 +3168,7 @@ function renderTreeNodes(nodes, options = {}) {
             data-tree-copy-path="${escapeHTML(node.path)}"
             data-tree-copy-scope="${escapeHTML(scope)}"
             data-tree-copy-panel="${escapeHTML(panel)}"
-          >复制当前子树</button>
+          >${escapeHTML(t("tasks.copy_current_subtree", "复制当前子树"))}</button>
           ${
             parentPath
               ? `
@@ -3082,7 +3178,7 @@ function renderTreeNodes(nodes, options = {}) {
                   data-tree-parent-path="${escapeHTML(node.path)}"
                   data-tree-parent-scope="${escapeHTML(scope)}"
                   data-tree-parent-panel="${escapeHTML(panel)}"
-                >只看父级</button>
+                >${escapeHTML(t("tasks.focus_parent", "只看父级"))}</button>
               `
               : ""
           }
@@ -3092,14 +3188,14 @@ function renderTreeNodes(nodes, options = {}) {
             data-tree-focus-path="${escapeHTML(node.path)}"
             data-tree-focus-scope="${escapeHTML(scope)}"
             data-tree-focus-panel="${escapeHTML(panel)}"
-          >只看当前路径</button>
+          >${escapeHTML(t("tasks.focus_current_path", "只看当前路径"))}</button>
           <button
             type="button"
             class="ghost"
             data-tree-sync-path="${escapeHTML(node.path)}"
             data-tree-sync-scope="${escapeHTML(scope)}"
             data-tree-sync-panel="${escapeHTML(panel)}"
-          >同步到${escapeHTML(syncLabel)}</button>
+          >${escapeHTML(tf("tasks.sync_to_tree", { label: syncLabel }, `同步到${syncLabel}`))}</button>
         </div>
         ${children}
       </div>
@@ -3146,7 +3242,7 @@ function renderTreeNodes(nodes, options = {}) {
                         data-tree-prefill-path="${escapeHTML(rootPath)}"
                         data-tree-prefill-scope="${escapeHTML(scope)}"
                         data-tree-prefill-panel="${escapeHTML(panel)}"
-                      >按当前 root 重建向导</button>
+                      >${escapeHTML(t("tasks.rebuild_from_root", "按当前 root 重建向导"))}</button>
                     `
                     : ""
                 }
@@ -3159,7 +3255,7 @@ function renderTreeNodes(nodes, options = {}) {
                         data-tree-retry-path="${escapeHTML(rootPath)}"
                         data-tree-retry-scope="${escapeHTML(scope)}"
                         data-tree-retry-panel="${escapeHTML(panel)}"
-                      >重试当前 root</button>
+                      >${escapeHTML(t("tasks.retry_current_root", "重试当前 root"))}</button>
                     `
                     : ""
                 }
@@ -3171,7 +3267,7 @@ function renderTreeNodes(nodes, options = {}) {
                         class="ghost"
                         data-tree-auto-recover-path="${escapeHTML(rootPath)}"
                         data-tree-auto-recover-panel="${escapeHTML(panel)}"
-                      >后台补传当前 root</button>
+                      >${escapeHTML(t("tasks.auto_recover_current_root", "后台补传当前 root"))}</button>
                     `
                     : ""
                 }
@@ -3181,14 +3277,14 @@ function renderTreeNodes(nodes, options = {}) {
                   data-tree-focus-path="${escapeHTML(rootPath)}"
                   data-tree-focus-scope="${escapeHTML(scope)}"
                   data-tree-focus-panel="${escapeHTML(panel)}"
-                >只看 root</button>
+                >${escapeHTML(t("tasks.focus_root", "只看 root"))}</button>
                 <button
                   type="button"
                   class="ghost"
                   data-tree-sync-path="${escapeHTML(rootPath)}"
                   data-tree-sync-scope="${escapeHTML(scope)}"
                   data-tree-sync-panel="${escapeHTML(panel)}"
-                >同步另一棵树</button>
+                >${escapeHTML(t("tasks.sync_other_tree", "同步另一棵树"))}</button>
                 <button
                   type="button"
                   class="ghost tree-group-toggle"
@@ -3197,7 +3293,7 @@ function renderTreeNodes(nodes, options = {}) {
                   data-tree-group-panel="${escapeHTML(panel)}"
                   data-tree-group-path="${escapeHTML(rootPath)}"
                   aria-expanded="${collapsed ? "false" : "true"}"
-                >${collapsed ? "展开" : "收起"}</button>
+                >${escapeHTML(collapsed ? t("tasks.expand", "展开") : t("tasks.collapse", "收起"))}</button>
               </div>
             </div>
             <div class="directory-group-body">
@@ -3213,13 +3309,13 @@ function renderTreeNodes(nodes, options = {}) {
 function renderDirectoryStates(states) {
   const normalized = normalizeDirectoryStates(states);
   if (!normalized.length) {
-    return `<div class="directory-empty">暂无目录状态。</div>`;
+    return `<div class="directory-empty">${escapeHTML(t("tasks.no_directory_states", "暂无目录状态。"))}</div>`;
   }
-  return renderTreeNodes(states, { mode: "directory", emptyMessage: "暂无目录状态。" });
+  return renderTreeNodes(states, { mode: "directory", emptyMessage: t("tasks.no_directory_states", "暂无目录状态。") });
 }
 
 function renderPendingTree(nodes) {
-  return renderTreeNodes(nodes, { mode: "pending", emptyMessage: "暂无待补传项。" });
+  return renderTreeNodes(nodes, { mode: "pending", emptyMessage: t("tasks.no_pending_items", "暂无待补传项。") });
 }
 
 function currentSelectedTaskDetail() {
@@ -3249,24 +3345,24 @@ function updateTaskTreePanels(detail) {
   const pendingResult = filterPendingTree(runtime.pendingTree || [], state.treeFilters.taskPending);
   $("#task-directory-states").innerHTML = renderTreeNodes(directoryResult.nodes, {
     mode: "directory",
-    emptyMessage: "暂无目录状态。",
+    emptyMessage: t("tasks.no_directory_states", "暂无目录状态。"),
     normalized: true,
     scope: "task",
     panel: "directory",
   });
   $("#task-pending-tree").innerHTML = renderTreeNodes(pendingResult.nodes, {
     mode: "pending",
-    emptyMessage: "暂无待补传项。",
+    emptyMessage: t("tasks.no_pending_items", "暂无待补传项。"),
     normalized: true,
     scope: "task",
     panel: "pending",
   });
   $("#task-directory-filter-summary").textContent = detail
     ? renderTreeFilterSummary(directoryResult, "目录节点", "directory")
-    : "等待任务数据...";
+    : t("tasks.waiting_directory_data", "等待任务数据...");
   $("#task-pending-filter-summary").textContent = detail
     ? renderTreeFilterSummary(pendingResult, "待补传节点", "pending")
-    : "等待任务数据...";
+    : t("tasks.waiting_directory_data", "等待任务数据...");
   wireTreeBulkActions("task", "directory");
   wireTreeBulkActions("task", "pending");
   wireTreeGroupToggles("task", "directory");
@@ -3279,14 +3375,14 @@ function updateStatusTreePanels(runtimePayload) {
   const pendingResult = filterPendingTree(runtime.pendingTree || [], state.treeFilters.statusPending);
   $("#status-directory-states").innerHTML = renderTreeNodes(directoryResult.nodes, {
     mode: "directory",
-    emptyMessage: "暂无目录状态。",
+    emptyMessage: t("tasks.no_directory_states", "暂无目录状态。"),
     normalized: true,
     scope: "status",
     panel: "directory",
   });
   $("#status-pending-tree").innerHTML = renderTreeNodes(pendingResult.nodes, {
     mode: "pending",
-    emptyMessage: "暂无待补传项。",
+    emptyMessage: t("tasks.no_pending_items", "暂无待补传项。"),
     normalized: true,
     scope: "status",
     panel: "pending",
