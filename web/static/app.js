@@ -201,6 +201,29 @@ function syncProfileAuthGuide() {
   wrap.textContent = renderProfileAuthGuide(provider, authMode);
 }
 
+function localizeAPIError(error, status) {
+  const code = String(error?.code || "").trim();
+  const message = String(error?.message || "").trim();
+  const knownMessages = {
+    provider_not_found: "未找到对应网盘源，请先确认当前网盘源是否存在。",
+    auth_mode_not_supported: "当前网盘源不支持这种授权方式，请切换到列表中可选的授权方式。",
+    display_name_required: "显示名称不能为空，请先给这个授权档案起一个容易识别的名字。",
+    provider_key_required: "请先选择网盘源，再创建授权档案。",
+    missing_access_token: "当前授权方式需要填写令牌 Token，请先补全后再保存。",
+    missing_domain_or_drive_id: "当前 Open 接口还需要在附加配置(JSON)里填写 domainId 和 driveId。",
+    missing_cookie: "当前授权方式需要填写 Cookie，请先补全后再保存。",
+    missing_pwd_id: "当前网盘源还需要在附加配置(JSON)里填写 pwdId，例如分享口令。",
+    missing_access_token_or_cookie: "当前网盘源至少需要填写 Token 或 Cookie 其中一项。",
+    invalid_json: "输入内容不是合法 JSON，请检查括号、引号和逗号后重试。",
+    profile_not_found: "没有找到对应授权档案，可能已被删除，请刷新后重试。",
+    invalid_password: "管理员密码不正确，请确认后重新输入。",
+  };
+  if (code && knownMessages[code]) {
+    return knownMessages[code];
+  }
+  return message || `请求失败：${status}`;
+}
+
 function renderProfileStatusLabel(status) {
   const normalized = stringifyValue(status, "-");
   const labels = {
@@ -2800,7 +2823,7 @@ async function api(path, options = {}) {
   const response = await fetch(path, config);
   const payload = await response.json();
   if (!response.ok || !payload.ok) {
-    throw new Error(payload?.error?.message || `Request failed: ${response.status}`);
+    throw new Error(localizeAPIError(payload?.error, response.status));
   }
   return payload.data;
 }

@@ -1506,6 +1506,18 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "官方 OAuth（official_oauth）") {
 		t.Fatalf("expected localized official_oauth auth mode in app.js, got %q", body)
 	}
+	if !strings.Contains(body, "localizeAPIError") {
+		t.Fatalf("expected api error localization helper in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "当前 Open 接口还需要在附加配置(JSON)里填写 domainId 和 driveId") {
+		t.Fatalf("expected localized open auth error text in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "当前授权方式需要填写 Cookie") {
+		t.Fatalf("expected localized cookie auth error text in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "当前网盘源至少需要填写 Token 或 Cookie 其中一项") {
+		t.Fatalf("expected localized token-or-cookie auth error text in app.js, got %q", body)
+	}
 	if !strings.Contains(body, "renderRiskDefaultsSourceBadge") {
 		t.Fatalf("expected provider risk source badge helper in app.js, got %q", body)
 	}
