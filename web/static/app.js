@@ -133,6 +133,15 @@ function renderRiskModeLabel(mode) {
   return labels[normalized] || normalized;
 }
 
+function renderAuthModeLabel(mode) {
+  const normalized = stringifyValue(mode, "-");
+  const labels = {
+    manual_token: "手动令牌（manual_token）",
+    manual_cookie: "手动 Cookie（manual_cookie）",
+  };
+  return labels[normalized] || normalized;
+}
+
 function renderSourceDeletePolicy(value, fallback = "record_only") {
   const policy = stringifyValue(value, fallback);
   if (policy === "record_only") {
@@ -506,7 +515,7 @@ function syncTargetProfileInsight() {
   wrap.innerHTML = `
     <div class="section-head">
       <h3>${escapeHTML(stringifyValue(profile.displayName, profileID))}</h3>
-      <span class="muted">${escapeHTML(stringifyValue(profile.providerKey, "-"))} / ${escapeHTML(stringifyValue(profile.authMode, "-"))}</span>
+      <span class="muted">${escapeHTML(stringifyValue(profile.providerKey, "-"))} / ${escapeHTML(renderAuthModeLabel(profile.authMode))}</span>
     </div>
     <div class="insight-grid">
       <div class="insight-card">

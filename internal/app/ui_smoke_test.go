@@ -245,6 +245,7 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 		waitForText(`#plan-target-provider-insight`, "网盘源默认模板"),
 		waitForText(`#plan-target-profile`, profileName),
 		setSelectValueByText(`#plan-target-profile`, profileName),
+		waitForText(`#plan-target-profile-insight`, "123_open / 手动令牌（manual_token）"),
 		waitForText(`#plan-target-profile-insight`, "授权档案内置账号默认风控"),
 		waitForText(`#plan-target-profile-insight`, "req 1666ms"),
 		chromedp.Click(`#apply-profile-default-risk`, chromedp.ByID),
