@@ -7898,6 +7898,7 @@ function wirePlanner() {
     if (openButton) {
       try {
         await loadDirectoryBrowser("source", openButton.dataset.browserPath || "/", { fileId: openButton.dataset.browserFileId || "" });
+        showFlash(`已打开源目录：${state.directoryBrowsers.source.currentPath || "/"}`);
       } catch (error) {
         showFlash(error.message, true);
       }
@@ -7913,6 +7914,7 @@ function wirePlanner() {
     if (openButton) {
       try {
         await loadDirectoryBrowser("target", openButton.dataset.browserPath || "/", { fileId: openButton.dataset.browserFileId || "" });
+        showFlash(`已打开目标目录：${state.directoryBrowsers.target.currentPath || "/"}`);
       } catch (error) {
         showFlash(error.message, true);
       }
@@ -7929,6 +7931,7 @@ function wirePlanner() {
     }
     try {
       await loadDirectoryBrowser("source", button.dataset.browserPath || "/");
+      showFlash(`已跳转到源目录：${state.directoryBrowsers.source.currentPath || "/"}`);
     } catch (error) {
       showFlash(error.message, true);
     }
@@ -7940,6 +7943,7 @@ function wirePlanner() {
     }
     try {
       await loadDirectoryBrowser("target", button.dataset.browserPath || "/");
+      showFlash(`已跳转到目标目录：${state.directoryBrowsers.target.currentPath || "/"}`);
     } catch (error) {
       showFlash(error.message, true);
     }
