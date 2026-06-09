@@ -219,8 +219,8 @@
 
           <article class="card">
             <div class="section-head">
-              <h2>已保存授权档案</h2>
-              <span class="muted">支持 validate 与 delete</span>
+              <h2 data-i18n-text="providers.saved_profiles_title">已保存授权档案</h2>
+              <span class="muted" data-i18n-text="providers.saved_profiles_hint">支持 validate 与 delete</span>
             </div>
             <div id="profiles-table" class="table-wrap"></div>
           </article>
@@ -331,45 +331,45 @@
                   </div>
                   <div class="mini-grid">
                     <label>
-                      <span>请求间隔(ms)</span>
-                      <input id="risk-request-interval" type="number" min="0" placeholder="例如 1200" />
+                      <span data-i18n-text="wizard.risk_request_interval">请求间隔(ms)</span>
+                      <input id="risk-request-interval" type="number" min="0" placeholder="例如 1200" data-i18n-placeholder="wizard.number_example_1200" />
                     </label>
                     <label>
-                      <span>目录间隔(ms)</span>
-                      <input id="risk-directory-interval" type="number" min="0" placeholder="例如 2000" />
+                      <span data-i18n-text="wizard.risk_directory_interval">目录间隔(ms)</span>
+                      <input id="risk-directory-interval" type="number" min="0" placeholder="例如 2000" data-i18n-placeholder="wizard.number_example_2000" />
                     </label>
                     <label>
-                      <span>分页大小</span>
-                      <input id="risk-page-size" type="number" min="1" placeholder="例如 100" />
+                      <span data-i18n-text="wizard.risk_page_size">分页大小</span>
+                      <input id="risk-page-size" type="number" min="1" placeholder="例如 100" data-i18n-placeholder="wizard.number_example_100" />
                     </label>
                     <label>
-                      <span>冷却时间(s)</span>
-                      <input id="risk-cooldown-seconds" type="number" min="0" placeholder="例如 600" />
+                      <span data-i18n-text="wizard.risk_cooldown_seconds">冷却时间(s)</span>
+                      <input id="risk-cooldown-seconds" type="number" min="0" placeholder="例如 600" data-i18n-placeholder="wizard.number_example_600" />
                     </label>
                     <label>
-                      <span>重试次数</span>
-                      <input id="risk-retry-limit" type="number" min="0" placeholder="例如 2" />
+                      <span data-i18n-text="wizard.risk_retry_limit">重试次数</span>
+                      <input id="risk-retry-limit" type="number" min="0" placeholder="例如 2" data-i18n-placeholder="wizard.number_example_2" />
                     </label>
                     <label>
-                      <span>最大并发</span>
-                      <input id="risk-max-concurrent" type="number" min="0" placeholder="例如 1" />
+                      <span data-i18n-text="wizard.risk_max_concurrent">最大并发</span>
+                      <input id="risk-max-concurrent" type="number" min="0" placeholder="例如 1" data-i18n-placeholder="wizard.number_example_1" />
                     </label>
                     <label>
-                      <span>自动补传开始时段</span>
-                      <input id="risk-auto-retry-start-hour" type="number" min="0" max="23" placeholder="例如 1" />
+                      <span data-i18n-text="wizard.risk_auto_retry_start_hour">自动补传开始时段</span>
+                      <input id="risk-auto-retry-start-hour" type="number" min="0" max="23" placeholder="例如 1" data-i18n-placeholder="wizard.number_example_1" />
                     </label>
                     <label>
-                      <span>自动补传结束时段</span>
-                      <input id="risk-auto-retry-end-hour" type="number" min="0" max="24" placeholder="例如 7" />
+                      <span data-i18n-text="wizard.risk_auto_retry_end_hour">自动补传结束时段</span>
+                      <input id="risk-auto-retry-end-hour" type="number" min="0" max="24" placeholder="例如 7" data-i18n-placeholder="wizard.number_example_7" />
                     </label>
                     <label>
-                      <span>风险关键词</span>
-                      <input id="risk-keywords" type="text" placeholder="rate_limit,captcha,forbidden" />
+                      <span data-i18n-text="wizard.risk_keywords">风险关键词</span>
+                      <input id="risk-keywords" type="text" placeholder="rate_limit,captcha,forbidden" data-i18n-placeholder="wizard.risk_keywords_placeholder" />
                     </label>
                   </div>
                   <div class="actions compact-actions">
-                    <button type="button" class="ghost" id="sync-risk-override">同步到 JSON</button>
-                    <button type="button" class="ghost" id="clear-risk-override">清空覆盖</button>
+                    <button type="button" class="ghost" id="sync-risk-override" data-i18n-text="wizard.sync_risk_override">同步到 JSON</button>
+                    <button type="button" class="ghost" id="clear-risk-override" data-i18n-text="wizard.clear_risk_override">清空覆盖</button>
                   </div>
                 </div>
                 <label>
@@ -406,11 +406,11 @@
                   </div>
                 </div>
                 <label>
-                  <span>阈值(MB)</span>
+                  <span data-i18n-text="wizard.threshold_mb">阈值(MB)</span>
                   <input id="plan-threshold" name="thresholdMB" type="number" min="0" value="10" />
                 </label>
                 <label>
-                  <span>冲突策略</span>
+                  <span data-i18n-text="wizard.conflict_policy">冲突策略</span>
                   <select id="plan-conflict-policy" name="conflictPolicy">
                     <option value="auto_rename_new">auto_rename_new</option>
                     <option value="overwrite_existing">overwrite_existing</option>
@@ -434,7 +434,7 @@
                   上传目标路径会按“目标根目录 + 源端相对路径”生成；留空时默认写到目标端根目录。
                 </div>
                 <label>
-                  <span>条目(JSON)</span>
+                  <span data-i18n-text="wizard.entries_json">条目(JSON)</span>
                   <textarea id="plan-entries" rows="12">[
   {
     "path": "/demo/file.bin",
