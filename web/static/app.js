@@ -97,6 +97,62 @@ const translations = {
       constraint_python: "不兼容 Python 旧页面",
       constraint_entry: "适合作为后续真实联调入口",
       waiting: "等待登录验证..."
+    },
+    common: {
+      refresh: "刷新"
+    },
+    providers: {
+      profile_title: "授权档案",
+      assist_title: "授权引导入口",
+      assist_desc: "默认优先通过 OpenList 获取登录态和存储信息，失败后再切到 Alist，最后才使用手动高级模式。",
+      openlist_url_label: "OpenList 地址",
+      openlist_token_label: "OpenList 访问令牌",
+      alist_url_label: "Alist 地址",
+      alist_token_label: "Alist 访问令牌",
+      url_placeholder: "例如：http://127.0.0.1:5244",
+      token_placeholder: "可留空，登录后再补",
+      assist_use_openlist: "优先使用 OpenList",
+      assist_use_alist: "切到 Alist 兜底",
+      assist_use_manual: "使用手动高级模式",
+      assist_discover_openlist: "检测 OpenList",
+      assist_discover_alist: "检测 Alist",
+      assist_open_openlist: "打开 OpenList",
+      assist_open_alist: "打开 Alist",
+      assist_clear: "清空引导配置",
+      assist_summary_default: "当前将优先尝试 OpenList 引导；如未配置地址或令牌，会自动提示切到 Alist 或手动模式。",
+      assist_discovery_default: "检测结果会在这里显示；如果能列出可见存储，说明当前 OpenList / Alist 地址和令牌基本可用。",
+      provider_label: "网盘源",
+      auth_mode_label: "授权方式",
+      display_name_label: "显示名称",
+      display_name_placeholder: "例如：189Cloud 主账号",
+      token_label: "令牌 Token",
+      cookie_label: "Cookie",
+      extra_label: "附加配置(JSON)",
+      optional_placeholder: "可留空",
+      extra_placeholder: "例如：{\"pwdId\":\"abcd\"}",
+      auth_guide_default: "选择网盘源和授权方式后，这里会提示当前常见必填项、可留空项和 Extra JSON 示例。",
+      risk_title: "账号默认风控模板",
+      risk_desc: "可选。保存到 `extra.riskDefaults`，作为该授权档案默认风控。",
+      risk_sync: "同步到 Extra JSON",
+      risk_clear: "清空账号默认风控",
+      submit_create: "创建授权档案",
+      submit_update: "更新授权档案",
+      cancel_edit: "取消编辑",
+      catalog_title: "网盘能力概览",
+      catalog_detail_default: "点击任一网盘卡片，查看能力说明、默认风控模板和恢复预算。",
+      flash_use_openlist: "已切换为 OpenList 优先引导",
+      flash_use_alist: "已切换为 Alist 兜底引导",
+      flash_use_manual: "已切换为手动高级模式",
+      flash_detect_openlist: "已检测 OpenList，可见存储 {count} 项",
+      flash_detect_alist: "已检测 Alist，可见存储 {count} 项",
+      flash_reset_assist: "授权引导配置已清空，已恢复 OpenList 优先",
+      flash_refresh_catalog: "网盘列表已刷新",
+      flash_refresh_profiles: "授权档案已刷新",
+      flash_sync_risk: "账号默认风控已同步到 Extra JSON",
+      flash_clear_risk: "账号默认风控已清空",
+      flash_cancel_edit: "已退出授权档案编辑",
+      flash_profile_created: "授权档案已创建",
+      flash_profile_updated: "授权档案已更新"
     }
   },
   "en-US": {
@@ -132,6 +188,62 @@ const translations = {
       constraint_python: "Legacy Python pages are not supported",
       constraint_entry: "Suitable as the primary entry for real integration work",
       waiting: "Waiting for login verification..."
+    },
+    common: {
+      refresh: "Refresh"
+    },
+    providers: {
+      profile_title: "Auth Profiles",
+      assist_title: "Authorization Guide",
+      assist_desc: "OpenList is preferred for session and storage discovery, Alist is the fallback, and manual advanced mode remains the last resort.",
+      openlist_url_label: "OpenList URL",
+      openlist_token_label: "OpenList Access Token",
+      alist_url_label: "Alist URL",
+      alist_token_label: "Alist Access Token",
+      url_placeholder: "Example: http://127.0.0.1:5244",
+      token_placeholder: "Optional for now, fill it in after login",
+      assist_use_openlist: "Prefer OpenList",
+      assist_use_alist: "Use Alist Fallback",
+      assist_use_manual: "Use Manual Advanced Mode",
+      assist_discover_openlist: "Detect OpenList",
+      assist_discover_alist: "Detect Alist",
+      assist_open_openlist: "Open OpenList",
+      assist_open_alist: "Open Alist",
+      assist_clear: "Clear Guide Settings",
+      assist_summary_default: "OpenList guidance is preferred by default. If the URL or token is missing, the console will prompt you to switch to Alist or manual mode.",
+      assist_discovery_default: "Detection results appear here. If visible storages are listed, the current OpenList / Alist URL and token are basically usable.",
+      provider_label: "Provider",
+      auth_mode_label: "Auth Mode",
+      display_name_label: "Display Name",
+      display_name_placeholder: "Example: 189Cloud Primary Account",
+      token_label: "Token",
+      cookie_label: "Cookie",
+      extra_label: "Extra JSON",
+      optional_placeholder: "Optional",
+      extra_placeholder: "Example: {\"pwdId\":\"abcd\"}",
+      auth_guide_default: "After you choose a provider and auth mode, this panel shows common required fields, optional fields, and Extra JSON examples.",
+      risk_title: "Default Account Risk Template",
+      risk_desc: "Optional. Saved to `extra.riskDefaults` as the default risk template for this auth profile.",
+      risk_sync: "Sync to Extra JSON",
+      risk_clear: "Clear Default Risk Template",
+      submit_create: "Create Auth Profile",
+      submit_update: "Update Auth Profile",
+      cancel_edit: "Cancel Edit",
+      catalog_title: "Provider Capability Overview",
+      catalog_detail_default: "Click any provider card to inspect capabilities, default risk templates, and recovery budgets.",
+      flash_use_openlist: "Switched to OpenList-first guidance",
+      flash_use_alist: "Switched to Alist fallback guidance",
+      flash_use_manual: "Switched to manual advanced mode",
+      flash_detect_openlist: "OpenList detected with {count} visible storages",
+      flash_detect_alist: "Alist detected with {count} visible storages",
+      flash_reset_assist: "Authorization guide settings cleared. OpenList-first guidance has been restored",
+      flash_refresh_catalog: "Provider list refreshed",
+      flash_refresh_profiles: "Auth profiles refreshed",
+      flash_sync_risk: "Default account risk settings synced to Extra JSON",
+      flash_clear_risk: "Default account risk settings cleared",
+      flash_cancel_edit: "Auth profile edit cancelled",
+      flash_profile_created: "Auth profile created",
+      flash_profile_updated: "Auth profile updated"
     }
   }
 };
@@ -246,6 +358,14 @@ function t(key, fallback = "") {
   return translationValue(key, fallback);
 }
 
+function tf(key, params = {}, fallback = "") {
+  let text = t(key, fallback);
+  Object.entries(params || {}).forEach(([name, value]) => {
+    text = text.replaceAll(`{${name}}`, String(value));
+  });
+  return text;
+}
+
 function applyI18n() {
   document.documentElement.lang = state.language || "zh-CN";
   document.title = t("page_title", document.title || "CloudPan Sync Go");
@@ -325,61 +445,110 @@ function renderAuthModeLabel(mode) {
 
 function renderProfileAuthGuide(provider, authMode) {
   if (!provider || typeof provider !== "object") {
-    return "选择网盘源和授权方式后，这里会提示当前常见必填项、可留空项和 Extra JSON 示例。";
+    return t(
+      "providers.auth_guide_default",
+      "选择网盘源和授权方式后，这里会提示当前常见必填项、可留空项和 Extra JSON 示例。",
+    );
   }
   const displayName = stringifyValue(provider.meta?.displayName, provider.meta?.key || "当前网盘源");
   const mode = String(authMode || "").trim();
-  const required = ["显示名称"];
+  const required = [t("providers.display_name_label", "显示名称")];
   const optional = [];
-  let intro = `当前网盘源：${displayName}。`;
-  let extraHint = "一般情况下 `附加配置(JSON)` 可以先留空。";
+  let intro =
+    state.language === "en-US"
+      ? `Current provider: ${displayName}.`
+      : `当前网盘源：${displayName}。`;
+  let extraHint =
+    state.language === "en-US"
+      ? "In most cases, `Extra JSON` can stay empty at first."
+      : "一般情况下 `附加配置(JSON)` 可以先留空。";
 
   if (mode === "manual_token") {
-    required.push("令牌 Token");
-    optional.push("Cookie");
-    intro += " 当前使用手动令牌模式，优先填写令牌。";
+    required.push(t("providers.token_label", "令牌 Token"));
+    optional.push(t("providers.cookie_label", "Cookie"));
+    intro +=
+      state.language === "en-US"
+        ? " Manual token mode is active. Fill in the token first."
+        : " 当前使用手动令牌模式，优先填写令牌。";
   } else if (mode === "manual_cookie") {
-    required.push("Cookie");
-    optional.push("令牌 Token");
-    intro += " 当前使用手动 Cookie 模式，优先填写完整 Cookie。";
+    required.push(t("providers.cookie_label", "Cookie"));
+    optional.push(t("providers.token_label", "令牌 Token"));
+    intro +=
+      state.language === "en-US"
+        ? " Manual cookie mode is active. Fill in the full cookie first."
+        : " 当前使用手动 Cookie 模式，优先填写完整 Cookie。";
   } else if (mode === "official_oauth") {
-    required.push("令牌 Token");
-    optional.push("Cookie");
-    intro += " 当前使用官方 OAuth 模式，通常先填写开放平台返回的 access token。";
+    required.push(t("providers.token_label", "令牌 Token"));
+    optional.push(t("providers.cookie_label", "Cookie"));
+    intro +=
+      state.language === "en-US"
+        ? " Official OAuth mode is active. Usually you should fill in the access token returned by the open platform first."
+        : " 当前使用官方 OAuth 模式，通常先填写开放平台返回的 access token。";
   } else if (mode === "web_login_capture") {
-    required.push("Cookie");
-    optional.push("令牌 Token");
-    intro += " 当前使用网页登录采集模式，通常先从浏览器已登录会话中整理 Cookie。";
+    required.push(t("providers.cookie_label", "Cookie"));
+    optional.push(t("providers.token_label", "令牌 Token"));
+    intro +=
+      state.language === "en-US"
+        ? " Web login capture mode is active. Usually you should extract the cookie from an existing signed-in browser session first."
+        : " 当前使用网页登录采集模式，通常先从浏览器已登录会话中整理 Cookie。";
   }
 
   const providerKey = String(provider.meta?.key || "").trim();
   if (["aliyundrive_open", "123_open"].includes(providerKey)) {
-    required.push("Extra JSON 内的 domainId", "Extra JSON 内的 driveId");
+    required.push(
+      state.language === "en-US" ? "domainId inside Extra JSON" : "Extra JSON 内的 domainId",
+      state.language === "en-US" ? "driveId inside Extra JSON" : "Extra JSON 内的 driveId",
+    );
     extraHint =
-      'Open 接口通常还需要在 `附加配置(JSON)` 中补 `domainId` 和 `driveId`，例如 `{"domainId":"bj1","driveId":"drive-1"}`。';
+      state.language === "en-US"
+        ? 'Open API providers usually also require `domainId` and `driveId` in `Extra JSON`, for example `{"domainId":"bj1","driveId":"drive-1"}`.'
+        : 'Open 接口通常还需要在 `附加配置(JSON)` 中补 `domainId` 和 `driveId`，例如 `{"domainId":"bj1","driveId":"drive-1"}`。';
   } else if (["quark", "uc"].includes(providerKey)) {
-    required.push("分享口令对应的 Extra JSON: pwdId");
-    extraHint = 'Quark / UC 常见还需要在 `附加配置(JSON)` 中填写 `pwdId`，例如 `{"pwdId":"分享口令"}`。';
+    required.push(state.language === "en-US" ? "pwdId inside Extra JSON for the share code" : "分享口令对应的 Extra JSON: pwdId");
+    extraHint =
+      state.language === "en-US"
+        ? 'Quark / UC providers commonly also require `pwdId` in `Extra JSON`, for example `{"pwdId":"share-code"}`.'
+        : 'Quark / UC 常见还需要在 `附加配置(JSON)` 中填写 `pwdId`，例如 `{"pwdId":"分享口令"}`。';
   }
 
   if (mode === "web_login_capture") {
-    extraHint += " 如果暂时拿不到网页登录辅助入口，可先切到该网盘源支持的手动模式继续。";
+    extraHint +=
+      state.language === "en-US"
+        ? " If you cannot access the web-login helper right now, switch to a supported manual mode for this provider first."
+        : " 如果暂时拿不到网页登录辅助入口，可先切到该网盘源支持的手动模式继续。";
   }
 
   const assist = state.authAssist || defaultAuthAssistState();
-  let bridgeHint = "当前授权入口：OpenList 优先，Alist 兜底，手动模式作为最后兜底。";
+  let bridgeHint =
+    state.language === "en-US"
+      ? "Current authorization path: OpenList first, Alist as fallback, manual mode as the last resort."
+      : "当前授权入口：OpenList 优先，Alist 兜底，手动模式作为最后兜底。";
   if (assist.preferred === "openlist") {
     bridgeHint = assist.openlistURL
-      ? "当前授权入口：优先通过 OpenList 辅助获取登录态、存储和目录信息。若 OpenList 不可用，再切到 Alist 或手动模式。"
-      : "当前授权入口：已选 OpenList 优先，但还没填写 OpenList 地址；可先补地址，或临时切到 Alist / 手动模式。";
+      ? state.language === "en-US"
+        ? "Current authorization path: OpenList is preferred for session, storage, and directory discovery. If OpenList is unavailable, switch to Alist or manual mode."
+        : "当前授权入口：优先通过 OpenList 辅助获取登录态、存储和目录信息。若 OpenList 不可用，再切到 Alist 或手动模式。"
+      : state.language === "en-US"
+        ? "Current authorization path: OpenList is preferred, but the OpenList URL is still missing. Fill it in first, or temporarily switch to Alist / manual mode."
+        : "当前授权入口：已选 OpenList 优先，但还没填写 OpenList 地址；可先补地址，或临时切到 Alist / 手动模式。";
   } else if (assist.preferred === "alist") {
     bridgeHint = assist.alistURL
-      ? "当前授权入口：当前已切到 Alist 兜底；如果 Alist 能看到目标存储，可先在 Alist 登录后再回填下方授权字段。"
-      : "当前授权入口：已切到 Alist 兜底，但还没填写 Alist 地址；可先补地址，或改回 OpenList / 手动模式。";
+      ? state.language === "en-US"
+        ? "Current authorization path: Alist fallback is active. If Alist can already see the target storage, sign in there first and then fill the auth fields below."
+        : "当前授权入口：当前已切到 Alist 兜底；如果 Alist 能看到目标存储，可先在 Alist 登录后再回填下方授权字段。"
+      : state.language === "en-US"
+        ? "Current authorization path: Alist fallback is active, but the Alist URL is still missing. Fill in the address first, or switch back to OpenList / manual mode."
+        : "当前授权入口：已切到 Alist 兜底，但还没填写 Alist 地址；可先补地址，或改回 OpenList / 手动模式。";
   } else if (assist.preferred === "manual") {
-    bridgeHint = "当前授权入口：已切到手动高级模式，建议只在 OpenList / Alist 都不可用时使用。";
+    bridgeHint =
+      state.language === "en-US"
+        ? "Current authorization path: manual advanced mode is active. Use it only when both OpenList and Alist are unavailable."
+        : "当前授权入口：已切到手动高级模式，建议只在 OpenList / Alist 都不可用时使用。";
   }
 
+  if (state.language === "en-US") {
+    return `${bridgeHint} ${intro} Required: ${required.join(", ")}.${optional.length ? ` Optional: ${optional.join(", ")}.` : ""} ${extraHint}`;
+  }
   return `${bridgeHint} ${intro} 必填：${required.join("、")}。${optional.length ? ` 可留空：${optional.join("、")}。` : ""} ${extraHint}`;
 }
 
@@ -411,15 +580,25 @@ function renderAuthAssistSummary() {
   const alistReady = Boolean(assist.alistURL);
   if (assist.preferred === "openlist") {
     return openlistReady
-      ? `当前优先走 OpenList：${assist.openlistURL}。建议先在 OpenList 登录并确认能看到对应存储；失败后再切到 Alist 或手动模式。`
-      : "当前优先走 OpenList，但还没填写 OpenList 地址。可先填写地址并在新窗口登录；若暂时没有 OpenList，再切到 Alist 兜底。";
+      ? state.language === "en-US"
+        ? `OpenList is currently preferred: ${assist.openlistURL}. Sign in with OpenList first and confirm the target storage is visible. If it fails, switch to Alist or manual mode.`
+        : `当前优先走 OpenList：${assist.openlistURL}。建议先在 OpenList 登录并确认能看到对应存储；失败后再切到 Alist 或手动模式。`
+      : state.language === "en-US"
+        ? "OpenList is currently preferred, but the OpenList URL is still missing. Fill in the address and sign in in a new window first. If OpenList is unavailable, switch to Alist fallback."
+        : "当前优先走 OpenList，但还没填写 OpenList 地址。可先填写地址并在新窗口登录；若暂时没有 OpenList，再切到 Alist 兜底。";
   }
   if (assist.preferred === "alist") {
     return alistReady
-      ? `当前已切到 Alist 兜底：${assist.alistURL}。建议先在 Alist 登录并确认能看到对应存储；如果仍拿不到字段，再回到底部手动模式。`
-      : "当前已切到 Alist 兜底，但还没填写 Alist 地址。可先补 Alist 地址；如果也没有 Alist，再使用手动高级模式。";
+      ? state.language === "en-US"
+        ? `Alist fallback is active: ${assist.alistURL}. Sign in with Alist first and confirm the target storage is visible. If required fields are still missing, switch to manual mode below.`
+        : `当前已切到 Alist 兜底：${assist.alistURL}。建议先在 Alist 登录并确认能看到对应存储；如果仍拿不到字段，再回到底部手动模式。`
+      : state.language === "en-US"
+        ? "Alist fallback is active, but the Alist URL is still missing. Fill in the Alist address first. If Alist is also unavailable, use manual advanced mode."
+        : "当前已切到 Alist 兜底，但还没填写 Alist 地址。可先补 Alist 地址；如果也没有 Alist，再使用手动高级模式。";
   }
-  return "当前已切到手动高级模式。请直接填写下方 Token、Cookie 和附加配置；如果后面补上 OpenList 或 Alist，也可以再切回引导模式。";
+  return state.language === "en-US"
+    ? "Manual advanced mode is active. Fill in the Token, Cookie, and Extra fields directly below. If OpenList or Alist becomes available later, you can switch back to guided mode."
+    : "当前已切到手动高级模式。请直接填写下方 Token、Cookie 和附加配置；如果后面补上 OpenList 或 Alist，也可以再切回引导模式。";
 }
 
 function syncAuthAssistInputs() {
@@ -456,11 +635,16 @@ function persistAuthAssistState(nextState = {}) {
 
 function renderAuthAssistDiscovery(response) {
   if (!response || typeof response !== "object") {
-    return "检测结果会在这里显示；如果能列出可见存储，说明当前 OpenList / Alist 地址和令牌基本可用。";
+    return t(
+      "providers.assist_discovery_default",
+      "检测结果会在这里显示；如果能列出可见存储，说明当前 OpenList / Alist 地址和令牌基本可用。",
+    );
   }
   const storages = Array.isArray(response.storages) ? response.storages : [];
   if (!storages.length) {
-    return `${response.kind === "alist" ? "Alist" : "OpenList"} 已连通，但当前没有返回可见存储。可继续确认令牌权限，或直接回到底部手动模式。`;
+    return state.language === "en-US"
+      ? `${response.kind === "alist" ? "Alist" : "OpenList"} is reachable, but no visible storage was returned. Confirm the token permissions, or switch back to manual mode below.`
+      : `${response.kind === "alist" ? "Alist" : "OpenList"} 已连通，但当前没有返回可见存储。可继续确认令牌权限，或直接回到底部手动模式。`;
   }
   const summary = storages
     .slice(0, 6)
@@ -472,6 +656,19 @@ function renderAuthAssistDiscovery(response) {
     })
     .join("；");
   const suffix = storages.length > 6 ? `；其余 ${storages.length - 6} 项未展开` : "";
+  if (state.language === "en-US") {
+    const englishSummary = storages
+      .slice(0, 6)
+      .map((item) => {
+        const name = stringifyValue(item.name, "-");
+        const driver = stringifyValue(item.driver, "-");
+        const mountPath = stringifyValue(item.mountPath, "-");
+        return `${name} (${driver} / ${mountPath})`;
+      })
+      .join("; ");
+    const englishSuffix = storages.length > 6 ? `; ${storages.length - 6} more items are hidden` : "";
+    return `${response.kind === "alist" ? "Alist" : "OpenList"} is reachable. Visible storages: ${englishSummary}${englishSuffix}.`;
+  }
   return `${response.kind === "alist" ? "Alist" : "OpenList"} 已连通，当前可见存储：${summary}${suffix}。`;
 }
 
@@ -3185,7 +3382,7 @@ function resetProfileForm() {
   $("#profile-id").value = "";
   $("#profile-extra").value = "";
   hydrateRiskProfileForm("profile-risk", null);
-  $("#profile-submit").textContent = "创建授权档案";
+  $("#profile-submit").textContent = t("providers.submit_create", "创建授权档案");
   syncAuthAssistInputs();
   syncAuthModes();
   syncProfileAuthGuide();
@@ -3206,7 +3403,7 @@ function setProfileFormEditing(profile) {
   const extra = profile.extra && typeof profile.extra === "object" ? profile.extra : {};
   $("#profile-extra").value = Object.keys(extra).length ? JSON.stringify(extra, null, 2) : "";
   hydrateRiskProfileForm("profile-risk", parseProfileRiskDefaultsFromExtra(extra));
-  $("#profile-submit").textContent = "更新授权档案";
+  $("#profile-submit").textContent = t("providers.submit_update", "更新授权档案");
   syncAuthAssistInputs();
   syncProfileAuthGuide();
 }
@@ -8262,6 +8459,8 @@ function wireLanguage() {
     saveLanguage();
     applyI18n();
     syncSessionState();
+    syncAuthAssistInputs();
+    syncProfileAuthGuide();
   });
 }
 
@@ -8304,20 +8503,20 @@ function wireProfiles() {
   });
   $("#profile-assist-use-openlist").addEventListener("click", () => {
     switchAuthAssistMode("openlist");
-    showFlash("已切换为 OpenList 优先引导");
+    showFlash(t("providers.flash_use_openlist", "已切换为 OpenList 优先引导"));
   });
   $("#profile-assist-use-alist").addEventListener("click", () => {
     switchAuthAssistMode("alist");
-    showFlash("已切换为 Alist 兜底引导");
+    showFlash(t("providers.flash_use_alist", "已切换为 Alist 兜底引导"));
   });
   $("#profile-assist-use-manual").addEventListener("click", () => {
     switchAuthAssistMode("manual");
-    showFlash("已切换为手动高级模式");
+    showFlash(t("providers.flash_use_manual", "已切换为手动高级模式"));
   });
   $("#profile-assist-discover-openlist").addEventListener("click", async () => {
     try {
       const result = await discoverAuthAssist("openlist");
-      showFlash(`已检测 OpenList，可见存储 ${Array.isArray(result.storages) ? result.storages.length : 0} 项`);
+      showFlash(t("providers.flash_detect_openlist", "已检测 OpenList，可见存储 {count} 项").replace("{count}", String(Array.isArray(result.storages) ? result.storages.length : 0)));
     } catch (error) {
       syncAuthAssistDiscovery(error.message);
       showFlash(error.message, true);
@@ -8326,7 +8525,7 @@ function wireProfiles() {
   $("#profile-assist-discover-alist").addEventListener("click", async () => {
     try {
       const result = await discoverAuthAssist("alist");
-      showFlash(`已检测 Alist，可见存储 ${Array.isArray(result.storages) ? result.storages.length : 0} 项`);
+      showFlash(t("providers.flash_detect_alist", "已检测 Alist，可见存储 {count} 项").replace("{count}", String(Array.isArray(result.storages) ? result.storages.length : 0)));
     } catch (error) {
       syncAuthAssistDiscovery(error.message);
       showFlash(error.message, true);
@@ -8337,7 +8536,7 @@ function wireProfiles() {
   $("#profile-assist-clear").addEventListener("click", () => {
     persistAuthAssistState(defaultAuthAssistState());
     syncAuthAssistDiscovery("");
-    showFlash("授权引导配置已清空，已恢复 OpenList 优先");
+    showFlash(t("providers.flash_reset_assist", "授权引导配置已清空，已恢复 OpenList 优先"));
   });
   $("#profile-assist-discovery").addEventListener("click", (event) => {
     const button = event.target.closest("[data-assist-select-index]");
@@ -8398,7 +8597,7 @@ function wireProfiles() {
   $("#refresh-providers").addEventListener("click", async () => {
     try {
       await loadProviders();
-      showFlash("网盘列表已刷新");
+      showFlash(t("providers.flash_refresh_catalog", "网盘列表已刷新"));
     } catch (error) {
       showFlash(error.message, true);
     }
@@ -8408,7 +8607,7 @@ function wireProfiles() {
     try {
       await loadProfiles();
       await refreshDirectoryBrowsers();
-      showFlash("授权档案已刷新");
+      showFlash(t("providers.flash_refresh_profiles", "授权档案已刷新"));
     } catch (error) {
       showFlash(error.message, true);
     }
@@ -8419,7 +8618,7 @@ function wireProfiles() {
       const extra = parseJSONInput($("#profile-extra").value, {});
       const merged = mergeProfileRiskDefaultsIntoExtra(extra, collectRiskProfileFromForm("profile-risk"));
       $("#profile-extra").value = Object.keys(merged).length ? JSON.stringify(merged, null, 2) : "";
-      showFlash("账号默认风控已同步到 Extra JSON");
+      showFlash(t("providers.flash_sync_risk", "账号默认风控已同步到 Extra JSON"));
     } catch (error) {
       showFlash(`Extra JSON 无法解析：${error.message}`, true);
     }
@@ -8431,7 +8630,7 @@ function wireProfiles() {
       const merged = mergeProfileRiskDefaultsIntoExtra(extra, null);
       $("#profile-extra").value = Object.keys(merged).length ? JSON.stringify(merged, null, 2) : "";
       hydrateRiskProfileForm("profile-risk", null);
-      showFlash("账号默认风控已清空");
+      showFlash(t("providers.flash_clear_risk", "账号默认风控已清空"));
     } catch (error) {
       showFlash(`Extra JSON 无法解析：${error.message}`, true);
     }
@@ -8440,7 +8639,7 @@ function wireProfiles() {
   $("#profile-cancel-edit").addEventListener("click", () => {
     resetProfileForm();
     focusProfile("");
-    showFlash("已退出授权档案编辑");
+    showFlash(t("providers.flash_cancel_edit", "已退出授权档案编辑"));
   });
 
   $("#profile-form").addEventListener("submit", async (event) => {
@@ -8463,7 +8662,7 @@ function wireProfiles() {
       resetProfileForm();
       await loadProfiles();
       await refreshDirectoryBrowsers();
-      showFlash(profileID ? "授权档案已更新" : "授权档案已创建");
+      showFlash(profileID ? t("providers.flash_profile_updated", "授权档案已更新") : t("providers.flash_profile_created", "授权档案已创建"));
     } catch (error) {
       showFlash(error.message, true);
     }
@@ -9325,5 +9524,6 @@ async function init() {
   }
 }
 window.addEventListener("DOMContentLoaded", init);
+
 
 

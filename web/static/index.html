@@ -74,86 +74,86 @@
           <div class="grid two">
             <article class="card">
               <div class="section-head">
-                <h2>授权档案</h2>
-                <button type="button" class="ghost" id="refresh-profiles">刷新</button>
+                <h2 data-i18n-text="providers.profile_title">授权档案</h2>
+                <button type="button" class="ghost" id="refresh-profiles" data-i18n-text="common.refresh">刷新</button>
               </div>
               <form id="profile-form" class="stack">
                 <input id="profile-id" name="id" type="hidden" />
                 <div class="risk-builder">
                   <div class="risk-builder-head">
-                    <strong>授权引导入口</strong>
-                    <span>默认优先通过 OpenList 获取登录态和存储信息，失败后再切到 Alist，最后才使用手动高级模式。</span>
+                    <strong data-i18n-text="providers.assist_title">授权引导入口</strong>
+                    <span data-i18n-text="providers.assist_desc">默认优先通过 OpenList 获取登录态和存储信息，失败后再切到 Alist，最后才使用手动高级模式。</span>
                   </div>
                   <div class="mini-grid">
                     <label>
-                      <span>OpenList 地址</span>
-                      <input id="profile-assist-openlist-url" type="text" placeholder="例如：http://127.0.0.1:5244" />
+                      <span data-i18n-text="providers.openlist_url_label">OpenList 地址</span>
+                      <input id="profile-assist-openlist-url" type="text" placeholder="例如：http://127.0.0.1:5244" data-i18n-placeholder="providers.url_placeholder" />
                     </label>
                     <label>
-                      <span>OpenList 访问令牌</span>
-                      <input id="profile-assist-openlist-token" type="text" placeholder="可留空，登录后再补" />
+                      <span data-i18n-text="providers.openlist_token_label">OpenList 访问令牌</span>
+                      <input id="profile-assist-openlist-token" type="text" placeholder="可留空，登录后再补" data-i18n-placeholder="providers.token_placeholder" />
                     </label>
                     <label>
-                      <span>Alist 地址</span>
-                      <input id="profile-assist-alist-url" type="text" placeholder="例如：http://127.0.0.1:5244" />
+                      <span data-i18n-text="providers.alist_url_label">Alist 地址</span>
+                      <input id="profile-assist-alist-url" type="text" placeholder="例如：http://127.0.0.1:5244" data-i18n-placeholder="providers.url_placeholder" />
                     </label>
                     <label>
-                      <span>Alist 访问令牌</span>
-                      <input id="profile-assist-alist-token" type="text" placeholder="可留空，登录后再补" />
+                      <span data-i18n-text="providers.alist_token_label">Alist 访问令牌</span>
+                      <input id="profile-assist-alist-token" type="text" placeholder="可留空，登录后再补" data-i18n-placeholder="providers.token_placeholder" />
                     </label>
                   </div>
                   <div class="actions compact-actions">
-                    <button type="button" class="ghost" id="profile-assist-use-openlist">优先使用 OpenList</button>
-                    <button type="button" class="ghost" id="profile-assist-use-alist">切到 Alist 兜底</button>
-                    <button type="button" class="ghost" id="profile-assist-use-manual">使用手动高级模式</button>
+                    <button type="button" class="ghost" id="profile-assist-use-openlist" data-i18n-text="providers.assist_use_openlist">优先使用 OpenList</button>
+                    <button type="button" class="ghost" id="profile-assist-use-alist" data-i18n-text="providers.assist_use_alist">切到 Alist 兜底</button>
+                    <button type="button" class="ghost" id="profile-assist-use-manual" data-i18n-text="providers.assist_use_manual">使用手动高级模式</button>
                   </div>
                   <div class="actions compact-actions">
-                    <button type="button" class="ghost" id="profile-assist-discover-openlist">检测 OpenList</button>
-                    <button type="button" class="ghost" id="profile-assist-discover-alist">检测 Alist</button>
+                    <button type="button" class="ghost" id="profile-assist-discover-openlist" data-i18n-text="providers.assist_discover_openlist">检测 OpenList</button>
+                    <button type="button" class="ghost" id="profile-assist-discover-alist" data-i18n-text="providers.assist_discover_alist">检测 Alist</button>
                   </div>
                   <div class="actions compact-actions">
-                    <button type="button" class="ghost" id="profile-assist-open-openlist">打开 OpenList</button>
-                    <button type="button" class="ghost" id="profile-assist-open-alist">打开 Alist</button>
-                    <button type="button" class="ghost" id="profile-assist-clear">清空引导配置</button>
+                    <button type="button" class="ghost" id="profile-assist-open-openlist" data-i18n-text="providers.assist_open_openlist">打开 OpenList</button>
+                    <button type="button" class="ghost" id="profile-assist-open-alist" data-i18n-text="providers.assist_open_alist">打开 Alist</button>
+                    <button type="button" class="ghost" id="profile-assist-clear" data-i18n-text="providers.assist_clear">清空引导配置</button>
                   </div>
-                  <div id="profile-assist-summary" class="inline-note auth-guide-card">
+                  <div id="profile-assist-summary" class="inline-note auth-guide-card" data-i18n-text="providers.assist_summary_default">
                     当前将优先尝试 OpenList 引导；如未配置地址或令牌，会自动提示切到 Alist 或手动模式。
                   </div>
-                  <div id="profile-assist-discovery" class="inline-note auth-guide-card">
+                  <div id="profile-assist-discovery" class="inline-note auth-guide-card" data-i18n-text="providers.assist_discovery_default">
                     检测结果会在这里显示；如果能列出可见存储，说明当前 OpenList / Alist 地址和令牌基本可用。
                   </div>
                 </div>
                 <label>
-                  <span>网盘源</span>
+                  <span data-i18n-text="providers.provider_label">网盘源</span>
                   <select id="profile-provider" name="providerKey"></select>
                 </label>
                 <label>
-                  <span>授权方式</span>
+                  <span data-i18n-text="providers.auth_mode_label">授权方式</span>
                   <select id="profile-auth-mode" name="authMode"></select>
                 </label>
                 <label>
-                  <span>显示名称</span>
-                  <input id="profile-display-name" name="displayName" type="text" placeholder="例如：189Cloud 主账号" />
+                  <span data-i18n-text="providers.display_name_label">显示名称</span>
+                  <input id="profile-display-name" name="displayName" type="text" placeholder="例如：189Cloud 主账号" data-i18n-placeholder="providers.display_name_placeholder" />
                 </label>
                 <label>
-                  <span>令牌 Token</span>
-                  <input id="profile-token" name="token" type="text" placeholder="可留空" />
+                  <span data-i18n-text="providers.token_label">令牌 Token</span>
+                  <input id="profile-token" name="token" type="text" placeholder="可留空" data-i18n-placeholder="providers.optional_placeholder" />
                 </label>
                 <label>
-                  <span>Cookie</span>
-                  <textarea id="profile-cookie" name="cookie" rows="3" placeholder="可留空"></textarea>
+                  <span data-i18n-text="providers.cookie_label">Cookie</span>
+                  <textarea id="profile-cookie" name="cookie" rows="3" placeholder="可留空" data-i18n-placeholder="providers.optional_placeholder"></textarea>
                 </label>
                 <label>
-                  <span>附加配置(JSON)</span>
-                  <textarea id="profile-extra" name="extra" rows="4" placeholder='例如：{"pwdId":"abcd"}'></textarea>
+                  <span data-i18n-text="providers.extra_label">附加配置(JSON)</span>
+                  <textarea id="profile-extra" name="extra" rows="4" placeholder='例如：{"pwdId":"abcd"}' data-i18n-placeholder="providers.extra_placeholder"></textarea>
                 </label>
-                <div id="profile-auth-guide" class="inline-note auth-guide-card">
+                <div id="profile-auth-guide" class="inline-note auth-guide-card" data-i18n-text="providers.auth_guide_default">
                   选择网盘源和授权方式后，这里会提示当前常见必填项、可留空项和 Extra JSON 示例。
                 </div>
                 <div class="risk-builder">
                   <div class="risk-builder-head">
-                    <strong>账号默认风控模板</strong>
-                    <span>可选。保存到 `extra.riskDefaults`，作为该授权档案默认风控。</span>
+                    <strong data-i18n-text="providers.risk_title">账号默认风控模板</strong>
+                    <span data-i18n-text="providers.risk_desc">可选。保存到 `extra.riskDefaults`，作为该授权档案默认风控。</span>
                   </div>
                   <div class="mini-grid">
                     <label>
@@ -194,25 +194,25 @@
                     </label>
                   </div>
                   <div class="actions compact-actions">
-                    <button type="button" class="ghost" id="sync-profile-risk-defaults">同步到 Extra JSON</button>
-                    <button type="button" class="ghost" id="clear-profile-risk-defaults">清空账号默认风控</button>
+                    <button type="button" class="ghost" id="sync-profile-risk-defaults" data-i18n-text="providers.risk_sync">同步到 Extra JSON</button>
+                    <button type="button" class="ghost" id="clear-profile-risk-defaults" data-i18n-text="providers.risk_clear">清空账号默认风控</button>
                   </div>
                 </div>
                 <div class="actions">
-                  <button type="submit" id="profile-submit">创建授权档案</button>
-                  <button type="button" class="ghost" id="profile-cancel-edit">取消编辑</button>
+                  <button type="submit" id="profile-submit" data-i18n-text="providers.submit_create">创建授权档案</button>
+                  <button type="button" class="ghost" id="profile-cancel-edit" data-i18n-text="providers.cancel_edit">取消编辑</button>
                 </div>
               </form>
             </article>
 
             <article class="card">
               <div class="section-head">
-                <h2>网盘能力概览</h2>
-                <button type="button" class="ghost" id="refresh-providers">刷新</button>
+                <h2 data-i18n-text="providers.catalog_title">网盘能力概览</h2>
+                <button type="button" class="ghost" id="refresh-providers" data-i18n-text="common.refresh">刷新</button>
               </div>
               <div id="providers-grid" class="provider-grid"></div>
               <div id="provider-capability-detail" class="provider-detail-card">
-                <div class="muted">点击任一网盘卡片，查看能力说明、默认风控模板和恢复预算。</div>
+                <div class="muted" data-i18n-text="providers.catalog_detail_default">点击任一网盘卡片，查看能力说明、默认风控模板和恢复预算。</div>
               </div>
             </article>
           </div>
@@ -856,4 +856,5 @@
     <script src="/assets/app.js" defer></script>
   </body>
   </html>
+
 

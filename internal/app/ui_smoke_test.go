@@ -242,6 +242,12 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 
 	runStep(t, runCtx, "create and validate profile",
 		chromedp.Click(`button[data-view="providers"]`, chromedp.ByQuery),
+		setSelectValue(`#language-select`, "en-US"),
+		waitForText(`body`, "Auth Profiles"),
+		waitForText(`#profile-assist-use-openlist`, "Prefer OpenList"),
+		waitForText(`#profile-submit`, "Create Auth Profile"),
+		setSelectValue(`#language-select`, "zh-CN"),
+		waitForText(`body`, "授权档案"),
 		waitForText(`#profile-assist-summary`, "当前优先走 OpenList"),
 		chromedp.Evaluate(`(() => {
 			if (typeof syncAuthAssistDiscovery !== 'function') {
@@ -948,4 +954,5 @@ func runStep(t *testing.T, ctx context.Context, name string, actions ...chromedp
 		t.Fatalf("ui smoke step %q failed: %v\nbody:\n%s", name, err, bodyText)
 	}
 }
+
 

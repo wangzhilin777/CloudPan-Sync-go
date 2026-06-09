@@ -140,6 +140,15 @@ func TestHandleIndexServesHTML(t *testing.T) {
 	if !strings.Contains(body, `data-i18n-text="hero.title"`) {
 		t.Fatalf("expected hero title i18n binding in html body, got %q", body)
 	}
+	if !strings.Contains(body, `data-i18n-text="providers.profile_title"`) {
+		t.Fatalf("expected providers profile title i18n binding in html body, got %q", body)
+	}
+	if !strings.Contains(body, `data-i18n-text="providers.assist_use_openlist"`) {
+		t.Fatalf("expected providers OpenList assist i18n binding in html body, got %q", body)
+	}
+	if !strings.Contains(body, `data-i18n-text="providers.submit_create"`) {
+		t.Fatalf("expected providers submit i18n binding in html body, got %q", body)
+	}
 	if !strings.Contains(body, `id="plan-target-profile-insight"`) {
 		t.Fatalf("expected target profile insight panel in html body, got %q", body)
 	}
@@ -1586,6 +1595,15 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	}
 	if !strings.Contains(body, "Signed In") {
 		t.Fatalf("expected English session translation in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "Auth Profiles") {
+		t.Fatalf("expected English providers translation in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "Prefer OpenList") {
+		t.Fatalf("expected English auth assist translation in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "Create Auth Profile") {
+		t.Fatalf("expected English providers submit translation in app.js, got %q", body)
 	}
 	if !strings.Contains(body, "localizeAPIError") {
 		t.Fatalf("expected api error localization helper in app.js, got %q", body)
