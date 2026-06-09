@@ -354,7 +354,43 @@ const translations = {
       waiting_retry_limit: "等待重试上限",
       waiting_other: "其它等待",
       auto_retry_policy_summary_prefix: "自动补传默认调度",
-      blocked_empty: "当前没有需要人工处理的 blocked 聚合项。"
+      blocked_empty: "当前没有需要人工处理的 blocked 聚合项。",
+      auto_recover_last_preview: "最近预演",
+      auto_recover_last_run: "最近执行",
+      auto_recover_last_recoverable: "预演可放行",
+      auto_recover_last_recovered: "recovered",
+      auto_recover_decision_empty: "最近一次后台补传预演或执行暂无决策明细。",
+      auto_recover_budget_hint_empty: "预算占用：当前决策未返回可复用的预算占用信息。",
+      auto_recover_budget_hint_prefix: "预算占用",
+      auto_recover_waiting_advice: "等待态说明",
+      focus_current_state: "只看该状态",
+      focus_current_lane: "只看该 lane",
+      apply_suggested_budgets: "采用建议预算",
+      preview_current_decision: "预演该决策",
+      run_current_decision: "执行该决策",
+      open_sample_task: "打开样本任务",
+      acceptance_report_empty: "暂无验收报告，请先刷新或保存一份报告。",
+      report_title_label: "报告标题",
+      report_generated_at: "生成时间",
+      report_note_label: "报告备注",
+      auto_recover_acceptance: "自动补传验收",
+      auto_recover_fairness_summary: "自动补传恢复与公平性摘要",
+      recovery_priority_action: "恢复优先动作",
+      recovery_priority_action_counts: "恢复优先动作统计:",
+      fairness_gap: "公平性缺口",
+      fairness_priority_action: "公平性优先动作",
+      waiting_reason_summary: "等待原因",
+      no_auto_recover_pool_samples: "当前没有自动补传候选池样本。",
+      lane_summary_prefix: "通道",
+      sample_record_empty: "暂无真实 provider smoke 记录。",
+      smoke_record_empty: "当前没有 smoke 记录。",
+      smoke_record_showing_all: "显示全部 {visible} 条 smoke 记录。",
+      smoke_record_showing_filtered: "当前显示 {visible} / {total} 条 smoke 记录。",
+      sample_matrix_empty: "暂无真实样本矩阵。",
+      smoke_view_markdown: "查看 Markdown",
+      smoke_download_markdown: "下载 Markdown",
+      acceptance_matrix_view: "验收矩阵视图",
+      acceptance_matrix_hint: "可按验收状态快速筛选，也能直接跳到对应 smoke 样本或样本任务，方便继续补齐真实联调样本。"
     },
     providers: {
       profile_title: "授权档案",
@@ -842,7 +878,43 @@ const translations = {
       waiting_retry_limit: "Waiting Retry Limit",
       waiting_other: "Other Waiting",
       auto_retry_policy_summary_prefix: "Default auto-recovery scheduling",
-      blocked_empty: "There are no blocked aggregates that need manual handling right now."
+      blocked_empty: "There are no blocked aggregates that need manual handling right now.",
+      auto_recover_last_preview: "Latest Preview",
+      auto_recover_last_run: "Latest Run",
+      auto_recover_last_recoverable: "Recoverable",
+      auto_recover_last_recovered: "Recovered",
+      auto_recover_decision_empty: "The latest auto-recovery preview or run does not contain decision details.",
+      auto_recover_budget_hint_empty: "Budget usage: the current decision did not return reusable budget hints.",
+      auto_recover_budget_hint_prefix: "Budget usage",
+      auto_recover_waiting_advice: "Waiting-state note",
+      focus_current_state: "Show This State",
+      focus_current_lane: "Show This Lane",
+      apply_suggested_budgets: "Apply Suggested Budgets",
+      preview_current_decision: "Preview This Decision",
+      run_current_decision: "Run This Decision",
+      open_sample_task: "Open Sample Task",
+      acceptance_report_empty: "No acceptance report is available yet. Refresh or save one first.",
+      report_title_label: "Report Title",
+      report_generated_at: "Generated At",
+      report_note_label: "Report Note",
+      auto_recover_acceptance: "Auto-Recovery Acceptance",
+      auto_recover_fairness_summary: "Auto-Recovery and Fairness Summary",
+      recovery_priority_action: "Recovery Priority Action",
+      recovery_priority_action_counts: "Recovery Priority Action Counts",
+      fairness_gap: "Fairness Gap",
+      fairness_priority_action: "Fairness Priority Action",
+      waiting_reason_summary: "Waiting Reasons",
+      no_auto_recover_pool_samples: "There are no auto-recovery pool samples right now.",
+      lane_summary_prefix: "Lane",
+      sample_record_empty: "There are no real provider smoke records yet.",
+      smoke_record_empty: "There are no smoke records.",
+      smoke_record_showing_all: "Showing all {visible} smoke records.",
+      smoke_record_showing_filtered: "Showing {visible} / {total} smoke records.",
+      sample_matrix_empty: "There is no real sample matrix yet.",
+      smoke_view_markdown: "View Markdown",
+      smoke_download_markdown: "Download Markdown",
+      acceptance_matrix_view: "Acceptance Matrix View",
+      acceptance_matrix_hint: "You can filter quickly by acceptance state and jump to the related smoke sample or sample task to keep filling real integration evidence."
     },
     providers: {
       profile_title: "Auth Profiles",
@@ -6617,10 +6689,14 @@ function renderAutoRecoverSuggestedBudgets(result) {
 function renderAutoRecoverLastResultSummary() {
   const result = state.autoRecoverLastResult;
   if (!result || typeof result !== "object") {
-    return "尚未执行后台补传预演或实际放行。";
+    return t("status.no_auto_recover_result", "尚未执行后台补传预演或实际放行。");
   }
-  const label = result.dryRun ? "最近预演" : "最近执行";
-  const recoveredLabel = result.dryRun ? "可放行" : "recovered";
+  const label = result.dryRun
+    ? t("status.auto_recover_last_preview", "最近预演")
+    : t("status.auto_recover_last_run", "最近执行");
+  const recoveredLabel = result.dryRun
+    ? t("status.auto_recover_last_recoverable", "可放行")
+    : t("status.auto_recover_last_recovered", "已恢复");
   return `${label}：matched ${stringifyValue(result.matchedCount, "0")} / ${recoveredLabel} ${stringifyValue(result.recoveredCount, "0")} / limit ${stringifyValue(result.skippedByLimit, "0")} / modeBudget ${stringifyValue(result.skippedByModeBudget, "0")} / laneBudget ${stringifyValue(result.skippedByLaneBudget, "0")} / protocolGroupBudget ${stringifyValue(result.skippedByProtocolGroupBudget, "0")} / providerBudget ${stringifyValue(result.skippedByProviderBudget, "0")} / profileBudget ${stringifyValue(result.skippedByProfileBudget, "0")} / cooldownWait ${stringifyValue(result.skippedByCooldownWait, "0")} / retryWindowWait ${stringifyValue(result.skippedByRetryWindowWait, "0")} / blocked ${stringifyValue(result.skippedByBlockedReason, "0")}${renderAutoRecoverOutcomeCounts(result)}${renderAutoRecoverRetryClassCounts(result)}${renderAutoRecoverRecoverStateCounts(result)}${renderAutoRecoverBlockedActionCounts(result)}${renderAutoRecoverProtocolGroupCounts(result)}${renderAutoRecoverProviderCounts(result)}${renderAutoRecoverStrategyCounts(result)}${renderAutoRecoverProfileCounts(result)}${renderAutoRecoverLaneCounts(result)}${renderAutoRecoverSuggestedBudgets(result)}${result.earliestNextRetryAt ? ` / earliest ${result.earliestNextRetryAt}` : ""}`;
 }
 
@@ -6647,14 +6723,14 @@ function renderAutoRecoverDecisionBudgetHints(item) {
   if (!hints.length) {
     return "";
   }
-  return `预算占用：${hints.join(" / ")}`;
+  return `${t("status.auto_recover_budget_hint_prefix", "预算占用")}：${hints.join(" / ")}`;
 }
 
 function renderAutoRecoverLastResultDetail() {
   const result = state.autoRecoverLastResult;
   const decisions = Array.isArray(result?.decisions) ? result.decisions : [];
   if (!decisions.length) {
-    return `<div class="directory-empty">最近一次后台补传预演或执行暂无决策明细。</div>`;
+    return `<div class="directory-empty">${escapeHTML(t("status.auto_recover_decision_empty", "最近一次后台补传预演或执行暂无决策明细。"))}</div>`;
   }
   return decisions
     .map(
@@ -6679,16 +6755,16 @@ function renderAutoRecoverLastResultDetail() {
           <div class="muted">path: <code>${escapeHTML(stringifyValue(item.path, "-"))}</code> / protocolGroup: <code>${escapeHTML(stringifyValue(item.protocolGroup, "-"))}</code></div>
           <div class="muted">retryClass: <code>${escapeHTML(stringifyValue(item.retryClass, "-"))}</code> / blockedAction: <code>${escapeHTML(stringifyValue(item.blockedAction, "-"))}</code> / blockedReason: <code>${escapeHTML(stringifyValue(item.blockedReason, "-"))}</code> / nextRetryAt: <code>${escapeHTML(stringifyValue(item.nextRetryAt, "-"))}</code></div>
           <div class="muted">next-step: ${escapeHTML(renderBlockedSummary(item.blockedAction, item.message, item.nextRetryAt, autoRecoverDecisionAdvice(item)))}</div>
-          <div class="muted">${escapeHTML(renderAutoRecoverDecisionBudgetHints(item) || "预算占用：当前决策未返回可复用的预算占用信息。")}</div>
-          <div class="muted">等待态说明：${escapeHTML(autoRecoverDecisionAdvice(item))}</div>
+          <div class="muted">${escapeHTML(renderAutoRecoverDecisionBudgetHints(item) || t("status.auto_recover_budget_hint_empty", "预算占用：当前决策未返回可复用的预算占用信息。"))}</div>
+          <div class="muted">${escapeHTML(t("status.auto_recover_waiting_advice", "等待态说明"))}：${escapeHTML(autoRecoverDecisionAdvice(item))}</div>
           <div class="muted">${escapeHTML(stringifyValue(item.message, "-"))}</div>
           <div class="tree-actions">
-            <button type="button" class="link-button" data-auto-recover-decision-focus-state="${escapeHTML(stringifyValue(item.recoverState, ""))}">只看该状态</button>
-            <button type="button" class="link-button" data-auto-recover-decision-focus-lane-mode="${escapeHTML(stringifyValue(item.mode, ""))}" data-auto-recover-decision-focus-lane-strategy="${escapeHTML(stringifyValue(item.strategy, ""))}" data-auto-recover-decision-focus-lane-retry-class="${escapeHTML(stringifyValue(item.retryClass, ""))}" data-auto-recover-decision-focus-lane-blocked-action="${escapeHTML(stringifyValue(item.blockedAction, ""))}">只看该 lane</button>
-            <button type="button" class="link-button" data-auto-recover-decision-apply-budgets="1" data-auto-recover-decision-apply-mode-budget="${escapeHTML(stringifyValue(item.suggestedModeBudget, ""))}" data-auto-recover-decision-apply-lane-budget="${escapeHTML(stringifyValue(item.suggestedLaneBudget, ""))}" data-auto-recover-decision-apply-group-budget="${escapeHTML(stringifyValue(item.suggestedProtocolGroupBudget, ""))}" data-auto-recover-decision-apply-provider-budget="${escapeHTML(stringifyValue(item.suggestedProviderBudget, ""))}" data-auto-recover-decision-apply-profile-budget="${escapeHTML(stringifyValue(item.suggestedProfileBudget, ""))}">采用建议预算</button>
-            <button type="button" class="link-button" data-auto-recover-decision-preview="1" data-auto-recover-decision-task-id="${escapeHTML(stringifyValue(item.taskId, ""))}" data-auto-recover-decision-mode="${escapeHTML(stringifyValue(item.mode, ""))}" data-auto-recover-decision-strategy="${escapeHTML(stringifyValue(item.strategy, ""))}" data-auto-recover-decision-protocol-group="${escapeHTML(stringifyValue(item.protocolGroup, ""))}" data-auto-recover-decision-provider="${escapeHTML(stringifyValue(item.providerKey, ""))}" data-auto-recover-decision-profile="${escapeHTML(stringifyValue(item.profileId, ""))}" data-auto-recover-decision-retry-class="${escapeHTML(stringifyValue(item.retryClass, ""))}" data-auto-recover-decision-blocked-action="${escapeHTML(stringifyValue(item.blockedAction, ""))}" data-auto-recover-decision-recover-state="${escapeHTML(stringifyValue(item.recoverState, ""))}" data-auto-recover-decision-mode-budget="${escapeHTML(stringifyValue(item.suggestedModeBudget, ""))}" data-auto-recover-decision-lane-budget="${escapeHTML(stringifyValue(item.suggestedLaneBudget, ""))}" data-auto-recover-decision-group-budget="${escapeHTML(stringifyValue(item.suggestedProtocolGroupBudget, ""))}" data-auto-recover-decision-provider-budget="${escapeHTML(stringifyValue(item.suggestedProviderBudget, ""))}" data-auto-recover-decision-profile-budget="${escapeHTML(stringifyValue(item.suggestedProfileBudget, ""))}">预演该决策</button>
-            <button type="button" class="link-button" data-auto-recover-decision-run="1" data-auto-recover-decision-task-id="${escapeHTML(stringifyValue(item.taskId, ""))}" data-auto-recover-decision-mode="${escapeHTML(stringifyValue(item.mode, ""))}" data-auto-recover-decision-strategy="${escapeHTML(stringifyValue(item.strategy, ""))}" data-auto-recover-decision-protocol-group="${escapeHTML(stringifyValue(item.protocolGroup, ""))}" data-auto-recover-decision-provider="${escapeHTML(stringifyValue(item.providerKey, ""))}" data-auto-recover-decision-profile="${escapeHTML(stringifyValue(item.profileId, ""))}" data-auto-recover-decision-retry-class="${escapeHTML(stringifyValue(item.retryClass, ""))}" data-auto-recover-decision-blocked-action="${escapeHTML(stringifyValue(item.blockedAction, ""))}" data-auto-recover-decision-recover-state="${escapeHTML(stringifyValue(item.recoverState, ""))}" data-auto-recover-decision-mode-budget="${escapeHTML(stringifyValue(item.suggestedModeBudget, ""))}" data-auto-recover-decision-lane-budget="${escapeHTML(stringifyValue(item.suggestedLaneBudget, ""))}" data-auto-recover-decision-group-budget="${escapeHTML(stringifyValue(item.suggestedProtocolGroupBudget, ""))}" data-auto-recover-decision-provider-budget="${escapeHTML(stringifyValue(item.suggestedProviderBudget, ""))}" data-auto-recover-decision-profile-budget="${escapeHTML(stringifyValue(item.suggestedProfileBudget, ""))}">执行该决策</button>
-            <button type="button" class="link-button" data-auto-recover-decision-open-task="${escapeHTML(stringifyValue(item.taskId, ""))}">打开样本任务</button>
+            <button type="button" class="link-button" data-auto-recover-decision-focus-state="${escapeHTML(stringifyValue(item.recoverState, ""))}">${escapeHTML(t("status.focus_current_state", "只看该状态"))}</button>
+            <button type="button" class="link-button" data-auto-recover-decision-focus-lane-mode="${escapeHTML(stringifyValue(item.mode, ""))}" data-auto-recover-decision-focus-lane-strategy="${escapeHTML(stringifyValue(item.strategy, ""))}" data-auto-recover-decision-focus-lane-retry-class="${escapeHTML(stringifyValue(item.retryClass, ""))}" data-auto-recover-decision-focus-lane-blocked-action="${escapeHTML(stringifyValue(item.blockedAction, ""))}">${escapeHTML(t("status.focus_current_lane", "只看该 lane"))}</button>
+            <button type="button" class="link-button" data-auto-recover-decision-apply-budgets="1" data-auto-recover-decision-apply-mode-budget="${escapeHTML(stringifyValue(item.suggestedModeBudget, ""))}" data-auto-recover-decision-apply-lane-budget="${escapeHTML(stringifyValue(item.suggestedLaneBudget, ""))}" data-auto-recover-decision-apply-group-budget="${escapeHTML(stringifyValue(item.suggestedProtocolGroupBudget, ""))}" data-auto-recover-decision-apply-provider-budget="${escapeHTML(stringifyValue(item.suggestedProviderBudget, ""))}" data-auto-recover-decision-apply-profile-budget="${escapeHTML(stringifyValue(item.suggestedProfileBudget, ""))}">${escapeHTML(t("status.apply_suggested_budgets", "采用建议预算"))}</button>
+            <button type="button" class="link-button" data-auto-recover-decision-preview="1" data-auto-recover-decision-task-id="${escapeHTML(stringifyValue(item.taskId, ""))}" data-auto-recover-decision-mode="${escapeHTML(stringifyValue(item.mode, ""))}" data-auto-recover-decision-strategy="${escapeHTML(stringifyValue(item.strategy, ""))}" data-auto-recover-decision-protocol-group="${escapeHTML(stringifyValue(item.protocolGroup, ""))}" data-auto-recover-decision-provider="${escapeHTML(stringifyValue(item.providerKey, ""))}" data-auto-recover-decision-profile="${escapeHTML(stringifyValue(item.profileId, ""))}" data-auto-recover-decision-retry-class="${escapeHTML(stringifyValue(item.retryClass, ""))}" data-auto-recover-decision-blocked-action="${escapeHTML(stringifyValue(item.blockedAction, ""))}" data-auto-recover-decision-recover-state="${escapeHTML(stringifyValue(item.recoverState, ""))}" data-auto-recover-decision-mode-budget="${escapeHTML(stringifyValue(item.suggestedModeBudget, ""))}" data-auto-recover-decision-lane-budget="${escapeHTML(stringifyValue(item.suggestedLaneBudget, ""))}" data-auto-recover-decision-group-budget="${escapeHTML(stringifyValue(item.suggestedProtocolGroupBudget, ""))}" data-auto-recover-decision-provider-budget="${escapeHTML(stringifyValue(item.suggestedProviderBudget, ""))}" data-auto-recover-decision-profile-budget="${escapeHTML(stringifyValue(item.suggestedProfileBudget, ""))}">${escapeHTML(t("status.preview_current_decision", "预演该决策"))}</button>
+            <button type="button" class="link-button" data-auto-recover-decision-run="1" data-auto-recover-decision-task-id="${escapeHTML(stringifyValue(item.taskId, ""))}" data-auto-recover-decision-mode="${escapeHTML(stringifyValue(item.mode, ""))}" data-auto-recover-decision-strategy="${escapeHTML(stringifyValue(item.strategy, ""))}" data-auto-recover-decision-protocol-group="${escapeHTML(stringifyValue(item.protocolGroup, ""))}" data-auto-recover-decision-provider="${escapeHTML(stringifyValue(item.providerKey, ""))}" data-auto-recover-decision-profile="${escapeHTML(stringifyValue(item.profileId, ""))}" data-auto-recover-decision-retry-class="${escapeHTML(stringifyValue(item.retryClass, ""))}" data-auto-recover-decision-blocked-action="${escapeHTML(stringifyValue(item.blockedAction, ""))}" data-auto-recover-decision-recover-state="${escapeHTML(stringifyValue(item.recoverState, ""))}" data-auto-recover-decision-mode-budget="${escapeHTML(stringifyValue(item.suggestedModeBudget, ""))}" data-auto-recover-decision-lane-budget="${escapeHTML(stringifyValue(item.suggestedLaneBudget, ""))}" data-auto-recover-decision-group-budget="${escapeHTML(stringifyValue(item.suggestedProtocolGroupBudget, ""))}" data-auto-recover-decision-provider-budget="${escapeHTML(stringifyValue(item.suggestedProviderBudget, ""))}" data-auto-recover-decision-profile-budget="${escapeHTML(stringifyValue(item.suggestedProfileBudget, ""))}">${escapeHTML(t("status.run_current_decision", "执行该决策"))}</button>
+            <button type="button" class="link-button" data-auto-recover-decision-open-task="${escapeHTML(stringifyValue(item.taskId, ""))}">${escapeHTML(t("status.open_sample_task", "打开样本任务"))}</button>
           </div>
         </div>
       `,
@@ -8005,12 +8081,12 @@ function renderEvidenceAutoRecoverSummary(report) {
   const focusLanes = fairnessPool.slice(0, 4);
   return `
     <div class="insight-card">
-      <strong>自动补传验收</strong>
+      <strong>${escapeHTML(t("status.auto_recover_acceptance", "自动补传验收"))}</strong>
       <span>恢复就绪 ${escapeHTML(recoveryReadiness)} / 公平性就绪 ${escapeHTML(fairnessReadiness)}</span>
     </div>
     <div class="directory-row tree-node">
       <div class="directory-row-header">
-        <strong>自动补传恢复与公平性摘要</strong>
+        <strong>${escapeHTML(t("status.auto_recover_fairness_summary", "自动补传恢复与公平性摘要"))}</strong>
         <code>autoRecoverPool</code>
       </div>
       <div class="directory-metrics">
@@ -8019,18 +8095,18 @@ function renderEvidenceAutoRecoverSummary(report) {
         <span class="pill">恢复 ${escapeHTML(recoveryReadiness)}</span>
         <span class="pill">公平性 ${escapeHTML(fairnessReadiness)}</span>
       </div>
-      <div class="muted">恢复优先动作: ${escapeHTML(recoveryPriorityAction)}</div>
-      <div class="muted">恢复优先动作统计: ${escapeHTML(autoRecoverPriorityActionSummary || "-")}</div>
-      <div class="muted">公平性缺口: ${escapeHTML(renderAutoRecoverFairnessMissing(summary))}</div>
-      <div class="muted">公平性优先动作: ${escapeHTML(fairnessPriorityAction)}</div>
-      <div class="muted">等待原因: 冷却 ${escapeHTML(stringifyValue(summary.autoRecoverWaitingCooldownTasks, "0"))} / 时间窗 ${escapeHTML(stringifyValue(summary.autoRecoverWaitingRetryWindowTasks, "0"))} / 授权 ${escapeHTML(stringifyValue(summary.autoRecoverWaitingAuthRefreshTasks, "0"))} / 本地文件 ${escapeHTML(stringifyValue(summary.autoRecoverWaitingLocalRestoreTasks, "0"))} / 人工处理 ${escapeHTML(stringifyValue(summary.autoRecoverWaitingManualTasks, "0"))}</div>
+      <div class="muted">${escapeHTML(t("status.recovery_priority_action", "恢复优先动作"))}: ${escapeHTML(recoveryPriorityAction)}</div>
+      <div class="muted">${escapeHTML(t("status.recovery_priority_action_counts", "恢复优先动作统计"))}: ${escapeHTML(autoRecoverPriorityActionSummary || "-")}</div>
+      <div class="muted">${escapeHTML(t("status.fairness_gap", "公平性缺口"))}: ${escapeHTML(renderAutoRecoverFairnessMissing(summary))}</div>
+      <div class="muted">${escapeHTML(t("status.fairness_priority_action", "公平性优先动作"))}: ${escapeHTML(fairnessPriorityAction)}</div>
+      <div class="muted">${escapeHTML(t("status.waiting_reason_summary", "等待原因"))}: 冷却 ${escapeHTML(stringifyValue(summary.autoRecoverWaitingCooldownTasks, "0"))} / 时间窗 ${escapeHTML(stringifyValue(summary.autoRecoverWaitingRetryWindowTasks, "0"))} / 授权 ${escapeHTML(stringifyValue(summary.autoRecoverWaitingAuthRefreshTasks, "0"))} / 本地文件 ${escapeHTML(stringifyValue(summary.autoRecoverWaitingLocalRestoreTasks, "0"))} / 人工处理 ${escapeHTML(stringifyValue(summary.autoRecoverWaitingManualTasks, "0"))}</div>
       ${
         focusLanes.length
           ? focusLanes
               .map(
                 (item) => `
                   <div class="muted">
-                    通道 ${escapeHTML(stringifyValue(item.mode, "-"))}:
+                    ${escapeHTML(t("status.lane_summary_prefix", "通道"))} ${escapeHTML(stringifyValue(item.mode, "-"))}:
                     网盘源 ${escapeHTML(stringifyValue(item.sampleProvider, "-"))}
                     / 协议组 ${escapeHTML(stringifyValue(item.sampleProtocolGroup, "-"))}
                     / 授权档案 ${escapeHTML(stringifyValue(item.sampleProfileId, "-"))}
@@ -8040,7 +8116,7 @@ function renderEvidenceAutoRecoverSummary(report) {
                 `,
               )
               .join("")
-          : `<div class="muted">当前没有自动补传候选池样本。</div>`
+          : `<div class="muted">${escapeHTML(t("status.no_auto_recover_pool_samples", "当前没有自动补传候选池样本。"))}</div>`
       }
     </div>
   `;
@@ -8048,20 +8124,20 @@ function renderEvidenceAutoRecoverSummary(report) {
 
 function renderEvidenceReport(report) {
   if (!report || typeof report !== "object") {
-    return `<div class="directory-empty">暂无验收报告，请先刷新或保存一份报告。</div>`;
+    return `<div class="directory-empty">${escapeHTML(t("status.acceptance_report_empty", "暂无验收报告，请先刷新或保存一份报告。"))}</div>`;
   }
   return `
     <div class="insight-card">
-      <strong>报告标题</strong>
+      <strong>${escapeHTML(t("status.report_title_label", "报告标题"))}</strong>
       <span>${escapeHTML(stringifyValue(report.title, "-"))}</span>
     </div>
     <div class="insight-card">
-      <strong>生成时间</strong>
+      <strong>${escapeHTML(t("status.report_generated_at", "生成时间"))}</strong>
       <span>${escapeHTML(stringifyValue(report.generatedAt, "-"))}</span>
     </div>
     ${report.note ? `
       <div class="insight-card">
-        <strong>报告备注</strong>
+        <strong>${escapeHTML(t("status.report_note_label", "报告备注"))}</strong>
         <span>${escapeHTML(report.note)}</span>
       </div>
     ` : ""}
@@ -8511,7 +8587,7 @@ function focusRuntimeTreeByPath(scope, path, kind = "roots") {
 function renderProviderSmokeRecords(items) {
   const result = filterProviderSmokeRecords(items, state.providerSmokeRecordFilters);
   if (!result.totalItems) {
-    return `<div class="directory-empty">暂无真实 provider smoke 记录。</div>`;
+    return `<div class="directory-empty">${escapeHTML(t("status.sample_record_empty", "暂无真实 provider smoke 记录。"))}</div>`;
   }
   return result.items
     .map(
@@ -8536,8 +8612,8 @@ function renderProviderSmokeRecords(items) {
           <div class="muted">operations: ${escapeHTML((item.operations || []).join(", ") || "-")}</div>
           <div class="muted">createdAt: <code>${escapeHTML(stringifyValue(item.createdAt, "-"))}</code></div>
           <div class="actions compact">
-            <button type="button" class="ghost" data-provider-smoke-view="${escapeHTML(item.id || "")}">查看 Markdown</button>
-            <button type="button" class="ghost" data-provider-smoke-download="${escapeHTML(item.id || "")}">下载 Markdown</button>
+            <button type="button" class="ghost" data-provider-smoke-view="${escapeHTML(item.id || "")}">${escapeHTML(t("status.smoke_view_markdown", "查看 Markdown"))}</button>
+            <button type="button" class="ghost" data-provider-smoke-download="${escapeHTML(item.id || "")}">${escapeHTML(t("status.smoke_download_markdown", "下载 Markdown"))}</button>
           </div>
         </div>
       `,
@@ -8572,17 +8648,17 @@ function filterProviderSmokeRecords(items, filters = {}) {
 
 function renderProviderSmokeRecordSummary(result) {
   if (!result.totalItems) {
-    return "当前没有 smoke 记录。";
+    return t("status.smoke_record_empty", "当前没有 smoke 记录。");
   }
   if (!result.filterActive) {
-    return `显示全部 ${result.visibleItems} 条 smoke 记录。`;
+    return tf("status.smoke_record_showing_all", { visible: result.visibleItems }, `显示全部 ${result.visibleItems} 条 smoke 记录。`);
   }
-  return `当前显示 ${result.visibleItems} / ${result.totalItems} 条 smoke 记录。`;
+  return tf("status.smoke_record_showing_filtered", { visible: result.visibleItems, total: result.totalItems }, `当前显示 ${result.visibleItems} / ${result.totalItems} 条 smoke 记录。`);
 }
 
 function renderProviderSmokeSummary(items) {
   if (!Array.isArray(items) || !items.length) {
-    return `<div class="directory-empty">暂无真实样本矩阵。</div>`;
+    return `<div class="directory-empty">${escapeHTML(t("status.sample_matrix_empty", "暂无真实样本矩阵。"))}</div>`;
   }
   return items
     .map(
@@ -8684,10 +8760,10 @@ function renderProviderSmokeMatrixControls(items) {
   return `
     <div class="provider-smoke-matrix-toolbar">
       <div class="directory-row-header">
-        <strong>验收矩阵视图</strong>
+        <strong>${escapeHTML(t("status.acceptance_matrix_view", "验收矩阵视图"))}</strong>
         <code>${escapeHTML(providerSmokeMatrixFilterLabel(state.providerSmokeMatrixFilter))}</code>
       </div>
-      <div class="muted">可按验收状态快速筛选，也能直接跳到对应 smoke 样本或样本任务，方便继续补齐真实联调样本。</div>
+      <div class="muted">${escapeHTML(t("status.acceptance_matrix_hint", "可按验收状态快速筛选，也能直接跳到对应 smoke 样本或样本任务，方便继续补齐真实联调样本。"))}</div>
       <div class="actions compact">
         ${filters
           .map(
