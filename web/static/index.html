@@ -318,10 +318,10 @@
                 <label>
                   <span data-i18n-text="wizard.risk_mode">风控档位</span>
                   <select id="plan-risk-mode" name="riskMode">
-                    <option value="balanced">balanced</option>
-                    <option value="safe">safe</option>
-                    <option value="fast">fast</option>
-                    <option value="custom">custom</option>
+                    <option value="balanced" data-i18n-text="wizard.risk_mode_balanced">balanced</option>
+                    <option value="safe" data-i18n-text="wizard.risk_mode_safe">safe</option>
+                    <option value="fast" data-i18n-text="wizard.risk_mode_fast">fast</option>
+                    <option value="custom" data-i18n-text="wizard.risk_mode_custom">custom</option>
                   </select>
                 </label>
                 <div class="risk-builder">
@@ -379,14 +379,14 @@
                 <label>
                   <span data-i18n-text="wizard.execution_mode">执行模式</span>
                   <select id="plan-execution-mode" name="executionMode">
-                    <option value="leaf_first_lazy">leaf_first_lazy</option>
-                    <option value="pre_scan_flat">pre_scan_flat</option>
+                    <option value="leaf_first_lazy" data-i18n-text="wizard.execution_mode_leaf_first_lazy">leaf_first_lazy</option>
+                    <option value="pre_scan_flat" data-i18n-text="wizard.execution_mode_pre_scan_flat">pre_scan_flat</option>
                   </select>
                 </label>
                 <label>
                   <span data-i18n-text="wizard.source_delete_policy">源端删除策略</span>
                   <select id="plan-source-delete-policy" name="sourceDeletePolicy">
-                    <option value="record_only">record_only（只记录，不删目标端）</option>
+                    <option value="record_only" data-i18n-text="wizard.source_delete_policy_record_only">record_only（只记录，不删目标端）</option>
                   </select>
                 </label>
                 <div id="plan-execution-hint" class="inline-note" data-i18n-text="wizard.execution_hint_default">
@@ -412,8 +412,8 @@
                 <label>
                   <span data-i18n-text="wizard.conflict_policy">冲突策略</span>
                   <select id="plan-conflict-policy" name="conflictPolicy">
-                    <option value="auto_rename_new">auto_rename_new</option>
-                    <option value="overwrite_existing">overwrite_existing</option>
+                    <option value="auto_rename_new" data-i18n-text="wizard.conflict_policy_auto_rename_new">auto_rename_new</option>
+                    <option value="overwrite_existing" data-i18n-text="wizard.conflict_policy_overwrite_existing">overwrite_existing</option>
                   </select>
                 </label>
                 <label>
@@ -512,17 +512,17 @@
                 <input id="task-retry-filter-query" type="text" placeholder="筛选路径 / reason / provider status" data-i18n-placeholder="tasks.retry_filter_query_placeholder" />
                 <select id="task-retry-filter-class">
                   <option value="" data-i18n-text="tasks.all_classes">全部分类</option>
-                  <option value="pending_manual">pending_manual</option>
-                  <option value="provider_session_missing">provider_session_missing</option>
-                  <option value="rate_limited">rate_limited</option>
-                  <option value="auth_expired">auth_expired</option>
-                  <option value="local_file_missing">local_file_missing</option>
+                  <option value="pending_manual" data-i18n-text="tasks.retry_class_pending_manual">pending_manual</option>
+                  <option value="provider_session_missing" data-i18n-text="tasks.retry_class_provider_session_missing">provider_session_missing</option>
+                  <option value="rate_limited" data-i18n-text="tasks.retry_class_rate_limited">rate_limited</option>
+                  <option value="auth_expired" data-i18n-text="tasks.retry_class_auth_expired">auth_expired</option>
+                  <option value="local_file_missing" data-i18n-text="tasks.retry_class_local_file_missing">local_file_missing</option>
                 </select>
                 <select id="task-retry-filter-state">
                   <option value="" data-i18n-text="tasks.all_states">全部状态</option>
-                  <option value="retryable">retryable</option>
-                  <option value="blocked">blocked</option>
-                  <option value="exhausted">exhausted</option>
+                  <option value="retryable" data-i18n-text="tasks.retry_state_retryable">retryable</option>
+                  <option value="blocked" data-i18n-text="tasks.retry_state_blocked">blocked</option>
+                  <option value="exhausted" data-i18n-text="tasks.retry_state_exhausted">exhausted</option>
                 </select>
               </div>
               <div id="task-retry-filter-summary" class="filter-summary muted" data-i18n-text="tasks.waiting_task_data">等待任务数据...</div>
@@ -548,10 +548,10 @@
                 <input id="task-directory-filter-query" type="text" placeholder="筛选路径 / last item" data-i18n-placeholder="tasks.directory_filter_placeholder" />
                 <select id="task-directory-filter-status">
                   <option value="" data-i18n-text="tasks.all_statuses">全部状态</option>
-                  <option value="pending">pending</option>
-                  <option value="running">running</option>
-                  <option value="blocked">blocked</option>
-                  <option value="completed">completed</option>
+                  <option value="pending" data-i18n-text="tasks.status_pending">pending</option>
+                  <option value="running" data-i18n-text="tasks.status_running">running</option>
+                  <option value="blocked" data-i18n-text="tasks.status_blocked">blocked</option>
+                  <option value="completed" data-i18n-text="tasks.status_completed">completed</option>
                 </select>
                 <label class="toggle-chip">
                   <input id="task-directory-filter-leaf-only" type="checkbox" />
@@ -609,16 +609,16 @@
               <div class="filter-bar">
                 <select id="auto-recover-mode">
                   <option value="" data-i18n-text="status.all_modes">全部模式</option>
-                  <option value="upload_checkpoint_auto_resume">upload_checkpoint_auto_resume</option>
-                  <option value="retry_queue_auto_retry">retry_queue_auto_retry</option>
-                  <option value="retry_window_waiting_auto_retry">retry_window_waiting_auto_retry</option>
-                  <option value="cooldown_elapsed_auto_retry">cooldown_elapsed_auto_retry</option>
+                  <option value="upload_checkpoint_auto_resume" data-i18n-text="status.auto_recover_mode_upload_checkpoint_auto_resume">upload_checkpoint_auto_resume</option>
+                  <option value="retry_queue_auto_retry" data-i18n-text="status.auto_recover_mode_retry_queue_auto_retry">retry_queue_auto_retry</option>
+                  <option value="retry_window_waiting_auto_retry" data-i18n-text="status.auto_recover_mode_retry_window_waiting_auto_retry">retry_window_waiting_auto_retry</option>
+                  <option value="cooldown_elapsed_auto_retry" data-i18n-text="status.auto_recover_mode_cooldown_elapsed_auto_retry">cooldown_elapsed_auto_retry</option>
                 </select>
                 <select id="auto-recover-strategy">
                   <option value="" data-i18n-text="status.all_strategies">全部策略</option>
-                  <option value="fast_upload">fast_upload</option>
-                  <option value="download_upload">download_upload</option>
-                  <option value="pending_manual">pending_manual</option>
+                  <option value="fast_upload" data-i18n-text="status.strategy_fast_upload">fast_upload</option>
+                  <option value="download_upload" data-i18n-text="status.strategy_download_upload">download_upload</option>
+                  <option value="pending_manual" data-i18n-text="status.strategy_pending_manual">pending_manual</option>
                 </select>
                 <select id="auto-recover-protocol-group">
                   <option value="" data-i18n-text="status.all_protocol_groups">全部协议族</option>
@@ -631,27 +631,27 @@
                 </select>
                 <select id="auto-recover-retry-class">
                   <option value="" data-i18n-text="status.all_retry_classes">全部失败类型</option>
-                  <option value="rate_limited">rate_limited</option>
-                  <option value="pending_manual">pending_manual</option>
-                  <option value="provider_session_missing">provider_session_missing</option>
-                  <option value="auth_expired">auth_expired</option>
-                  <option value="local_file_missing">local_file_missing</option>
-                  <option value="retry_failed">retry_failed</option>
+                  <option value="rate_limited" data-i18n-text="status.retry_class_rate_limited">rate_limited</option>
+                  <option value="pending_manual" data-i18n-text="status.retry_class_pending_manual">pending_manual</option>
+                  <option value="provider_session_missing" data-i18n-text="status.retry_class_provider_session_missing">provider_session_missing</option>
+                  <option value="auth_expired" data-i18n-text="status.retry_class_auth_expired">auth_expired</option>
+                  <option value="local_file_missing" data-i18n-text="status.retry_class_local_file_missing">local_file_missing</option>
+                  <option value="retry_failed" data-i18n-text="status.retry_class_retry_failed">retry_failed</option>
                 </select>
                 <select id="auto-recover-blocked-action">
                   <option value="" data-i18n-text="status.all_blocked_actions">全部阻塞动作</option>
                 </select>
                 <select id="auto-recover-state">
                   <option value="" data-i18n-text="status.all_execution_states">全部执行状态</option>
-                  <option value="runnable_now">runnable_now</option>
-                  <option value="waiting_cooldown">waiting_cooldown</option>
-                  <option value="waiting_retry_window">waiting_retry_window</option>
-                  <option value="waiting_auth_refresh">waiting_auth_refresh</option>
-                  <option value="waiting_local_restore">waiting_local_restore</option>
-                  <option value="waiting_provider_session">waiting_provider_session</option>
-                  <option value="waiting_manual_confirmation">waiting_manual_confirmation</option>
-                  <option value="waiting_retry_limit">waiting_retry_limit</option>
-                  <option value="waiting_other">waiting_other</option>
+                  <option value="runnable_now" data-i18n-text="status.state_runnable_now">runnable_now</option>
+                  <option value="waiting_cooldown" data-i18n-text="status.state_waiting_cooldown">waiting_cooldown</option>
+                  <option value="waiting_retry_window" data-i18n-text="status.state_waiting_retry_window">waiting_retry_window</option>
+                  <option value="waiting_auth_refresh" data-i18n-text="status.state_waiting_auth_refresh">waiting_auth_refresh</option>
+                  <option value="waiting_local_restore" data-i18n-text="status.state_waiting_local_restore">waiting_local_restore</option>
+                  <option value="waiting_provider_session" data-i18n-text="status.state_waiting_provider_session">waiting_provider_session</option>
+                  <option value="waiting_manual_confirmation" data-i18n-text="status.state_waiting_manual_confirmation">waiting_manual_confirmation</option>
+                  <option value="waiting_retry_limit" data-i18n-text="status.state_waiting_retry_limit">waiting_retry_limit</option>
+                  <option value="waiting_other" data-i18n-text="status.state_waiting_other">waiting_other</option>
                 </select>
                 <input id="auto-recover-limit" type="number" min="1" placeholder="本轮上限，例如 3" data-i18n-placeholder="status.auto_recover_limit_placeholder" />
                 <input id="auto-recover-limit-per-mode" type="number" min="1" placeholder="模式预算，例如 1" data-i18n-placeholder="status.auto_recover_limit_per_mode_placeholder" />
@@ -765,17 +765,17 @@
                 <input id="status-retry-filter-query" type="text" placeholder="筛选路径 / reason / provider status" data-i18n-placeholder="tasks.retry_filter_query_placeholder" />
                 <select id="status-retry-filter-class">
                   <option value="" data-i18n-text="tasks.all_classes">全部分类</option>
-                  <option value="pending_manual">pending_manual</option>
-                  <option value="provider_session_missing">provider_session_missing</option>
-                  <option value="rate_limited">rate_limited</option>
-                  <option value="auth_expired">auth_expired</option>
-                  <option value="local_file_missing">local_file_missing</option>
+                  <option value="pending_manual" data-i18n-text="tasks.retry_class_pending_manual">pending_manual</option>
+                  <option value="provider_session_missing" data-i18n-text="tasks.retry_class_provider_session_missing">provider_session_missing</option>
+                  <option value="rate_limited" data-i18n-text="tasks.retry_class_rate_limited">rate_limited</option>
+                  <option value="auth_expired" data-i18n-text="tasks.retry_class_auth_expired">auth_expired</option>
+                  <option value="local_file_missing" data-i18n-text="tasks.retry_class_local_file_missing">local_file_missing</option>
                 </select>
                 <select id="status-retry-filter-state">
                   <option value="" data-i18n-text="tasks.all_states">全部状态</option>
-                  <option value="retryable">retryable</option>
-                  <option value="blocked">blocked</option>
-                  <option value="exhausted">exhausted</option>
+                  <option value="retryable" data-i18n-text="tasks.retry_state_retryable">retryable</option>
+                  <option value="blocked" data-i18n-text="tasks.retry_state_blocked">blocked</option>
+                  <option value="exhausted" data-i18n-text="tasks.retry_state_exhausted">exhausted</option>
                 </select>
               </div>
               <div id="status-retry-filter-summary" class="filter-summary muted" data-i18n-text="status.waiting_status_data">等待状态数据...</div>
@@ -808,10 +808,10 @@
                 <input id="status-directory-filter-query" type="text" placeholder="筛选路径 / last item" data-i18n-placeholder="tasks.directory_filter_placeholder" />
                 <select id="status-directory-filter-status">
                   <option value="" data-i18n-text="tasks.all_statuses">全部状态</option>
-                  <option value="pending">pending</option>
-                  <option value="running">running</option>
-                  <option value="blocked">blocked</option>
-                  <option value="completed">completed</option>
+                  <option value="pending" data-i18n-text="tasks.status_pending">pending</option>
+                  <option value="running" data-i18n-text="tasks.status_running">running</option>
+                  <option value="blocked" data-i18n-text="tasks.status_blocked">blocked</option>
+                  <option value="completed" data-i18n-text="tasks.status_completed">completed</option>
                 </select>
                 <label class="toggle-chip">
                   <input id="status-directory-filter-leaf-only" type="checkbox" />
