@@ -113,6 +113,15 @@ function localizeRecommendationReason(reason, fallback) {
   return knownReasons[normalized] || normalized;
 }
 
+function renderExecutionModeLabel(mode) {
+  const normalized = stringifyValue(mode, "-");
+  const labels = {
+    pre_scan_flat: "先完整扫描再执行（pre_scan_flat）",
+    leaf_first_lazy: "按目录逐棵推进（leaf_first_lazy）",
+  };
+  return labels[normalized] || normalized;
+}
+
 function renderSourceDeletePolicy(value, fallback = "record_only") {
   const policy = stringifyValue(value, fallback);
   if (policy === "record_only") {
@@ -4018,10 +4027,10 @@ function syncExecutionModeHint() {
   const mode = $("#plan-execution-mode").value;
   const hint = $("#plan-execution-hint");
   if (mode === "pre_scan_flat") {
-    hint.textContent = "pre_scan_flat 适合目录较小、希望先拿到完整扫描结果再执行的场景。";
+    hint.textContent = "先完整扫描再执行（pre_scan_flat）适合目录较小、希望先拿到完整扫描结果后再统一执行的场景。";
     return;
   }
-  hint.textContent = "leaf_first_lazy 是默认优先推荐模式，会按顶层目录顺序逐棵子树推进，只扫描当前真正需要传的目录。";
+  hint.textContent = "按目录逐棵推进（leaf_first_lazy）是默认优先推荐模式，会按顶层目录顺序逐棵子树推进，只扫描当前真正需要传的目录。";
 }
 
 function updateExecutionRecommendationAction(metadata = {}) {
@@ -4048,8 +4057,8 @@ function updateExecutionRecommendationAction(metadata = {}) {
   if (recommendedExecution) {
     titleParts.push(
       recommendedExecution === selectedExecution
-        ? `执行模式已采用推荐值：${recommendedExecution}`
-        : `建议执行模式：${recommendedExecution}`,
+        ? `执行模式已采用推荐值：${renderExecutionModeLabel(recommendedExecution)}`
+        : `建议执行模式：${renderExecutionModeLabel(recommendedExecution)}`,
     );
   }
   if (recommendedRisk) {
