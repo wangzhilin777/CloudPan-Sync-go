@@ -247,6 +247,8 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 		setSelectValueByText(`#plan-target-profile`, profileName),
 		waitForText(`#plan-target-profile-insight`, "123_open / 手动令牌（manual_token）"),
 		waitForText(`#plan-target-profile-insight`, "授权档案内置账号默认风控"),
+		waitForText(`#plan-target-profile-insight`, "附加配置项"),
+		waitForText(`#plan-target-profile-insight`, "已启用字段"),
 		waitForText(`#plan-target-profile-insight`, "req 1666ms"),
 		chromedp.Click(`#apply-profile-default-risk`, chromedp.ByID),
 		waitForText(`#flash`, "已将账号默认风控写入任务覆盖"),

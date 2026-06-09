@@ -529,11 +529,11 @@ function syncTargetProfileInsight() {
         <div class="muted">${escapeHTML(renderProfileRiskDefaultSourceAdvice(riskDefaultSource || ""))}</div>
       </div>
       <div class="insight-card">
-        <strong>附加字段</strong>
+        <strong>附加配置项</strong>
         <span>${escapeHTML(extraKeys.join(", ") || "-")}</span>
       </div>
       <div class="insight-card">
-        <strong>命中字段</strong>
+        <strong>已启用字段</strong>
         <span>${escapeHTML(profileDefaultFields.join(", ") || "-")}</span>
       </div>
       <div class="insight-card">
