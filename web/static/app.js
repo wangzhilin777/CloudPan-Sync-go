@@ -6376,19 +6376,19 @@ function renderEvidenceProviderSmokeProviders(report) {
         <code>providerSmokeProviders</code>
       </div>
       <div class="directory-metrics">
-        <span class="pill">ready ${counts.ready}</span>
-        <span class="pill">partial ${counts.partial}</span>
-        <span class="pill">pending ${counts.pending}</span>
-        <span class="pill">missing basic ${counts.missingBasic}</span>
-        <span class="pill">missing upload ${counts.missingUpload}</span>
-        <span class="pill">missing anomaly ${counts.missingAnomaly}</span>
-        <span class="pill">missing representative ${counts.missingRepresentative}</span>
+        <span class="pill">就绪 ${counts.ready}</span>
+        <span class="pill">部分就绪 ${counts.partial}</span>
+        <span class="pill">待补齐 ${counts.pending}</span>
+        <span class="pill">缺基础样本 ${counts.missingBasic}</span>
+        <span class="pill">缺上传样本 ${counts.missingUpload}</span>
+        <span class="pill">缺异常样本 ${counts.missingAnomaly}</span>
+        <span class="pill">缺代表样本 ${counts.missingRepresentative}</span>
       </div>
-      <div class="muted">missing basic providers: ${escapeHTML(summarizePathList(counts.missingBasicProviders, 8))}</div>
-      <div class="muted">missing upload providers: ${escapeHTML(summarizePathList(counts.missingUploadProviders, 8))}</div>
-      <div class="muted">missing anomaly providers: ${escapeHTML(summarizePathList(counts.missingAnomalyProviders, 8))}</div>
-      <div class="muted">missing representative providers: ${escapeHTML(summarizePathList(counts.missingRepresentativeProviders, 8))}</div>
-      <div class="muted">provider priority action counts: ${escapeHTML(providerPriorityActionSummary || "-")}</div>
+      <div class="muted">缺基础样本网盘源: ${escapeHTML(summarizePathList(counts.missingBasicProviders, 8))}</div>
+      <div class="muted">缺上传样本网盘源: ${escapeHTML(summarizePathList(counts.missingUploadProviders, 8))}</div>
+      <div class="muted">缺异常样本网盘源: ${escapeHTML(summarizePathList(counts.missingAnomalyProviders, 8))}</div>
+      <div class="muted">缺代表样本网盘源: ${escapeHTML(summarizePathList(counts.missingRepresentativeProviders, 8))}</div>
+      <div class="muted">网盘源优先动作统计: ${escapeHTML(providerPriorityActionSummary || "-")}</div>
       ${
         focusItems.length
           ? focusItems
@@ -6397,23 +6397,23 @@ function renderEvidenceProviderSmokeProviders(report) {
                   <div class="muted">
                     ${escapeHTML(stringifyValue(item.providerKey, "-"))}:
                     ${escapeHTML(renderProviderSmokeProviderReadinessLabel(item.readiness))}
-                    / basic ${item.hasBasicSuccessSample ? "ready" : "pending"}
-                    / upload ${item.hasUploadSuccessSample ? "ready" : "pending"}
-                    / anomaly ${escapeHTML(stringifyValue(item.anomalyCompletedCount, "0"))}/${escapeHTML(stringifyValue(item.anomalyTargetCount, "0"))}
-                    / representative ${escapeHTML(stringifyValue(item.representativeCompletedCount, "0"))}/${escapeHTML(stringifyValue(item.representativeTargetCount, "0"))}
-                    / priority ${escapeHTML(stringifyValue(item.priorityAction, "complete"))}
+                    / 基础 ${item.hasBasicSuccessSample ? "已就绪" : "待补齐"}
+                    / 上传 ${item.hasUploadSuccessSample ? "已就绪" : "待补齐"}
+                    / 异常 ${escapeHTML(stringifyValue(item.anomalyCompletedCount, "0"))}/${escapeHTML(stringifyValue(item.anomalyTargetCount, "0"))}
+                    / 代表 ${escapeHTML(stringifyValue(item.representativeCompletedCount, "0"))}/${escapeHTML(stringifyValue(item.representativeTargetCount, "0"))}
+                    / 优先动作 ${escapeHTML(stringifyValue(item.priorityAction, "complete"))}
                   </div>
-                  <div class="muted">provider preferred sample: ${escapeHTML(stringifyValue(item.preferredSampleTitle, "-"))} / ${escapeHTML(stringifyValue(item.preferredSamplePriority, "-"))}</div>
-                  <div class="muted">provider preferred upload: ${escapeHTML(stringifyValue(item.preferredUploadSampleTitle, "-"))} / ${escapeHTML(stringifyValue(item.preferredUploadPriority, "-"))}</div>
-                  <div class="muted">provider preferred anomaly: ${escapeHTML(stringifyValue(item.preferredAnomalySampleTitle, "-"))} / ${escapeHTML(stringifyValue(item.preferredAnomalyPriority, "-"))}</div>
-                  <div class="muted">provider preferred representative: ${escapeHTML(stringifyValue(item.preferredRepresentativeSampleTitle, "-"))} / ${escapeHTML(stringifyValue(item.preferredRepresentativePriority, "-"))}</div>
-                  ${Array.isArray(item.representativeMissing) && item.representativeMissing.length ? `<div class="muted">provider representative missing: ${escapeHTML(item.representativeMissing.join(", "))}</div>` : ""}
-                  ${Array.isArray(item.representativeActions) && item.representativeActions.length ? `<div class="muted">provider representative actions: ${escapeHTML(item.representativeActions.join("；"))}</div>` : ""}
-                  ${item.representativeAdvice ? `<div class="muted">provider representative advice: ${escapeHTML(item.representativeAdvice)}</div>` : ""}
+                  <div class="muted">优先基础样本: ${escapeHTML(stringifyValue(item.preferredSampleTitle, "-"))} / ${escapeHTML(stringifyValue(item.preferredSamplePriority, "-"))}</div>
+                  <div class="muted">优先上传样本: ${escapeHTML(stringifyValue(item.preferredUploadSampleTitle, "-"))} / ${escapeHTML(stringifyValue(item.preferredUploadPriority, "-"))}</div>
+                  <div class="muted">优先异常样本: ${escapeHTML(stringifyValue(item.preferredAnomalySampleTitle, "-"))} / ${escapeHTML(stringifyValue(item.preferredAnomalyPriority, "-"))}</div>
+                  <div class="muted">优先代表样本: ${escapeHTML(stringifyValue(item.preferredRepresentativeSampleTitle, "-"))} / ${escapeHTML(stringifyValue(item.preferredRepresentativePriority, "-"))}</div>
+                  ${Array.isArray(item.representativeMissing) && item.representativeMissing.length ? `<div class="muted">代表样本缺口: ${escapeHTML(item.representativeMissing.join(", "))}</div>` : ""}
+                  ${Array.isArray(item.representativeActions) && item.representativeActions.length ? `<div class="muted">代表样本动作建议: ${escapeHTML(item.representativeActions.join("；"))}</div>` : ""}
+                  ${item.representativeAdvice ? `<div class="muted">代表样本补齐建议: ${escapeHTML(item.representativeAdvice)}</div>` : ""}
                 `,
               )
               .join("")
-          : `<div class="muted">provider priority action: complete</div>`
+          : `<div class="muted">网盘源优先动作: complete</div>`
       }
     </div>
   `;
@@ -6430,7 +6430,7 @@ function renderEvidenceUploadCheckpointSummary(report) {
   const priorityAction = renderUploadCheckpointPriorityAction(summary);
   return `
     <div class="insight-card">
-      <strong>Upload checkpoint 默认恢复验收</strong>
+      <strong>上传断点续传默认恢复验收</strong>
       <span>断点续传就绪度：${escapeHTML(readiness)}</span>
     </div>
     <div class="directory-row tree-node">
@@ -6439,15 +6439,15 @@ function renderEvidenceUploadCheckpointSummary(report) {
         <code>uploadCheckpointResume</code>
       </div>
       <div class="directory-metrics">
-        <span class="pill">checkpoint ${checkpointCount}</span>
-        <span class="pill">auto-resume ${resumeCount}</span>
-        <span class="pill">readiness ${escapeHTML(readiness)}</span>
+        <span class="pill">断点任务 ${checkpointCount}</span>
+        <span class="pill">自动续传 ${resumeCount}</span>
+        <span class="pill">就绪度 ${escapeHTML(readiness)}</span>
       </div>
-      <div class="muted">priority action: ${escapeHTML(priorityAction)}</div>
-      <div class="muted">sample context: provider ${escapeHTML(stringifyValue(summary.uploadCheckpointResumeSampleProvider, "-"))} / group ${escapeHTML(stringifyValue(summary.uploadCheckpointResumeSampleProtocol, "-"))} / task ${escapeHTML(stringifyValue(summary.uploadCheckpointResumeSampleTaskId, "-"))} / profile ${escapeHTML(stringifyValue(summary.uploadCheckpointResumeSampleProfileId, "-"))}</div>
-      <div class="muted">resume detail: upload ${escapeHTML(stringifyValue(summary.uploadCheckpointResumeSampleUploadId, "-"))} / next part ${escapeHTML(stringifyValue(summary.uploadCheckpointResumeSampleNextPart, "0"))} / uploaded ${escapeHTML(stringifyValue(summary.uploadCheckpointResumeSampleUploaded, "0"))}/${escapeHTML(stringifyValue(summary.uploadCheckpointResumeSamplePartCount, "0"))}</div>
-      <div class="muted">sample path: ${escapeHTML(paths.length ? paths.join(" -> ") : "-")}</div>
-      <div class="muted">recover priority action: ${escapeHTML(priorityAction)}</div>
+      <div class="muted">优先恢复动作: ${escapeHTML(priorityAction)}</div>
+      <div class="muted">样本上下文: 网盘源 ${escapeHTML(stringifyValue(summary.uploadCheckpointResumeSampleProvider, "-"))} / 协议组 ${escapeHTML(stringifyValue(summary.uploadCheckpointResumeSampleProtocol, "-"))} / 任务 ${escapeHTML(stringifyValue(summary.uploadCheckpointResumeSampleTaskId, "-"))} / 授权档案 ${escapeHTML(stringifyValue(summary.uploadCheckpointResumeSampleProfileId, "-"))}</div>
+      <div class="muted">续传详情: 上传 ${escapeHTML(stringifyValue(summary.uploadCheckpointResumeSampleUploadId, "-"))} / 下一分片 ${escapeHTML(stringifyValue(summary.uploadCheckpointResumeSampleNextPart, "0"))} / 已上传 ${escapeHTML(stringifyValue(summary.uploadCheckpointResumeSampleUploaded, "0"))}/${escapeHTML(stringifyValue(summary.uploadCheckpointResumeSamplePartCount, "0"))}</div>
+      <div class="muted">样本路径: ${escapeHTML(paths.length ? paths.join(" -> ") : "-")}</div>
+      <div class="muted">恢复优先动作: ${escapeHTML(priorityAction)}</div>
     </div>
   `;
 }
@@ -6536,9 +6536,9 @@ function renderEvidenceRiskCalibrationSummary(report) {
         <code>defaultRiskTemplate</code>
       </div>
       <div class="directory-metrics">
-        <span class="pill">ready ${counts.ready}</span>
-        <span class="pill">partial ${counts.partial}</span>
-        <span class="pill">pending ${counts.pending}</span>
+        <span class="pill">就绪 ${counts.ready}</span>
+        <span class="pill">部分就绪 ${counts.partial}</span>
+        <span class="pill">待补齐 ${counts.pending}</span>
       </div>
       <div class="muted">校准缺失字段统计: ${escapeHTML(calibrationMissingFieldSummary || "-")}</div>
       <div class="muted">校准优先动作统计: ${escapeHTML(calibrationPriorityActionSummary || "-")}</div>
@@ -6551,7 +6551,7 @@ function renderEvidenceRiskCalibrationSummary(report) {
                   <div class="muted">
                     ${escapeHTML(stringifyValue(item?.meta?.key, "-"))}:
                     校准就绪度 ${escapeHTML(stringifyValue(template.calibrationReadiness, "pending"))}
-                    / recommended ${escapeHTML(stringifyValue(template.recommendedMode, "-"))}
+                    / 推荐风控 ${escapeHTML(stringifyValue(template.recommendedMode, "-"))}
                     / 优先校准 ${escapeHTML(stringifyValue(template.calibrationPriorityAction, "-"))}
                   </div>
                   <div class="muted">
@@ -6561,10 +6561,10 @@ function renderEvidenceRiskCalibrationSummary(report) {
                   <div class="muted">
                     校准缺失 ${escapeHTML((template.calibrationMissing || []).join(", ") || "-")}
                     / 校准覆盖 ${escapeHTML(stringifyValue(template.calibrationCoverage, "-"))}
-                    / covered ${escapeHTML(stringifyValue(template.calibrationCoveredCount, "0"))}/${escapeHTML(stringifyValue(template.calibrationTargetCount, "0"))}
+                    / 已覆盖 ${escapeHTML(stringifyValue(template.calibrationCoveredCount, "0"))}/${escapeHTML(stringifyValue(template.calibrationTargetCount, "0"))}
                   </div>
                   <div class="muted">
-                    covered fields ${escapeHTML((template.calibrationCoveredFields || []).join(", ") || "-")}
+                    已覆盖字段 ${escapeHTML((template.calibrationCoveredFields || []).join(", ") || "-")}
                   </div>
                   <div class="muted">
                     校准样本建议 ${escapeHTML(stringifyValue(template.calibrationSampleAdvice, "-"))}
@@ -6598,7 +6598,7 @@ function renderEvidenceAutoRecoverSummary(report) {
   return `
     <div class="insight-card">
       <strong>自动补传验收</strong>
-      <span>Recover Ready ${escapeHTML(recoveryReadiness)} / Fairness Ready ${escapeHTML(fairnessReadiness)}</span>
+      <span>恢复就绪 ${escapeHTML(recoveryReadiness)} / 公平性就绪 ${escapeHTML(fairnessReadiness)}</span>
     </div>
     <div class="directory-row tree-node">
       <div class="directory-row-header">
@@ -6606,28 +6606,28 @@ function renderEvidenceAutoRecoverSummary(report) {
         <code>autoRecoverPool</code>
       </div>
       <div class="directory-metrics">
-        <span class="pill">tasks ${escapeHTML(stringifyValue(summary.autoRecoverTasks, "0"))}</span>
-        <span class="pill">runnable ${escapeHTML(stringifyValue(summary.autoRecoverRunnableTasks, "0"))}</span>
-        <span class="pill">recover ${escapeHTML(recoveryReadiness)}</span>
-        <span class="pill">fairness ${escapeHTML(fairnessReadiness)}</span>
+        <span class="pill">任务 ${escapeHTML(stringifyValue(summary.autoRecoverTasks, "0"))}</span>
+        <span class="pill">可运行 ${escapeHTML(stringifyValue(summary.autoRecoverRunnableTasks, "0"))}</span>
+        <span class="pill">恢复 ${escapeHTML(recoveryReadiness)}</span>
+        <span class="pill">公平性 ${escapeHTML(fairnessReadiness)}</span>
       </div>
-      <div class="muted">recover priority action: ${escapeHTML(recoveryPriorityAction)}</div>
-      <div class="muted">recover priority action counts: ${escapeHTML(autoRecoverPriorityActionSummary || "-")}</div>
-      <div class="muted">fairness missing: ${escapeHTML(renderAutoRecoverFairnessMissing(summary))}</div>
-      <div class="muted">fairness priority action: ${escapeHTML(fairnessPriorityAction)}</div>
-      <div class="muted">waiting: cooldown ${escapeHTML(stringifyValue(summary.autoRecoverWaitingCooldownTasks, "0"))} / window ${escapeHTML(stringifyValue(summary.autoRecoverWaitingRetryWindowTasks, "0"))} / auth ${escapeHTML(stringifyValue(summary.autoRecoverWaitingAuthRefreshTasks, "0"))} / local ${escapeHTML(stringifyValue(summary.autoRecoverWaitingLocalRestoreTasks, "0"))} / manual ${escapeHTML(stringifyValue(summary.autoRecoverWaitingManualTasks, "0"))}</div>
+      <div class="muted">恢复优先动作: ${escapeHTML(recoveryPriorityAction)}</div>
+      <div class="muted">恢复优先动作统计: ${escapeHTML(autoRecoverPriorityActionSummary || "-")}</div>
+      <div class="muted">公平性缺口: ${escapeHTML(renderAutoRecoverFairnessMissing(summary))}</div>
+      <div class="muted">公平性优先动作: ${escapeHTML(fairnessPriorityAction)}</div>
+      <div class="muted">等待原因: 冷却 ${escapeHTML(stringifyValue(summary.autoRecoverWaitingCooldownTasks, "0"))} / 时间窗 ${escapeHTML(stringifyValue(summary.autoRecoverWaitingRetryWindowTasks, "0"))} / 授权 ${escapeHTML(stringifyValue(summary.autoRecoverWaitingAuthRefreshTasks, "0"))} / 本地文件 ${escapeHTML(stringifyValue(summary.autoRecoverWaitingLocalRestoreTasks, "0"))} / 人工处理 ${escapeHTML(stringifyValue(summary.autoRecoverWaitingManualTasks, "0"))}</div>
       ${
         focusLanes.length
           ? focusLanes
               .map(
                 (item) => `
                   <div class="muted">
-                    lane ${escapeHTML(stringifyValue(item.mode, "-"))}:
-                    provider ${escapeHTML(stringifyValue(item.sampleProvider, "-"))}
-                    / group ${escapeHTML(stringifyValue(item.sampleProtocolGroup, "-"))}
-                    / profile ${escapeHTML(stringifyValue(item.sampleProfileId, "-"))}
-                    / providers ${escapeHTML(stringifyValue(item.providerCount, "0"))}
-                    / profiles ${escapeHTML(stringifyValue(item.profileCount, "0"))}
+                    通道 ${escapeHTML(stringifyValue(item.mode, "-"))}:
+                    网盘源 ${escapeHTML(stringifyValue(item.sampleProvider, "-"))}
+                    / 协议组 ${escapeHTML(stringifyValue(item.sampleProtocolGroup, "-"))}
+                    / 授权档案 ${escapeHTML(stringifyValue(item.sampleProfileId, "-"))}
+                    / 网盘源数 ${escapeHTML(stringifyValue(item.providerCount, "0"))}
+                    / 授权档案数 ${escapeHTML(stringifyValue(item.profileCount, "0"))}
                   </div>
                 `,
               )

@@ -915,10 +915,10 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "autoRecoverPool") {
 		t.Fatalf("expected evidence auto recover pool wiring in app.js, got %q", body)
 	}
-	if !strings.Contains(body, "fairness priority action") {
+	if !strings.Contains(body, "公平性优先动作") {
 		t.Fatalf("expected evidence auto recover fairness priority action in app.js, got %q", body)
 	}
-	if !strings.Contains(body, "Upload checkpoint 默认恢复验收") {
+	if !strings.Contains(body, "上传断点续传默认恢复验收") {
 		t.Fatalf("expected evidence upload checkpoint report title in app.js, got %q", body)
 	}
 	if !strings.Contains(body, "断点续传就绪度") {
@@ -927,10 +927,10 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "uploadCheckpointResume") {
 		t.Fatalf("expected evidence upload checkpoint resume wiring in app.js, got %q", body)
 	}
-	if !strings.Contains(body, "recover priority action") {
+	if !strings.Contains(body, "恢复优先动作") {
 		t.Fatalf("expected evidence upload checkpoint priority action summary in app.js, got %q", body)
 	}
-	if !strings.Contains(body, "autoRecoverPriorityActionCounts") || !strings.Contains(body, "recover priority action counts:") {
+	if !strings.Contains(body, "autoRecoverPriorityActionCounts") || !strings.Contains(body, "恢复优先动作统计:") {
 		t.Fatalf("expected evidence auto recover priority action counts in app.js, got %q", body)
 	}
 	if !strings.Contains(body, "renderEvidenceProviderSmokeProviders") {
@@ -948,13 +948,13 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "providerSmokeProviderMissingBasicProviders") || !strings.Contains(body, "providerSmokeProviderMissingUploadProviders") || !strings.Contains(body, "providerSmokeProviderMissingAnomalyProviders") || !strings.Contains(body, "providerSmokeProviderMissingRepresentativeProviders") {
 		t.Fatalf("expected provider-level smoke missing provider lists in app.js, got %q", body)
 	}
-	if !strings.Contains(body, "providerSmokeProviderPriorityActionCounts") || !strings.Contains(body, "provider priority action counts:") {
+	if !strings.Contains(body, "providerSmokeProviderPriorityActionCounts") || !strings.Contains(body, "网盘源优先动作统计:") {
 		t.Fatalf("expected provider-level smoke priority action counts in app.js, got %q", body)
 	}
-	if !strings.Contains(body, "missing basic") || !strings.Contains(body, "missing upload") || !strings.Contains(body, "missing anomaly") || !strings.Contains(body, "missing representative") {
+	if !strings.Contains(body, "缺基础样本") || !strings.Contains(body, "缺上传样本") || !strings.Contains(body, "缺异常样本") || !strings.Contains(body, "缺代表样本") {
 		t.Fatalf("expected provider-level smoke missing counter labels in app.js, got %q", body)
 	}
-	if !strings.Contains(body, "missing basic providers:") || !strings.Contains(body, "missing upload providers:") || !strings.Contains(body, "missing anomaly providers:") || !strings.Contains(body, "missing representative providers:") {
+	if !strings.Contains(body, "缺基础样本网盘源:") || !strings.Contains(body, "缺上传样本网盘源:") || !strings.Contains(body, "缺异常样本网盘源:") || !strings.Contains(body, "缺代表样本网盘源:") {
 		t.Fatalf("expected provider-level smoke missing provider list labels in app.js, got %q", body)
 	}
 	if !strings.Contains(body, "网盘源级真实样本验收") {
@@ -969,10 +969,10 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "providerSmokeProviders") {
 		t.Fatalf("expected providerSmokeProviders report wiring in app.js, got %q", body)
 	}
-	if !strings.Contains(body, "provider priority action") {
+	if !strings.Contains(body, "网盘源优先动作") {
 		t.Fatalf("expected provider-level smoke priority action summary in app.js, got %q", body)
 	}
-	if !strings.Contains(body, "provider preferred sample:") || !strings.Contains(body, "provider preferred upload:") || !strings.Contains(body, "provider preferred anomaly:") {
+	if !strings.Contains(body, "优先基础样本:") || !strings.Contains(body, "优先上传样本:") || !strings.Contains(body, "优先异常样本:") {
 		t.Fatalf("expected provider-level preferred sample summaries in app.js, got %q", body)
 	}
 	if !strings.Contains(body, "renderEvidenceRiskCalibrationSummary") {
@@ -1146,10 +1146,10 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "regression entry:") {
 		t.Fatalf("expected provider smoke regression entry summary in app.js, got %q", body)
 	}
-	if !strings.Contains(body, "preferred sample:") {
+	if !strings.Contains(body, "优先基础样本:") {
 		t.Fatalf("expected provider smoke preferred sample summary in app.js, got %q", body)
 	}
-	if !strings.Contains(body, "preferred upload:") || !strings.Contains(body, "preferred anomaly:") || !strings.Contains(body, "preferred representative:") {
+	if !strings.Contains(body, "优先上传样本:") || !strings.Contains(body, "优先异常样本:") || !strings.Contains(body, "优先代表样本:") {
 		t.Fatalf("expected provider smoke preferred upload/anomaly/representative summaries in app.js, got %q", body)
 	}
 	if !strings.Contains(body, "smokeMatrixMissingUploadGroups") || !strings.Contains(body, "smokeMatrixMissingCoverageGroups") || !strings.Contains(body, "smokeMatrixMissingAnomalyGroups") || !strings.Contains(body, "smokeMatrixMissingRepresentativeGroups") {
@@ -1158,7 +1158,7 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "smokeMatrixPriorityActionCounts") || !strings.Contains(body, "验收优先动作") {
 		t.Fatalf("expected localized smoke matrix priority action counts in app.js, got %q", body)
 	}
-	if !strings.Contains(body, "provider preferred representative:") || !strings.Contains(body, "provider representative missing:") || !strings.Contains(body, "provider representative actions:") || !strings.Contains(body, "provider representative advice:") {
+	if !strings.Contains(body, "优先代表样本:") || !strings.Contains(body, "代表样本缺口:") || !strings.Contains(body, "代表样本动作建议:") || !strings.Contains(body, "代表样本补齐建议:") {
 		t.Fatalf("expected provider-level representative summaries in app.js, got %q", body)
 	}
 	if !strings.Contains(body, "auto recover focus:") {
