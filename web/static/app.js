@@ -236,6 +236,74 @@ const translations = {
       collapse: "收起",
       recent_directory_states: "最近目录状态",
       recent_pending_tree: "最近待补传树"
+      ,
+      no_tree_nodes: "暂无{label}。",
+      showing_all_tree_nodes: "显示全部 {visible} 个{label}。{suffix}",
+      showing_filtered_tree_nodes: "当前显示 {visible} / {total} 个{label}。{suffix}",
+      retry_queue_empty: "当前没有需要后续重试的队列项。",
+      retry_queue_none: "当前没有重试队列项。",
+      retry_queue_current: "当前显示",
+      retry_queue_retryable_now: "可立即重试",
+      retry_queue_blocked: "阻塞",
+      retry_queue_exhausted: "耗尽",
+      retry_queue_filtered_empty: "筛选后没有命中的重试队列项。",
+      focus_pending_tree: "定位待补传树",
+      focus_same_retry_class: "只看同类队列",
+      result_count_compact: "done {done} / skipped {skipped} / failed {failed}",
+      retry_queue_compact: "可重试 {retryable} / 阻塞 {blocked}",
+      action_refresh_auth_profile: "刷新授权后继续",
+      action_restore_local_source_file: "补回本地文件后继续",
+      action_manual_intervention_required: "修复 provider 会话后继续",
+      action_wait_for_cooldown: "等待冷却到 {time}",
+      action_wait_for_cooldown_fallback: "等待冷却结束后继续",
+      action_wait_for_retry_window: "等待时间窗到 {time}",
+      action_wait_for_retry_window_fallback: "等待时间窗开放后继续",
+      action_manual_confirmation_required: "人工确认后继续",
+      action_review_and_reset_retry_strategy: "调整重试策略后继续",
+      guide_refresh_auth_title: "刷新授权档案",
+      guide_refresh_auth_step_1: "切到“网盘源 / 授权”面板，定位当前目标端授权档案。",
+      guide_refresh_auth_step_2: "更新 token/cookie 后先执行 Validate，确认授权恢复正常。",
+      guide_refresh_auth_step_3: "回到任务详情页，再执行 Resume 或 Retry。",
+      guide_restore_local_title: "补回本地回退文件",
+      guide_restore_local_step_1: "先补回源文件或校正本地 fallback 路径，确保 localPath 对应文件真实存在。",
+      guide_restore_local_step_2: "如果路径配置有误，建议回到任务向导核对 entries / selectedRoots。",
+      guide_restore_local_step_3: "补齐后返回任务详情页重新 Retry。",
+      guide_manual_intervention_title: "修复 provider 会话缺口",
+      guide_manual_intervention_step_1: "当前 retryClass 是 provider_session_missing，说明 provider 返回体缺少 uploadid / upload session 这类关键会话字段。",
+      guide_manual_intervention_step_2: "先核对 provider 返回体、上传会话构建逻辑和目标端授权档案，确认是否需要重新生成会话或刷新授权。",
+      guide_manual_intervention_step_3: "修复后回到状态矩阵，确认该类 blocked 项已经收敛，再执行 Retry。",
+      guide_wait_cooldown_title: "等待冷却窗口结束",
+      guide_wait_cooldown_step_1: "当前最早自动补传时间是 {time}。",
+      guide_wait_cooldown_step_1_fallback: "当前处于风控冷却窗口。",
+      guide_wait_cooldown_step_2: "冷却期间无需手动重试，系统会在窗口结束后自动尝试补传。",
+      guide_wait_cooldown_step_3: "如果想确认整体阻塞分布，可切到状态矩阵查看 blocked 聚合看板。",
+      guide_wait_window_title: "等待自动补传时间窗",
+      guide_wait_window_step_1: "当前下一次允许自动补传的时间是 {time}。",
+      guide_wait_window_step_1_fallback: "当前不在允许的自动补传时间窗内。",
+      guide_wait_window_step_2: "这类任务仍会留在自动补传候选池里，但在时间窗开始前不会被 worker 实际执行。",
+      guide_wait_window_step_3: "如果需要排查影响范围，可切到状态矩阵按 blocked action 或 lane 直接聚焦。",
+      guide_manual_confirmation_title: "等待人工确认",
+      guide_manual_confirmation_step_1: "当前任务存在 pending_manual 项，说明 provider 仍需要人工确认或后续 fallback 运行时能力。",
+      guide_manual_confirmation_step_2: "先在状态矩阵和待补传树里确认影响范围，再决定是否拆分任务或等待后续链路补齐。",
+      guide_manual_confirmation_step_3: "确认后再回到任务详情执行 Retry。",
+      guide_review_retry_title: "调整重试策略",
+      guide_review_retry_step_1: "当前任务已经达到 retryLimit，继续原样 Retry 不会再推进。",
+      guide_review_retry_step_2: "建议回到任务向导调整 riskOverride / retryLimit / 执行策略，必要时拆成更小任务。",
+      guide_review_retry_step_3: "创建新任务后，用状态矩阵对比新的 blocked 分布是否收敛。",
+      guide_open_providers: "打开授权面板",
+      guide_focus_auth_queue: "只看授权失效队列",
+      guide_open_status_blocked: "按当前阻塞打开状态矩阵",
+      guide_focus_local_missing: "只看本地缺失队列",
+      guide_open_wizard: "打开任务向导",
+      guide_focus_session_missing: "只看会话缺口队列",
+      guide_focus_cooldown: "只看冷却队列",
+      guide_focus_window: "只看时间窗等待态",
+      guide_focus_current_retry: "只看当前任务重试队列",
+      guide_focus_manual_pending: "只看待确认队列",
+      guide_stay_task_detail: "留在任务详情",
+      guide_focus_exhausted: "只看 exhausted 队列",
+      guide_manual_fallback_title: "人工处理建议",
+      guide_manual_fallback_step: "请根据 blocked 原因检查授权、源文件和 provider 返回状态。"
     },
     status: {
       summary_title: "运行证据摘要",
@@ -656,6 +724,74 @@ const translations = {
       collapse: "Collapse",
       recent_directory_states: "Recent Directory States",
       recent_pending_tree: "Recent Pending Retry Tree"
+      ,
+      no_tree_nodes: "No {label} yet.",
+      showing_all_tree_nodes: "Showing all {visible} {label}. {suffix}",
+      showing_filtered_tree_nodes: "Showing {visible} / {total} {label}. {suffix}",
+      retry_queue_empty: "There are no retry queue items that need follow-up.",
+      retry_queue_none: "There are no retry queue items.",
+      retry_queue_current: "Currently Visible",
+      retry_queue_retryable_now: "Retryable Now",
+      retry_queue_blocked: "Blocked",
+      retry_queue_exhausted: "Exhausted",
+      retry_queue_filtered_empty: "No retry queue items match the current filters.",
+      focus_pending_tree: "Focus Pending Retry Tree",
+      focus_same_retry_class: "Show Similar Queue",
+      result_count_compact: "done {done} / skipped {skipped} / failed {failed}",
+      retry_queue_compact: "retryable {retryable} / blocked {blocked}",
+      action_refresh_auth_profile: "Continue after refreshing auth",
+      action_restore_local_source_file: "Continue after restoring local files",
+      action_manual_intervention_required: "Continue after fixing the provider session",
+      action_wait_for_cooldown: "Wait for cooldown until {time}",
+      action_wait_for_cooldown_fallback: "Continue after the cooldown ends",
+      action_wait_for_retry_window: "Wait for the retry window until {time}",
+      action_wait_for_retry_window_fallback: "Continue after the retry window opens",
+      action_manual_confirmation_required: "Continue after manual confirmation",
+      action_review_and_reset_retry_strategy: "Continue after adjusting the retry strategy",
+      guide_refresh_auth_title: "Refresh Auth Profile",
+      guide_refresh_auth_step_1: "Open the Providers / Auth panel and locate the current target auth profile.",
+      guide_refresh_auth_step_2: "Update the token/cookie and run Validate first to confirm the auth is healthy again.",
+      guide_refresh_auth_step_3: "Return to task details, then Resume or Retry.",
+      guide_restore_local_title: "Restore Local Fallback Files",
+      guide_restore_local_step_1: "Restore the source file or correct the local fallback path so the localPath file really exists.",
+      guide_restore_local_step_2: "If the path configuration is wrong, return to the task wizard and verify entries / selectedRoots.",
+      guide_restore_local_step_3: "After fixing it, return to task details and Retry again.",
+      guide_manual_intervention_title: "Fix the Provider Session Gap",
+      guide_manual_intervention_step_1: "The current retryClass is provider_session_missing, which means the provider response is missing key session fields such as uploadid / upload session.",
+      guide_manual_intervention_step_2: "Check the provider response, upload-session construction logic, and target auth profile to confirm whether a new session or auth refresh is needed.",
+      guide_manual_intervention_step_3: "After fixing it, return to the status matrix, confirm the blocked items have converged, and then Retry.",
+      guide_wait_cooldown_title: "Wait for the Cooldown Window",
+      guide_wait_cooldown_step_1: "The earliest auto-recovery time is {time}.",
+      guide_wait_cooldown_step_1_fallback: "The task is currently inside the risk cooldown window.",
+      guide_wait_cooldown_step_2: "You do not need to retry manually during cooldown. The system will try again automatically after the window ends.",
+      guide_wait_cooldown_step_3: "If you want to confirm the overall blocked distribution, open the status matrix and inspect the blocked summary board.",
+      guide_wait_window_title: "Wait for the Auto-Recovery Window",
+      guide_wait_window_step_1: "The next allowed auto-recovery time is {time}.",
+      guide_wait_window_step_1_fallback: "The task is currently outside the allowed auto-recovery window.",
+      guide_wait_window_step_2: "These tasks remain in the auto-recovery pool, but the worker will not execute them before the window begins.",
+      guide_wait_window_step_3: "If you need to inspect the impact range, open the status matrix and focus by blocked action or lane.",
+      guide_manual_confirmation_title: "Wait for Manual Confirmation",
+      guide_manual_confirmation_step_1: "The current task contains pending_manual items, which means the provider still requires manual confirmation or later fallback runtime capability.",
+      guide_manual_confirmation_step_2: "First inspect the impact range in the status matrix and pending-retry tree, then decide whether to split the task or wait for later runtime support.",
+      guide_manual_confirmation_step_3: "After confirming, return to task details and Retry.",
+      guide_review_retry_title: "Adjust the Retry Strategy",
+      guide_review_retry_step_1: "The current task has reached retryLimit, so retrying it as-is will not make progress.",
+      guide_review_retry_step_2: "Return to the task wizard to adjust riskOverride / retryLimit / execution strategy, and split it into smaller tasks if needed.",
+      guide_review_retry_step_3: "After creating the new task, compare the new blocked distribution in the status matrix to confirm it has converged.",
+      guide_open_providers: "Open Providers",
+      guide_focus_auth_queue: "Show Expired Auth Queue",
+      guide_open_status_blocked: "Open Status Matrix for This Block",
+      guide_focus_local_missing: "Show Local-Missing Queue",
+      guide_open_wizard: "Open Task Wizard",
+      guide_focus_session_missing: "Show Session-Gap Queue",
+      guide_focus_cooldown: "Show Cooldown Queue",
+      guide_focus_window: "Show Waiting-Window State",
+      guide_focus_current_retry: "Show Current Task Retry Queue",
+      guide_focus_manual_pending: "Show Pending-Manual Queue",
+      guide_stay_task_detail: "Stay on Task Details",
+      guide_focus_exhausted: "Show Exhausted Queue",
+      guide_manual_fallback_title: "Manual Handling Suggestion",
+      guide_manual_fallback_step: "Check auth, source files, and provider status according to the blocked reason."
     },
     status: {
       summary_title: "Runtime Evidence Summary",
@@ -2410,7 +2546,7 @@ function filterPendingTree(nodes, filters = {}) {
 
 function renderTreeFilterSummary(result, label, mode = "directory") {
   if (!result.totalNodes) {
-    return `暂无${label}。`;
+    return tf("tasks.no_tree_nodes", { label }, `暂无${label}。`);
   }
   const summary = summarizeVisibleTree(result, mode);
   const suffix = [
@@ -2423,9 +2559,9 @@ function renderTreeFilterSummary(result, label, mode = "directory") {
     .filter(Boolean)
     .join(" / ");
   if (!result.filterActive) {
-    return `显示全部 ${result.visibleNodes} 个${label}。${suffix}`;
+    return tf("tasks.showing_all_tree_nodes", { visible: result.visibleNodes, label, suffix }, `显示全部 ${result.visibleNodes} 个${label}。${suffix}`);
   }
-  return `当前显示 ${result.visibleNodes} / ${result.totalNodes} 个${label}。${suffix}`;
+  return tf("tasks.showing_filtered_tree_nodes", { visible: result.visibleNodes, total: result.totalNodes, label, suffix }, `当前显示 ${result.visibleNodes} / ${result.totalNodes} 个${label}。${suffix}`);
 }
 
 function resetTreeFilterSection(section) {
@@ -2463,7 +2599,7 @@ function filterRetryQueue(items, filters = {}) {
 
 function renderRetryQueueSummary(result) {
   if (!result.totalItems) {
-    return `<div class="directory-empty">当前没有需要后续重试的队列项。</div>`;
+    return `<div class="directory-empty">${escapeHTML(t("tasks.retry_queue_empty", "当前没有需要后续重试的队列项。"))}</div>`;
   }
   const retryable = result.items.filter((item) => item.retryable && !item.exhausted).length;
   const blocked = result.items.filter((item) => item.blocked && !item.exhausted).length;
@@ -2471,19 +2607,19 @@ function renderRetryQueueSummary(result) {
   return `
     <div class="retry-summary-grid">
       <div class="retry-card">
-        <strong>当前显示</strong>
+        <strong>${escapeHTML(t("tasks.retry_queue_current", "当前显示"))}</strong>
         <span>${result.visibleItems} / ${result.totalItems}</span>
       </div>
       <div class="retry-card">
-        <strong>可立即重试</strong>
+        <strong>${escapeHTML(t("tasks.retry_queue_retryable_now", "可立即重试"))}</strong>
         <span>${retryable}</span>
       </div>
       <div class="retry-card">
-        <strong>Blocked</strong>
+        <strong>${escapeHTML(t("tasks.retry_queue_blocked", "阻塞"))}</strong>
         <span>${blocked}</span>
       </div>
       <div class="retry-card">
-        <strong>Exhausted</strong>
+        <strong>${escapeHTML(t("tasks.retry_queue_exhausted", "耗尽"))}</strong>
         <span>${exhausted}</span>
       </div>
     </div>
@@ -2494,8 +2630,8 @@ function renderRetryQueue(items, filters = {}) {
   const result = filterRetryQueue(items, filters);
   if (!result.totalItems) {
     return {
-      html: `<div class="directory-empty">当前没有需要后续重试的队列项。</div>`,
-      summaryText: "当前没有重试队列项。",
+      html: `<div class="directory-empty">${escapeHTML(t("tasks.retry_queue_empty", "当前没有需要后续重试的队列项。"))}</div>`,
+      summaryText: t("tasks.retry_queue_none", "当前没有重试队列项。"),
     };
   }
   const rows = result.items
@@ -2525,23 +2661,23 @@ function renderRetryQueue(items, filters = {}) {
               type="button"
               class="ghost"
               data-retry-focus-pending="${escapeHTML(item.rootPath || item.path)}"
-            >定位待补传树</button>
+            >${escapeHTML(t("tasks.focus_pending_tree", "定位待补传树"))}</button>
             <button
               type="button"
               class="ghost"
               data-retry-focus-class="${escapeHTML(item.retryClass)}"
               data-retry-focus-state="${escapeHTML(stateValue)}"
-            >只看同类队列</button>
+            >${escapeHTML(t("tasks.focus_same_retry_class", "只看同类队列"))}</button>
           </div>
         </div>
       `;
     })
     .join("");
   const summaryText = result.filterActive
-    ? `当前显示 ${result.visibleItems} / ${result.totalItems} 个重试队列项。`
-    : `显示全部 ${result.totalItems} 个重试队列项。`;
+    ? tf("tasks.showing_filtered_tree_nodes", { visible: result.visibleItems, total: result.totalItems, label: "重试队列项", suffix: "" }, `当前显示 ${result.visibleItems} / ${result.totalItems} 个重试队列项。`).replace(/\s+\.$/, "。")
+    : tf("tasks.showing_all_tree_nodes", { visible: result.totalItems, label: "重试队列项", suffix: "" }, `显示全部 ${result.totalItems} 个重试队列项。`).replace(/\s+\.$/, "。");
   return {
-    html: `${renderRetryQueueSummary(result)}${rows || `<div class="directory-empty">筛选后没有命中的重试队列项。</div>`}`,
+    html: `${renderRetryQueueSummary(result)}${rows || `<div class="directory-empty">${escapeHTML(t("tasks.retry_queue_filtered_empty", "筛选后没有命中的重试队列项。"))}</div>`}`,
     summaryText,
   };
 }
@@ -2584,13 +2720,13 @@ function renderBlockedSummary(action, advice, nextRetryAt = "", autoRecoverAdvic
     return "-";
   }
   const actionLabelMap = {
-    refresh_auth_profile: "刷新授权后继续",
-    restore_local_source_file: "补回本地文件后继续",
-    manual_intervention_required: "修复 provider 会话后继续",
-    wait_for_cooldown: normalizedNextRetryAt ? `等待冷却到 ${normalizedNextRetryAt}` : "等待冷却结束后继续",
-    wait_for_retry_window: normalizedNextRetryAt ? `等待时间窗到 ${normalizedNextRetryAt}` : "等待时间窗开放后继续",
-    manual_confirmation_required: "人工确认后继续",
-    review_and_reset_retry_strategy: "调整重试策略后继续",
+    refresh_auth_profile: t("tasks.action_refresh_auth_profile", "刷新授权后继续"),
+    restore_local_source_file: t("tasks.action_restore_local_source_file", "补回本地文件后继续"),
+    manual_intervention_required: t("tasks.action_manual_intervention_required", "修复 provider 会话后继续"),
+    wait_for_cooldown: normalizedNextRetryAt ? tf("tasks.action_wait_for_cooldown", { time: normalizedNextRetryAt }, `等待冷却到 ${normalizedNextRetryAt}`) : t("tasks.action_wait_for_cooldown_fallback", "等待冷却结束后继续"),
+    wait_for_retry_window: normalizedNextRetryAt ? tf("tasks.action_wait_for_retry_window", { time: normalizedNextRetryAt }, `等待时间窗到 ${normalizedNextRetryAt}`) : t("tasks.action_wait_for_retry_window_fallback", "等待时间窗开放后继续"),
+    manual_confirmation_required: t("tasks.action_manual_confirmation_required", "人工确认后继续"),
+    review_and_reset_retry_strategy: t("tasks.action_review_and_reset_retry_strategy", "调整重试策略后继续"),
   };
   const primary = actionLabelMap[normalizedAction] || normalizedAdvice || normalizedAutoRecoverAdvice || normalizedAction;
   if (normalizedAdvice && normalizedAdvice !== primary) {
@@ -4789,102 +4925,102 @@ function renderTaskResolutionGuide(detail) {
 
   const stepsByAction = {
     refresh_auth_profile: {
-      title: "刷新授权档案",
+      title: t("tasks.guide_refresh_auth_title", "刷新授权档案"),
       steps: [
-        "切到“网盘源 / 授权”面板，定位当前目标端授权档案。",
-        "更新 token/cookie 后先执行 Validate，确认授权恢复正常。",
-        "回到任务详情页，再执行 Resume 或 Retry。",
+        t("tasks.guide_refresh_auth_step_1", "切到“网盘源 / 授权”面板，定位当前目标端授权档案。"),
+        t("tasks.guide_refresh_auth_step_2", "更新 token/cookie 后先执行 Validate，确认授权恢复正常。"),
+        t("tasks.guide_refresh_auth_step_3", "回到任务详情页，再执行 Resume 或 Retry。"),
       ],
       buttons: [
-        { label: "打开授权面板", view: "providers", providerKey, profileId, intent: "focus_profile" },
-        { label: "只看授权失效队列", view: "tasks", intent: "focus_task_retry" },
-        { label: "按当前阻塞打开状态矩阵", view: "status", intent: "focus_status_blocked" },
+        { label: t("tasks.guide_open_providers", "打开授权面板"), view: "providers", providerKey, profileId, intent: "focus_profile" },
+        { label: t("tasks.guide_focus_auth_queue", "只看授权失效队列"), view: "tasks", intent: "focus_task_retry" },
+        { label: t("tasks.guide_open_status_blocked", "按当前阻塞打开状态矩阵"), view: "status", intent: "focus_status_blocked" },
       ],
     },
     restore_local_source_file: {
-      title: "补回本地回退文件",
+      title: t("tasks.guide_restore_local_title", "补回本地回退文件"),
       steps: [
-        "先补回源文件或校正本地 fallback 路径，确保 localPath 对应文件真实存在。",
-        "如果路径配置有误，建议回到任务向导核对 entries / selectedRoots。",
-        "补齐后返回任务详情页重新 Retry。",
+        t("tasks.guide_restore_local_step_1", "先补回源文件或校正本地 fallback 路径，确保 localPath 对应文件真实存在。"),
+        t("tasks.guide_restore_local_step_2", "如果路径配置有误，建议回到任务向导核对 entries / selectedRoots。"),
+        t("tasks.guide_restore_local_step_3", "补齐后返回任务详情页重新 Retry。"),
       ],
       buttons: [
-        { label: "定位待补传树", view: "tasks", intent: "focus_task_pending" },
-        { label: "只看本地缺失队列", view: "tasks", intent: "focus_task_retry" },
-        { label: "打开任务向导", view: "wizard", providerKey, intent: "prefill_wizard" },
-        { label: "按当前阻塞打开状态矩阵", view: "status", intent: "focus_status_blocked" },
+        { label: t("tasks.focus_pending_tree", "定位待补传树"), view: "tasks", intent: "focus_task_pending" },
+        { label: t("tasks.guide_focus_local_missing", "只看本地缺失队列"), view: "tasks", intent: "focus_task_retry" },
+        { label: t("tasks.guide_open_wizard", "打开任务向导"), view: "wizard", providerKey, intent: "prefill_wizard" },
+        { label: t("tasks.guide_open_status_blocked", "按当前阻塞打开状态矩阵"), view: "status", intent: "focus_status_blocked" },
       ],
     },
     manual_intervention_required: {
-      title: "修复 provider 会话缺口",
+      title: t("tasks.guide_manual_intervention_title", "修复 provider 会话缺口"),
       steps: [
-        "当前 retryClass 是 provider_session_missing，说明 provider 返回体缺少 uploadid / upload session 这类关键会话字段。",
-        "先核对 provider 返回体、上传会话构建逻辑和目标端授权档案，确认是否需要重新生成会话或刷新授权。",
-        "修复后回到状态矩阵，确认该类 blocked 项已经收敛，再执行 Retry。",
+        t("tasks.guide_manual_intervention_step_1", "当前 retryClass 是 provider_session_missing，说明 provider 返回体缺少 uploadid / upload session 这类关键会话字段。"),
+        t("tasks.guide_manual_intervention_step_2", "先核对 provider 返回体、上传会话构建逻辑和目标端授权档案，确认是否需要重新生成会话或刷新授权。"),
+        t("tasks.guide_manual_intervention_step_3", "修复后回到状态矩阵，确认该类 blocked 项已经收敛，再执行 Retry。"),
       ],
       buttons: [
-        { label: "只看会话缺口队列", view: "tasks", intent: "focus_task_retry" },
-        { label: "打开授权面板", view: "providers", providerKey, profileId, intent: "focus_profile" },
-        { label: "按当前阻塞打开状态矩阵", view: "status", intent: "focus_status_blocked" },
+        { label: t("tasks.guide_focus_session_missing", "只看会话缺口队列"), view: "tasks", intent: "focus_task_retry" },
+        { label: t("tasks.guide_open_providers", "打开授权面板"), view: "providers", providerKey, profileId, intent: "focus_profile" },
+        { label: t("tasks.guide_open_status_blocked", "按当前阻塞打开状态矩阵"), view: "status", intent: "focus_status_blocked" },
       ],
     },
     wait_for_cooldown: {
-      title: "等待冷却窗口结束",
+      title: t("tasks.guide_wait_cooldown_title", "等待冷却窗口结束"),
       steps: [
-        nextRetryAt ? `当前最早自动补传时间是 ${nextRetryAt}。` : "当前处于风控冷却窗口。",
-        "冷却期间无需手动重试，系统会在窗口结束后自动尝试补传。",
-        "如果想确认整体阻塞分布，可切到状态矩阵查看 blocked 聚合看板。",
+        nextRetryAt ? tf("tasks.guide_wait_cooldown_step_1", { time: nextRetryAt }, `当前最早自动补传时间是 ${nextRetryAt}。`) : t("tasks.guide_wait_cooldown_step_1_fallback", "当前处于风控冷却窗口。"),
+        t("tasks.guide_wait_cooldown_step_2", "冷却期间无需手动重试，系统会在窗口结束后自动尝试补传。"),
+        t("tasks.guide_wait_cooldown_step_3", "如果想确认整体阻塞分布，可切到状态矩阵查看 blocked 聚合看板。"),
       ],
       buttons: [
-        { label: "只看冷却队列", view: "tasks", intent: "focus_task_retry" },
-        { label: "按当前阻塞打开状态矩阵", view: "status", intent: "focus_status_blocked" },
+        { label: t("tasks.guide_focus_cooldown", "只看冷却队列"), view: "tasks", intent: "focus_task_retry" },
+        { label: t("tasks.guide_open_status_blocked", "按当前阻塞打开状态矩阵"), view: "status", intent: "focus_status_blocked" },
       ],
     },
     wait_for_retry_window: {
-      title: "等待自动补传时间窗",
+      title: t("tasks.guide_wait_window_title", "等待自动补传时间窗"),
       steps: [
-        nextRetryAt ? `当前下一次允许自动补传的时间是 ${nextRetryAt}。` : "当前不在允许的自动补传时间窗内。",
-        "这类任务仍会留在自动补传候选池里，但在时间窗开始前不会被 worker 实际执行。",
-        "如果需要排查影响范围，可切到状态矩阵按 blocked action 或 lane 直接聚焦。",
+        nextRetryAt ? tf("tasks.guide_wait_window_step_1", { time: nextRetryAt }, `当前下一次允许自动补传的时间是 ${nextRetryAt}。`) : t("tasks.guide_wait_window_step_1_fallback", "当前不在允许的自动补传时间窗内。"),
+        t("tasks.guide_wait_window_step_2", "这类任务仍会留在自动补传候选池里，但在时间窗开始前不会被 worker 实际执行。"),
+        t("tasks.guide_wait_window_step_3", "如果需要排查影响范围，可切到状态矩阵按 blocked action 或 lane 直接聚焦。"),
       ],
       buttons: [
-        { label: "只看时间窗等待态", view: "status" },
-        { label: "只看当前任务重试队列", view: "tasks", intent: "focus_task_retry" },
+        { label: t("tasks.guide_focus_window", "只看时间窗等待态"), view: "status" },
+        { label: t("tasks.guide_focus_current_retry", "只看当前任务重试队列"), view: "tasks", intent: "focus_task_retry" },
       ],
     },
     manual_confirmation_required: {
-      title: "等待人工确认",
+      title: t("tasks.guide_manual_confirmation_title", "等待人工确认"),
       steps: [
-        "当前任务存在 pending_manual 项，说明 provider 仍需要人工确认或后续 fallback 运行时能力。",
-        "先在状态矩阵和待补传树里确认影响范围，再决定是否拆分任务或等待后续链路补齐。",
-        "确认后再回到任务详情执行 Retry。",
+        t("tasks.guide_manual_confirmation_step_1", "当前任务存在 pending_manual 项，说明 provider 仍需要人工确认或后续 fallback 运行时能力。"),
+        t("tasks.guide_manual_confirmation_step_2", "先在状态矩阵和待补传树里确认影响范围，再决定是否拆分任务或等待后续链路补齐。"),
+        t("tasks.guide_manual_confirmation_step_3", "确认后再回到任务详情执行 Retry。"),
       ],
       buttons: [
-        { label: "定位待补传树", view: "tasks", intent: "focus_task_pending" },
-        { label: "只看待确认队列", view: "tasks", intent: "focus_task_retry" },
-        { label: "按当前阻塞打开状态矩阵", view: "status", intent: "focus_status_blocked" },
-        { label: "留在任务详情", view: "tasks" },
+        { label: t("tasks.focus_pending_tree", "定位待补传树"), view: "tasks", intent: "focus_task_pending" },
+        { label: t("tasks.guide_focus_manual_pending", "只看待确认队列"), view: "tasks", intent: "focus_task_retry" },
+        { label: t("tasks.guide_open_status_blocked", "按当前阻塞打开状态矩阵"), view: "status", intent: "focus_status_blocked" },
+        { label: t("tasks.guide_stay_task_detail", "留在任务详情"), view: "tasks" },
       ],
     },
     review_and_reset_retry_strategy: {
-      title: "调整重试策略",
+      title: t("tasks.guide_review_retry_title", "调整重试策略"),
       steps: [
-        "当前任务已经达到 retryLimit，继续原样 Retry 不会再推进。",
-        "建议回到任务向导调整 riskOverride / retryLimit / 执行策略，必要时拆成更小任务。",
-        "创建新任务后，用状态矩阵对比新的 blocked 分布是否收敛。",
+        t("tasks.guide_review_retry_step_1", "当前任务已经达到 retryLimit，继续原样 Retry 不会再推进。"),
+        t("tasks.guide_review_retry_step_2", "建议回到任务向导调整 riskOverride / retryLimit / 执行策略，必要时拆成更小任务。"),
+        t("tasks.guide_review_retry_step_3", "创建新任务后，用状态矩阵对比新的 blocked 分布是否收敛。"),
       ],
       buttons: [
-        { label: "只看 exhausted 队列", view: "tasks", intent: "focus_task_retry" },
-        { label: "打开任务向导", view: "wizard", providerKey, intent: "prefill_wizard" },
-        { label: "按当前阻塞打开状态矩阵", view: "status", intent: "focus_status_blocked" },
+        { label: t("tasks.guide_focus_exhausted", "只看 exhausted 队列"), view: "tasks", intent: "focus_task_retry" },
+        { label: t("tasks.guide_open_wizard", "打开任务向导"), view: "wizard", providerKey, intent: "prefill_wizard" },
+        { label: t("tasks.guide_open_status_blocked", "按当前阻塞打开状态矩阵"), view: "status", intent: "focus_status_blocked" },
       ],
     },
   };
 
   const config = stepsByAction[action] || {
-    title: "人工处理建议",
-    steps: [advice || "请根据 blocked 原因检查授权、源文件和 provider 返回状态。"],
-    buttons: [{ label: "打开状态矩阵", view: "status" }],
+    title: t("tasks.guide_manual_fallback_title", "人工处理建议"),
+    steps: [advice || t("tasks.guide_manual_fallback_step", "请根据 blocked 原因检查授权、源文件和 provider 返回状态。")],
+    buttons: [{ label: t("tasks.open_status_matrix", "打开状态矩阵"), view: "status" }],
   };
 
   return `
