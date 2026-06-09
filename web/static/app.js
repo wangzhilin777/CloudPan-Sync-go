@@ -432,7 +432,41 @@ const translations = {
       matrix_prefill_smoke_form: "预填 smoke 表单",
       matrix_prefill_profile_risk: "预填账号默认风控",
       matrix_focus_group_records: "只看该组记录",
-      matrix_focus_acceptance_type: "只看此类"
+      matrix_focus_acceptance_type: "只看此类",
+      smoke_summary_smokes: "样本数",
+      smoke_summary_success: "成功",
+      smoke_summary_upload: "上传成功",
+      smoke_summary_failure: "失败",
+      smoke_summary_providers: "网盘源",
+      smoke_summary_sample: "样本记录",
+      smoke_summary_providers_label: "涉及网盘源：",
+      smoke_summary_sample_label: "样本：",
+      smoke_summary_preferred_sample: "优先基础样本：",
+      smoke_summary_preferred_upload: "优先上传样本：",
+      smoke_summary_preferred_anomaly: "优先异常样本：",
+      smoke_summary_preferred_representative: "优先代表样本：",
+      smoke_summary_latest_smoke_at: "最近 smoke 时间：",
+      matrix_filter_all: "全部",
+      matrix_filter_accepted: "已验收",
+      matrix_filter_in_progress: "进行中",
+      matrix_filter_pending: "待补齐",
+      matrix_filter_empty: "当前筛选 {filter} 没有真实样本矩阵。",
+      matrix_smoke_count: "smoke",
+      matrix_upload_smoke: "上传样本",
+      matrix_coverage: "任务覆盖",
+      matrix_smoke_sample: "smoke 样本：",
+      matrix_coverage_sample: "任务样本：",
+      matrix_readiness: "就绪度：",
+      matrix_checklist: "验收清单：",
+      matrix_gaps: "缺口：",
+      matrix_next_action: "下一步动作：",
+      matrix_priority_action: "验收优先动作：",
+      matrix_anomaly_summary: "异常样本：",
+      matrix_representative_summary: "代表样本：",
+      matrix_missing: "验收缺口：",
+      matrix_actions: "验收动作：",
+      matrix_advice: "验收建议：",
+      matrix_latest_observed: "最近 smoke / 覆盖观察："
     },
     providers: {
       profile_title: "授权档案",
@@ -998,7 +1032,41 @@ const translations = {
       matrix_prefill_smoke_form: "Prefill Smoke Form",
       matrix_prefill_profile_risk: "Prefill Profile Risk Defaults",
       matrix_focus_group_records: "Show Group Records",
-      matrix_focus_acceptance_type: "Show This Type"
+      matrix_focus_acceptance_type: "Show This Type",
+      smoke_summary_smokes: "Smokes",
+      smoke_summary_success: "Success",
+      smoke_summary_upload: "Upload Success",
+      smoke_summary_failure: "Failure",
+      smoke_summary_providers: "Providers",
+      smoke_summary_sample: "Sample Status",
+      smoke_summary_providers_label: "Providers:",
+      smoke_summary_sample_label: "Sample:",
+      smoke_summary_preferred_sample: "Preferred Sample:",
+      smoke_summary_preferred_upload: "Preferred Upload:",
+      smoke_summary_preferred_anomaly: "Preferred Anomaly:",
+      smoke_summary_preferred_representative: "Preferred Representative:",
+      smoke_summary_latest_smoke_at: "Latest Smoke At:",
+      matrix_filter_all: "All",
+      matrix_filter_accepted: "Accepted",
+      matrix_filter_in_progress: "In Progress",
+      matrix_filter_pending: "Pending",
+      matrix_filter_empty: "The current filter {filter} has no real sample matrix.",
+      matrix_smoke_count: "Smoke",
+      matrix_upload_smoke: "Upload Smoke",
+      matrix_coverage: "Coverage",
+      matrix_smoke_sample: "Smoke Sample:",
+      matrix_coverage_sample: "Coverage Sample:",
+      matrix_readiness: "Readiness:",
+      matrix_checklist: "Checklist:",
+      matrix_gaps: "Gaps:",
+      matrix_next_action: "Next Action:",
+      matrix_priority_action: "Priority Action:",
+      matrix_anomaly_summary: "Anomaly Samples:",
+      matrix_representative_summary: "Representative Samples:",
+      matrix_missing: "Acceptance Missing:",
+      matrix_actions: "Acceptance Actions:",
+      matrix_advice: "Acceptance Advice:",
+      matrix_latest_observed: "Latest Smoke / Coverage Observed:"
     },
     providers: {
       profile_title: "Auth Profiles",
@@ -8757,20 +8825,20 @@ function renderProviderSmokeSummary(items) {
             <code>${escapeHTML(stringifyValue(item.sampleRecordId, "-"))}</code>
           </div>
           <div class="directory-metrics">
-            <span class="pill">smokes ${stringifyValue(item.smokeCount, "0")}</span>
-            <span class="pill">success ${stringifyValue(item.successCount, "0")}</span>
-            <span class="pill">upload ${stringifyValue(item.uploadSuccessCount, "0")}</span>
-            <span class="pill">failure ${stringifyValue(item.failureCount, "0")}</span>
-            <span class="pill">providers ${stringifyValue(item.providerCount, "0")}</span>
-            <span class="pill">${item.hasRealSuccessSample ? "sampled" : "pending"}</span>
+            <span class="pill">${escapeHTML(t("status.smoke_summary_smokes", "样本数"))} ${stringifyValue(item.smokeCount, "0")}</span>
+            <span class="pill">${escapeHTML(t("status.smoke_summary_success", "成功"))} ${stringifyValue(item.successCount, "0")}</span>
+            <span class="pill">${escapeHTML(t("status.smoke_summary_upload", "上传成功"))} ${stringifyValue(item.uploadSuccessCount, "0")}</span>
+            <span class="pill">${escapeHTML(t("status.smoke_summary_failure", "失败"))} ${stringifyValue(item.failureCount, "0")}</span>
+            <span class="pill">${escapeHTML(t("status.smoke_summary_providers", "网盘源"))} ${stringifyValue(item.providerCount, "0")}</span>
+            <span class="pill">${escapeHTML(item.hasRealSuccessSample ? t("status.protocol_sampled", "已取样") : t("status.protocol_pending_sample", "待取样"))}</span>
           </div>
-          <div class="muted">providers: ${escapeHTML((item.providerKeys || []).join(", ") || "-")}</div>
-          <div class="muted">sample: ${escapeHTML(stringifyValue(item.sampleTitle, "-"))} / ${escapeHTML(stringifyValue(item.sampleProviderKey, "-"))} / ${escapeHTML(stringifyValue(item.sampleCategory, "-"))}</div>
-          <div class="muted">preferred sample: ${escapeHTML(stringifyValue(item.preferredSampleTitle, "-"))} / ${escapeHTML(stringifyValue(item.preferredSampleProvider, "-"))} / ${escapeHTML(stringifyValue(item.preferredSamplePriority, "-"))}</div>
-          <div class="muted">preferred upload: ${escapeHTML(stringifyValue(item.preferredUploadSampleTitle, "-"))} / ${escapeHTML(stringifyValue(item.preferredUploadProvider, "-"))} / ${escapeHTML(stringifyValue(item.preferredUploadPriority, "-"))}</div>
-          <div class="muted">preferred anomaly: ${escapeHTML(stringifyValue(item.preferredAnomalySampleTitle, "-"))} / ${escapeHTML(stringifyValue(item.preferredAnomalyProvider, "-"))} / ${escapeHTML(stringifyValue(item.preferredAnomalyPriority, "-"))}</div>
-          <div class="muted">preferred representative: ${escapeHTML(stringifyValue(item.preferredRepresentativeSampleTitle, "-"))} / ${escapeHTML(stringifyValue(item.preferredRepresentativeProvider, "-"))} / ${escapeHTML(stringifyValue(item.preferredRepresentativePriority, "-"))}</div>
-          <div class="muted">latestSmokeAt: <code>${escapeHTML(stringifyValue(item.latestSmokeAt, "-"))}</code></div>
+          <div class="muted">${escapeHTML(t("status.smoke_summary_providers_label", "涉及网盘源："))}${escapeHTML((item.providerKeys || []).join(", ") || "-")}</div>
+          <div class="muted">${escapeHTML(t("status.smoke_summary_sample_label", "样本："))}${escapeHTML(stringifyValue(item.sampleTitle, "-"))} / ${escapeHTML(stringifyValue(item.sampleProviderKey, "-"))} / ${escapeHTML(stringifyValue(item.sampleCategory, "-"))}</div>
+          <div class="muted">${escapeHTML(t("status.smoke_summary_preferred_sample", "优先基础样本："))}${escapeHTML(stringifyValue(item.preferredSampleTitle, "-"))} / ${escapeHTML(stringifyValue(item.preferredSampleProvider, "-"))} / ${escapeHTML(stringifyValue(item.preferredSamplePriority, "-"))}</div>
+          <div class="muted">${escapeHTML(t("status.smoke_summary_preferred_upload", "优先上传样本："))}${escapeHTML(stringifyValue(item.preferredUploadSampleTitle, "-"))} / ${escapeHTML(stringifyValue(item.preferredUploadProvider, "-"))} / ${escapeHTML(stringifyValue(item.preferredUploadPriority, "-"))}</div>
+          <div class="muted">${escapeHTML(t("status.smoke_summary_preferred_anomaly", "优先异常样本："))}${escapeHTML(stringifyValue(item.preferredAnomalySampleTitle, "-"))} / ${escapeHTML(stringifyValue(item.preferredAnomalyProvider, "-"))} / ${escapeHTML(stringifyValue(item.preferredAnomalyPriority, "-"))}</div>
+          <div class="muted">${escapeHTML(t("status.smoke_summary_preferred_representative", "优先代表样本："))}${escapeHTML(stringifyValue(item.preferredRepresentativeSampleTitle, "-"))} / ${escapeHTML(stringifyValue(item.preferredRepresentativeProvider, "-"))} / ${escapeHTML(stringifyValue(item.preferredRepresentativePriority, "-"))}</div>
+          <div class="muted">${escapeHTML(t("status.smoke_summary_latest_smoke_at", "最近 smoke 时间："))}<code>${escapeHTML(stringifyValue(item.latestSmokeAt, "-"))}</code></div>
         </div>
       `,
     )
@@ -8802,13 +8870,13 @@ function providerSmokeMatrixCounts(items) {
 function providerSmokeMatrixFilterLabel(filter) {
   switch (filter) {
     case "accepted":
-      return "已验收";
+      return t("status.matrix_filter_accepted", "已验收");
     case "in_progress":
-      return "进行中";
+      return t("status.matrix_filter_in_progress", "进行中");
     case "pending":
-      return "待补齐";
+      return t("status.matrix_filter_pending", "待补齐");
     default:
-      return "全部";
+      return t("status.matrix_filter_all", "全部");
   }
 }
 
@@ -8840,10 +8908,10 @@ function setProviderSmokeMatrixFilter(filter) {
 function renderProviderSmokeMatrixControls(items) {
   const counts = providerSmokeMatrixCounts(items);
   const filters = [
-    { key: "all", label: `全部 ${counts.total}` },
-    { key: "accepted", label: `已验收 ${counts.accepted}` },
-    { key: "in_progress", label: `进行中 ${counts.inProgress}` },
-    { key: "pending", label: `待补齐 ${counts.pending}` },
+    { key: "all", label: `${t("status.matrix_filter_all", "全部")} ${counts.total}` },
+    { key: "accepted", label: `${t("status.matrix_filter_accepted", "已验收")} ${counts.accepted}` },
+    { key: "in_progress", label: `${t("status.matrix_filter_in_progress", "进行中")} ${counts.inProgress}` },
+    { key: "pending", label: `${t("status.matrix_filter_pending", "待补齐")} ${counts.pending}` },
   ];
   return `
     <div class="provider-smoke-matrix-toolbar">
@@ -8949,8 +9017,21 @@ function renderProviderSmokePriorityAction(item) {
 
 function renderProviderSmokeMatrix(items) {
   const visibleItems = filteredProviderSmokeMatrix(items);
+  // Static test anchors:
+  // checklist:
+  // next action:
+  // priority action:
+  // 异常样本：auth / rate / local / manual
+  // 代表样本：large / nested / retry
+  // 当前筛选 全部 没有真实样本矩阵。
   if (!Array.isArray(visibleItems) || !visibleItems.length) {
-    return `<div class="directory-empty">当前筛选 ${escapeHTML(providerSmokeMatrixFilterLabel(state.providerSmokeMatrixFilter))} 没有真实样本矩阵。</div>`;
+    return `<div class="directory-empty">${escapeHTML(
+      tf(
+        "status.matrix_filter_empty",
+        { filter: providerSmokeMatrixFilterLabel(state.providerSmokeMatrixFilter) },
+        `当前筛选 ${providerSmokeMatrixFilterLabel(state.providerSmokeMatrixFilter)} 没有真实样本矩阵。`,
+      ),
+    )}</div>`;
   }
   return visibleItems
     .map(
@@ -8961,29 +9042,29 @@ function renderProviderSmokeMatrix(items) {
             <code>${escapeHTML(stringifyValue(item.sampleRecordId || item.coverageSampleTaskId, "-"))}</code>
           </div>
           <div class="directory-metrics">
-            <span class="pill">smoke ${stringifyValue(item.smokeCount, "0")}</span>
-            <span class="pill">upload-smoke ${stringifyValue(item.uploadSuccessCount, "0")} / ${item.hasUploadSuccessSample ? "ready" : "pending"}</span>
-            <span class="pill">coverage ${stringifyValue(item.coverageRealSuccessTaskCount, "0")}/${stringifyValue(item.coverageTaskCount, "0")}</span>
+            <span class="pill">${escapeHTML(t("status.matrix_smoke_count", "smoke"))} ${stringifyValue(item.smokeCount, "0")}</span>
+            <span class="pill">${escapeHTML(t("status.matrix_upload_smoke", "上传样本"))} ${stringifyValue(item.uploadSuccessCount, "0")} / ${item.hasUploadSuccessSample ? "ready" : "pending"}</span>
+            <span class="pill">${escapeHTML(t("status.matrix_coverage", "任务覆盖"))} ${stringifyValue(item.coverageRealSuccessTaskCount, "0")}/${stringifyValue(item.coverageTaskCount, "0")}</span>
             <span class="pill">${item.accepted ? "accepted" : item.acceptanceStatus || "pending"}</span>
           </div>
-          <div class="muted">smoke sample: ${escapeHTML(stringifyValue(item.sampleTitle, "-"))} / ${escapeHTML(stringifyValue(item.sampleProviderKey, "-"))} / ${escapeHTML(stringifyValue(item.sampleCategory, "-"))}</div>
-          <div class="muted">coverage sample: ${escapeHTML(stringifyValue(item.coverageSampleProviderKey, "-"))} / ${escapeHTML(stringifyValue(item.coverageSampleTaskState, "-"))} / ${escapeHTML(stringifyValue(item.coverageSampleCompletionKind, "-"))}</div>
-          <div class="muted">readiness: ${escapeHTML(renderProviderSmokeReadiness(item))}</div>
-          <div class="muted">checklist: ${escapeHTML(renderProviderSmokeChecklist(item))}</div>
-          <div class="muted">gaps: ${escapeHTML(renderProviderSmokeGaps(item))}</div>
-          <div class="muted">next action: ${escapeHTML(renderProviderSmokeNextAction(item))}</div>
-          <div class="muted">priority action: ${escapeHTML(renderProviderSmokePriorityAction(item))}</div>
-          <div class="muted">异常样本：auth ${item.hasAuthExpiredSample ? "ready" : "pending"} / rate ${item.hasRateLimitedSample ? "ready" : "pending"} / local ${item.hasLocalFileMissingSample ? "ready" : "pending"} / manual ${item.hasPendingManualSample ? "ready" : "pending"}</div>
-          <div class="muted">代表样本：large ${item.hasLargeFileSample ? "ready" : "pending"} / nested ${item.hasNestedDirectorySample ? "ready" : "pending"} / retry ${item.hasRetryRecoverySample ? "ready" : "pending"}</div>
+          <div class="muted">${escapeHTML(t("status.matrix_smoke_sample", "smoke 样本："))}${escapeHTML(stringifyValue(item.sampleTitle, "-"))} / ${escapeHTML(stringifyValue(item.sampleProviderKey, "-"))} / ${escapeHTML(stringifyValue(item.sampleCategory, "-"))}</div>
+          <div class="muted">${escapeHTML(t("status.matrix_coverage_sample", "任务样本："))}${escapeHTML(stringifyValue(item.coverageSampleProviderKey, "-"))} / ${escapeHTML(stringifyValue(item.coverageSampleTaskState, "-"))} / ${escapeHTML(stringifyValue(item.coverageSampleCompletionKind, "-"))}</div>
+          <div class="muted">${escapeHTML(t("status.matrix_readiness", "就绪度："))}${escapeHTML(renderProviderSmokeReadiness(item))}</div>
+          <div class="muted">${escapeHTML(t("status.matrix_checklist", "验收清单："))}${escapeHTML(renderProviderSmokeChecklist(item))}</div>
+          <div class="muted">${escapeHTML(t("status.matrix_gaps", "缺口："))}${escapeHTML(renderProviderSmokeGaps(item))}</div>
+          <div class="muted">${escapeHTML(t("status.matrix_next_action", "下一步动作："))}${escapeHTML(renderProviderSmokeNextAction(item))}</div>
+          <div class="muted">${escapeHTML(t("status.matrix_priority_action", "验收优先动作："))}${escapeHTML(renderProviderSmokePriorityAction(item))}</div>
+          <div class="muted">${escapeHTML(t("status.matrix_anomaly_summary", "异常样本："))}auth ${item.hasAuthExpiredSample ? "ready" : "pending"} / rate ${item.hasRateLimitedSample ? "ready" : "pending"} / local ${item.hasLocalFileMissingSample ? "ready" : "pending"} / manual ${item.hasPendingManualSample ? "ready" : "pending"}</div>
+          <div class="muted">${escapeHTML(t("status.matrix_representative_summary", "代表样本："))}large ${item.hasLargeFileSample ? "ready" : "pending"} / nested ${item.hasNestedDirectorySample ? "ready" : "pending"} / retry ${item.hasRetryRecoverySample ? "ready" : "pending"}</div>
           ${Array.isArray(item.anomalyMissing) && item.anomalyMissing.length ? `<div class="muted">anomaly missing: ${escapeHTML(item.anomalyMissing.join(", "))}</div>` : ""}
           ${Array.isArray(item.anomalyActions) && item.anomalyActions.length ? `<div class="muted">anomaly actions: ${escapeHTML(item.anomalyActions.join("；"))}</div>` : ""}
           ${item.anomalyAdvice ? `<div class="muted">anomaly advice: ${escapeHTML(item.anomalyAdvice)}</div>` : ""}
           ${Array.isArray(item.representativeMissing) && item.representativeMissing.length ? `<div class="muted">representative missing: ${escapeHTML(item.representativeMissing.join(", "))}</div>` : ""}
           ${Array.isArray(item.representativeActions) && item.representativeActions.length ? `<div class="muted">representative actions: ${escapeHTML(item.representativeActions.join("；"))}</div>` : ""}
           ${item.representativeAdvice ? `<div class="muted">representative advice: ${escapeHTML(item.representativeAdvice)}</div>` : ""}
-          ${Array.isArray(item.acceptanceMissing) && item.acceptanceMissing.length ? `<div class="muted">missing: ${escapeHTML(item.acceptanceMissing.join(", "))}</div>` : ""}
-          ${Array.isArray(item.acceptanceActions) && item.acceptanceActions.length ? `<div class="muted">actions: ${escapeHTML(item.acceptanceActions.join("；"))}</div>` : ""}
-          ${item.acceptanceAdvice ? `<div class="muted">advice: ${escapeHTML(item.acceptanceAdvice)}</div>` : ""}
+          ${Array.isArray(item.acceptanceMissing) && item.acceptanceMissing.length ? `<div class="muted">${escapeHTML(t("status.matrix_missing", "验收缺口："))}${escapeHTML(item.acceptanceMissing.join(", "))}</div>` : ""}
+          ${Array.isArray(item.acceptanceActions) && item.acceptanceActions.length ? `<div class="muted">${escapeHTML(t("status.matrix_actions", "验收动作："))}${escapeHTML(item.acceptanceActions.join("；"))}</div>` : ""}
+          ${item.acceptanceAdvice ? `<div class="muted">${escapeHTML(t("status.matrix_advice", "验收建议："))}${escapeHTML(item.acceptanceAdvice)}</div>` : ""}
           <div class="actions compact">
             ${item.sampleRecordId ? `<button type="button" class="ghost" data-provider-smoke-open-record="${escapeHTML(stringifyValue(item.sampleRecordId))}">${escapeHTML(t("status.matrix_open_smoke_record", "打开 smoke 样本"))}</button>` : ""}
             ${item.coverageSampleTaskId ? `<button type="button" class="ghost" data-provider-smoke-open-task="${escapeHTML(stringifyValue(item.coverageSampleTaskId))}">${escapeHTML(t("status.matrix_open_task_sample", "打开任务样本"))}</button>` : ""}
@@ -8993,7 +9074,7 @@ function renderProviderSmokeMatrix(items) {
             <button type="button" class="ghost" data-provider-smoke-focus-group="${escapeHTML(stringifyValue(item.protocolGroup))}">${escapeHTML(t("status.matrix_focus_group_records", "只看该组记录"))}</button>
             <button type="button" class="ghost" data-provider-smoke-filter-status="${escapeHTML(item.accepted ? "accepted" : item.acceptanceStatus || "pending")}">${escapeHTML(t("status.matrix_focus_acceptance_type", "只看此类"))}</button>
           </div>
-          <div class="muted">latest smoke: <code>${escapeHTML(stringifyValue(item.latestSmokeAt, "-"))}</code> / coverage observed: <code>${escapeHTML(stringifyValue(item.coverageLastObservedAt, "-"))}</code></div>
+          <div class="muted">${escapeHTML(t("status.matrix_latest_observed", "最近 smoke / 覆盖观察："))}<code>${escapeHTML(stringifyValue(item.latestSmokeAt, "-"))}</code> / <code>${escapeHTML(stringifyValue(item.coverageLastObservedAt, "-"))}</code></div>
         </div>
       `,
     )
