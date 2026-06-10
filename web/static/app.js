@@ -288,6 +288,17 @@ const translations = {
       flash_blocked_task_not_found: "未找到对应样本任务，可能已被清理",
       flash_blocked_task_opened: "已打开 blocked 摘要对应的样本任务",
       flash_status_retry_blocked_action_focused: "已按 blocked action 收敛最近重试队列",
+      flash_retry_selection_rebuilt: "已按{source} ({scope}) 重建 {count} 条路径的 retry 范围",
+      flash_retry_single_path_rebuilt: "已按 {path} ({scope}) 重建 retry 范围",
+      flash_tasks_refreshed: "任务列表已刷新",
+      flash_status_refreshed: "状态矩阵已刷新",
+      flash_provider_smoke_saved: "网盘样本 smoke 记录已保存",
+      flash_report_refreshed: "验收报告已刷新",
+      flash_report_saved: "验收报告已保存",
+      flash_report_downloaded: "验收报告已下载",
+      flash_report_switched: "已切换验收报告",
+      flash_smoke_markdown_switched: "已切换 smoke Markdown",
+      flash_smoke_markdown_downloaded: "smoke Markdown 已下载",
       focus_same_retry_class: "只看同类队列",
       result_count_compact: "done {done} / skipped {skipped} / failed {failed}",
       retry_queue_compact: "可重试 {retryable} / 阻塞 {blocked}",
@@ -1057,6 +1068,17 @@ const translations = {
       flash_blocked_task_not_found: "The sample task was not found and may already have been cleaned up",
       flash_blocked_task_opened: "Opened the sample task referenced by the blocked summary",
       flash_status_retry_blocked_action_focused: "Focused the recent retry queue by blocked action",
+      flash_retry_selection_rebuilt: "Rebuilt the retry scope for {count} paths from {source} ({scope})",
+      flash_retry_single_path_rebuilt: "Rebuilt the retry scope for {path} ({scope})",
+      flash_tasks_refreshed: "Task list refreshed",
+      flash_status_refreshed: "Status matrix refreshed",
+      flash_provider_smoke_saved: "Provider smoke record saved",
+      flash_report_refreshed: "Acceptance report refreshed",
+      flash_report_saved: "Acceptance report saved",
+      flash_report_downloaded: "Acceptance report downloaded",
+      flash_report_switched: "Acceptance report switched",
+      flash_smoke_markdown_switched: "Smoke Markdown switched",
+      flash_smoke_markdown_downloaded: "Smoke Markdown downloaded",
       focus_same_retry_class: "Show Similar Queue",
       result_count_compact: "done {done} / skipped {skipped} / failed {failed}",
       retry_queue_compact: "retryable {retryable} / blocked {blocked}",
@@ -10500,7 +10522,7 @@ async function retryVisibleSelection(scope, source) {
   }
   const ok = await runTaskActionForTask(context.taskId, "retry", { paths, scope: recoverScopeFromSource(source) });
   if (ok) {
-    showFlash(`已按${selectionSourceLabel(source)} (${selectionScopeLabel(recoverScopeFromSource(source))}) 重建 ${paths.length} 条路径的 retry 范围`);
+    showFlash(tf("tasks.flash_retry_selection_rebuilt", { source: selectionSourceLabel(source), scope: selectionScopeLabel(recoverScopeFromSource(source)), count: paths.length }, `已按${selectionSourceLabel(source)} (${selectionScopeLabel(recoverScopeFromSource(source))}) 重建 ${paths.length} 条路径的 retry 范围`));
   }
 }
 
@@ -10548,7 +10570,7 @@ async function retryTaskPath(scope, path) {
     scope: "selected_pending_subset",
   });
   if (ok) {
-    showFlash(`已按 ${normalizedPath} (${selectionScopeLabel("selected_pending_subset")}) 重建 retry 范围`);
+    showFlash(tf("tasks.flash_retry_single_path_rebuilt", { path: normalizedPath, scope: selectionScopeLabel("selected_pending_subset") }, `已按 ${normalizedPath} (${selectionScopeLabel("selected_pending_subset")}) 重建 retry 范围`));
   }
   return ok;
 }
@@ -10557,7 +10579,7 @@ function wireTasks() {
   $("#refresh-tasks").addEventListener("click", async () => {
     try {
       await loadTasks();
-      showFlash("任务列表已刷新");
+      showFlash(t("tasks.flash_tasks_refreshed", "任务列表已刷新"));
     } catch (error) {
       showFlash(error.message, true);
     }
@@ -10579,7 +10601,7 @@ function wireStatus() {
   $("#refresh-status").addEventListener("click", async () => {
     try {
       await loadStatus();
-      showFlash("状态矩阵已刷新");
+      showFlash(t("tasks.flash_status_refreshed", "状态矩阵已刷新"));
     } catch (error) {
       showFlash(error.message, true);
     }
@@ -10714,7 +10736,7 @@ function wireStatus() {
       hydrateProviderSmokeForm(record);
       state.selectedProviderSmokeId = record.id || "";
       state.selectedProviderSmokeMarkdown = record.markdown || "";
-      showFlash("网盘样本 smoke 记录已保存");
+      showFlash(t("tasks.flash_provider_smoke_saved", "网盘样本 smoke 记录已保存"));
       await loadStatus();
     } catch (error) {
       showFlash(error.message, true);
@@ -10723,7 +10745,7 @@ function wireStatus() {
   $("#refresh-report").addEventListener("click", async () => {
     try {
       await loadStatus();
-      showFlash("验收报告已刷新");
+      showFlash(t("tasks.flash_report_refreshed", "验收报告已刷新"));
     } catch (error) {
       showFlash(error.message, true);
     }
@@ -10739,7 +10761,7 @@ function wireStatus() {
         body: payload,
       });
       state.selectedReportId = record.id || "";
-      showFlash("验收报告已保存");
+      showFlash(t("tasks.flash_report_saved", "验收报告已保存"));
       await loadStatus();
       if (state.selectedReportId) {
         $("#report-history").querySelector(`[data-report-view="${state.selectedReportId}"]`)?.focus?.();
@@ -10752,7 +10774,7 @@ function wireStatus() {
     try {
       const report = selectedEvidenceReport();
       if (!report || !report.markdown) {
-        showFlash("暂无可下载的验收报告", true);
+        showFlash(t("status.acceptance_report_empty", "暂无可下载的验收报告"), true);
         return;
       }
       const blob = new Blob([report.markdown], { type: "text/plain;charset=utf-8" });
@@ -10764,7 +10786,7 @@ function wireStatus() {
       anchor.click();
       anchor.remove();
       URL.revokeObjectURL(url);
-      showFlash("验收报告已下载");
+      showFlash(t("tasks.flash_report_downloaded", "验收报告已下载"));
     } catch (error) {
       showFlash(error.message, true);
     }
@@ -10774,7 +10796,7 @@ function wireStatus() {
     if (viewButton) {
       state.selectedReportId = viewButton.dataset.reportView || "";
       renderStatus();
-      showFlash("已切换验收报告");
+      showFlash(t("tasks.flash_report_switched", "已切换验收报告"));
       return;
     }
     const downloadButton = event.target.closest("[data-report-download]");
@@ -10788,7 +10810,7 @@ function wireStatus() {
     if (viewButton) {
       try {
         await loadProviderSmokeMarkdown(viewButton.dataset.providerSmokeView || "");
-        showFlash("已切换 smoke Markdown");
+        showFlash(t("tasks.flash_smoke_markdown_switched", "已切换 smoke Markdown"));
       } catch (error) {
         showFlash(error.message, true);
       }
@@ -10819,7 +10841,7 @@ function wireStatus() {
         anchor.click();
         anchor.remove();
         URL.revokeObjectURL(url);
-        showFlash("smoke Markdown 已下载");
+        showFlash(t("tasks.flash_smoke_markdown_downloaded", "smoke Markdown 已下载"));
       } catch (error) {
         showFlash(error.message, true);
       }
@@ -11046,7 +11068,4 @@ async function init() {
   }
 }
 window.addEventListener("DOMContentLoaded", init);
-
-
-
 
