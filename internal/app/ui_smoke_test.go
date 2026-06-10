@@ -744,7 +744,7 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 		waitForValueContains(`#provider-smoke-note`, "协议组：aliyun_123_open"),
 		chromedp.Evaluate(`(() => document.querySelector('#provider-smoke-matrix [data-provider-smoke-focus-group="aliyun_123_open"]')?.click())()`, nil),
 		waitForValue(`#provider-smoke-records-filter-group`, "aliyun_123_open"),
-		waitForText(`#provider-smoke-records-filter-summary`, "当前没有 smoke 记录。"),
+		waitForText(`#provider-smoke-records-filter-summary`, "当前没有样本记录。"),
 		chromedp.Evaluate(`(() => document.querySelector('#provider-smoke-matrix [data-provider-smoke-draft-action="aliyun_123_open"]')?.click())()`, nil),
 		waitForText(`#flash`, "已按验收缺口预填 smoke 动作"),
 		waitForValueContains(`#provider-smoke-title`, "补授权失效样本"),
@@ -759,7 +759,7 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 		  const row = rows.find((item) => item.textContent?.includes('aliyun_123_open'));
 		  row?.querySelector('[data-provider-smoke-open-record]')?.click();
 		})()`, nil),
-		waitForText(`#flash`, "已打开 smoke 样本并回填表单"),
+		waitForText(`#flash`, "已打开样本记录并回填表单"),
 		waitForText(`#provider-smoke-markdown`, "aliyun_123_open 补授权失效样本"),
 		waitForText(`#provider-smoke-markdown`, "ValidateAuth"),
 		chromedp.Evaluate(`(() => document.querySelector('#provider-smoke-matrix [data-provider-smoke-filter-status="pending"]')?.click())()`, nil),

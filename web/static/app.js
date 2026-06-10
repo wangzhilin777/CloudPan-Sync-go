@@ -539,14 +539,14 @@ const translations = {
       auto_recover_pool_empty: "当前没有进入后台补传候选池的任务。",
       lane_summary_prefix: "通道",
       sample_record_empty: "暂无真实网盘样本记录。",
-      smoke_record_empty: "当前没有 smoke 记录。",
-      smoke_record_showing_all: "显示全部 {visible} 条 smoke 记录。",
-      smoke_record_showing_filtered: "当前显示 {visible} / {total} 条 smoke 记录。",
+      smoke_record_empty: "当前没有样本记录。",
+      smoke_record_showing_all: "显示全部 {visible} 条样本记录。",
+      smoke_record_showing_filtered: "当前显示 {visible} / {total} 条样本记录。",
       sample_matrix_empty: "暂无真实样本矩阵。",
       smoke_view_markdown: "查看样本文档",
       smoke_download_markdown: "下载样本文档",
       acceptance_matrix_view: "验收矩阵视图",
-      acceptance_matrix_hint: "可按验收状态快速筛选，也能直接跳到对应 smoke 样本或样本任务，方便继续补齐真实联调样本。",
+      acceptance_matrix_hint: "可按验收状态快速筛选，也能直接跳到对应样本记录或任务样本，方便继续补齐真实联调样本。",
       protocol_sampled: "已取样",
       protocol_pending_sample: "待取样",
       protocol_related_providers: "涉及网盘源",
@@ -607,9 +607,9 @@ const translations = {
       auto_recover_run_primary_blocked: "执行主阻塞动作",
       auto_recover_run_lane: "执行该 lane",
       auto_recover_run_mode: "执行该模式",
-      matrix_open_smoke_record: "打开 smoke 样本",
+      matrix_open_smoke_record: "打开样本记录",
       matrix_open_task_sample: "打开任务样本",
-      matrix_prefill_smoke_form: "预填 smoke 表单",
+      matrix_prefill_smoke_form: "预填样本表单",
       matrix_prefill_profile_risk: "预填账号默认风控",
       matrix_focus_group_records: "只看该组记录",
       matrix_focus_acceptance_type: "只看此类",
@@ -637,20 +637,20 @@ const translations = {
       smoke_summary_preferred_upload: "优先上传样本：",
       smoke_summary_preferred_anomaly: "优先异常样本：",
       smoke_summary_preferred_representative: "优先代表样本：",
-      smoke_summary_latest_smoke_at: "最近 smoke 时间：",
+      smoke_summary_latest_smoke_at: "最近样本时间：",
       matrix_filter_all: "全部",
       matrix_filter_accepted: "已验收",
       matrix_filter_in_progress: "进行中",
       matrix_filter_pending: "待补齐",
       matrix_filter_empty: "当前筛选 {filter} 没有真实样本矩阵。",
       flash_smoke_records_filtered: "已按 {label} 收敛 smoke 记录",
-      flash_smoke_records_result_cleared: "已清空 smoke 记录结果筛选",
-      flash_smoke_records_group_cleared: "已清空 smoke 记录协议组筛选",
-      flash_smoke_records_cleared: "已清空 smoke 记录筛选",
+      flash_smoke_records_result_cleared: "已清空样本记录结果筛选",
+      flash_smoke_records_group_cleared: "已清空样本记录协议组筛选",
+      flash_smoke_records_cleared: "已清空样本记录筛选",
       flash_smoke_matrix_filtered: "已按 {label} 收敛验收矩阵",
-      flash_smoke_record_opened: "已打开 smoke 样本并回填表单",
+      flash_smoke_record_opened: "已打开样本记录并回填表单",
       flash_smoke_gap_prefilled: "已按验收缺口预填 smoke 动作",
-      flash_smoke_matrix_prefilled: "已按验收矩阵预填 smoke 表单",
+      flash_smoke_matrix_prefilled: "已按验收矩阵预填样本表单",
       flash_smoke_profile_risk_prefilled: "已按真实样本预填账号默认风控",
       smoke_note_protocol_group: "协议组：{value}",
       smoke_note_provider: "建议 provider：{value}",
@@ -9762,12 +9762,12 @@ function filterProviderSmokeRecords(items, filters = {}) {
 
 function renderProviderSmokeRecordSummary(result) {
   if (!result.totalItems) {
-    return t("status.smoke_record_empty", "当前没有 smoke 记录。");
+    return t("status.smoke_record_empty", "当前没有样本记录。");
   }
   if (!result.filterActive) {
-    return tf("status.smoke_record_showing_all", { visible: result.visibleItems }, `显示全部 ${result.visibleItems} 条 smoke 记录。`);
+    return tf("status.smoke_record_showing_all", { visible: result.visibleItems }, `显示全部 ${result.visibleItems} 条样本记录。`);
   }
-  return tf("status.smoke_record_showing_filtered", { visible: result.visibleItems, total: result.totalItems }, `当前显示 ${result.visibleItems} / ${result.totalItems} 条 smoke 记录。`);
+  return tf("status.smoke_record_showing_filtered", { visible: result.visibleItems, total: result.totalItems }, `当前显示 ${result.visibleItems} / ${result.totalItems} 条样本记录。`);
 }
 
 function renderProviderSmokeSummary(items) {
@@ -9796,7 +9796,7 @@ function renderProviderSmokeSummary(items) {
           <div class="muted">${escapeHTML(t("status.smoke_summary_preferred_upload", "优先上传样本："))}${escapeHTML(stringifyValue(item.preferredUploadSampleTitle, "-"))} / ${escapeHTML(stringifyValue(item.preferredUploadProvider, "-"))} / ${escapeHTML(stringifyValue(item.preferredUploadPriority, "-"))}</div>
           <div class="muted">${escapeHTML(t("status.smoke_summary_preferred_anomaly", "优先异常样本："))}${escapeHTML(stringifyValue(item.preferredAnomalySampleTitle, "-"))} / ${escapeHTML(stringifyValue(item.preferredAnomalyProvider, "-"))} / ${escapeHTML(stringifyValue(item.preferredAnomalyPriority, "-"))}</div>
           <div class="muted">${escapeHTML(t("status.smoke_summary_preferred_representative", "优先代表样本："))}${escapeHTML(stringifyValue(item.preferredRepresentativeSampleTitle, "-"))} / ${escapeHTML(stringifyValue(item.preferredRepresentativeProvider, "-"))} / ${escapeHTML(stringifyValue(item.preferredRepresentativePriority, "-"))}</div>
-          <div class="muted">${escapeHTML(t("status.smoke_summary_latest_smoke_at", "最近 smoke 时间："))}<code>${escapeHTML(stringifyValue(item.latestSmokeAt, "-"))}</code></div>
+          <div class="muted">${escapeHTML(t("status.smoke_summary_latest_smoke_at", "最近样本时间："))}<code>${escapeHTML(stringifyValue(item.latestSmokeAt, "-"))}</code></div>
         </div>
       `,
     )
@@ -9892,7 +9892,7 @@ function renderProviderSmokeMatrixControls(items) {
         <strong>${escapeHTML(t("status.acceptance_matrix_view", "验收矩阵视图"))}</strong>
         <code>${escapeHTML(providerSmokeMatrixFilterLabel(state.providerSmokeMatrixFilter))}</code>
       </div>
-      <div class="muted">${escapeHTML(t("status.acceptance_matrix_hint", "可按验收状态快速筛选，也能直接跳到对应 smoke 样本或样本任务，方便继续补齐真实联调样本。"))}</div>
+      <div class="muted">${escapeHTML(t("status.acceptance_matrix_hint", "可按验收状态快速筛选，也能直接跳到对应样本记录或任务样本，方便继续补齐真实联调样本。"))}</div>
       <div class="actions compact">
         ${filters
           .map(
@@ -10047,9 +10047,9 @@ function renderProviderSmokeMatrix(items) {
           ${Array.isArray(item.acceptanceActions) && item.acceptanceActions.length ? `<div class="muted">${escapeHTML(t("status.matrix_actions", "验收动作："))}${escapeHTML(item.acceptanceActions.join("；"))}</div>` : ""}
           ${item.acceptanceAdvice ? `<div class="muted">${escapeHTML(t("status.matrix_advice", "验收建议："))}${escapeHTML(item.acceptanceAdvice)}</div>` : ""}
           <div class="actions compact">
-            ${item.sampleRecordId ? `<button type="button" class="ghost" data-provider-smoke-open-record="${escapeHTML(stringifyValue(item.sampleRecordId))}">${escapeHTML(t("status.matrix_open_smoke_record", "打开 smoke 样本"))}</button>` : ""}
+            ${item.sampleRecordId ? `<button type="button" class="ghost" data-provider-smoke-open-record="${escapeHTML(stringifyValue(item.sampleRecordId))}">${escapeHTML(t("status.matrix_open_smoke_record", "打开样本记录"))}</button>` : ""}
             ${item.coverageSampleTaskId ? `<button type="button" class="ghost" data-provider-smoke-open-task="${escapeHTML(stringifyValue(item.coverageSampleTaskId))}">${escapeHTML(t("status.matrix_open_task_sample", "打开任务样本"))}</button>` : ""}
-            <button type="button" class="ghost" data-provider-smoke-draft="${escapeHTML(stringifyValue(item.protocolGroup))}">${escapeHTML(t("status.matrix_prefill_smoke_form", "预填 smoke 表单"))}</button>
+            <button type="button" class="ghost" data-provider-smoke-draft="${escapeHTML(stringifyValue(item.protocolGroup))}">${escapeHTML(t("status.matrix_prefill_smoke_form", "预填样本表单"))}</button>
             <button type="button" class="ghost" data-provider-smoke-draft-action="${escapeHTML(stringifyValue(item.protocolGroup))}">${escapeHTML(providerSmokeDraftActionLabel(item))}</button>
             <button type="button" class="ghost" data-provider-smoke-prefill-profile-risk="${escapeHTML(stringifyValue(item.protocolGroup))}">${escapeHTML(t("status.matrix_prefill_profile_risk", "预填账号默认风控"))}</button>
             <button type="button" class="ghost" data-provider-smoke-focus-group="${escapeHTML(stringifyValue(item.protocolGroup))}">${escapeHTML(t("status.matrix_focus_group_records", "只看该组记录"))}</button>
@@ -10312,7 +10312,7 @@ function focusProviderSmokeRecordsByResult(result) {
   showFlash(
     normalized
       ? tf("status.flash_smoke_records_filtered", { label }, `已按 ${label} 收敛 smoke 记录`)
-      : t("status.flash_smoke_records_result_cleared", "已清空 smoke 记录结果筛选"),
+      : t("status.flash_smoke_records_result_cleared", "已清空样本记录结果筛选"),
   );
 }
 
@@ -10331,7 +10331,7 @@ function openProviderSmokeRecordInMatrix(id) {
     focusProviderSmokeRecordsByGroup(record.protocolGroup || "");
   }
   return loadProviderSmokeMarkdown(id).then(() => {
-    showFlash(t("status.flash_smoke_record_opened", "已打开 smoke 样本并回填表单"));
+    showFlash(t("status.flash_smoke_record_opened", "已打开样本记录并回填表单"));
   });
 }
 
@@ -10359,7 +10359,7 @@ function draftProviderSmokeAndFocus(item, { fromGap = false } = {}) {
     showFlash(t("status.flash_smoke_gap_prefilled", "已按验收缺口预填 smoke 动作"));
     return;
   }
-  showFlash(t("status.flash_smoke_matrix_prefilled", "已按验收矩阵预填 smoke 表单"));
+  showFlash(t("status.flash_smoke_matrix_prefilled", "已按验收矩阵预填样本表单"));
 }
 
 function buildProviderSmokeDraftByProtocolGroup(protocolGroup, { fromGap = false } = {}) {
@@ -10463,7 +10463,7 @@ function focusProviderSmokeRecordsByGroup(protocolGroup) {
   showFlash(
     normalized
       ? tf("status.flash_smoke_records_filtered", { label: normalized }, `已按 ${normalized} 收敛 smoke 记录`)
-      : t("status.flash_smoke_records_group_cleared", "已清空 smoke 记录协议组筛选"),
+      : t("status.flash_smoke_records_group_cleared", "已清空样本记录协议组筛选"),
   );
 }
 
@@ -11581,7 +11581,7 @@ function wireTreeFilters() {
     setFilterControlValue("#provider-smoke-records-filter-sample-type", "");
     setFilterControlValue("#provider-smoke-records-filter-result", "");
     renderStatus();
-    showFlash(t("status.flash_smoke_records_cleared", "已清空 smoke 记录筛选"));
+    showFlash(t("status.flash_smoke_records_cleared", "已清空样本记录筛选"));
   });
   $("#task-directory-copy-visible").addEventListener("click", async () => {
     try {

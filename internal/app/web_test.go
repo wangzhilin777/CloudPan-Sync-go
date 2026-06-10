@@ -1,4 +1,4 @@
-﻿package app
+package app
 
 import (
 	"io"
@@ -909,7 +909,7 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "setProviderSmokeMatrixFilter") {
 		t.Fatalf("expected provider smoke matrix filter helper in app.js, got %q", body)
 	}
-	if !strings.Contains(body, "已按验收矩阵预填 smoke 表单") {
+	if !strings.Contains(body, "已按验收矩阵预填样本表单") {
 		t.Fatalf("expected provider smoke matrix draft flash text in app.js, got %q", body)
 	}
 	if !strings.Contains(body, "已按验收缺口预填 smoke 动作") {
@@ -918,10 +918,10 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "已按真实样本预填账号默认风控") {
 		t.Fatalf("expected provider smoke matrix profile risk prefill flash text in app.js, got %q", body)
 	}
-	if !strings.Contains(body, "已打开 smoke 样本") {
+	if !strings.Contains(body, "已打开样本记录") {
 		t.Fatalf("expected provider smoke matrix open-record flash text in app.js, got %q", body)
 	}
-	if !strings.Contains(body, "已打开 smoke 样本并回填表单") {
+	if !strings.Contains(body, "已打开样本记录并回填表单") {
 		t.Fatalf("expected provider smoke matrix open-record hydrate flash text in app.js, got %q", body)
 	}
 	if !strings.Contains(body, "已打开 blocked 摘要对应的样本任务") {
@@ -1209,7 +1209,7 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "smoke Markdown 已下载") {
 		t.Fatalf("expected provider smoke markdown download flash text in app.js, got %q", body)
 	}
-	if !strings.Contains(body, "已清空 smoke 记录筛选") {
+	if !strings.Contains(body, "已清空样本记录筛选") {
 		t.Fatalf("expected provider smoke filter clear flash text in app.js, got %q", body)
 	}
 	if !strings.Contains(body, "data-tree-group-toggle") {
