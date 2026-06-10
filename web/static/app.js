@@ -113,6 +113,7 @@ const translations = {
       prefill_wizard: "按当前任务重建向导",
       copy_payload: "复制任务创建参数",
       runtime_checkpoint: "运行检查点",
+      flash_auto_recover_filters_cleared: "后台补传筛选已清空",
       retry_queue: "重试队列",
       retry_queue_desc: "按失败分类查看 retryable / blocked / exhausted 项",
       retry_current_filter: "重试当前筛选",
@@ -260,6 +261,14 @@ const translations = {
       retry_queue_exhausted: "耗尽",
       retry_queue_filtered_empty: "筛选后没有命中的重试队列项。",
       focus_pending_tree: "定位待补传树",
+      flash_task_tree_focused_by_scan: "已按扫描轨迹定位任务目录树",
+      flash_task_tree_focused_by_root: "已按选定根目录定位任务目录树",
+      flash_status_tree_focused_by_scan: "已按最近扫描轨迹定位状态目录树",
+      flash_status_tree_focused_by_root: "已按选定根目录定位状态目录树",
+      flash_task_directory_filters_cleared: "已清空任务目录树筛选",
+      flash_task_pending_filters_cleared: "已清空任务待补传筛选",
+      flash_status_directory_filters_cleared: "已清空状态目录树筛选",
+      flash_status_pending_filters_cleared: "已清空状态待补传筛选",
       focus_same_retry_class: "只看同类队列",
       result_count_compact: "done {done} / skipped {skipped} / failed {failed}",
       retry_queue_compact: "可重试 {retryable} / 阻塞 {blocked}",
@@ -1147,6 +1156,7 @@ const translations = {
       result_failure: "Failure (failure)",
       provider_matrix: "Provider Status Matrix",
       provider_matrix_title: "Provider Status Matrix",
+      flash_auto_recover_filters_cleared: "Auto-recovery filters cleared",
       runtime_checkpoints: "Runtime Checkpoint Overview",
       runtime_overview_title: "Runtime Checkpoint Overview",
       from_recent_probe: "From the latest probe / snapshot",
@@ -1202,6 +1212,14 @@ const translations = {
       recovery_priority_action_counts: "Recovery Priority Action Counts",
       fairness_gap: "Fairness Gap",
       fairness_priority_action: "Fairness Priority Action",
+      flash_task_tree_focused_by_scan: "Task directory tree focused by the latest scan trail",
+      flash_task_tree_focused_by_root: "Task directory tree focused by the selected root",
+      flash_status_tree_focused_by_scan: "Status directory tree focused by the latest scan trail",
+      flash_status_tree_focused_by_root: "Status directory tree focused by the selected root",
+      flash_task_directory_filters_cleared: "Task directory-tree filters cleared",
+      flash_task_pending_filters_cleared: "Task pending-tree filters cleared",
+      flash_status_directory_filters_cleared: "Status directory-tree filters cleared",
+      flash_status_pending_filters_cleared: "Status pending-tree filters cleared",
       waiting_reason_summary: "Waiting Reasons",
       no_auto_recover_pool_samples: "There are no auto-recovery pool samples right now.",
       lane_summary_prefix: "Lane",
@@ -9012,7 +9030,7 @@ function resetAutoRecoverFilters() {
   setInputValueIfPresent("#auto-recover-limit-per-provider", "");
   setInputValueIfPresent("#auto-recover-limit-per-profile", "");
   renderStatus();
-  showFlash("后台补传筛选已清空");
+  showFlash(t("status.flash_auto_recover_filters_cleared", "后台补传筛选已清空"));
 }
 
 function focusRuntimeTreeByPath(scope, path, kind = "roots") {
@@ -9028,27 +9046,28 @@ function focusRuntimeTreeByPath(scope, path, kind = "roots") {
       state.treeFilters.taskDirectory.query = normalized;
       setFilterControlValue("#task-directory-filter-query", normalized);
       updateTaskTreePanels(currentSelectedTaskDetail());
-      showFlash("已按扫描轨迹定位任务目录树");
+      showFlash(t("tasks.flash_task_tree_focused_by_scan", "已按扫描轨迹定位任务目录树"));
       return;
     }
     state.treeFilters.taskDirectory.query = normalized;
     setFilterControlValue("#task-directory-filter-query", normalized);
     updateTaskTreePanels(currentSelectedTaskDetail());
-    showFlash("已按选定根目录定位任务目录树");
+    showFlash(t("tasks.flash_task_tree_focused_by_root", "已按选定根目录定位任务目录树"));
     return;
   }
   if (kind === "scan") {
     state.treeFilters.statusDirectory.query = normalized;
     setFilterControlValue("#status-directory-filter-query", normalized);
     updateStatusTreePanels(recentRuntimePayload());
-    showFlash("已按最近扫描轨迹定位状态目录树");
+    showFlash(t("tasks.flash_status_tree_focused_by_scan", "已按最近扫描轨迹定位状态目录树"));
     return;
   }
   state.treeFilters.statusDirectory.query = normalized;
   setFilterControlValue("#status-directory-filter-query", normalized);
   updateStatusTreePanels(recentRuntimePayload());
-  showFlash("已按选定根目录定位状态目录树");
+  showFlash(t("tasks.flash_status_tree_focused_by_root", "已按选定根目录定位状态目录树"));
 }
+
 
 function renderProviderSmokeRecords(items) {
   const result = filterProviderSmokeRecords(items, state.providerSmokeRecordFilters);
@@ -10809,7 +10828,6 @@ function wireTreeFilters() {
       rerender();
     });
   };
-
   const rerenderTask = () => updateTaskTreePanels(currentSelectedTaskDetail());
   const rerenderStatus = () => updateStatusTreePanels(recentRuntimePayload());
 
@@ -10842,7 +10860,7 @@ function wireTreeFilters() {
     setFilterControlValue("#task-directory-filter-leaf-only", false);
     setFilterControlValue("#task-directory-filter-problem-only", false);
     rerenderTask();
-    showFlash("已清空任务目录树筛选");
+    showFlash(t("tasks.flash_task_directory_filters_cleared", "已清空任务目录树筛选"));
   });
   $("#task-pending-filter-clear").addEventListener("click", () => {
     resetTreeFilterSection("taskPending");
@@ -10850,7 +10868,7 @@ function wireTreeFilters() {
     setFilterControlValue("#task-pending-filter-reason", "");
     setFilterControlValue("#task-pending-filter-leaf-only", false);
     rerenderTask();
-    showFlash("已清空任务待补传筛选");
+    showFlash(t("tasks.flash_task_pending_filters_cleared", "已清空任务待补传筛选"));
   });
   $("#status-directory-filter-clear").addEventListener("click", () => {
     resetTreeFilterSection("statusDirectory");
@@ -10859,7 +10877,7 @@ function wireTreeFilters() {
     setFilterControlValue("#status-directory-filter-leaf-only", false);
     setFilterControlValue("#status-directory-filter-problem-only", false);
     rerenderStatus();
-    showFlash("已清空状态目录树筛选");
+    showFlash(t("tasks.flash_status_directory_filters_cleared", "已清空状态目录树筛选"));
   });
   $("#status-pending-filter-clear").addEventListener("click", () => {
     resetTreeFilterSection("statusPending");
@@ -10867,7 +10885,7 @@ function wireTreeFilters() {
     setFilterControlValue("#status-pending-filter-reason", "");
     setFilterControlValue("#status-pending-filter-leaf-only", false);
     rerenderStatus();
-    showFlash("已清空状态待补传筛选");
+    showFlash(t("tasks.flash_status_pending_filters_cleared", "已清空状态待补传筛选"));
   });
   $("#provider-smoke-records-filter-query").addEventListener("input", (event) => {
     state.providerSmokeRecordFilters.query = event.target.value;
