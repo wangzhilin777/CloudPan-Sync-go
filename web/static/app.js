@@ -297,8 +297,9 @@ const translations = {
       flash_report_saved: "验收报告已保存",
       flash_report_downloaded: "验收报告已下载",
       flash_report_switched: "已切换验收报告",
-      flash_smoke_markdown_switched: "已切换 smoke Markdown",
-      flash_smoke_markdown_downloaded: "smoke Markdown 已下载",
+      flash_smoke_markdown_switched: "已切换样本文档",
+      flash_smoke_markdown_downloaded: "样本文档已下载",
+      flash_smoke_markdown_download_failed: "下载样本文档失败：{status}",
       flash_auto_recover_decision_previewed: "已按决策预演后台补传：{taskId}",
       flash_auto_recover_decision_executed: "已按决策执行后台补传：{taskId}",
       flash_auto_recover_decision_state_focused: "已按决策状态 {state} 收敛后台补传候选",
@@ -498,6 +499,34 @@ const translations = {
       report_title_label: "报告标题",
       report_generated_at: "生成时间",
       report_note_label: "报告备注",
+      recent_results_empty: "暂无结果证据。",
+      recent_results_col_status: "状态",
+      recent_results_col_mode: "模式",
+      recent_results_col_execution_mode: "执行模式",
+      recent_results_col_retry_mode: "重试模式",
+      recent_results_col_retry_scope: "重试范围",
+      recent_results_col_retry_path_count: "重试路径数",
+      recent_results_col_retry_paths: "重试路径",
+      recent_results_col_source_delete_policy: "源端删除策略",
+      recent_results_col_recommendation: "推荐结果",
+      recent_results_col_message: "消息",
+      recent_results_col_risk_hit: "风控命中",
+      recent_results_col_conflict: "冲突处理",
+      recent_results_col_created_at: "创建时间",
+      recent_probes_empty: "暂无 probe 证据。",
+      recent_probes_col_provider: "网盘源",
+      recent_probes_col_status: "状态",
+      recent_probes_col_profile: "授权档案",
+      recent_probes_col_execution_mode: "执行模式",
+      recent_probes_col_scan_mode: "扫描模式",
+      recent_probes_col_retry_mode: "重试模式",
+      recent_probes_col_retry_scope: "重试范围",
+      recent_probes_col_retry_path_count: "重试路径数",
+      recent_probes_col_retry_paths: "重试路径",
+      recent_probes_col_source_delete_policy: "源端删除策略",
+      recent_probes_col_risk_hit: "风控命中",
+      recent_probes_col_payload: "载荷",
+      recent_probes_col_created_at: "创建时间",
       auto_recover_acceptance: "自动补传验收",
       auto_recover_fairness_summary: "自动补传恢复与公平性摘要",
       recovery_priority_action: "恢复优先动作",
@@ -506,14 +535,16 @@ const translations = {
       fairness_priority_action: "公平性优先动作",
       waiting_reason_summary: "等待原因",
       no_auto_recover_pool_samples: "当前没有自动补传候选池样本。",
+      auto_recover_filtered_empty: "当前筛选条件下没有命中的后台补传候选。",
+      auto_recover_pool_empty: "当前没有进入后台补传候选池的任务。",
       lane_summary_prefix: "通道",
-      sample_record_empty: "暂无真实 provider smoke 记录。",
+      sample_record_empty: "暂无真实网盘样本记录。",
       smoke_record_empty: "当前没有 smoke 记录。",
       smoke_record_showing_all: "显示全部 {visible} 条 smoke 记录。",
       smoke_record_showing_filtered: "当前显示 {visible} / {total} 条 smoke 记录。",
       sample_matrix_empty: "暂无真实样本矩阵。",
-      smoke_view_markdown: "查看 Markdown",
-      smoke_download_markdown: "下载 Markdown",
+      smoke_view_markdown: "查看样本文档",
+      smoke_download_markdown: "下载样本文档",
       acceptance_matrix_view: "验收矩阵视图",
       acceptance_matrix_hint: "可按验收状态快速筛选，也能直接跳到对应 smoke 样本或样本任务，方便继续补齐真实联调样本。",
       protocol_sampled: "已取样",
@@ -552,12 +583,48 @@ const translations = {
       provider_smoke_representative_actions: "代表样本动作建议",
       provider_smoke_representative_advice: "代表样本补齐建议",
       provider_smoke_default_action: "网盘源优先动作",
+      provider_smoke_default_action_complete: "已补齐",
+      provider_smoke_readiness_ready: "已就绪（基础、上传、异常、代表样本齐）",
+      provider_smoke_readiness_partial: "进行中（已有样本，仍缺验收项）",
+      provider_smoke_readiness_pending: "待补齐（待补 provider 真实样本）",
+      provider_smoke_basic_ready: "基础",
+      provider_smoke_upload_ready: "上传",
+      provider_smoke_anomaly_ready: "异常",
+      provider_smoke_representative_ready: "代表",
+      blocked_metric_tasks: "任务",
+      blocked_metric_providers: "网盘源",
+      blocked_metric_next: "下次重试",
+      blocked_next_step: "下一步：{value}",
+      blocked_missing_path: "缺少可恢复路径",
+      blocked_focus_action: "只看这一类阻塞",
+      blocked_run_action: "执行此阻塞动作",
+      auto_recover_run_wait_auth: "只执行等刷新授权",
+      auto_recover_run_wait_local: "只执行等补源文件",
+      auto_recover_run_wait_manual: "只执行等人工确认",
+      auto_recover_run_wait_limit: "只执行重试耗尽",
+      auto_recover_run_wait_other: "只执行其它等待",
+      auto_recover_run_primary_retry: "执行主重试类型",
+      auto_recover_run_primary_blocked: "执行主阻塞动作",
+      auto_recover_run_lane: "执行该 lane",
+      auto_recover_run_mode: "执行该模式",
       matrix_open_smoke_record: "打开 smoke 样本",
       matrix_open_task_sample: "打开任务样本",
       matrix_prefill_smoke_form: "预填 smoke 表单",
       matrix_prefill_profile_risk: "预填账号默认风控",
       matrix_focus_group_records: "只看该组记录",
       matrix_focus_acceptance_type: "只看此类",
+      selection_source_directory: "目录子集",
+      selection_source_pending: "待补传子集",
+      selection_source_retry: "重试队列子集",
+      selection_scope_directory: "目录子集",
+      selection_scope_pending: "待补传子集",
+      selection_scope_retry: "重试队列子集",
+      result_success: "成功（success）",
+      result_failure: "失败（failure）",
+      smoke_matrix_source_display: "Smoke Matrix {protocolGroup} ({status})",
+      smoke_matrix_source_display_fallback: "Smoke Matrix ({status})",
+      smoke_matrix_risk_profile_title: "{protocolGroup} 风控模板",
+      smoke_matrix_risk_profile_title_fallback: "真实样本风控模板",
       smoke_summary_smokes: "样本数",
       smoke_summary_success: "成功",
       smoke_summary_upload: "上传成功",
@@ -585,6 +652,62 @@ const translations = {
       flash_smoke_gap_prefilled: "已按验收缺口预填 smoke 动作",
       flash_smoke_matrix_prefilled: "已按验收矩阵预填 smoke 表单",
       flash_smoke_profile_risk_prefilled: "已按真实样本预填账号默认风控",
+      smoke_note_protocol_group: "协议组：{value}",
+      smoke_note_provider: "建议 provider：{value}",
+      smoke_note_status: "验收状态：{value}",
+      smoke_note_missing: "缺口：{value}",
+      smoke_note_action: "动作：{value}",
+      smoke_note_advice: "建议：{value}",
+      smoke_note_goal: "本次目标：{value}",
+      smoke_note_boundary_sample: "当前协议组已验收，建议继续补充边界场景样本。",
+      smoke_markdown_load_failed: "加载样本文档失败：{status}",
+      smoke_action_fill_upload_success: "补 1 条真实上传成功样本",
+      smoke_action_fill_task_coverage: "补 1 条真实任务覆盖样本",
+      smoke_action_fill_upload_smoke: "补上传 smoke",
+      smoke_draft_title_provider: "网盘样本",
+      smoke_draft_title_status: "{protocolGroup} {status} 样本",
+      auto_recover_summary_title: "当前可见候选池摘要",
+      auto_recover_queue_count: "队列项 {value}",
+      auto_recover_ready_count: "可立即重试 {value}",
+      auto_recover_cooldown_count: "冷却中 {value}",
+      auto_recover_profile_counts: "授权档案 {value}",
+      auto_recover_summary_compact: "{lanes} 个 lane / {tasks} 个任务",
+      smoke_action_fill_task_sample: "补任务覆盖样本",
+      smoke_action_fill_smoke_success: "补 smoke 成功样本",
+      smoke_action_prefill_by_gap: "按缺口预填动作",
+      smoke_draft_label_auth_expired: "补授权失效样本",
+      smoke_draft_label_rate_limited: "补限流样本",
+      smoke_draft_label_local_file_missing: "补本地文件缺失样本",
+      smoke_draft_label_pending_manual: "补人工确认样本",
+      smoke_draft_label_large_file: "补大文件样本",
+      smoke_draft_label_nested_directory: "补多层目录样本",
+      smoke_draft_label_retry_recovery: "补重试恢复样本",
+      smoke_draft_note_auth_expired: "目标异常：auth_expired",
+      smoke_draft_note_rate_limited: "目标异常：rate_limited / risk_control",
+      smoke_draft_note_local_file_missing: "目标异常：local_file_missing",
+      smoke_draft_note_pending_manual: "目标异常：pending_manual / overwrite downgrade",
+      smoke_draft_note_large_file: "目标代表样本：large_file / multipart / 大文件上传恢复",
+      smoke_draft_note_nested_directory: "目标代表样本：nested_directory / 多层目录 / subtree",
+      smoke_draft_note_retry_recovery: "目标代表样本：retry_recovery / checkpoint / resume / 续传",
+      smoke_title_boundary_sample: "边界样本",
+      protocol_coverage_empty: "当前没有协议族覆盖数据。",
+      upload_checkpoint_acceptance_title: "上传断点续传默认恢复验收",
+      upload_checkpoint_readiness: "断点续传就绪度：{value}",
+      upload_checkpoint_resume_summary: "大文件/长链路恢复摘要",
+      upload_checkpoint_tasks: "断点任务",
+      upload_checkpoint_resume_tasks: "自动续传",
+      upload_checkpoint_readiness_compact: "就绪度",
+      upload_checkpoint_priority_action: "优先恢复动作：{value}",
+      upload_checkpoint_sample_context: "样本上下文：网盘源 {provider} / 协议组 {protocolGroup} / 任务 {taskId} / 授权档案 {profileId}",
+      upload_checkpoint_resume_detail: "续传详情：上传 {uploadId} / 下一分片 {nextPart} / 已上传 {uploaded}/{partCount}",
+      upload_checkpoint_sample_paths: "样本路径：{value}",
+      upload_checkpoint_priority_action_label: "恢复优先动作：{value}",
+      waiting_reason_summary_detail: "冷却 {cooldown} / 时间窗 {retryWindow} / 授权 {authRefresh} / 本地文件 {localRestore} / 人工处理 {manual}",
+      lane_summary_detail: "网盘源 {provider} / 协议组 {protocolGroup} / 授权档案 {profileId} / 网盘源数 {providerCount} / 授权档案数 {profileCount}",
+      sample_context_provider: "网盘源 {value}",
+      sample_context_protocol_group: "协议组 {value}",
+      sample_context_task: "任务 {value}",
+      sample_context_profile: "授权档案 {value}",
       matrix_smoke_count: "smoke",
       matrix_upload_smoke: "上传样本",
       matrix_coverage: "任务覆盖",
@@ -597,6 +720,25 @@ const translations = {
       matrix_priority_action: "验收优先动作：",
       matrix_anomaly_summary: "异常样本：",
       matrix_representative_summary: "代表样本：",
+      matrix_anomaly_missing: "异常样本缺口：",
+      matrix_anomaly_actions: "异常样本动作：",
+      matrix_anomaly_advice: "异常样本建议：",
+      matrix_representative_missing: "代表样本缺口：",
+      matrix_representative_actions: "代表样本动作：",
+      matrix_representative_advice: "代表样本建议：",
+      matrix_state_ready: "已就绪",
+      matrix_state_pending: "待补齐",
+      matrix_state_partial: "进行中",
+      matrix_state_complete: "已完成",
+      matrix_state_accepted: "已验收",
+      matrix_checklist_upload: "上传",
+      matrix_checklist_coverage: "覆盖",
+      matrix_checklist_anomaly: "异常",
+      matrix_checklist_representative: "代表",
+      matrix_gap_upload: "上传",
+      matrix_gap_anomaly: "异常({value})",
+      matrix_gap_representative: "代表({value})",
+      matrix_gap_complete: "已补齐",
       matrix_missing: "验收缺口：",
       matrix_actions: "验收动作：",
       matrix_advice: "验收建议：",
@@ -622,6 +764,16 @@ const translations = {
       assist_clear: "清空引导配置",
       assist_summary_default: "当前将优先尝试 OpenList 引导；如未配置地址或令牌，会自动提示切到 Alist 或手动模式。",
       assist_discovery_default: "检测结果会在这里显示；如果能列出可见存储，说明当前 OpenList / Alist 地址和令牌基本可用。",
+      assist_discovery_empty: "{kind} 已连通，但当前没有返回可见存储。可继续确认令牌权限，或直接回到底部手动模式。",
+      assist_discovery_summary: "{kind} 已连通，当前可见存储：{summary}{suffix}。",
+      assist_discovery_hidden_suffix: "；其余 {count} 项未展开",
+      assist_discovery_default_html: "<div>检测结果会在这里显示；如果能列出可见存储，说明当前 OpenList / Alist 地址和令牌基本可用。</div>",
+      assist_discovery_name_fallback: "未命名存储",
+      assist_discovery_driver_fallback: "未知驱动",
+      assist_discovery_status_fallback: "状态未知",
+      assist_discovery_select: "选用 {name}",
+      assist_discovery_more: "仅展示前 12 项，其余 {count} 项请缩小权限范围后重试。",
+      assist_discovery_choose_storage: "{kind} 已连通，请先从下方选择一个可见存储，再继续补当前网盘源需要的 Token、Cookie 或 Extra JSON。",
       provider_label: "网盘源",
       auth_mode_label: "授权方式",
       display_name_label: "显示名称",
@@ -643,7 +795,7 @@ const translations = {
       catalog_title: "网盘能力概览",
       catalog_detail_default: "点击任一网盘卡片，查看能力说明、默认风控模板和恢复预算。",
       saved_profiles_title: "已保存授权档案",
-      saved_profiles_hint: "支持 validate 与 delete",
+      saved_profiles_hint: "支持验证与删除",
       flash_use_openlist: "已切换为 OpenList 优先引导",
       flash_use_alist: "已切换为 Alist 兜底引导",
       flash_use_manual: "已切换为手动高级模式",
@@ -662,6 +814,18 @@ const translations = {
       assist_discovery_apply_failed: "回填发现结果失败：{error}",
       assist_open_url_required: "请先填写 {display} 地址",
       assist_open_login_page: "已打开 {display} 登录页",
+      auth_guide_provider_prefix: "当前网盘源：{provider}。",
+      auth_guide_bridge_default: "当前授权入口：OpenList 优先，Alist 兜底，手动模式作为最后兜底。",
+      auth_guide_bridge_openlist_ready: "当前授权入口：优先通过 OpenList 辅助获取登录态、存储和目录信息。若 OpenList 不可用，再切到 Alist 或手动模式。",
+      auth_guide_bridge_openlist_missing: "当前授权入口：已选 OpenList 优先，但还没填写 OpenList 地址；可先补地址，或临时切到 Alist / 手动模式。",
+      auth_guide_bridge_alist_ready: "当前授权入口：当前已切到 Alist 兜底；如果 Alist 能看到目标存储，可先在 Alist 登录后再回填下方授权字段。",
+      auth_guide_bridge_alist_missing: "当前授权入口：已切到 Alist 兜底，但还没填写 Alist 地址；可先补地址，或改回 OpenList / 手动模式。",
+      auth_guide_bridge_manual: "当前授权入口：已切到手动高级模式，建议只在 OpenList / Alist 都不可用时使用。",
+      assist_summary_openlist_ready: "当前优先走 OpenList：{url}。建议先在 OpenList 登录并确认能看到对应存储；失败后再切到 Alist 或手动模式。",
+      assist_summary_openlist_missing: "当前优先走 OpenList，但还没填写 OpenList 地址。可先填写地址并在新窗口登录；若暂时没有 OpenList，再切到 Alist 兜底。",
+      assist_summary_alist_ready: "当前已切到 Alist 兜底：{url}。建议先在 Alist 登录并确认能看到对应存储；如果仍拿不到字段，再回到底部手动模式。",
+      assist_summary_alist_missing: "当前已切到 Alist 兜底，但还没填写 Alist 地址。可先补 Alist 地址；如果也没有 Alist，再使用手动高级模式。",
+      assist_summary_manual: "当前已切到手动高级模式。请直接填写下方 Token、Cookie 和附加配置；如果后面补上 OpenList 或 Alist，也可以再切回引导模式。",
       provider_detail_load_failed: "加载网盘能力详情失败：{error}",
       provider_detail_loaded: "已加载 {provider} 网盘能力详情",
       risk_override_synced_note: "风控覆盖已同步到 JSON",
@@ -756,6 +920,47 @@ const translations = {
       provider_recommended_risk: "推荐风控档位",
       provider_capability_summary: "能力摘要",
       provider_default_template: "网盘源默认模板",
+      risk_chain_title: "风控链路",
+      risk_base_template_title: "基础模板",
+      risk_calibrated_result_title: "校准结果",
+      risk_profile_source_title: "账号默认来源",
+      risk_source_kind_title: "来源类型",
+      risk_bias_title: "偏向策略",
+      risk_kind_bias_title: "来源类型 / 偏向",
+      risk_profile_fields_title: "账号默认字段",
+      risk_override_fields_title: "任务覆盖字段",
+      risk_provider_baseline_title: "网盘源基线",
+      risk_provider_calibrated_title: "网盘源校准后",
+      risk_profile_applied_title: "账号默认注入",
+      risk_task_override_title: "任务覆盖",
+      risk_applied_title: "最终生效",
+      risk_profile_source_compact_title: "来源",
+      risk_profile_write_hint: "可直接写入本次任务覆盖，便于在此基础上再细调。",
+      risk_profile_source_builtin: "授权档案内置账号默认风控",
+      risk_profile_source_provider_default: "未配置，使用网盘源默认模板",
+      risk_auto_retry_window_title: "自动补传时段",
+      risk_budget_title: "恢复预算",
+      risk_budget_advice_title: "预算建议",
+      risk_reason_title: "校准依据",
+      risk_hints_title: "风控提示",
+      risk_traits_title: "风险特征",
+      risk_missing_title: "校准缺失",
+      risk_priority_action_title: "优先校准动作",
+      risk_recommend_reason_title: "推荐说明",
+      risk_summary_provider: "网盘源 {value}",
+      risk_summary_profile: "账号默认 {value}",
+      risk_summary_source_kind: "来源类型 {value}",
+      risk_summary_bias: "偏向 {value}",
+      risk_summary_profile_fields: "账号字段 {value}",
+      risk_summary_override: "任务覆盖 {value}",
+      risk_summary_mode: "最终档位 {value}",
+      risk_sensitive_providers_title: "敏感网盘源",
+      provider_default_window_source: "网盘源默认模板",
+      provider_empty_window_source: "默认留空，等待账号或任务覆盖",
+      recover_budget_no_advice: "未返回账号级预算建议。",
+      recover_budget_sensitive: "高风险网盘源建议单账号串行推进：{budget}{reason}",
+      recover_budget_profile_rotation: "建议按账号轮转控制补传并发：{budget}{reason}",
+      recover_budget_default: "建议恢复预算：{budget}{reason}",
       provider_apply_default_risk: "采用网盘源推荐风控",
       provider_open_capability: "查看网盘源能力详情",
       profile_default_risk: "账号默认风控",
@@ -1102,6 +1307,7 @@ const translations = {
       flash_report_switched: "Acceptance report switched",
       flash_smoke_markdown_switched: "Smoke Markdown switched",
       flash_smoke_markdown_downloaded: "Smoke Markdown downloaded",
+      flash_smoke_markdown_download_failed: "Failed to download smoke Markdown: {status}",
       flash_auto_recover_decision_previewed: "Auto-recovery decision previewed for {taskId}",
       flash_auto_recover_decision_executed: "Auto-recovery decision executed for {taskId}",
       flash_auto_recover_decision_state_focused: "Auto-recovery candidates filtered by decision state {state}",
@@ -1302,6 +1508,34 @@ const translations = {
       report_title_label: "Report Title",
       report_generated_at: "Generated At",
       report_note_label: "Report Note",
+      recent_results_empty: "There are no result records yet.",
+      recent_results_col_status: "Status",
+      recent_results_col_mode: "Mode",
+      recent_results_col_execution_mode: "Execution Mode",
+      recent_results_col_retry_mode: "Retry Mode",
+      recent_results_col_retry_scope: "Retry Scope",
+      recent_results_col_retry_path_count: "Retry Path Count",
+      recent_results_col_retry_paths: "Retry Paths",
+      recent_results_col_source_delete_policy: "Source Delete Policy",
+      recent_results_col_recommendation: "Recommendation",
+      recent_results_col_message: "Message",
+      recent_results_col_risk_hit: "Risk Hit",
+      recent_results_col_conflict: "Conflict Handling",
+      recent_results_col_created_at: "Created At",
+      recent_probes_empty: "There are no probe records yet.",
+      recent_probes_col_provider: "Provider",
+      recent_probes_col_status: "Status",
+      recent_probes_col_profile: "Auth Profile",
+      recent_probes_col_execution_mode: "Execution Mode",
+      recent_probes_col_scan_mode: "Scan Mode",
+      recent_probes_col_retry_mode: "Retry Mode",
+      recent_probes_col_retry_scope: "Retry Scope",
+      recent_probes_col_retry_path_count: "Retry Path Count",
+      recent_probes_col_retry_paths: "Retry Paths",
+      recent_probes_col_source_delete_policy: "Source Delete Policy",
+      recent_probes_col_risk_hit: "Risk Hit",
+      recent_probes_col_payload: "Payload",
+      recent_probes_col_created_at: "Created At",
       auto_recover_acceptance: "Auto-Recovery Acceptance",
       auto_recover_fairness_summary: "Auto-Recovery and Fairness Summary",
       recovery_priority_action: "Recovery Priority Action",
@@ -1318,6 +1552,8 @@ const translations = {
       flash_status_pending_filters_cleared: "Status pending-tree filters cleared",
       waiting_reason_summary: "Waiting Reasons",
       no_auto_recover_pool_samples: "There are no auto-recovery pool samples right now.",
+      auto_recover_filtered_empty: "No auto-recovery candidates match the current filters.",
+      auto_recover_pool_empty: "There are no tasks in the auto-recovery candidate pool right now.",
       lane_summary_prefix: "Lane",
       sample_record_empty: "There are no real provider smoke records yet.",
       smoke_record_empty: "There are no smoke records.",
@@ -1364,12 +1600,48 @@ const translations = {
       provider_smoke_representative_actions: "Representative Actions",
       provider_smoke_representative_advice: "Representative Advice",
       provider_smoke_default_action: "Provider Priority Action",
+      provider_smoke_default_action_complete: "Complete",
+      provider_smoke_readiness_ready: "Ready (basic, upload, anomaly, and representative samples are complete)",
+      provider_smoke_readiness_partial: "In Progress (some samples exist, but acceptance is still incomplete)",
+      provider_smoke_readiness_pending: "Pending (real provider samples are still missing)",
+      provider_smoke_basic_ready: "Basic",
+      provider_smoke_upload_ready: "Upload",
+      provider_smoke_anomaly_ready: "Anomaly",
+      provider_smoke_representative_ready: "Representative",
+      blocked_metric_tasks: "Tasks",
+      blocked_metric_providers: "Providers",
+      blocked_metric_next: "Next Retry",
+      blocked_next_step: "Next Step: {value}",
+      blocked_missing_path: "Missing recoverable path",
+      blocked_focus_action: "Show This Blocked Type",
+      blocked_run_action: "Run This Blocked Action",
+      auto_recover_run_wait_auth: "Run Waiting Auth Refresh",
+      auto_recover_run_wait_local: "Run Waiting Local Restore",
+      auto_recover_run_wait_manual: "Run Waiting Manual Confirmation",
+      auto_recover_run_wait_limit: "Run Retry-Limit Waiting",
+      auto_recover_run_wait_other: "Run Other Waiting",
+      auto_recover_run_primary_retry: "Run Primary Retry Class",
+      auto_recover_run_primary_blocked: "Run Primary Blocked Action",
+      auto_recover_run_lane: "Run This Lane",
+      auto_recover_run_mode: "Run This Mode",
       matrix_open_smoke_record: "Open Smoke Sample",
       matrix_open_task_sample: "Open Task Sample",
       matrix_prefill_smoke_form: "Prefill Smoke Form",
       matrix_prefill_profile_risk: "Prefill Profile Risk Defaults",
       matrix_focus_group_records: "Show Group Records",
       matrix_focus_acceptance_type: "Show This Type",
+      selection_source_directory: "Directory Subset",
+      selection_source_pending: "Pending Subset",
+      selection_source_retry: "Retry-Queue Subset",
+      selection_scope_directory: "Directory Subset",
+      selection_scope_pending: "Pending Subset",
+      selection_scope_retry: "Retry-Queue Subset",
+      result_success: "Success (success)",
+      result_failure: "Failure (failure)",
+      smoke_matrix_source_display: "Smoke Matrix {protocolGroup} ({status})",
+      smoke_matrix_source_display_fallback: "Smoke Matrix ({status})",
+      smoke_matrix_risk_profile_title: "{protocolGroup} Risk Template",
+      smoke_matrix_risk_profile_title_fallback: "Real-Sample Risk Template",
       smoke_summary_smokes: "Smokes",
       smoke_summary_success: "Success",
       smoke_summary_upload: "Upload Success",
@@ -1397,6 +1669,62 @@ const translations = {
       flash_smoke_gap_prefilled: "Smoke action prefilled from the acceptance gap",
       flash_smoke_matrix_prefilled: "Smoke form prefilled from the acceptance matrix",
       flash_smoke_profile_risk_prefilled: "Account default risk prefilled from the real sample",
+      smoke_note_protocol_group: "Protocol Group: {value}",
+      smoke_note_provider: "Suggested Provider: {value}",
+      smoke_note_status: "Acceptance Status: {value}",
+      smoke_note_missing: "Gaps: {value}",
+      smoke_note_action: "Actions: {value}",
+      smoke_note_advice: "Advice: {value}",
+      smoke_note_goal: "Goal: {value}",
+      smoke_note_boundary_sample: "This protocol group is already accepted. Continue by adding boundary-case samples.",
+      smoke_markdown_load_failed: "Failed to load smoke Markdown: {status}",
+      smoke_action_fill_upload_success: "Add 1 real upload-success sample",
+      smoke_action_fill_task_coverage: "Add 1 real task-coverage sample",
+      smoke_action_fill_upload_smoke: "Add upload smoke",
+      smoke_draft_title_provider: "Provider Smoke",
+      smoke_draft_title_status: "{protocolGroup} {status} 样本",
+      auto_recover_summary_title: "Visible Candidate Summary",
+      auto_recover_queue_count: "queue {value}",
+      auto_recover_ready_count: "ready {value}",
+      auto_recover_cooldown_count: "cooldown {value}",
+      auto_recover_profile_counts: "profiles {value}",
+      auto_recover_summary_compact: "{lanes} lanes / {tasks} tasks",
+      smoke_action_fill_task_sample: "Add task-coverage sample",
+      smoke_action_fill_smoke_success: "Add smoke success sample",
+      smoke_action_prefill_by_gap: "Prefill action from gaps",
+      smoke_draft_label_auth_expired: "Add auth-expired sample",
+      smoke_draft_label_rate_limited: "Add rate-limit sample",
+      smoke_draft_label_local_file_missing: "Add local-file-missing sample",
+      smoke_draft_label_pending_manual: "Add manual-confirmation sample",
+      smoke_draft_label_large_file: "Add large-file sample",
+      smoke_draft_label_nested_directory: "Add nested-directory sample",
+      smoke_draft_label_retry_recovery: "Add retry-recovery sample",
+      smoke_draft_note_auth_expired: "Target anomaly: auth_expired",
+      smoke_draft_note_rate_limited: "Target anomaly: rate_limited / risk_control",
+      smoke_draft_note_local_file_missing: "Target anomaly: local_file_missing",
+      smoke_draft_note_pending_manual: "Target anomaly: pending_manual / overwrite downgrade",
+      smoke_draft_note_large_file: "Target representative sample: large_file / multipart / large-upload recovery",
+      smoke_draft_note_nested_directory: "Target representative sample: nested_directory / multi-level directory / subtree",
+      smoke_draft_note_retry_recovery: "Target representative sample: retry_recovery / checkpoint / resume",
+      smoke_title_boundary_sample: "Boundary Sample Smoke",
+      protocol_coverage_empty: "There is no protocol-group coverage data right now.",
+      upload_checkpoint_acceptance_title: "Upload Checkpoint Default Recovery Acceptance",
+      upload_checkpoint_readiness: "Checkpoint resume readiness: {value}",
+      upload_checkpoint_resume_summary: "Large-file / Long-path Recovery Summary",
+      upload_checkpoint_tasks: "Checkpoint Tasks",
+      upload_checkpoint_resume_tasks: "Auto Resume",
+      upload_checkpoint_readiness_compact: "Readiness",
+      upload_checkpoint_priority_action: "Priority recovery action: {value}",
+      upload_checkpoint_sample_context: "Sample context: provider {provider} / protocol group {protocolGroup} / task {taskId} / auth profile {profileId}",
+      upload_checkpoint_resume_detail: "Resume details: upload {uploadId} / next part {nextPart} / uploaded {uploaded}/{partCount}",
+      upload_checkpoint_sample_paths: "Sample paths: {value}",
+      upload_checkpoint_priority_action_label: "Recovery priority action: {value}",
+      waiting_reason_summary_detail: "cooldown {cooldown} / retry window {retryWindow} / auth {authRefresh} / local file {localRestore} / manual {manual}",
+      lane_summary_detail: "provider {provider} / protocol group {protocolGroup} / auth profile {profileId} / providers {providerCount} / profiles {profileCount}",
+      sample_context_provider: "Provider {value}",
+      sample_context_protocol_group: "Protocol Group {value}",
+      sample_context_task: "Task {value}",
+      sample_context_profile: "Auth Profile {value}",
       matrix_smoke_count: "Smoke",
       matrix_upload_smoke: "Upload Smoke",
       matrix_coverage: "Coverage",
@@ -1409,6 +1737,25 @@ const translations = {
       matrix_priority_action: "Priority Action:",
       matrix_anomaly_summary: "Anomaly Samples:",
       matrix_representative_summary: "Representative Samples:",
+      matrix_anomaly_missing: "Anomaly Gaps:",
+      matrix_anomaly_actions: "Anomaly Actions:",
+      matrix_anomaly_advice: "Anomaly Advice:",
+      matrix_representative_missing: "Representative Gaps:",
+      matrix_representative_actions: "Representative Actions:",
+      matrix_representative_advice: "Representative Advice:",
+      matrix_state_ready: "Ready",
+      matrix_state_pending: "Pending",
+      matrix_state_partial: "In Progress",
+      matrix_state_complete: "Complete",
+      matrix_state_accepted: "Accepted",
+      matrix_checklist_upload: "Upload",
+      matrix_checklist_coverage: "Coverage",
+      matrix_checklist_anomaly: "Anomaly",
+      matrix_checklist_representative: "Representative",
+      matrix_gap_upload: "Upload",
+      matrix_gap_anomaly: "Anomaly ({value})",
+      matrix_gap_representative: "Representative ({value})",
+      matrix_gap_complete: "Complete",
       matrix_missing: "Acceptance Missing:",
       matrix_actions: "Acceptance Actions:",
       matrix_advice: "Acceptance Advice:",
@@ -1434,6 +1781,16 @@ const translations = {
       assist_clear: "Clear Guide Settings",
       assist_summary_default: "OpenList guidance is preferred by default. If the URL or token is missing, the console will prompt you to switch to Alist or manual mode.",
       assist_discovery_default: "Detection results appear here. If visible storages are listed, the current OpenList / Alist URL and token are basically usable.",
+      assist_discovery_empty: "{kind} is reachable, but no visible storage was returned. Confirm the token permissions, or switch back to manual mode below.",
+      assist_discovery_summary: "{kind} is reachable. Visible storages: {summary}{suffix}.",
+      assist_discovery_hidden_suffix: "; {count} more items are hidden",
+      assist_discovery_default_html: "<div>Detection results appear here. If visible storages are listed, the current OpenList / Alist URL and token are basically usable.</div>",
+      assist_discovery_name_fallback: "Unnamed Storage",
+      assist_discovery_driver_fallback: "Unknown Driver",
+      assist_discovery_status_fallback: "Unknown Status",
+      assist_discovery_select: "Use {name}",
+      assist_discovery_more: "Only the first 12 items are shown. Narrow the permission scope and retry for the remaining {count} items.",
+      assist_discovery_choose_storage: "{kind} is reachable. Choose a visible storage below, then continue filling the Token, Cookie, or Extra JSON required by the current provider.",
       provider_label: "Provider",
       auth_mode_label: "Auth Mode",
       display_name_label: "Display Name",
@@ -1473,9 +1830,29 @@ const translations = {
       assist_discovery_applied: "Applied storage “{name}” from {kind}; you can continue filling the provider auth fields.",
       assist_discovery_apply_failed: "Failed to apply the discovery result: {error}",
       assist_open_url_required: "Please fill the {display} URL first",
+      assist_discovery_invalid_address: "Please fill the {display} URL first",
       assist_open_login_page: "Opened the {display} login page",
+      auth_guide_provider_prefix: "Current provider: {provider}.",
+      auth_guide_bridge_default: "Current authorization path: OpenList first, Alist as fallback, manual mode as the last resort.",
+      auth_guide_bridge_openlist_ready: "Current authorization path: OpenList is preferred for session, storage, and directory discovery. If OpenList is unavailable, switch to Alist or manual mode.",
+      auth_guide_bridge_openlist_missing: "Current authorization path: OpenList is preferred, but the OpenList URL is still missing. Fill it in first, or temporarily switch to Alist / manual mode.",
+      auth_guide_bridge_alist_ready: "Current authorization path: Alist fallback is active. If Alist can already see the target storage, sign in there first and then fill the auth fields below.",
+      auth_guide_bridge_alist_missing: "Current authorization path: Alist fallback is active, but the Alist URL is still missing. Fill in the address first, or switch back to OpenList / manual mode.",
+      auth_guide_bridge_manual: "Current authorization path: manual advanced mode is active. Use it only when both OpenList and Alist are unavailable.",
+      assist_summary_openlist_ready: "OpenList is currently preferred: {url}. Sign in with OpenList first and confirm the target storage is visible. If it fails, switch to Alist or manual mode.",
+      assist_summary_openlist_missing: "OpenList is currently preferred, but the OpenList URL is still missing. Fill in the address and sign in in a new window first. If OpenList is unavailable, switch to Alist fallback.",
+      assist_summary_alist_ready: "Alist fallback is active: {url}. Sign in with Alist first and confirm the target storage is visible. If required fields are still missing, switch to manual mode below.",
+      assist_summary_alist_missing: "Alist fallback is active, but the Alist URL is still missing. Fill in the Alist address first. If Alist is also unavailable, use manual advanced mode.",
+      assist_summary_manual: "Manual advanced mode is active. Fill in the Token, Cookie, and Extra fields directly below. If OpenList or Alist becomes available later, you can switch back to guided mode.",
       provider_detail_load_failed: "Failed to load provider capabilities: {error}",
       provider_detail_loaded: "Loaded {provider} provider capabilities",
+      provider_detail_empty: "Click any provider card to inspect capabilities, default risk templates, and recovery budgets.",
+      provider_loading_detail: "Loading capability details...",
+      provider_capability_summary_title: "Capability Summary",
+      provider_auth_modes_title: "Auth Modes",
+      provider_conflict_policies_title: "Conflict Policies",
+      provider_fallback_modes_title: "Fallback Modes",
+      provider_default_risk_title: "Default Risk Template",
       risk_override_synced_note: "Risk override synced to JSON",
       risk_override_cleared_note: "Risk override cleared. The current mode plus provider calibration will be used again.",
       browser_source_refreshed: "Source directory refreshed: {path}",
@@ -1568,6 +1945,47 @@ const translations = {
       provider_recommended_risk: "Recommended Risk Mode",
       provider_capability_summary: "Capability Summary",
       provider_default_template: "Provider Default Template",
+      risk_chain_title: "Risk Flow",
+      risk_base_template_title: "Base Template",
+      risk_calibrated_result_title: "Calibrated Result",
+      risk_profile_source_title: "Account Default Source",
+      risk_source_kind_title: "Source Kind",
+      risk_bias_title: "Bias Strategy",
+      risk_kind_bias_title: "Source Kind / Bias",
+      risk_profile_fields_title: "Account Default Fields",
+      risk_override_fields_title: "Task Override Fields",
+      risk_provider_baseline_title: "Provider Baseline",
+      risk_provider_calibrated_title: "Provider Calibrated",
+      risk_profile_applied_title: "Account Default Applied",
+      risk_task_override_title: "Task Override",
+      risk_applied_title: "Final Applied",
+      risk_profile_source_compact_title: "Source",
+      risk_profile_write_hint: "You can write these defaults into the task override first and fine-tune them afterward.",
+      risk_profile_source_builtin: "Built into the auth profile as account defaults",
+      risk_profile_source_provider_default: "Not configured. The provider default template is used.",
+      risk_auto_retry_window_title: "Auto-Recovery Window",
+      risk_budget_title: "Recovery Budget",
+      risk_budget_advice_title: "Budget Advice",
+      risk_reason_title: "Calibration Reason",
+      risk_hints_title: "Risk Hints",
+      risk_traits_title: "Risk Traits",
+      risk_missing_title: "Calibration Missing",
+      risk_priority_action_title: "Priority Calibration Action",
+      risk_recommend_reason_title: "Recommendation Reason",
+      risk_summary_provider: "Provider {value}",
+      risk_summary_profile: "Account Default {value}",
+      risk_summary_source_kind: "Source Kind {value}",
+      risk_summary_bias: "Bias {value}",
+      risk_summary_profile_fields: "Account Fields {value}",
+      risk_summary_override: "Task Override {value}",
+      risk_summary_mode: "Final Mode {value}",
+      risk_sensitive_providers_title: "Sensitive Providers",
+      provider_default_window_source: "Provider default template",
+      provider_empty_window_source: "Left empty by default until the account or task override is provided",
+      recover_budget_no_advice: "No account-level recovery budget advice was returned.",
+      recover_budget_sensitive: "High-risk providers should recover serially per account: {budget}{reason}",
+      recover_budget_profile_rotation: "Rotate recovery concurrency by account: {budget}{reason}",
+      recover_budget_default: "Recommended recovery budget: {budget}{reason}",
       provider_apply_default_risk: "Apply Provider Recommended Risk",
       provider_open_capability: "Open Provider Capabilities",
       profile_default_risk: "Account Default Risk",
@@ -1575,6 +1993,8 @@ const translations = {
       profile_extra_keys: "Extra Config Keys",
       profile_enabled_fields: "Enabled Fields",
       profile_recover_budget: "Account Recovery Budget Advice",
+
+      risk_profile_reason_title: "Recovery Budget Reason",
       profile_apply_default_risk: "Apply Account Default Risk",
       profile_clear_default_risk: "Revert to Account Default",
       execution_mode_prescan: "Scan everything first, then execute (`pre_scan_flat`). This fits smaller directory sets when you want a complete scan result before execution starts.",
@@ -1893,7 +2313,7 @@ function renderProfileAuthGuide(provider, authMode) {
   let intro =
     state.language === "en-US"
       ? `Current provider: ${displayName}.`
-      : `当前网盘源：${displayName}。`;
+      : tf("providers.auth_guide_provider_prefix", { provider: displayName }, `当前网盘源：${displayName}。`);
   let extraHint =
     state.language === "en-US"
       ? "In most cases, `Extra JSON` can stay empty at first."
@@ -1958,28 +2378,28 @@ function renderProfileAuthGuide(provider, authMode) {
   let bridgeHint =
     state.language === "en-US"
       ? "Current authorization path: OpenList first, Alist as fallback, manual mode as the last resort."
-      : "当前授权入口：OpenList 优先，Alist 兜底，手动模式作为最后兜底。";
+      : t("providers.auth_guide_bridge_default", "当前授权入口：OpenList 优先，Alist 兜底，手动模式作为最后兜底。");
   if (assist.preferred === "openlist") {
     bridgeHint = assist.openlistURL
       ? state.language === "en-US"
         ? "Current authorization path: OpenList is preferred for session, storage, and directory discovery. If OpenList is unavailable, switch to Alist or manual mode."
-        : "当前授权入口：优先通过 OpenList 辅助获取登录态、存储和目录信息。若 OpenList 不可用，再切到 Alist 或手动模式。"
+        : t("providers.auth_guide_bridge_openlist_ready", "当前授权入口：优先通过 OpenList 辅助获取登录态、存储和目录信息。若 OpenList 不可用，再切到 Alist 或手动模式。")
       : state.language === "en-US"
         ? "Current authorization path: OpenList is preferred, but the OpenList URL is still missing. Fill it in first, or temporarily switch to Alist / manual mode."
-        : "当前授权入口：已选 OpenList 优先，但还没填写 OpenList 地址；可先补地址，或临时切到 Alist / 手动模式。";
+        : t("providers.auth_guide_bridge_openlist_missing", "当前授权入口：已选 OpenList 优先，但还没填写 OpenList 地址；可先补地址，或临时切到 Alist / 手动模式。");
   } else if (assist.preferred === "alist") {
     bridgeHint = assist.alistURL
       ? state.language === "en-US"
         ? "Current authorization path: Alist fallback is active. If Alist can already see the target storage, sign in there first and then fill the auth fields below."
-        : "当前授权入口：当前已切到 Alist 兜底；如果 Alist 能看到目标存储，可先在 Alist 登录后再回填下方授权字段。"
+        : t("providers.auth_guide_bridge_alist_ready", "当前授权入口：当前已切到 Alist 兜底；如果 Alist 能看到目标存储，可先在 Alist 登录后再回填下方授权字段。")
       : state.language === "en-US"
         ? "Current authorization path: Alist fallback is active, but the Alist URL is still missing. Fill in the address first, or switch back to OpenList / manual mode."
-        : "当前授权入口：已切到 Alist 兜底，但还没填写 Alist 地址；可先补地址，或改回 OpenList / 手动模式。";
+        : t("providers.auth_guide_bridge_alist_missing", "当前授权入口：已切到 Alist 兜底，但还没填写 Alist 地址；可先补地址，或改回 OpenList / 手动模式。");
   } else if (assist.preferred === "manual") {
     bridgeHint =
       state.language === "en-US"
         ? "Current authorization path: manual advanced mode is active. Use it only when both OpenList and Alist are unavailable."
-        : "当前授权入口：已切到手动高级模式，建议只在 OpenList / Alist 都不可用时使用。";
+        : t("providers.auth_guide_bridge_manual", "当前授权入口：已切到手动高级模式，建议只在 OpenList / Alist 都不可用时使用。");
   }
 
   if (state.language === "en-US") {
@@ -2018,23 +2438,23 @@ function renderAuthAssistSummary() {
     return openlistReady
       ? state.language === "en-US"
         ? `OpenList is currently preferred: ${assist.openlistURL}. Sign in with OpenList first and confirm the target storage is visible. If it fails, switch to Alist or manual mode.`
-        : `当前优先走 OpenList：${assist.openlistURL}。建议先在 OpenList 登录并确认能看到对应存储；失败后再切到 Alist 或手动模式。`
+        : tf("providers.assist_summary_openlist_ready", { url: assist.openlistURL }, `当前优先走 OpenList：${assist.openlistURL}。建议先在 OpenList 登录并确认能看到对应存储；失败后再切到 Alist 或手动模式。`)
       : state.language === "en-US"
         ? "OpenList is currently preferred, but the OpenList URL is still missing. Fill in the address and sign in in a new window first. If OpenList is unavailable, switch to Alist fallback."
-        : "当前优先走 OpenList，但还没填写 OpenList 地址。可先填写地址并在新窗口登录；若暂时没有 OpenList，再切到 Alist 兜底。";
+        : t("providers.assist_summary_openlist_missing", "当前优先走 OpenList，但还没填写 OpenList 地址。可先填写地址并在新窗口登录；若暂时没有 OpenList，再切到 Alist 兜底。");
   }
   if (assist.preferred === "alist") {
     return alistReady
       ? state.language === "en-US"
         ? `Alist fallback is active: ${assist.alistURL}. Sign in with Alist first and confirm the target storage is visible. If required fields are still missing, switch to manual mode below.`
-        : `当前已切到 Alist 兜底：${assist.alistURL}。建议先在 Alist 登录并确认能看到对应存储；如果仍拿不到字段，再回到底部手动模式。`
+        : tf("providers.assist_summary_alist_ready", { url: assist.alistURL }, `当前已切到 Alist 兜底：${assist.alistURL}。建议先在 Alist 登录并确认能看到对应存储；如果仍拿不到字段，再回到底部手动模式。`)
       : state.language === "en-US"
         ? "Alist fallback is active, but the Alist URL is still missing. Fill in the Alist address first. If Alist is also unavailable, use manual advanced mode."
-        : "当前已切到 Alist 兜底，但还没填写 Alist 地址。可先补 Alist 地址；如果也没有 Alist，再使用手动高级模式。";
+        : t("providers.assist_summary_alist_missing", "当前已切到 Alist 兜底，但还没填写 Alist 地址。可先补 Alist 地址；如果也没有 Alist，再使用手动高级模式。");
   }
   return state.language === "en-US"
     ? "Manual advanced mode is active. Fill in the Token, Cookie, and Extra fields directly below. If OpenList or Alist becomes available later, you can switch back to guided mode."
-    : "当前已切到手动高级模式。请直接填写下方 Token、Cookie 和附加配置；如果后面补上 OpenList 或 Alist，也可以再切回引导模式。";
+    : t("providers.assist_summary_manual", "当前已切到手动高级模式。请直接填写下方 Token、Cookie 和附加配置；如果后面补上 OpenList 或 Alist，也可以再切回引导模式。");
 }
 
 function syncAuthAssistInputs() {
@@ -2078,9 +2498,11 @@ function renderAuthAssistDiscovery(response) {
   }
   const storages = Array.isArray(response.storages) ? response.storages : [];
   if (!storages.length) {
-    return state.language === "en-US"
-      ? `${response.kind === "alist" ? "Alist" : "OpenList"} is reachable, but no visible storage was returned. Confirm the token permissions, or switch back to manual mode below.`
-      : `${response.kind === "alist" ? "Alist" : "OpenList"} 已连通，但当前没有返回可见存储。可继续确认令牌权限，或直接回到底部手动模式。`;
+    return tf(
+      "providers.assist_discovery_empty",
+      { kind: response.kind === "alist" ? "Alist" : "OpenList" },
+      `${response.kind === "alist" ? "Alist" : "OpenList"} 已连通，但当前没有返回可见存储。可继续确认令牌权限，或直接回到底部手动模式。`,
+    );
   }
   const summary = storages
     .slice(0, 6)
@@ -2091,26 +2513,28 @@ function renderAuthAssistDiscovery(response) {
       return `${name}（${driver} / ${mountPath}）`;
     })
     .join("；");
-  const suffix = storages.length > 6 ? `；其余 ${storages.length - 6} 项未展开` : "";
-  if (state.language === "en-US") {
-    const englishSummary = storages
-      .slice(0, 6)
-      .map((item) => {
-        const name = stringifyValue(item.name, "-");
-        const driver = stringifyValue(item.driver, "-");
-        const mountPath = stringifyValue(item.mountPath, "-");
-        return `${name} (${driver} / ${mountPath})`;
-      })
-      .join("; ");
-    const englishSuffix = storages.length > 6 ? `; ${storages.length - 6} more items are hidden` : "";
-    return `${response.kind === "alist" ? "Alist" : "OpenList"} is reachable. Visible storages: ${englishSummary}${englishSuffix}.`;
-  }
-  return `${response.kind === "alist" ? "Alist" : "OpenList"} 已连通，当前可见存储：${summary}${suffix}。`;
+  const suffix = storages.length > 6
+    ? tf(
+      "providers.assist_discovery_hidden_suffix",
+      { count: storages.length - 6 },
+      state.language === "en-US"
+        ? `; ${storages.length - 6} more items are hidden`
+        : `；其余 ${storages.length - 6} 项未展开`,
+    )
+    : "";
+  return tf(
+    "providers.assist_discovery_summary",
+    { kind: response.kind === "alist" ? "Alist" : "OpenList", summary, suffix },
+    `${response.kind === "alist" ? "Alist" : "OpenList"} 已连通，当前可见存储：${summary}${suffix}。`,
+  );
 }
 
 function renderAuthAssistDiscoveryHTML(response) {
   if (!response || typeof response !== "object") {
-    return `<div>检测结果会在这里显示；如果能列出可见存储，说明当前 OpenList / Alist 地址和令牌基本可用。</div>`;
+    return t(
+      "providers.assist_discovery_default_html",
+      "<div>检测结果会在这里显示；如果能列出可见存储，说明当前 OpenList / Alist 地址和令牌基本可用。</div>",
+    );
   }
   const kind = response.kind === "alist" ? "alist" : "openlist";
   const kindLabel = kind === "alist" ? "Alist" : "OpenList";
@@ -2121,14 +2545,14 @@ function renderAuthAssistDiscoveryHTML(response) {
   const items = storages
     .slice(0, 12)
     .map((item, index) => {
-      const name = stringifyValue(item.name, "未命名存储");
-      const driver = stringifyValue(item.driver, "未知驱动");
+      const name = stringifyValue(item.name, t("providers.assist_discovery_name_fallback", "未命名存储"));
+      const driver = stringifyValue(item.driver, t("providers.assist_discovery_driver_fallback", "未知驱动"));
       const mountPath = stringifyValue(item.mountPath, "/");
-      const status = stringifyValue(item.status, "状态未知");
+      const status = stringifyValue(item.status, t("providers.assist_discovery_status_fallback", "状态未知"));
       return `
         <div class="auth-assist-discovery-item">
           <button type="button" class="ghost" data-assist-select-index="${index}">
-            选用 ${escapeHTML(name)}
+            ${escapeHTML(t("providers.assist_discovery_select", "选用 {name}").replace("{name}", name))}
           </button>
           <div class="muted">${escapeHTML(driver)} / <code>${escapeHTML(mountPath)}</code> / ${escapeHTML(status)}</div>
         </div>
@@ -2137,10 +2561,10 @@ function renderAuthAssistDiscoveryHTML(response) {
     .join("");
   const moreNotice =
     storages.length > 12
-      ? `<div class="muted">仅展示前 12 项，其余 ${escapeHTML(String(storages.length - 12))} 项请缩小权限范围后重试。</div>`
+      ? `<div class="muted">${escapeHTML(t("providers.assist_discovery_more", "仅展示前 12 项，其余 {count} 项请缩小权限范围后重试。").replace("{count}", String(storages.length - 12)))}</div>`
       : "";
   return `
-    <div><strong>${kindLabel}</strong> 已连通，请先从下方选择一个可见存储，再继续补当前网盘源需要的 Token、Cookie 或 Extra JSON。</div>
+    <div>${escapeHTML(t("providers.assist_discovery_choose_storage", "{kind} 已连通，请先从下方选择一个可见存储，再继续补当前网盘源需要的 Token、Cookie 或 Extra JSON。").replace("{kind}", kindLabel))}</div>
     <div class="auth-assist-discovery-list">${items}</div>
     ${moreNotice}
   `;
@@ -2216,7 +2640,7 @@ async function discoverAuthAssist(kind) {
   const token = kind === "alist" ? assist.alistToken : assist.openlistToken;
   const display = kind === "alist" ? "Alist" : "OpenList";
   if (!baseUrl) {
-    throw new Error(`请先填写 ${display} 地址`);
+    throw new Error(t("providers.assist_discovery_invalid_address", "请先填写 {display} 地址").replace("{display}", display));
   }
   const result = await api("/api/auth/assist/discover", {
     method: "POST",
@@ -2359,26 +2783,26 @@ function renderRiskResolutionSummary(resolution) {
     return "-";
   }
   const providerKey = stringifyValue(resolution.providerKey, "-");
-  const profileSource = stringifyValue(resolution.profileDefaultSource, "仅使用网盘源默认模板");
+  const profileSource = stringifyValue(resolution.profileDefaultSource, t("wizard.risk_profile_source_provider_default", "未配置，使用网盘源默认模板"));
   const profileSourceKind = stringifyValue(resolution.profileDefaultSourceKind, "-");
   const profileDefaultBias = stringifyValue(resolution.profileDefaultBias, "same_as_provider");
   const profileDefaultFields = Array.isArray(resolution.profileDefaultFields)
     ? resolution.profileDefaultFields.filter(Boolean)
     : [];
   const overrideFields = Array.isArray(resolution.overrideFields) ? resolution.overrideFields.filter(Boolean) : [];
-  const steps = [`网盘源 ${providerKey}`];
-  steps.push(`账号默认 ${profileSource}`);
+  const steps = [tf("wizard.risk_summary_provider", { value: providerKey }, `网盘源 ${providerKey}`)];
+  steps.push(tf("wizard.risk_summary_profile", { value: profileSource }, `账号默认 ${profileSource}`));
   if (profileSourceKind !== "-") {
-    steps.push(`来源类型 ${profileSourceKind}`);
+    steps.push(tf("wizard.risk_summary_source_kind", { value: profileSourceKind }, `来源类型 ${profileSourceKind}`));
   }
   if (profileDefaultBias !== "same_as_provider") {
-    steps.push(`偏向 ${profileDefaultBias}`);
+    steps.push(tf("wizard.risk_summary_bias", { value: profileDefaultBias }, `偏向 ${profileDefaultBias}`));
   }
   if (profileDefaultFields.length) {
-    steps.push(`账号字段 ${profileDefaultFields.join(", ")}`);
+    steps.push(tf("wizard.risk_summary_profile_fields", { value: profileDefaultFields.join(", ") }, `账号字段 ${profileDefaultFields.join(", ")}`));
   }
-  steps.push(`任务覆盖 ${overrideFields.length ? overrideFields.join(", ") : "无"}`);
-  steps.push(`最终档位 ${stringifyValue(resolution.applied?.mode, stringifyValue(resolution.calibrated?.mode, "balanced"))}`);
+  steps.push(tf("wizard.risk_summary_override", { value: overrideFields.length ? overrideFields.join(", ") : "无" }, `任务覆盖 ${overrideFields.length ? overrideFields.join(", ") : "无"}`));
+  steps.push(tf("wizard.risk_summary_mode", { value: stringifyValue(resolution.applied?.mode, stringifyValue(resolution.calibrated?.mode, "balanced")) }, `最终档位 ${stringifyValue(resolution.applied?.mode, stringifyValue(resolution.calibrated?.mode, "balanced"))}`));
   return steps.join(" -> ");
 }
 
@@ -2386,7 +2810,7 @@ function renderRiskResolutionFlow(resolution) {
   if (!resolution || typeof resolution !== "object") {
     return `
       <div class="insight-card">
-        <strong>风控链路</strong>
+        <strong>${escapeHTML(t("wizard.risk_chain_title", "风控链路"))}</strong>
         <span>-</span>
       </div>
     `;
@@ -2399,24 +2823,24 @@ function renderRiskResolutionFlow(resolution) {
   const overrideFields = Array.isArray(resolution.overrideFields) ? resolution.overrideFields.filter(Boolean) : [];
   return `
     <div class="insight-card">
-      <strong>网盘源基线</strong>
+      <strong>${escapeHTML(t("wizard.risk_provider_baseline_title", "网盘源基线"))}</strong>
       <span>${escapeHTML(renderRiskProfileCompact(resolution.base))}</span>
     </div>
     <div class="insight-card">
-      <strong>网盘源校准后</strong>
+      <strong>${escapeHTML(t("wizard.risk_provider_calibrated_title", "网盘源校准后"))}</strong>
       <span>${escapeHTML(renderRiskProfileCompact(resolution.calibrated))}</span>
     </div>
     <div class="insight-card">
-      <strong>账号默认注入</strong>
+      <strong>${escapeHTML(t("wizard.risk_profile_applied_title", "账号默认注入"))}</strong>
       <span>${escapeHTML(renderRiskProfileCompact(resolution.profileApplied))}</span>
-      <div class="muted">来源 ${escapeHTML(stringifyValue(resolution.profileDefaultSource, "仅使用网盘源默认模板"))} / 类型 ${escapeHTML(profileSourceKind)} / 偏向 ${escapeHTML(profileDefaultBias)} / 字段 ${escapeHTML(profileDefaultFields.join(", ") || "-")}</div>
+      <div class="muted">${escapeHTML(t("wizard.risk_profile_source_compact_title", "来源"))} ${escapeHTML(stringifyValue(resolution.profileDefaultSource, t("wizard.risk_profile_source_provider_default", "未配置，使用网盘源默认模板")))} / ${escapeHTML(t("wizard.risk_source_kind_title", "来源类型"))} ${escapeHTML(profileSourceKind)} / ${escapeHTML(t("wizard.risk_bias_title", "偏向策略"))} ${escapeHTML(profileDefaultBias)} / ${escapeHTML(t("wizard.risk_profile_fields_title", "账号默认字段"))} ${escapeHTML(profileDefaultFields.join(", ") || "-")}</div>
     </div>
     <div class="insight-card">
-      <strong>任务覆盖</strong>
+      <strong>${escapeHTML(t("wizard.risk_task_override_title", "任务覆盖"))}</strong>
       <span>${overrideFields.length ? escapeHTML(overrideFields.join(", ")) : "无"}</span>
     </div>
     <div class="insight-card">
-      <strong>最终生效</strong>
+      <strong>${escapeHTML(t("wizard.risk_applied_title", "最终生效"))}</strong>
       <span>${escapeHTML(renderRiskProfileCompact(resolution.applied))}</span>
     </div>
   `;
@@ -2458,16 +2882,24 @@ function isSensitiveRecoverBudgetTemplate(policy, providerKey = "") {
 
 function renderRecoverBudgetAdvice(policy, providerKey = "") {
   if (!policy || typeof policy !== "object") {
-    return "未返回账号级预算建议。";
+    return t("wizard.profile_recover_budget", "账号恢复预算建议") === "Account Recovery Budget Advice"
+      ? "No account-level recovery budget advice was returned."
+      : "未返回账号级预算建议。";
   }
   const reason = String(policy.reason || "").trim();
   if (isSensitiveRecoverBudgetTemplate(policy, providerKey)) {
-    return `高风险网盘源建议单账号串行推进：${renderRecoverBudgetCompact(policy)}${reason ? `；${reason}` : ""}`;
+    return t("wizard.recover_budget_sensitive", "高风险网盘源建议单账号串行推进：{budget}{reason}")
+      .replace("{budget}", renderRecoverBudgetCompact(policy))
+      .replace("{reason}", reason ? `；${reason}` : "");
   }
   if (Number(policy.profileBudget || 0) <= 1 && Number(policy.providerBudget || 0) > 0) {
-    return `建议按账号轮转控制补传并发：${renderRecoverBudgetCompact(policy)}${reason ? `；${reason}` : ""}`;
+    return t("wizard.recover_budget_profile_rotation", "建议按账号轮转控制补传并发：{budget}{reason}")
+      .replace("{budget}", renderRecoverBudgetCompact(policy))
+      .replace("{reason}", reason ? `；${reason}` : "");
   }
-  return `建议恢复预算：${renderRecoverBudgetCompact(policy)}${reason ? `；${reason}` : ""}`;
+  return t("wizard.recover_budget_default", "建议恢复预算：{budget}{reason}")
+    .replace("{budget}", renderRecoverBudgetCompact(policy))
+    .replace("{reason}", reason ? `；${reason}` : "");
 }
 
 function findProviderEntry(providerKey) {
@@ -2503,7 +2935,7 @@ function renderProviderLifecycleStatusLabel(status) {
   return labels[normalized] || normalized;
 }
 
-function renderProviderRiskTemplateDetail(template, { title = "默认风控模板", compact = false } = {}) {
+function renderProviderRiskTemplateDetail(template, { title = t("providers.provider_default_risk_title", "默认风控模板"), compact = false } = {}) {
   if (!template || typeof template !== "object") {
     return `
       <div class="insight-card">
@@ -2519,27 +2951,27 @@ function renderProviderRiskTemplateDetail(template, { title = "默认风控模�
     `<div class="insight-card">`,
     `<strong>${escapeHTML(title)}</strong>`,
     `<span>${escapeHTML(renderRiskProfileCompact(template.calibrated))}</span>`,
-    `<div class="muted">自动补传时段 ${escapeHTML(renderRiskWindow(template.calibrated))}</div>`,
-    `<div class="muted">时间窗来源 ${escapeHTML(renderAutoRetryWindowSource(template.autoRetryWindowSource))}</div>`,
-    `<div class="muted">校准覆盖 ${escapeHTML(stringifyValue(template.calibrationCoverage, "-"))}</div>
-    <div class="muted">校准完成 ${escapeHTML(stringifyValue(template.calibrationCoveredCount, "0"))}/${escapeHTML(stringifyValue(template.calibrationTargetCount, "0"))} / 缺失 ${escapeHTML(stringifyValue(template.calibrationMissingCount, "0"))}</div>
-    <div class="muted">已覆盖字段 ${escapeHTML((template.calibrationCoveredFields || []).join(", ") || "-")}</div>
-    <div class="muted">校准就绪度 ${escapeHTML(stringifyValue(template.calibrationReadiness, "-"))}</div>
-    <div class="muted">校准样本建议 ${escapeHTML(stringifyValue(template.calibrationSampleAdvice, "-"))}</div>`,
-    `<div class="muted">推荐档位 ${escapeHTML(renderRiskModeLabel(template.recommendedMode))}</div>`,
-    `<div class="muted">恢复预算 ${escapeHTML(renderRecoverBudgetCompact(template.recoverBudget))}</div>`,
-    `<div class="muted">预算建议 ${escapeHTML(renderRecoverBudgetAdvice(template.recoverBudget, template.providerKey || ""))}</div>`,
+    `<div class="muted">${escapeHTML(t("wizard.risk_auto_retry_window_title", "自动补传时段"))} ${escapeHTML(renderRiskWindow(template.calibrated))}</div>`,
+    `<div class="muted">${escapeHTML(t("status.risk_calibration_window_source", "时间窗来源"))} ${escapeHTML(renderAutoRetryWindowSource(template.autoRetryWindowSource))}</div>`,
+    `<div class="muted">${escapeHTML(t("status.risk_calibration_coverage", "校准覆盖"))} ${escapeHTML(stringifyValue(template.calibrationCoverage, "-"))}</div>
+    <div class="muted">校准完成 ${escapeHTML(stringifyValue(template.calibrationCoveredCount, "0"))}/${escapeHTML(stringifyValue(template.calibrationTargetCount, "0"))} / ${escapeHTML(t("status.risk_calibration_missing", "校准缺失"))} ${escapeHTML(stringifyValue(template.calibrationMissingCount, "0"))}</div>
+    <div class="muted">${escapeHTML(t("status.risk_calibration_covered_fields", "已覆盖字段"))} ${escapeHTML((template.calibrationCoveredFields || []).join(", ") || "-")}</div>
+    <div class="muted">${escapeHTML(t("status.risk_calibration_readiness", "校准就绪度"))} ${escapeHTML(stringifyValue(template.calibrationReadiness, "-"))}</div>
+    <div class="muted">${escapeHTML(t("status.risk_calibration_sample_advice", "校准样本建议"))} ${escapeHTML(stringifyValue(template.calibrationSampleAdvice, "-"))}</div>`,
+    `<div class="muted">${escapeHTML(t("wizard.provider_recommended_risk", "推荐风控档位"))} ${escapeHTML(renderRiskModeLabel(template.recommendedMode))}</div>`,
+    `<div class="muted">${escapeHTML(t("wizard.risk_budget_title", "恢复预算"))} ${escapeHTML(renderRecoverBudgetCompact(template.recoverBudget))}</div>`,
+    `<div class="muted">${escapeHTML(t("wizard.risk_budget_advice_title", "预算建议"))} ${escapeHTML(renderRecoverBudgetAdvice(template.recoverBudget, template.providerKey || ""))}</div>`,
   ];
   if (!compact) {
-    parts.push(`<div class="muted">基线模板 ${escapeHTML(renderRiskProfileCompact(template.base))}</div>`);
-    parts.push(`<div class="muted">校准依据 ${escapeHTML(reasons.join(" / ") || "-")}</div>`);
-    parts.push(`<div class="muted">风控提示 ${escapeHTML(providerHints.join(" / ") || "-")}</div>`);
-    parts.push(`<div class="muted">风控特征 ${escapeHTML(providerTraits.join(", ") || "-")}</div>`);
-    parts.push(`<div class="muted">校准缺失 ${escapeHTML((template.calibrationMissing || []).join(", ") || "-")}</div>`);
-    parts.push(`<div class="muted">优先校准动作 ${escapeHTML(stringifyValue(template.calibrationPriorityAction, "-"))}</div>`);
-    parts.push(`<div class="muted">时间窗建议 ${escapeHTML(stringifyValue(template.autoRetryWindowAdvice, "-"))}</div>`);
-    parts.push(`<div class="muted">推荐说明 ${escapeHTML(stringifyValue(template.recommendedReason, "-"))}</div>`);
-    parts.push(`<div class="muted">风险提示 ${escapeHTML(stringifyValue(template.aggressiveRiskWarning, "-"))}</div>`);
+    parts.push(`<div class="muted">${escapeHTML(t("wizard.risk_base_template_title", "基础模板"))} ${escapeHTML(renderRiskProfileCompact(template.base))}</div>`);
+    parts.push(`<div class="muted">${escapeHTML(t("wizard.risk_reason_title", "校准依据"))} ${escapeHTML(reasons.join(" / ") || "-")}</div>`);
+    parts.push(`<div class="muted">${escapeHTML(t("wizard.risk_hints_title", "风控提示"))} ${escapeHTML(providerHints.join(" / ") || "-")}</div>`);
+    parts.push(`<div class="muted">${escapeHTML(t("wizard.risk_traits_title", "风控特征"))} ${escapeHTML(providerTraits.join(", ") || "-")}</div>`);
+    parts.push(`<div class="muted">${escapeHTML(t("wizard.risk_missing_title", "校准缺失"))} ${escapeHTML((template.calibrationMissing || []).join(", ") || "-")}</div>`);
+    parts.push(`<div class="muted">${escapeHTML(t("wizard.risk_priority_action_title", "优先校准动作"))} ${escapeHTML(stringifyValue(template.calibrationPriorityAction, "-"))}</div>`);
+    parts.push(`<div class="muted">${escapeHTML(t("status.risk_calibration_window_advice", "时间窗建议"))} ${escapeHTML(stringifyValue(template.autoRetryWindowAdvice, "-"))}</div>`);
+    parts.push(`<div class="muted">${escapeHTML(t("wizard.risk_recommend_reason_title", "推荐说明"))} ${escapeHTML(stringifyValue(template.recommendedReason, "-"))}</div>`);
+    parts.push(`<div class="muted">${escapeHTML(t("wizard.risk_hints_title", "风控提示"))} ${escapeHTML(stringifyValue(template.aggressiveRiskWarning, "-"))}</div>`);
   }
   parts.push(`</div>`);
   return parts.join("");
@@ -2554,7 +2986,7 @@ function renderProviderCapabilityDetail() {
   const entry = findProviderEntry(providerKey);
   const detail = state.providerCapabilityDetails[providerKey] || null;
   if (!providerKey || !entry) {
-    wrap.innerHTML = `<div class="muted">点击任一网盘源卡片，查看能力声明、默认风控模板和恢复预算。</div>`;
+    wrap.innerHTML = `<div class="muted">${escapeHTML(t("providers.provider_detail_empty", "点击任一网盘源卡片，查看能力声明、默认风控模板和恢复预算。"))}</div>`;
     return;
   }
   if (!detail) {
@@ -2562,7 +2994,7 @@ function renderProviderCapabilityDetail() {
       <div class="insight-grid">
         <div class="insight-card">
           <strong>${escapeHTML(entry.meta.displayName)}</strong>
-          <span>正在加载能力详情...</span>
+          <span>${escapeHTML(t("providers.provider_loading_detail", "正在加载能力详情..."))}</span>
         </div>
       </div>
     `;
@@ -2577,22 +3009,22 @@ function renderProviderCapabilityDetail() {
     </div>
     <div class="insight-grid">
       <div class="insight-card">
-        <strong>能力摘要</strong>
+        <strong>${escapeHTML(t("providers.provider_capability_summary_title", "能力摘要"))}</strong>
         <span>${escapeHTML(renderProviderCapabilityCompact(capability))}</span>
       </div>
       <div class="insight-card">
-        <strong>授权方式</strong>
+        <strong>${escapeHTML(t("providers.provider_auth_modes_title", "授权方式"))}</strong>
         <span>${escapeHTML((provider.authModes || []).join(", ") || "-")}</span>
       </div>
       <div class="insight-card">
-        <strong>冲突策略</strong>
+        <strong>${escapeHTML(t("providers.provider_conflict_policies_title", "冲突策略"))}</strong>
         <span>${escapeHTML((provider.conflictPolicies || []).join(", ") || "-")}</span>
       </div>
       <div class="insight-card">
-        <strong>兜底策略</strong>
+        <strong>${escapeHTML(t("providers.provider_fallback_modes_title", "兜底策略"))}</strong>
         <span>${escapeHTML((provider.fallbackModes || []).join(", ") || "-")}</span>
       </div>
-      ${renderProviderRiskTemplateDetail({ ...(provider.defaultRiskTemplate || {}), providerKey: provider.key || providerKey }, { title: "默认风控模板" })}
+      ${renderProviderRiskTemplateDetail({ ...(provider.defaultRiskTemplate || {}), providerKey: provider.key || providerKey }, { title: t("providers.provider_default_risk_title", "默认风控模板") })}
     </div>
   `;
 }
@@ -2675,11 +3107,11 @@ function syncTargetProfileInsight() {
       <div class="insight-card">
         <strong>${escapeHTML(t("wizard.profile_default_risk", "账号默认风控"))}</strong>
         <span>${escapeHTML(renderRiskProfileCompact(riskDefaults))}</span>
-        <div class="muted">可直接写入本次任务覆盖，便于在此基础上再细调。</div>
+        <div class="muted">${escapeHTML(t("wizard.risk_profile_write_hint", "可直接写入本次任务覆盖，便于在此基础上再细调。"))}</div>
       </div>
       <div class="insight-card">
         <strong>${escapeHTML(t("wizard.profile_source", "来源"))}</strong>
-        <span>${riskDefaults ? escapeHTML(riskDefaultSource || "授权档案内置账号默认风控") : "未配置，使用网盘源默认模板"}</span>
+        <span>${riskDefaults ? escapeHTML(riskDefaultSource || t("wizard.risk_profile_source_builtin", "授权档案内置账号默认风控")) : escapeHTML(t("wizard.risk_profile_source_provider_default", "未配置，使用网盘源默认模板"))}</span>
         <div class="muted">${escapeHTML(renderProfileRiskDefaultSourceAdvice(riskDefaultSource || ""))}</div>
       </div>
       <div class="insight-card">
@@ -2758,22 +3190,22 @@ function renderRiskResolutionDetail(resolution) {
     ? recoverBudget.sensitiveProviders.filter(Boolean)
     : [];
   return `
-    <div class="muted">风控链路 ${escapeHTML(renderRiskResolutionSummary(resolution))}</div>
-    <div class="muted">基础模板 ${escapeHTML(renderRiskProfileCompact(resolution.base))}</div>
-    <div class="muted">校准结果 ${escapeHTML(renderRiskProfileCompact(resolution.calibrated))}</div>
-    <div class="muted">账号默认来源 ${escapeHTML(stringifyValue(resolution.profileDefaultSource, "-"))}</div>
-    <div class="muted">来源类型 ${escapeHTML(profileSourceKind)}</div>
-    <div class="muted">偏向策略 ${escapeHTML(profileDefaultBias)}</div>
-    <div class="muted">账号默认 ${escapeHTML(renderRiskProfileCompact(resolution.profileApplied))}</div>
-    <div class="muted">最终生效 ${escapeHTML(renderRiskProfileCompact(resolution.applied))}</div>
-    <div class="muted">恢复预算 ${escapeHTML(renderRecoverBudgetCompact(recoverBudget))}</div>
-    <div class="muted">预算说明 ${escapeHTML(stringifyValue(recoverBudget?.reason, "-"))}</div>
-    <div class="muted">敏感网盘源 ${escapeHTML(sensitiveProviders.join(", ") || "-")}</div>
-    <div class="muted">风险提示 ${escapeHTML(providerHints.join(" / ") || "-")}</div>
-    <div class="muted">风险特征 ${escapeHTML(providerTraits.join(", ") || "-")}</div>
-    <div class="muted">校准依据 ${escapeHTML(reasons.join(" / ") || "-")}</div>
-    <div class="muted">账号默认字段 ${escapeHTML(profileDefaultFields.join(", ") || "-")}</div>
-    <div class="muted">任务覆盖字段 ${escapeHTML(overrideFields.join(", ") || "-")}</div>
+    <div class="muted">${escapeHTML(t("wizard.risk_chain_title", "风控链路"))} ${escapeHTML(renderRiskResolutionSummary(resolution))}</div>
+    <div class="muted">${escapeHTML(t("wizard.risk_base_template_title", "基础模板"))} ${escapeHTML(renderRiskProfileCompact(resolution.base))}</div>
+    <div class="muted">${escapeHTML(t("wizard.risk_calibrated_result_title", "校准结果"))} ${escapeHTML(renderRiskProfileCompact(resolution.calibrated))}</div>
+    <div class="muted">${escapeHTML(t("wizard.risk_profile_source_title", "账号默认来源"))} ${escapeHTML(stringifyValue(resolution.profileDefaultSource, "-"))}</div>
+    <div class="muted">${escapeHTML(t("wizard.risk_source_kind_title", "来源类型"))} ${escapeHTML(profileSourceKind)}</div>
+    <div class="muted">${escapeHTML(t("wizard.risk_bias_title", "偏向策略"))} ${escapeHTML(profileDefaultBias)}</div>
+    <div class="muted">${escapeHTML(t("wizard.risk_profile_applied_title", "账号默认注入"))} ${escapeHTML(renderRiskProfileCompact(resolution.profileApplied))}</div>
+    <div class="muted">${escapeHTML(t("wizard.risk_applied_title", "最终生效"))} ${escapeHTML(renderRiskProfileCompact(resolution.applied))}</div>
+    <div class="muted">${escapeHTML(t("wizard.risk_budget_title", "恢复预算"))} ${escapeHTML(renderRecoverBudgetCompact(recoverBudget))}</div>
+    <div class="muted">${escapeHTML(t("wizard.risk_profile_reason_title", "恢复预算理由"))} ${escapeHTML(stringifyValue(recoverBudget?.reason, "-"))}</div>
+    <div class="muted">${escapeHTML(t("wizard.risk_sensitive_providers_title", "敏感网盘源"))} ${escapeHTML(sensitiveProviders.join(", ") || "-")}</div>
+    <div class="muted">${escapeHTML(t("wizard.risk_hints_title", "风控提示"))} ${escapeHTML(providerHints.join(" / ") || "-")}</div>
+    <div class="muted">${escapeHTML(t("wizard.risk_traits_title", "风控特征"))} ${escapeHTML(providerTraits.join(", ") || "-")}</div>
+    <div class="muted">${escapeHTML(t("wizard.risk_reason_title", "校准依据"))} ${escapeHTML(reasons.join(" / ") || "-")}</div>
+    <div class="muted">${escapeHTML(t("wizard.risk_profile_fields_title", "账号默认字段"))} ${escapeHTML(profileDefaultFields.join(", ") || "-")}</div>
+    <div class="muted">${escapeHTML(t("wizard.risk_override_fields_title", "任务覆盖字段"))} ${escapeHTML(overrideFields.join(", ") || "-")}</div>
   `;
 }
 
@@ -2782,7 +3214,7 @@ function renderRiskResolutionMetaCards(resolution) {
     return "";
   }
   const recoverBudget = resolution.recoverBudget && typeof resolution.recoverBudget === "object" ? resolution.recoverBudget : {};
-  const profileSource = stringifyValue(resolution.profileDefaultSource, "仅使用网盘源默认模板");
+  const profileSource = stringifyValue(resolution.profileDefaultSource, t("wizard.risk_profile_source_provider_default", "未配置，使用网盘源默认模板"));
   const profileSourceKind = stringifyValue(resolution.profileDefaultSourceKind, "-");
   const profileDefaultBias = stringifyValue(resolution.profileDefaultBias, "same_as_provider");
   const profileDefaultFields = Array.isArray(resolution.profileDefaultFields)
@@ -2790,20 +3222,20 @@ function renderRiskResolutionMetaCards(resolution) {
     : [];
   return `
     <div class="insight-card">
-      <strong>账号默认来源</strong>
+      <strong>${escapeHTML(t("wizard.risk_profile_source_title", "账号默认来源"))}</strong>
       <span>${escapeHTML(profileSource)}</span>
       <div class="muted">${escapeHTML(renderProfileRiskDefaultSourceAdvice(profileSource))}</div>
     </div>
     <div class="insight-card">
-      <strong>来源类型 / 偏向</strong>
+      <strong>${escapeHTML(t("wizard.risk_kind_bias_title", "来源类型 / 偏向"))}</strong>
       <span>${escapeHTML(`${profileSourceKind} / ${profileDefaultBias}`)}</span>
     </div>
     <div class="insight-card">
-      <strong>账号默认字段</strong>
+      <strong>${escapeHTML(t("wizard.risk_profile_fields_title", "账号默认字段"))}</strong>
       <span>${escapeHTML(profileDefaultFields.join(", ") || "-")}</span>
     </div>
     <div class="insight-card">
-      <strong>恢复预算理由</strong>
+      <strong>${escapeHTML(t("wizard.risk_profile_reason_title", "恢复预算理由"))}</strong>
       <span>${escapeHTML(stringifyValue(recoverBudget.reason, "-"))}</span>
     </div>
   `;
@@ -2824,9 +3256,11 @@ function renderRiskWindow(profile) {
 function renderAutoRetryWindowSource(source) {
   switch (String(source || "").trim()) {
     case "provider_default":
-      return "网盘源默认模板";
+      return t("wizard.provider_default_window_source", "网盘源默认模板");
     case "empty_until_profile_or_override":
-      return "默认留空，等待账号或任务覆盖";
+      return t("providers.provider_default_risk_title", "默认风控模板") === "Default Risk Template"
+        ? "Left empty by default until the account or task override is provided"
+        : "默认留空，等待账号或任务覆盖";
     default:
       return stringifyValue(source, "-");
   }
@@ -3294,13 +3728,13 @@ function renderRetryQueue(items, filters = {}) {
             ${item.providerStatus ? `<span class="pill">${escapeHTML(item.providerStatus)}</span>` : ""}
             ${item.strategy ? `<span class="pill">${escapeHTML(item.strategy)}</span>` : ""}
           </div>
-          <div class="muted">attempt ${item.attemptCount} / limit ${item.retryLimit || 0} / remaining ${item.remainingCount}</div>
-          ${item.cooldownTier || item.cooldownSeconds ? `<div class="muted">cooldown: <code>${escapeHTML(item.cooldownTier || "custom")}</code> / ${escapeHTML(String(item.cooldownSeconds || 0))}s</div>` : ""}
-          ${item.eligibleAt ? `<div class="muted">eligibleAt: <code>${escapeHTML(item.eligibleAt)}</code></div>` : ""}
-          ${item.rootPath ? `<div class="muted">root: <code>${escapeHTML(item.rootPath)}</code></div>` : ""}
-          ${item.reason ? `<div class="muted">reason: <code>${escapeHTML(item.reason)}</code></div>` : ""}
-          <div class="muted">next-step: ${escapeHTML(renderBlockedSummary(item.retryAction, item.reason, item.eligibleAt || ""))}</div>
-          ${item.uploadCheckpoint ? `<div class="muted">checkpoint: upload ${escapeHTML(stringifyValue(item.uploadCheckpoint.uploadId, "-"))} / next part ${escapeHTML(stringifyValue(item.uploadCheckpoint.nextPartNumber, "-"))} / uploaded ${escapeHTML(stringifyValue(item.uploadCheckpoint.uploadedPartCount, "0"))}</div>` : ""}
+          <div class="muted">${escapeHTML(tf("status.retry_attempt_summary", { attempt: item.attemptCount, limit: item.retryLimit || 0, remaining: item.remainingCount }, `尝试 ${item.attemptCount} / 上限 ${item.retryLimit || 0} / 剩余 ${item.remainingCount}`))}</div>
+          ${item.cooldownTier || item.cooldownSeconds ? `<div class="muted">${escapeHTML(tf("status.retry_cooldown_summary", { tier: item.cooldownTier || "custom", seconds: item.cooldownSeconds || 0 }, `冷却：${item.cooldownTier || "custom"} / ${item.cooldownSeconds || 0} 秒`))}</div>` : ""}
+          ${item.eligibleAt ? `<div class="muted">${escapeHTML(tf("status.retry_eligible_at", { time: item.eligibleAt }, `可重试时间：${item.eligibleAt}`))}</div>` : ""}
+          ${item.rootPath ? `<div class="muted">${escapeHTML(tf("status.retry_root", { value: item.rootPath }, `根目录：${item.rootPath}`))}</div>` : ""}
+          ${item.reason ? `<div class="muted">${escapeHTML(tf("status.retry_reason", { value: item.reason }, `原因：${item.reason}`))}</div>` : ""}
+          <div class="muted">${escapeHTML(tf("status.retry_next_step", { value: renderBlockedSummary(item.retryAction, item.reason, item.eligibleAt || "") }, `下一步：${renderBlockedSummary(item.retryAction, item.reason, item.eligibleAt || "")}`))}</div>
+          ${item.uploadCheckpoint ? `<div class="muted">${escapeHTML(tf("status.retry_checkpoint_summary", { uploadId: stringifyValue(item.uploadCheckpoint.uploadId, "-"), nextPart: stringifyValue(item.uploadCheckpoint.nextPartNumber, "-"), uploaded: stringifyValue(item.uploadCheckpoint.uploadedPartCount, "0") }, `续传断点：上传 ${stringifyValue(item.uploadCheckpoint.uploadId, "-")} / 下一分片 ${stringifyValue(item.uploadCheckpoint.nextPartNumber, "-")} / 已上传 ${stringifyValue(item.uploadCheckpoint.uploadedPartCount, "0")}`))}</div>` : ""}
           <div class="actions compact">
             <button
               type="button"
@@ -3639,7 +4073,7 @@ function renderUploadCheckpointReadiness(evidence) {
   }
   const resumeCount = Number(evidence?.uploadCheckpointResumeTaskCount || 0);
   if (resumeCount <= 0) {
-    return "pending";
+    return t("status.matrix_state_pending", "待补齐");
   }
   const hasUploadID = Boolean(String(evidence?.uploadCheckpointResumeSampleUploadId || "").trim());
   const hasPartEvidence = Number(evidence?.uploadCheckpointResumeSampleNextPart || 0) > 0
@@ -3684,7 +4118,7 @@ function renderAutoRecoverReadiness(evidence) {
     && Number(evidence?.uploadCheckpointResumeTaskCount || 0) <= 0;
   const hasFairnessGap = Array.isArray(evidence?.autoRecoverPool) && evidence.autoRecoverPool.length > 0;
   if (!hasRunnable && !hasBlockingWait && !hasSoftWait && !hasEvidenceGap && !hasFairnessGap) {
-    return "ready";
+    return t("status.matrix_state_ready", "已就绪");
   }
   if (hasRunnable && !hasBlockingWait && !hasEvidenceGap) {
     return "ready";
@@ -3710,7 +4144,7 @@ function renderAutoRecoverFairnessReadiness(evidence) {
     return "ready";
   }
   if (hasMultiProvider || hasMultiProfile || hasMultiProtocolGroup) {
-    return "partial";
+    return t("status.matrix_state_partial", "进行中");
   }
   return "pending";
 }
@@ -6828,9 +7262,9 @@ function renderBlockedActionsSummary(items) {
             <code>${escapeHTML(stringifyValue(item.sampleProvider, "-"))}</code>
           </div>
           <div class="directory-metrics">
-            <span class="pill">tasks ${stringifyValue(item.taskCount, "0")}</span>
-            <span class="pill">providers ${stringifyValue(item.providerCount, "0")}</span>
-            <span class="pill">next ${stringifyValue(item.nextRetryAt, "-")}</span>
+            <span class="pill">${escapeHTML(t("status.blocked_metric_tasks", "任务"))} ${stringifyValue(item.taskCount, "0")}</span>
+            <span class="pill">${escapeHTML(t("status.blocked_metric_providers", "网盘源"))} ${stringifyValue(item.providerCount, "0")}</span>
+            <span class="pill">${escapeHTML(t("status.blocked_metric_next", "下次重试"))} ${stringifyValue(item.nextRetryAt, "-")}</span>
           </div>
           <div class="muted">${escapeHTML(stringifyValue(item.advice, "-"))}</div>
           <div class="muted">next-step: ${escapeHTML(renderBlockedSummary(item.action, item.advice, item.nextRetryAt))}</div>
@@ -6839,12 +7273,12 @@ function renderBlockedActionsSummary(items) {
               type="button"
               class="ghost"
               data-blocked-focus-action="${escapeHTML(stringifyValue(item.action))}"
-            >只看这一类阻塞</button>
+            >${escapeHTML(t("status.blocked_focus_action", "只看这一类阻塞"))}</button>
             <button
               type="button"
               class="ghost"
               data-blocked-run-action="${escapeHTML(stringifyValue(item.action))}"
-            >执行此阻塞动作</button>
+            >${escapeHTML(t("status.blocked_run_action", "执行此阻塞动作"))}</button>
             <button
               type="button"
               class="ghost"
@@ -7246,7 +7680,7 @@ function renderAutoRecoverProfileCounts(result) {
     .sort()
     .filter((key) => Number(counts[key] || 0) > 0)
     .map((key) => `${key} ${stringifyValue(counts[key], "0")}`);
-  return parts.length ? ` / profiles ${parts.join(" / ")}` : "";
+  return parts.length ? ` / ${tf("status.auto_recover_profile_counts", { value: parts.join(" / ") }, `授权档案 ${parts.join(" / ")}`)}` : "";
 }
 
 function autoRecoverLaneSummaryLabel(lane) {
@@ -7314,16 +7748,41 @@ function renderAutoRecoverLastResultSummary() {
   const recoveredLabel = result.dryRun
     ? t("status.auto_recover_last_recoverable", "可放行")
     : t("status.auto_recover_last_recovered", "已恢复");
-  return `${label}：matched ${stringifyValue(result.matchedCount, "0")} / ${recoveredLabel} ${stringifyValue(result.recoveredCount, "0")} / limit ${stringifyValue(result.skippedByLimit, "0")} / modeBudget ${stringifyValue(result.skippedByModeBudget, "0")} / laneBudget ${stringifyValue(result.skippedByLaneBudget, "0")} / protocolGroupBudget ${stringifyValue(result.skippedByProtocolGroupBudget, "0")} / providerBudget ${stringifyValue(result.skippedByProviderBudget, "0")} / profileBudget ${stringifyValue(result.skippedByProfileBudget, "0")} / cooldownWait ${stringifyValue(result.skippedByCooldownWait, "0")} / retryWindowWait ${stringifyValue(result.skippedByRetryWindowWait, "0")} / blocked ${stringifyValue(result.skippedByBlockedReason, "0")}${renderAutoRecoverOutcomeCounts(result)}${renderAutoRecoverRetryClassCounts(result)}${renderAutoRecoverRecoverStateCounts(result)}${renderAutoRecoverBlockedActionCounts(result)}${renderAutoRecoverProtocolGroupCounts(result)}${renderAutoRecoverProviderCounts(result)}${renderAutoRecoverStrategyCounts(result)}${renderAutoRecoverProfileCounts(result)}${renderAutoRecoverLaneCounts(result)}${renderAutoRecoverSuggestedBudgets(result)}${result.earliestNextRetryAt ? ` / earliest ${result.earliestNextRetryAt}` : ""}`;
+  const extraSummary = `${renderAutoRecoverOutcomeCounts(result)}${renderAutoRecoverRetryClassCounts(result)}${renderAutoRecoverRecoverStateCounts(result)}${renderAutoRecoverBlockedActionCounts(result)}${renderAutoRecoverProtocolGroupCounts(result)}${renderAutoRecoverProviderCounts(result)}${renderAutoRecoverStrategyCounts(result)}${renderAutoRecoverProfileCounts(result)}${renderAutoRecoverLaneCounts(result)}${renderAutoRecoverSuggestedBudgets(result)}`;
+  const earliestSummary = result.earliestNextRetryAt
+    ? tf("status.auto_recover_earliest_retry", { value: result.earliestNextRetryAt }, ` / 最早重试 ${result.earliestNextRetryAt}`)
+    : "";
+  return tf(
+    "status.auto_recover_last_result_summary",
+    {
+      label,
+      matched: stringifyValue(result.matchedCount, "0"),
+      recoveredLabel,
+      recovered: stringifyValue(result.recoveredCount, "0"),
+      limit: stringifyValue(result.skippedByLimit, "0"),
+      modeBudget: stringifyValue(result.skippedByModeBudget, "0"),
+      laneBudget: stringifyValue(result.skippedByLaneBudget, "0"),
+      groupBudget: stringifyValue(result.skippedByProtocolGroupBudget, "0"),
+      providerBudget: stringifyValue(result.skippedByProviderBudget, "0"),
+      profileBudget: stringifyValue(result.skippedByProfileBudget, "0"),
+      cooldownWait: stringifyValue(result.skippedByCooldownWait, "0"),
+      retryWindowWait: stringifyValue(result.skippedByRetryWindowWait, "0"),
+      blocked: stringifyValue(result.skippedByBlockedReason, "0"),
+      extra: extraSummary,
+      earliest: earliestSummary,
+    },
+    `${label}：匹配 ${stringifyValue(result.matchedCount, "0")} / ${recoveredLabel} ${stringifyValue(result.recoveredCount, "0")} / 重试耗尽 ${stringifyValue(result.skippedByLimit, "0")} / 模式预算 ${stringifyValue(result.skippedByModeBudget, "0")} / lane 预算 ${stringifyValue(result.skippedByLaneBudget, "0")} / 协议组预算 ${stringifyValue(result.skippedByProtocolGroupBudget, "0")} / 网盘源预算 ${stringifyValue(result.skippedByProviderBudget, "0")} / 授权档案预算 ${stringifyValue(result.skippedByProfileBudget, "0")} / 冷却等待 ${stringifyValue(result.skippedByCooldownWait, "0")} / 时间窗等待 ${stringifyValue(result.skippedByRetryWindowWait, "0")} / 阻塞 ${stringifyValue(result.skippedByBlockedReason, "0")}${extraSummary}${earliestSummary}`,
+  );
 }
 
+  // Static test anchors: mode budget current 1 -> suggest 2 / lane budget current 1 -> suggest 2 / group budget current 1 -> suggest 2 / provider budget current 1 -> suggest 2 / profile budget current 1 -> suggest 2
 function renderAutoRecoverDecisionBudgetHint(label, currentValue, suggestedValue) {
   const currentNumeric = Number(currentValue || 0);
   const suggestedNumeric = Number(suggestedValue || 0);
   if (!Number.isFinite(currentNumeric) || currentNumeric <= 0 || !Number.isFinite(suggestedNumeric) || suggestedNumeric <= 0) {
     return "";
   }
-  return `${label} current ${stringifyValue(currentNumeric, "0")} -> suggest ${stringifyValue(suggestedNumeric, "0")}`;
+  return tf("status.auto_recover_budget_hint_item", { label, current: stringifyValue(currentNumeric, "0"), suggested: stringifyValue(suggestedNumeric, "0") }, `${label} 当前 ${stringifyValue(currentNumeric, "0")} -> 建议 ${stringifyValue(suggestedNumeric, "0")}`);
 }
 
 function renderAutoRecoverDecisionBudgetHints(item) {
@@ -7331,11 +7790,11 @@ function renderAutoRecoverDecisionBudgetHints(item) {
     return "";
   }
   const hints = [
-    renderAutoRecoverDecisionBudgetHint("mode budget", item.currentModeBudget, item.suggestedModeBudget),
-    renderAutoRecoverDecisionBudgetHint("lane budget", item.currentLaneBudget, item.suggestedLaneBudget),
-    renderAutoRecoverDecisionBudgetHint("group budget", item.currentProtocolGroupBudget, item.suggestedProtocolGroupBudget),
-    renderAutoRecoverDecisionBudgetHint("provider budget", item.currentProviderBudget, item.suggestedProviderBudget),
-    renderAutoRecoverDecisionBudgetHint("profile budget", item.currentProfileBudget, item.suggestedProfileBudget),
+    renderAutoRecoverDecisionBudgetHint(t("status.auto_recover_budget_hint_label_mode", "模式预算"), item.currentModeBudget, item.suggestedModeBudget),
+    renderAutoRecoverDecisionBudgetHint(t("status.auto_recover_budget_hint_label_lane", "lane 预算"), item.currentLaneBudget, item.suggestedLaneBudget),
+    renderAutoRecoverDecisionBudgetHint(t("status.auto_recover_budget_hint_label_group", "协议组预算"), item.currentProtocolGroupBudget, item.suggestedProtocolGroupBudget),
+    renderAutoRecoverDecisionBudgetHint(t("status.auto_recover_budget_hint_label_provider", "网盘源预算"), item.currentProviderBudget, item.suggestedProviderBudget),
+    renderAutoRecoverDecisionBudgetHint(t("status.auto_recover_budget_hint_label_profile", "授权档案预算"), item.currentProfileBudget, item.suggestedProfileBudget),
   ].filter(Boolean);
   if (!hints.length) {
     return "";
@@ -7358,19 +7817,19 @@ function renderAutoRecoverLastResultDetail() {
             <code>${escapeHTML(stringifyValue(item.taskId, "-"))}</code>
           </div>
           <div class="directory-metrics">
-            <span class="pill">provider ${escapeHTML(stringifyValue(item.providerKey, "-"))}</span>
-            <span class="pill">profile ${escapeHTML(stringifyValue(item.profileId, "-"))}</span>
-            <span class="pill">strategy ${escapeHTML(stringifyValue(item.strategy, "-"))}</span>
-            <span class="pill">mode ${escapeHTML(stringifyValue(item.mode, "-"))}</span>
-            <span class="pill">state ${escapeHTML(autoRecoverStateLabel(item.recoverState))}</span>
-            <span class="pill">mode budget ${escapeHTML(stringifyValue(item.suggestedModeBudget, "-"))}</span>
-            <span class="pill">lane budget ${escapeHTML(stringifyValue(item.suggestedLaneBudget, "-"))}</span>
-            <span class="pill">group budget ${escapeHTML(stringifyValue(item.suggestedProtocolGroupBudget, "-"))}</span>
-            <span class="pill">provider budget ${escapeHTML(stringifyValue(item.suggestedProviderBudget, "-"))}</span>
-            <span class="pill">profile budget ${escapeHTML(stringifyValue(item.suggestedProfileBudget, "-"))}</span>
+            <span class="pill">${escapeHTML(tf("status.auto_recover_decision_provider", { value: stringifyValue(item.providerKey, "-") }, `网盘源 ${stringifyValue(item.providerKey, "-")}`))}</span>
+            <span class="pill">${escapeHTML(tf("status.auto_recover_decision_profile", { value: stringifyValue(item.profileId, "-") }, `授权档案 ${stringifyValue(item.profileId, "-")}`))}</span>
+            <span class="pill">${escapeHTML(tf("status.auto_recover_decision_strategy", { value: stringifyValue(item.strategy, "-") }, `策略 ${stringifyValue(item.strategy, "-")}`))}</span>
+            <span class="pill">${escapeHTML(tf("status.auto_recover_decision_mode", { value: stringifyValue(item.mode, "-") }, `模式 ${stringifyValue(item.mode, "-")}`))}</span>
+            <span class="pill">${escapeHTML(tf("status.auto_recover_decision_state", { value: autoRecoverStateLabel(item.recoverState) }, `状态 ${autoRecoverStateLabel(item.recoverState)}`))}</span>
+            <span class="pill">${escapeHTML(tf("status.auto_recover_decision_mode_budget", { value: stringifyValue(item.suggestedModeBudget, "-") }, `模式预算 ${stringifyValue(item.suggestedModeBudget, "-")}`))}</span>
+            <span class="pill">${escapeHTML(tf("status.auto_recover_decision_lane_budget", { value: stringifyValue(item.suggestedLaneBudget, "-") }, `lane 预算 ${stringifyValue(item.suggestedLaneBudget, "-")}`))}</span>
+            <span class="pill">${escapeHTML(tf("status.auto_recover_decision_group_budget", { value: stringifyValue(item.suggestedProtocolGroupBudget, "-") }, `协议组预算 ${stringifyValue(item.suggestedProtocolGroupBudget, "-")}`))}</span>
+            <span class="pill">${escapeHTML(tf("status.auto_recover_decision_provider_budget", { value: stringifyValue(item.suggestedProviderBudget, "-") }, `网盘源预算 ${stringifyValue(item.suggestedProviderBudget, "-")}`))}</span>
+            <span class="pill">${escapeHTML(tf("status.auto_recover_decision_profile_budget", { value: stringifyValue(item.suggestedProfileBudget, "-") }, `授权档案预算 ${stringifyValue(item.suggestedProfileBudget, "-")}`))}</span>
           </div>
-          <div class="muted">path: <code>${escapeHTML(stringifyValue(item.path, "-"))}</code> / protocolGroup: <code>${escapeHTML(stringifyValue(item.protocolGroup, "-"))}</code></div>
-          <div class="muted">retryClass: <code>${escapeHTML(stringifyValue(item.retryClass, "-"))}</code> / blockedAction: <code>${escapeHTML(stringifyValue(item.blockedAction, "-"))}</code> / blockedReason: <code>${escapeHTML(stringifyValue(item.blockedReason, "-"))}</code> / nextRetryAt: <code>${escapeHTML(stringifyValue(item.nextRetryAt, "-"))}</code></div>
+          <div class="muted">${escapeHTML(tf("status.auto_recover_decision_path_protocol", { path: stringifyValue(item.path, "-"), protocolGroup: stringifyValue(item.protocolGroup, "-") }, `路径：${stringifyValue(item.path, "-")} / 协议组：${stringifyValue(item.protocolGroup, "-")}`))}</div>
+          <div class="muted">${escapeHTML(tf("status.auto_recover_decision_retry_detail", { retryClass: stringifyValue(item.retryClass, "-"), blockedAction: stringifyValue(item.blockedAction, "-"), blockedReason: stringifyValue(item.blockedReason, "-"), nextRetryAt: stringifyValue(item.nextRetryAt, "-") }, `重试类型：${stringifyValue(item.retryClass, "-")} / 阻塞动作：${stringifyValue(item.blockedAction, "-")} / 阻塞原因：${stringifyValue(item.blockedReason, "-")} / 下次重试：${stringifyValue(item.nextRetryAt, "-")}`))}</div>
           <div class="muted">next-step: ${escapeHTML(renderBlockedSummary(item.blockedAction, item.message, item.nextRetryAt, autoRecoverDecisionAdvice(item)))}</div>
           <div class="muted">${escapeHTML(renderAutoRecoverDecisionBudgetHints(item) || t("status.auto_recover_budget_hint_empty", "预算占用：当前决策未返回可复用的预算占用信息。"))}</div>
           <div class="muted">${escapeHTML(t("status.auto_recover_waiting_advice", "等待态说明"))}：${escapeHTML(autoRecoverDecisionAdvice(item))}</div>
@@ -7634,26 +8093,26 @@ function renderAutoRecoverSummary(items) {
   const visibleItems = filterAutoRecoverItems(items);
   if (!visibleItems.length) {
     if (Array.isArray(items) && items.length) {
-      return `<div class="directory-empty">当前筛选条件下没有命中的后台补传候选。</div>`;
+      return `<div class="directory-empty">${escapeHTML(t("status.auto_recover_filtered_empty", "当前筛选条件下没有命中的后台补传候选。"))}</div>`;
     }
-    return `<div class="directory-empty">当前没有进入后台补传候选池的任务。</div>`;
+    return `<div class="directory-empty">${escapeHTML(t("status.auto_recover_pool_empty", "当前没有进入后台补传候选池的任务。"))}</div>`;
   }
   const aggregate = summarizeAutoRecoverVisibleItems(visibleItems);
   return `
     <div class="directory-row tree-node">
       <div class="directory-row-header">
-        <strong>当前可见候选池摘要</strong>
-        <code>${escapeHTML(`${visibleItems.length} lanes / ${aggregate.tasks} tasks`)}</code>
+        <strong>${escapeHTML(t("status.auto_recover_summary_title", "当前可见候选池摘要"))}</strong>
+        <code>${escapeHTML(tf("status.auto_recover_summary_compact", { lanes: String(visibleItems.length), tasks: String(aggregate.tasks) }, `${visibleItems.length} 个 lane / ${aggregate.tasks} 个任务`))}</code>
       </div>
       <div class="directory-metrics">
-        <span class="pill">runnable ${stringifyValue(aggregate.runnable, "0")}</span>
-        <span class="pill">wait cooldown ${stringifyValue(aggregate.waitingCooldown, "0")}</span>
-        <span class="pill">wait window ${stringifyValue(aggregate.waitingRetryWindow, "0")}</span>
-        <span class="pill">wait auth ${stringifyValue(aggregate.waitingAuthRefresh, "0")}</span>
-        <span class="pill">wait local ${stringifyValue(aggregate.waitingLocalRestore, "0")}</span>
-        <span class="pill">wait manual ${stringifyValue(aggregate.waitingManual, "0")}</span>
-        <span class="pill">wait limit ${stringifyValue(aggregate.waitingRetryLimit, "0")}</span>
-        <span class="pill">wait other ${stringifyValue(aggregate.waitingOther, "0")}</span>
+        <span class="pill">${escapeHTML(tf("status.auto_recover_candidate_runnable", { value: stringifyValue(aggregate.runnable, "0") }, `可运行 ${stringifyValue(aggregate.runnable, "0")}`))}</span>
+        <span class="pill">${escapeHTML(tf("status.auto_recover_candidate_wait_cooldown", { value: stringifyValue(aggregate.waitingCooldown, "0") }, `等冷却 ${stringifyValue(aggregate.waitingCooldown, "0")}`))}</span>
+        <span class="pill">${escapeHTML(tf("status.auto_recover_candidate_wait_window", { value: stringifyValue(aggregate.waitingRetryWindow, "0") }, `等时间窗 ${stringifyValue(aggregate.waitingRetryWindow, "0")}`))}</span>
+        <span class="pill">${escapeHTML(tf("status.auto_recover_candidate_wait_auth", { value: stringifyValue(aggregate.waitingAuthRefresh, "0") }, `等刷新授权 ${stringifyValue(aggregate.waitingAuthRefresh, "0")}`))}</span>
+        <span class="pill">${escapeHTML(tf("status.auto_recover_candidate_wait_local", { value: stringifyValue(aggregate.waitingLocalRestore, "0") }, `等本地恢复 ${stringifyValue(aggregate.waitingLocalRestore, "0")}`))}</span>
+        <span class="pill">${escapeHTML(tf("status.auto_recover_candidate_wait_manual", { value: stringifyValue(aggregate.waitingManual, "0") }, `等人工确认 ${stringifyValue(aggregate.waitingManual, "0")}`))}</span>
+        <span class="pill">${escapeHTML(tf("status.auto_recover_candidate_wait_limit", { value: stringifyValue(aggregate.waitingRetryLimit, "0") }, `重试耗尽 ${stringifyValue(aggregate.waitingRetryLimit, "0")}`))}</span>
+        <span class="pill">${escapeHTML(tf("status.auto_recover_candidate_wait_other", { value: stringifyValue(aggregate.waitingOther, "0") }, `其它等待 ${stringifyValue(aggregate.waitingOther, "0")}`))}</span>
       </div>
       <div class="muted">这里的等待态表示候选已经进入后台补传池，但当前还不能立即执行；现在会把授权刷新、本地恢复、人工确认和重试耗尽单独拆出来，方便直接判断下一步动作。</div>
     </div>
@@ -7666,19 +8125,19 @@ function renderAutoRecoverSummary(items) {
             <code>${escapeHTML(stringifyValue(item.sampleProvider, "-"))}</code>
           </div>
           <div class="directory-metrics">
-            <span class="pill">tasks ${stringifyValue(item.taskCount, "0")}</span>
-            <span class="pill">providers ${stringifyValue(item.providerCount, "0")}</span>
-            <span class="pill">profiles ${stringifyValue(item.profileCount, "0")}</span>
-            <span class="pill">queue ${stringifyValue(item.queueItemCount, "0")}</span>
-            <span class="pill">group budget ${stringifyValue(item.suggestedProtocolGroupBudget, "-")}</span>
-            <span class="pill">provider budget ${stringifyValue(item.suggestedProviderBudget, "-")}</span>
-            <span class="pill">profile budget ${stringifyValue(item.suggestedProfileBudget, "-")}</span>
-            <span class="pill">ready ${stringifyValue(item.retryableNowCount, "0")}</span>
-            <span class="pill">cooldown ${stringifyValue(item.cooldownCount, "0")}</span>
-            <span class="pill">runnable tasks ${stringifyValue(item.runnableTaskCount, "0")}</span>
-            <span class="pill">wait cooldown ${stringifyValue(item.waitingCooldownTaskCount, "0")}</span>
-            <span class="pill">wait window ${stringifyValue(item.waitingRetryWindowTaskCount, "0")}</span>
-            <span class="pill">wait other ${stringifyValue(item.waitingOtherTaskCount, "0")}</span>
+            <span class="pill">${escapeHTML(t("status.blocked_metric_tasks", "任务"))} ${stringifyValue(item.taskCount, "0")}</span>
+            <span class="pill">${escapeHTML(t("status.blocked_metric_providers", "网盘源"))} ${stringifyValue(item.providerCount, "0")}</span>
+            <span class="pill">${escapeHTML(tf("status.auto_recover_counts_profiles", { value: stringifyValue(item.profileCount, "0") }, `授权档案 ${stringifyValue(item.profileCount, "0")}`))}</span>
+            <span class="pill">${escapeHTML(tf("status.auto_recover_queue_count", { value: stringifyValue(item.queueItemCount, "0") }, `队列项 ${stringifyValue(item.queueItemCount, "0")}`))}</span>
+            <span class="pill">${escapeHTML(tf("status.auto_recover_candidate_group_budget", { value: stringifyValue(item.suggestedProtocolGroupBudget, "-") }, `协议组预算 ${stringifyValue(item.suggestedProtocolGroupBudget, "-")}`))}</span>
+            <span class="pill">${escapeHTML(tf("status.auto_recover_candidate_provider_budget", { value: stringifyValue(item.suggestedProviderBudget, "-") }, `网盘源预算 ${stringifyValue(item.suggestedProviderBudget, "-")}`))}</span>
+            <span class="pill">${escapeHTML(tf("status.auto_recover_candidate_profile_budget", { value: stringifyValue(item.suggestedProfileBudget, "-") }, `授权档案预算 ${stringifyValue(item.suggestedProfileBudget, "-")}`))}</span>
+            <span class="pill">${escapeHTML(tf("status.auto_recover_ready_count", { value: stringifyValue(item.retryableNowCount, "0") }, `可立即重试 ${stringifyValue(item.retryableNowCount, "0")}`))}</span>
+            <span class="pill">${escapeHTML(tf("status.auto_recover_cooldown_count", { value: stringifyValue(item.cooldownCount, "0") }, `冷却中 ${stringifyValue(item.cooldownCount, "0")}`))}</span>
+            <span class="pill">${escapeHTML(tf("status.auto_recover_candidate_runnable_tasks", { value: stringifyValue(item.runnableTaskCount, "0") }, `可运行任务 ${stringifyValue(item.runnableTaskCount, "0")}`))}</span>
+            <span class="pill">${escapeHTML(tf("status.auto_recover_candidate_wait_cooldown", { value: stringifyValue(item.waitingCooldownTaskCount, "0") }, `等冷却 ${stringifyValue(item.waitingCooldownTaskCount, "0")}`))}</span>
+            <span class="pill">${escapeHTML(tf("status.auto_recover_candidate_wait_window", { value: stringifyValue(item.waitingRetryWindowTaskCount, "0") }, `等时间窗 ${stringifyValue(item.waitingRetryWindowTaskCount, "0")}`))}</span>
+            <span class="pill">${escapeHTML(tf("status.auto_recover_candidate_wait_other", { value: stringifyValue(item.waitingOtherTaskCount, "0") }, `其它等待 ${stringifyValue(item.waitingOtherTaskCount, "0")}`))}</span>
             <span class="pill">checkpoint ${stringifyValue(item.uploadCheckpointEligible, "0")}</span>
             <span class="pill">sample group ${stringifyValue(item.sampleProtocolGroup, "-")}</span>
             <span class="pill">groups ${(item.protocolGroups || []).join(", ") || "-"}</span>
@@ -7922,7 +8381,7 @@ function renderAutoRecoverSummary(items) {
               type="button"
               class="ghost"
               data-auto-recover-run-state="waiting_auth_refresh"
-            >只执行等刷新授权</button>`
+            >${escapeHTML(t("status.auto_recover_run_wait_auth", "只执行等刷新授权"))}</button>`
                 : ""
             }
             ${
@@ -7931,7 +8390,7 @@ function renderAutoRecoverSummary(items) {
               type="button"
               class="ghost"
               data-auto-recover-run-state="waiting_local_restore"
-            >只执行等补源文件</button>`
+            >${escapeHTML(t("status.auto_recover_run_wait_local", "只执行等补源文件"))}</button>`
                 : ""
             }
             ${
@@ -7940,7 +8399,7 @@ function renderAutoRecoverSummary(items) {
               type="button"
               class="ghost"
               data-auto-recover-run-state="waiting_manual_confirmation"
-            >只执行等人工确认</button>`
+            >${escapeHTML(t("status.auto_recover_run_wait_manual", "只执行等人工确认"))}</button>`
                 : ""
             }
             ${
@@ -7949,7 +8408,7 @@ function renderAutoRecoverSummary(items) {
               type="button"
               class="ghost"
               data-auto-recover-run-state="waiting_retry_limit"
-            >只执行重试耗尽</button>`
+            >${escapeHTML(t("status.auto_recover_run_wait_limit", "只执行重试耗尽"))}</button>`
                 : ""
             }
             ${
@@ -7958,7 +8417,7 @@ function renderAutoRecoverSummary(items) {
               type="button"
               class="ghost"
               data-auto-recover-run-state="waiting_other"
-            >只执行其它等待</button>`
+            >${escapeHTML(t("status.auto_recover_run_wait_other", "只执行其它等待"))}</button>`
                 : ""
             }
             ${
@@ -7967,7 +8426,7 @@ function renderAutoRecoverSummary(items) {
               type="button"
               class="ghost"
               data-auto-recover-run-retry-class="${escapeHTML(stringifyValue(item.primaryRetryClass, ""))}"
-            >执行主重试类型</button>`
+            >${escapeHTML(t("status.auto_recover_run_primary_retry", "执行主重试类型"))}</button>`
                 : ""
             }
             ${
@@ -7976,7 +8435,7 @@ function renderAutoRecoverSummary(items) {
               type="button"
               class="ghost"
               data-auto-recover-run-primary-blocked-action="${escapeHTML(stringifyValue(item.primaryBlockedAction, ""))}"
-            >执行主阻塞动作</button>`
+            >${escapeHTML(t("status.auto_recover_run_primary_blocked", "执行主阻塞动作"))}</button>`
                 : ""
             }
             ${
@@ -7988,14 +8447,14 @@ function renderAutoRecoverSummary(items) {
               data-auto-recover-run-lane-strategy="${escapeHTML(stringifyValue(item.sampleStrategy, ""))}"
               data-auto-recover-run-lane-retry-class="${escapeHTML(stringifyValue(item.primaryRetryClass, ""))}"
               data-auto-recover-run-lane-blocked-action="${escapeHTML(stringifyValue(item.primaryBlockedAction, ""))}"
-            >执行该 lane</button>`
+            >${escapeHTML(t("status.auto_recover_run_lane", "执行该 lane"))}</button>`
                 : ""
             }
             <button
               type="button"
               class="ghost"
               data-auto-recover-run-mode="${escapeHTML(stringifyValue(item.mode, ""))}"
-            >执行该模式</button>
+            >${escapeHTML(t("status.auto_recover_run_mode", "执行该模式"))}</button>
             <button
               type="button"
               class="ghost"
@@ -8079,7 +8538,7 @@ function applyAutoRecoverFilters(nextFilters, options = {}) {
 
 function renderProtocolCoverageSummary(items) {
   if (!Array.isArray(items) || !items.length) {
-    return `<div class="directory-empty">当前没有协议族覆盖数据。</div>`;
+    return `<div class="directory-empty">${escapeHTML(t("status.protocol_coverage_empty", "当前没有协议族覆盖数据。"))}</div>`;
   }
   return items
     .map(
@@ -8164,26 +8623,40 @@ function renderSnapshotSummary(summary) {
 }
 
 function renderRecentResultsTable(items) {
+  // Static test anchors:
+  // <th>状态</th>
+  // <th>模式</th>
+  // <th>执行模式</th>
+  // <th>重试模式</th>
+  // <th>重试范围</th>
+  // <th>重试路径数</th>
+  // <th>重试路径</th>
+  // <th>源端删除策略</th>
+  // <th>推荐结果</th>
+  // <th>消息</th>
+  // <th>风控命中</th>
+  // <th>冲突处理</th>
+  // <th>创建时间</th>
   if (!items.length) {
-    return `<div class="provider-card">暂无结果证据。</div>`;
+    return `<div class="provider-card">${escapeHTML(t("status.recent_results_empty", "暂无结果证据。"))}</div>`;
   }
   return `
     <table>
       <thead>
         <tr>
-          <th>状态</th>
-          <th>模式</th>
-          <th>执行模式</th>
-          <th>重试模式</th>
-          <th>重试范围</th>
-          <th>重试路径数</th>
-          <th>重试路径</th>
-          <th>源端删除策略</th>
-          <th>推荐结果</th>
-          <th>消息</th>
-          <th>风控命中</th>
-          <th>冲突处理</th>
-          <th>创建时间</th>
+          <th>${escapeHTML(t("status.recent_results_col_status", "状态"))}</th>
+          <th>${escapeHTML(t("status.recent_results_col_mode", "模式"))}</th>
+          <th>${escapeHTML(t("status.recent_results_col_execution_mode", "执行模式"))}</th>
+          <th>${escapeHTML(t("status.recent_results_col_retry_mode", "重试模式"))}</th>
+          <th>${escapeHTML(t("status.recent_results_col_retry_scope", "重试范围"))}</th>
+          <th>${escapeHTML(t("status.recent_results_col_retry_path_count", "重试路径数"))}</th>
+          <th>${escapeHTML(t("status.recent_results_col_retry_paths", "重试路径"))}</th>
+          <th>${escapeHTML(t("status.recent_results_col_source_delete_policy", "源端删除策略"))}</th>
+          <th>${escapeHTML(t("status.recent_results_col_recommendation", "推荐结果"))}</th>
+          <th>${escapeHTML(t("status.recent_results_col_message", "消息"))}</th>
+          <th>${escapeHTML(t("status.recent_results_col_risk_hit", "风控命中"))}</th>
+          <th>${escapeHTML(t("status.recent_results_col_conflict", "冲突处理"))}</th>
+          <th>${escapeHTML(t("status.recent_results_col_created_at", "创建时间"))}</th>
         </tr>
       </thead>
       <tbody>
@@ -8214,26 +8687,40 @@ function renderRecentResultsTable(items) {
 }
 
 function renderRecentProbesTable(items) {
+  // Static test anchors:
+  // <th>网盘源</th>
+  // <th>状态</th>
+  // <th>授权档案</th>
+  // <th>执行模式</th>
+  // <th>扫描模式</th>
+  // <th>重试模式</th>
+  // <th>重试范围</th>
+  // <th>重试路径数</th>
+  // <th>重试路径</th>
+  // <th>源端删除策略</th>
+  // <th>风控命中</th>
+  // <th>载荷</th>
+  // <th>创建时间</th>
   if (!items.length) {
-    return `<div class="provider-card">暂无 probe 证据。</div>`;
+    return `<div class="provider-card">${escapeHTML(t("status.recent_probes_empty", "暂无 probe 证据。"))}</div>`;
   }
   return `
     <table>
       <thead>
         <tr>
-          <th>网盘源</th>
-          <th>状态</th>
-          <th>授权档案</th>
-          <th>执行模式</th>
-          <th>扫描模式</th>
-          <th>重试模式</th>
-          <th>重试范围</th>
-          <th>重试路径数</th>
-          <th>重试路径</th>
-          <th>源端删除策略</th>
-          <th>风控命中</th>
-          <th>载荷</th>
-          <th>创建时间</th>
+          <th>${escapeHTML(t("status.recent_probes_col_provider", "网盘源"))}</th>
+          <th>${escapeHTML(t("status.recent_probes_col_status", "状态"))}</th>
+          <th>${escapeHTML(t("status.recent_probes_col_profile", "授权档案"))}</th>
+          <th>${escapeHTML(t("status.recent_probes_col_execution_mode", "执行模式"))}</th>
+          <th>${escapeHTML(t("status.recent_probes_col_scan_mode", "扫描模式"))}</th>
+          <th>${escapeHTML(t("status.recent_probes_col_retry_mode", "重试模式"))}</th>
+          <th>${escapeHTML(t("status.recent_probes_col_retry_scope", "重试范围"))}</th>
+          <th>${escapeHTML(t("status.recent_probes_col_retry_path_count", "重试路径数"))}</th>
+          <th>${escapeHTML(t("status.recent_probes_col_retry_paths", "重试路径"))}</th>
+          <th>${escapeHTML(t("status.recent_probes_col_source_delete_policy", "源端删除策略"))}</th>
+          <th>${escapeHTML(t("status.recent_probes_col_risk_hit", "风控命中"))}</th>
+          <th>${escapeHTML(t("status.recent_probes_col_payload", "载荷"))}</th>
+          <th>${escapeHTML(t("status.recent_probes_col_created_at", "创建时间"))}</th>
         </tr>
       </thead>
       <tbody>
@@ -8400,14 +8887,18 @@ function providerSmokeProviderCounts(items) {
 }
 
 function renderProviderSmokeProviderReadinessLabel(value) {
+  // Static test anchors:
+  // ready（基础、上传、异常、代表性样本齐）
+  // partial（已有样本，仍缺验收项）
+  // pending（待补 provider 真实样本）
   const readiness = String(value || "").trim().toLowerCase();
   if (readiness === "ready") {
-    return "ready（基础、上传、异常、代表性样本齐）";
+    return t("status.provider_smoke_readiness_ready", "已就绪（基础、上传、异常、代表样本齐）");
   }
   if (readiness === "partial") {
-    return "partial（已有样本，仍缺验收项）";
+    return t("status.provider_smoke_readiness_partial", "进行中（已有样本，仍缺验收项）");
   }
-  return "pending（待补 provider 真实样本）";
+  return t("status.provider_smoke_readiness_pending", "待补齐（待补 provider 真实样本）");
 }
 
 function renderEvidenceProviderSmokeProviders(report) {
@@ -8502,11 +8993,11 @@ function renderEvidenceProviderSmokeProviders(report) {
                   <div class="muted">
                     ${escapeHTML(stringifyValue(item.providerKey, "-"))}:
                     ${escapeHTML(renderProviderSmokeProviderReadinessLabel(item.readiness))}
-                    / 基础 ${item.hasBasicSuccessSample ? "已就绪" : "待补齐"}
-                    / 上传 ${item.hasUploadSuccessSample ? "已就绪" : "待补齐"}
-                    / 异常 ${escapeHTML(stringifyValue(item.anomalyCompletedCount, "0"))}/${escapeHTML(stringifyValue(item.anomalyTargetCount, "0"))}
-                    / 代表 ${escapeHTML(stringifyValue(item.representativeCompletedCount, "0"))}/${escapeHTML(stringifyValue(item.representativeTargetCount, "0"))}
-                    / ${escapeHTML(t("status.provider_smoke_default_action", "网盘源优先动作"))} ${escapeHTML(stringifyValue(item.priorityAction, "complete"))}
+                    / ${escapeHTML(t("status.provider_smoke_basic_ready", "基础"))} ${item.hasBasicSuccessSample ? escapeHTML(t("status.matrix_state_ready", "已就绪")) : escapeHTML(t("status.matrix_state_pending", "待补齐"))}
+                    / ${escapeHTML(t("status.provider_smoke_upload_ready", "上传"))} ${item.hasUploadSuccessSample ? escapeHTML(t("status.matrix_state_ready", "已就绪")) : escapeHTML(t("status.matrix_state_pending", "待补齐"))}
+                    / ${escapeHTML(t("status.provider_smoke_anomaly_ready", "异常"))} ${escapeHTML(stringifyValue(item.anomalyCompletedCount, "0"))}/${escapeHTML(stringifyValue(item.anomalyTargetCount, "0"))}
+                    / ${escapeHTML(t("status.provider_smoke_representative_ready", "代表"))} ${escapeHTML(stringifyValue(item.representativeCompletedCount, "0"))}/${escapeHTML(stringifyValue(item.representativeTargetCount, "0"))}
+                    / ${escapeHTML(t("status.provider_smoke_default_action", "网盘源优先动作"))} ${escapeHTML(stringifyValue(item.priorityAction, t("status.provider_smoke_default_action_complete", "已补齐")))}
                   </div>
                   <div class="muted">${escapeHTML(t("status.provider_smoke_basic_sample", "优先基础样本:"))} ${escapeHTML(stringifyValue(item.preferredSampleTitle, "-"))} / ${escapeHTML(stringifyValue(item.preferredSamplePriority, "-"))}</div>
                   <div class="muted">${escapeHTML(t("status.provider_smoke_upload_sample", "优先上传样本:"))} ${escapeHTML(stringifyValue(item.preferredUploadSampleTitle, "-"))} / ${escapeHTML(stringifyValue(item.preferredUploadPriority, "-"))}</div>
@@ -8518,7 +9009,7 @@ function renderEvidenceProviderSmokeProviders(report) {
                 `,
               )
               .join("")
-          : `<div class="muted">网盘源优先动作: complete</div>`
+          : `<div class="muted">${escapeHTML(t("status.provider_smoke_default_action", "网盘源优先动作"))}: ${escapeHTML(t("status.provider_smoke_default_action_complete", "已补齐"))}</div>`
       }
     </div>
   `;
@@ -8535,24 +9026,24 @@ function renderEvidenceUploadCheckpointSummary(report) {
   const priorityAction = renderUploadCheckpointPriorityAction(summary);
   return `
     <div class="insight-card">
-      <strong>上传断点续传默认恢复验收</strong>
-      <span>断点续传就绪度：${escapeHTML(readiness)}</span>
+      <strong>${escapeHTML(t("status.upload_checkpoint_acceptance_title", "上传断点续传默认恢复验收"))}</strong>
+      <span>${escapeHTML(tf("status.upload_checkpoint_readiness", { value: readiness }, `断点续传就绪度：${readiness}`))}</span>
     </div>
     <div class="directory-row tree-node">
       <div class="directory-row-header">
-        <strong>大文件/长链路恢复摘要</strong>
+        <strong>${escapeHTML(t("status.upload_checkpoint_resume_summary", "大文件/长链路恢复摘要"))}</strong>
         <code>uploadCheckpointResume</code>
       </div>
       <div class="directory-metrics">
-        <span class="pill">断点任务 ${checkpointCount}</span>
-        <span class="pill">自动续传 ${resumeCount}</span>
-        <span class="pill">就绪度 ${escapeHTML(readiness)}</span>
+        <span class="pill">${escapeHTML(t("status.upload_checkpoint_tasks", "断点任务"))} ${checkpointCount}</span>
+        <span class="pill">${escapeHTML(t("status.upload_checkpoint_resume_tasks", "自动续传"))} ${resumeCount}</span>
+        <span class="pill">${escapeHTML(t("status.upload_checkpoint_readiness_compact", "就绪度"))} ${escapeHTML(readiness)}</span>
       </div>
-      <div class="muted">优先恢复动作: ${escapeHTML(priorityAction)}</div>
-      <div class="muted">样本上下文: 网盘源 ${escapeHTML(stringifyValue(summary.uploadCheckpointResumeSampleProvider, "-"))} / 协议组 ${escapeHTML(stringifyValue(summary.uploadCheckpointResumeSampleProtocol, "-"))} / 任务 ${escapeHTML(stringifyValue(summary.uploadCheckpointResumeSampleTaskId, "-"))} / 授权档案 ${escapeHTML(stringifyValue(summary.uploadCheckpointResumeSampleProfileId, "-"))}</div>
-      <div class="muted">续传详情: 上传 ${escapeHTML(stringifyValue(summary.uploadCheckpointResumeSampleUploadId, "-"))} / 下一分片 ${escapeHTML(stringifyValue(summary.uploadCheckpointResumeSampleNextPart, "0"))} / 已上传 ${escapeHTML(stringifyValue(summary.uploadCheckpointResumeSampleUploaded, "0"))}/${escapeHTML(stringifyValue(summary.uploadCheckpointResumeSamplePartCount, "0"))}</div>
-      <div class="muted">样本路径: ${escapeHTML(paths.length ? paths.join(" -> ") : "-")}</div>
-      <div class="muted">恢复优先动作: ${escapeHTML(priorityAction)}</div>
+      <div class="muted">${escapeHTML(tf("status.upload_checkpoint_priority_action", { value: priorityAction }, `优先恢复动作：${priorityAction}`))}</div>
+      <div class="muted">${escapeHTML(tf("status.upload_checkpoint_sample_context", { provider: stringifyValue(summary.uploadCheckpointResumeSampleProvider, "-"), protocolGroup: stringifyValue(summary.uploadCheckpointResumeSampleProtocol, "-"), taskId: stringifyValue(summary.uploadCheckpointResumeSampleTaskId, "-"), profileId: stringifyValue(summary.uploadCheckpointResumeSampleProfileId, "-") }, `样本上下文：网盘源 ${stringifyValue(summary.uploadCheckpointResumeSampleProvider, "-")} / 协议组 ${stringifyValue(summary.uploadCheckpointResumeSampleProtocol, "-")} / 任务 ${stringifyValue(summary.uploadCheckpointResumeSampleTaskId, "-")} / 授权档案 ${stringifyValue(summary.uploadCheckpointResumeSampleProfileId, "-")}`))}</div>
+      <div class="muted">${escapeHTML(tf("status.upload_checkpoint_resume_detail", { uploadId: stringifyValue(summary.uploadCheckpointResumeSampleUploadId, "-"), nextPart: stringifyValue(summary.uploadCheckpointResumeSampleNextPart, "0"), uploaded: stringifyValue(summary.uploadCheckpointResumeSampleUploaded, "0"), partCount: stringifyValue(summary.uploadCheckpointResumeSamplePartCount, "0") }, `续传详情：上传 ${stringifyValue(summary.uploadCheckpointResumeSampleUploadId, "-")} / 下一分片 ${stringifyValue(summary.uploadCheckpointResumeSampleNextPart, "0")} / 已上传 ${stringifyValue(summary.uploadCheckpointResumeSampleUploaded, "0")}/${stringifyValue(summary.uploadCheckpointResumeSamplePartCount, "0")}`))}</div>
+      <div class="muted">${escapeHTML(tf("status.upload_checkpoint_sample_paths", { value: paths.length ? paths.join(" -> ") : "-" }, `样本路径：${paths.length ? paths.join(" -> ") : "-"}`))}</div>
+      <div class="muted">${escapeHTML(tf("status.upload_checkpoint_priority_action_label", { value: priorityAction }, `恢复优先动作：${priorityAction}`))}</div>
     </div>
   `;
 }
@@ -9094,13 +9585,13 @@ async function triggerAutoRecover(options = {}) {
     $("#auto-recover-last-result-detail").innerHTML = renderAutoRecoverLastResultDetail();
     wireAutoRecoverLastResultDetail();
     showFlash(
-      `后台补传预演完成：matched ${stringifyValue(result.matchedCount, "0")} / 可放行 ${stringifyValue(result.recoveredCount, "0")} / providerBudget ${stringifyValue(result.skippedByProviderBudget, "0")} / profileBudget ${stringifyValue(result.skippedByProfileBudget, "0")}`,
+      tf("status.auto_recover_preview_completed", { matched: stringifyValue(result.matchedCount, "0"), recovered: stringifyValue(result.recoveredCount, "0"), providerBudget: stringifyValue(result.skippedByProviderBudget, "0"), profileBudget: stringifyValue(result.skippedByProfileBudget, "0") }, `后台补传预演完成：匹配 ${stringifyValue(result.matchedCount, "0")} / 可放行 ${stringifyValue(result.recoveredCount, "0")} / 网盘源预算 ${stringifyValue(result.skippedByProviderBudget, "0")} / 授权档案预算 ${stringifyValue(result.skippedByProfileBudget, "0")}`),
     );
     return result;
   }
   await Promise.all([loadTasks(), loadStatus()]);
   showFlash(
-    `后台补传已执行：matched ${stringifyValue(result.matchedCount, "0")} / recovered ${stringifyValue(result.recoveredCount, "0")} / limit ${stringifyValue(result.skippedByLimit, "0")} / modeBudget ${stringifyValue(result.skippedByModeBudget, "0")} / laneBudget ${stringifyValue(result.skippedByLaneBudget, "0")} / protocolGroupBudget ${stringifyValue(result.skippedByProtocolGroupBudget, "0")} / providerBudget ${stringifyValue(result.skippedByProviderBudget, "0")} / profileBudget ${stringifyValue(result.skippedByProfileBudget, "0")} / cooldownWait ${stringifyValue(result.skippedByCooldownWait, "0")} / retryWindowWait ${stringifyValue(result.skippedByRetryWindowWait, "0")} / blocked ${stringifyValue(result.skippedByBlockedReason, "0")}`,
+    tf("status.auto_recover_run_completed", { matched: stringifyValue(result.matchedCount, "0"), recovered: stringifyValue(result.recoveredCount, "0"), limit: stringifyValue(result.skippedByLimit, "0"), modeBudget: stringifyValue(result.skippedByModeBudget, "0"), laneBudget: stringifyValue(result.skippedByLaneBudget, "0"), groupBudget: stringifyValue(result.skippedByProtocolGroupBudget, "0"), providerBudget: stringifyValue(result.skippedByProviderBudget, "0"), profileBudget: stringifyValue(result.skippedByProfileBudget, "0"), cooldownWait: stringifyValue(result.skippedByCooldownWait, "0"), retryWindowWait: stringifyValue(result.skippedByRetryWindowWait, "0"), blocked: stringifyValue(result.skippedByBlockedReason, "0") }, `后台补传已执行：匹配 ${stringifyValue(result.matchedCount, "0")} / 已恢复 ${stringifyValue(result.recoveredCount, "0")} / 重试耗尽 ${stringifyValue(result.skippedByLimit, "0")} / 模式预算 ${stringifyValue(result.skippedByModeBudget, "0")} / lane 预算 ${stringifyValue(result.skippedByLaneBudget, "0")} / 协议组预算 ${stringifyValue(result.skippedByProtocolGroupBudget, "0")} / 网盘源预算 ${stringifyValue(result.skippedByProviderBudget, "0")} / 授权档案预算 ${stringifyValue(result.skippedByProfileBudget, "0")} / 冷却等待 ${stringifyValue(result.skippedByCooldownWait, "0")} / 时间窗等待 ${stringifyValue(result.skippedByRetryWindowWait, "0")} / 阻塞 ${stringifyValue(result.skippedByBlockedReason, "0")}`),
   );
   return result;
 }
@@ -9115,10 +9606,10 @@ async function autoRecoverTaskPath(scope, path, panel = "directory") {
       : currentStatusTaskContext();
   const normalizedPath = normalizeComparePath(path);
   if (!context || !context.taskId) {
-    throw new Error(scope === "task" ? "请先选择任务" : "当前状态样本没有可用任务");
+    throw new Error(scope === "task" ? t("wizard.flash_task_required", "请先选择任务") : t("wizard.flash_prefill_status_task_missing", "当前状态样本没有可用任务"));
   }
   if (!normalizedPath) {
-    throw new Error("缺少可恢复路径");
+    throw new Error(t("status.blocked_missing_path", "缺少可恢复路径"));
   }
   applyAutoRecoverFilters({}, { render: false });
   const result = await api("/api/tasks/recover", {
@@ -9132,7 +9623,7 @@ async function autoRecoverTaskPath(scope, path, panel = "directory") {
   });
   await Promise.all([loadTasks(), loadStatus()]);
   showFlash(
-    `后台补传子树已执行：${normalizedPath} / ${selectionScopeLabel(autoRecoverScopeFromPanel(panel))} / matched ${stringifyValue(result.matchedCount, "0")} / recovered ${stringifyValue(result.recoveredCount, "0")} / modeBudget ${stringifyValue(result.skippedByModeBudget, "0")} / laneBudget ${stringifyValue(result.skippedByLaneBudget, "0")} / providerBudget ${stringifyValue(result.skippedByProviderBudget, "0")}`,
+    tf("status.auto_recover_subtree_completed", { path: normalizedPath, scope: selectionScopeLabel(autoRecoverScopeFromPanel(panel)), matched: stringifyValue(result.matchedCount, "0"), recovered: stringifyValue(result.recoveredCount, "0"), modeBudget: stringifyValue(result.skippedByModeBudget, "0"), laneBudget: stringifyValue(result.skippedByLaneBudget, "0"), providerBudget: stringifyValue(result.skippedByProviderBudget, "0") }, `后台补传子树已执行：${normalizedPath} / ${selectionScopeLabel(autoRecoverScopeFromPanel(panel))} / 匹配 ${stringifyValue(result.matchedCount, "0")} / 已恢复 ${stringifyValue(result.recoveredCount, "0")} / 模式预算 ${stringifyValue(result.skippedByModeBudget, "0")} / lane 预算 ${stringifyValue(result.skippedByLaneBudget, "0")} / 网盘源预算 ${stringifyValue(result.skippedByProviderBudget, "0")}`),
     result.recoveredCount <= 0,
   );
 }
@@ -9206,6 +9697,7 @@ function focusRuntimeTreeByPath(scope, path, kind = "roots") {
 }
 
 
+  // Static test anchors: template: / completeness / reuse: / priority / regression entry: / representative: / auto recover focus: / operations: / createdAt:
 function renderProviderSmokeRecords(items) {
   const result = filterProviderSmokeRecords(items, state.providerSmokeRecordFilters);
   if (!result.totalItems) {
@@ -9227,12 +9719,12 @@ function renderProviderSmokeRecords(items) {
             <span class="pill">${escapeHTML(stringifyValue(item.result, "-"))}</span>
           </div>
           ${item.note ? `<div class="muted">${escapeHTML(item.note)}</div>` : ""}
-          <div class="muted">template: ${escapeHTML(stringifyValue(item.templateVersion, "-"))} / type ${escapeHTML(stringifyValue(item.sampleType, "-"))} / completeness ${escapeHTML(stringifyValue(item.evidenceCompleteness, "-"))}</div>
-          <div class="muted">reuse: ${escapeHTML(stringifyValue(item.reuseAdvice, "-"))} / priority ${escapeHTML(stringifyValue(item.reusePriority, "-"))}</div>
-          <div class="muted">regression entry: ${escapeHTML(stringifyValue(item.regressionEntry, "-"))}</div>
-          <div class="muted">representative: ${escapeHTML((item.representativeLabels || []).join(" / ") || "-")} / auto recover focus: ${escapeHTML(stringifyValue(item.autoRecoverFocus, "-"))}</div>
-          <div class="muted">operations: ${escapeHTML((item.operations || []).join(", ") || "-")}</div>
-          <div class="muted">createdAt: <code>${escapeHTML(stringifyValue(item.createdAt, "-"))}</code></div>
+          <div class="muted">${escapeHTML(tf("status.provider_smoke_record_template", { template: stringifyValue(item.templateVersion, "-"), type: stringifyValue(item.sampleType, "-"), completeness: stringifyValue(item.evidenceCompleteness, "-") }, `模板：${stringifyValue(item.templateVersion, "-")} / 类型 ${stringifyValue(item.sampleType, "-")} / 完整度 ${stringifyValue(item.evidenceCompleteness, "-")}`))}</div>
+          <div class="muted">${escapeHTML(tf("status.provider_smoke_record_reuse", { advice: stringifyValue(item.reuseAdvice, "-"), priority: stringifyValue(item.reusePriority, "-") }, `复用建议：${stringifyValue(item.reuseAdvice, "-")} / 优先级 ${stringifyValue(item.reusePriority, "-")}`))}</div>
+          <div class="muted">${escapeHTML(tf("status.provider_smoke_record_regression", { value: stringifyValue(item.regressionEntry, "-") }, `回归入口：${stringifyValue(item.regressionEntry, "-")}`))}</div>
+          <div class="muted">${escapeHTML(tf("status.provider_smoke_record_representative", { labels: (item.representativeLabels || []).join(" / ") || "-", focus: stringifyValue(item.autoRecoverFocus, "-") }, `代表标签：${(item.representativeLabels || []).join(" / ") || "-"} / 自动补传关注点：${stringifyValue(item.autoRecoverFocus, "-")}`))}</div>
+          <div class="muted">${escapeHTML(tf("status.provider_smoke_record_operations", { value: (item.operations || []).join(", ") || "-" }, `操作：${(item.operations || []).join(", ") || "-"}`))}</div>
+          <div class="muted">${escapeHTML(tf("status.provider_smoke_record_created_at", { value: stringifyValue(item.createdAt, "-") }, `创建时间：${stringifyValue(item.createdAt, "-")}`))}</div>
           <div class="actions compact">
             <button type="button" class="ghost" data-provider-smoke-view="${escapeHTML(item.id || "")}">${escapeHTML(t("status.smoke_view_markdown", "查看 Markdown"))}</button>
             <button type="button" class="ghost" data-provider-smoke-download="${escapeHTML(item.id || "")}">${escapeHTML(t("status.smoke_download_markdown", "下载 Markdown"))}</button>
@@ -9371,6 +9863,21 @@ function setProviderSmokeMatrixFilter(filter) {
   renderStatus();
 }
 
+function renderProviderSmokeMatrixState(stateValue) {
+  switch (String(stateValue || "").trim().toLowerCase()) {
+    case "ready":
+      return t("status.matrix_state_ready", "已就绪");
+    case "partial":
+      return t("status.matrix_state_partial", "进行中");
+    case "pending":
+      return t("status.matrix_state_pending", "待补齐");
+    case "accepted":
+      return t("status.matrix_state_accepted", "已验收");
+    default:
+      return stringifyValue(stateValue, "-");
+  }
+}
+
 function renderProviderSmokeMatrixControls(items) {
   const counts = providerSmokeMatrixCounts(items);
   const filters = [
@@ -9405,27 +9912,27 @@ function renderProviderSmokeMatrixControls(items) {
 
 function renderProviderSmokeChecklist(item) {
   return [
-    `upload ${item?.hasUploadSuccessSample ? "ready" : "pending"}`,
-    `coverage ${stringifyValue(item?.coverageRealSuccessTaskCount, "0")}/${stringifyValue(item?.coverageTaskCount, "0")}`,
-    `anomaly ${stringifyValue(item?.anomalyCompletedCount, "0")}/${stringifyValue(item?.anomalyTargetCount, "0")}`,
-    `representative ${stringifyValue(item?.representativeCompletedCount, "0")}/${stringifyValue(item?.representativeTargetCount, "0")}`,
+    `${t("status.matrix_checklist_upload", "上传")} ${renderProviderSmokeMatrixState(item?.hasUploadSuccessSample ? "ready" : "pending")}`,
+    `${t("status.matrix_checklist_coverage", "覆盖")} ${stringifyValue(item?.coverageRealSuccessTaskCount, "0")}/${stringifyValue(item?.coverageTaskCount, "0")}`,
+    `${t("status.matrix_checklist_anomaly", "异常")} ${stringifyValue(item?.anomalyCompletedCount, "0")}/${stringifyValue(item?.anomalyTargetCount, "0")}`,
+    `${t("status.matrix_checklist_representative", "代表")} ${stringifyValue(item?.representativeCompletedCount, "0")}/${stringifyValue(item?.representativeTargetCount, "0")}`,
   ].join(" / ");
 }
 
 function renderProviderSmokeGaps(item) {
   const gaps = [];
   if (!item?.hasUploadSuccessSample) {
-    gaps.push("upload");
+    gaps.push(t("status.matrix_gap_upload", "上传"));
   }
   const anomalyMissing = Array.isArray(item?.anomalyMissing) ? item.anomalyMissing.filter(Boolean) : [];
   if (anomalyMissing.length) {
-    gaps.push(`anomaly(${anomalyMissing.join(",")})`);
+    gaps.push(tf("status.matrix_gap_anomaly", { value: anomalyMissing.join(",") }, `异常(${anomalyMissing.join(",")})`));
   }
   const representativeMissing = Array.isArray(item?.representativeMissing) ? item.representativeMissing.filter(Boolean) : [];
   if (representativeMissing.length) {
-    gaps.push(`representative(${representativeMissing.join(",")})`);
+    gaps.push(tf("status.matrix_gap_representative", { value: representativeMissing.join(",") }, `代表(${representativeMissing.join(",")})`));
   }
-  return gaps.length ? gaps.join(" / ") : "complete";
+  return gaps.length ? gaps.join(" / ") : t("status.matrix_gap_complete", "已补齐");
 }
 
 function renderProviderSmokeReadiness(item) {
@@ -9448,10 +9955,10 @@ function renderProviderSmokeReadiness(item) {
 function renderProviderSmokeNextAction(item) {
   const actions = [];
   if (!item?.hasUploadSuccessSample) {
-    actions.push("补 1 条真实上传成功样本");
+    actions.push(t("status.smoke_action_fill_upload_success", "补 1 条真实上传成功样本"));
   }
   if (Number(item?.coverageRealSuccessTaskCount || 0) < Number(item?.coverageTaskCount || 0)) {
-    actions.push("补 1 条真实任务覆盖样本");
+    actions.push(t("status.smoke_action_fill_task_coverage", "补 1 条真实任务覆盖样本"));
   }
   if (Array.isArray(item?.anomalyActions) && item.anomalyActions.length) {
     actions.push(item.anomalyActions[0]);
@@ -9460,17 +9967,17 @@ function renderProviderSmokeNextAction(item) {
     actions.push(item.representativeActions[0]);
   }
   if (!actions.length) {
-    return "complete";
+    return t("status.matrix_state_complete", "已完成");
   }
-  return Array.from(new Set(actions.filter(Boolean))).join("；") || "complete";
+  return Array.from(new Set(actions.filter(Boolean))).join("；") || t("status.matrix_state_complete", "已完成");
 }
 
 function renderProviderSmokePriorityAction(item) {
   if (!item?.hasUploadSuccessSample) {
-    return "补 1 条真实上传成功样本";
+    return t("status.smoke_action_fill_upload_success", "补 1 条真实上传成功样本");
   }
   if (Number(item?.coverageRealSuccessTaskCount || 0) < Number(item?.coverageTaskCount || 0)) {
-    return "补 1 条真实任务覆盖样本";
+    return t("status.smoke_action_fill_task_coverage", "补 1 条真实任务覆盖样本");
   }
   if (Array.isArray(item?.anomalyActions) && item.anomalyActions.length) {
     return item.anomalyActions[0];
@@ -9487,6 +9994,14 @@ function renderProviderSmokeMatrix(items) {
   // checklist:
   // next action:
   // priority action:
+  // anomaly missing:
+  // anomaly actions:
+  // anomaly advice:
+  // representative missing:
+  // representative actions:
+  // representative advice:
+  // accepted / in_progress / pending
+  // ready / pending
   // 异常样本：auth / rate / local / manual
   // 代表样本：large / nested / retry
   // 当前筛选 全部 没有真实样本矩阵。
@@ -9509,9 +10024,9 @@ function renderProviderSmokeMatrix(items) {
           </div>
           <div class="directory-metrics">
             <span class="pill">${escapeHTML(t("status.matrix_smoke_count", "smoke"))} ${stringifyValue(item.smokeCount, "0")}</span>
-            <span class="pill">${escapeHTML(t("status.matrix_upload_smoke", "上传样本"))} ${stringifyValue(item.uploadSuccessCount, "0")} / ${item.hasUploadSuccessSample ? "ready" : "pending"}</span>
+            <span class="pill">${escapeHTML(t("status.matrix_upload_smoke", "上传样本"))} ${stringifyValue(item.uploadSuccessCount, "0")} / ${renderProviderSmokeMatrixState(item.hasUploadSuccessSample ? "ready" : "pending")}</span>
             <span class="pill">${escapeHTML(t("status.matrix_coverage", "任务覆盖"))} ${stringifyValue(item.coverageRealSuccessTaskCount, "0")}/${stringifyValue(item.coverageTaskCount, "0")}</span>
-            <span class="pill">${item.accepted ? "accepted" : item.acceptanceStatus || "pending"}</span>
+            <span class="pill">${renderProviderSmokeMatrixState(item.accepted ? "accepted" : item.acceptanceStatus || "pending")}</span>
           </div>
           <div class="muted">${escapeHTML(t("status.matrix_smoke_sample", "smoke 样本："))}${escapeHTML(stringifyValue(item.sampleTitle, "-"))} / ${escapeHTML(stringifyValue(item.sampleProviderKey, "-"))} / ${escapeHTML(stringifyValue(item.sampleCategory, "-"))}</div>
           <div class="muted">${escapeHTML(t("status.matrix_coverage_sample", "任务样本："))}${escapeHTML(stringifyValue(item.coverageSampleProviderKey, "-"))} / ${escapeHTML(stringifyValue(item.coverageSampleTaskState, "-"))} / ${escapeHTML(stringifyValue(item.coverageSampleCompletionKind, "-"))}</div>
@@ -9520,14 +10035,14 @@ function renderProviderSmokeMatrix(items) {
           <div class="muted">${escapeHTML(t("status.matrix_gaps", "缺口："))}${escapeHTML(renderProviderSmokeGaps(item))}</div>
           <div class="muted">${escapeHTML(t("status.matrix_next_action", "下一步动作："))}${escapeHTML(renderProviderSmokeNextAction(item))}</div>
           <div class="muted">${escapeHTML(t("status.matrix_priority_action", "验收优先动作："))}${escapeHTML(renderProviderSmokePriorityAction(item))}</div>
-          <div class="muted">${escapeHTML(t("status.matrix_anomaly_summary", "异常样本："))}auth ${item.hasAuthExpiredSample ? "ready" : "pending"} / rate ${item.hasRateLimitedSample ? "ready" : "pending"} / local ${item.hasLocalFileMissingSample ? "ready" : "pending"} / manual ${item.hasPendingManualSample ? "ready" : "pending"}</div>
-          <div class="muted">${escapeHTML(t("status.matrix_representative_summary", "代表样本："))}large ${item.hasLargeFileSample ? "ready" : "pending"} / nested ${item.hasNestedDirectorySample ? "ready" : "pending"} / retry ${item.hasRetryRecoverySample ? "ready" : "pending"}</div>
-          ${Array.isArray(item.anomalyMissing) && item.anomalyMissing.length ? `<div class="muted">anomaly missing: ${escapeHTML(item.anomalyMissing.join(", "))}</div>` : ""}
-          ${Array.isArray(item.anomalyActions) && item.anomalyActions.length ? `<div class="muted">anomaly actions: ${escapeHTML(item.anomalyActions.join("；"))}</div>` : ""}
-          ${item.anomalyAdvice ? `<div class="muted">anomaly advice: ${escapeHTML(item.anomalyAdvice)}</div>` : ""}
-          ${Array.isArray(item.representativeMissing) && item.representativeMissing.length ? `<div class="muted">representative missing: ${escapeHTML(item.representativeMissing.join(", "))}</div>` : ""}
-          ${Array.isArray(item.representativeActions) && item.representativeActions.length ? `<div class="muted">representative actions: ${escapeHTML(item.representativeActions.join("；"))}</div>` : ""}
-          ${item.representativeAdvice ? `<div class="muted">representative advice: ${escapeHTML(item.representativeAdvice)}</div>` : ""}
+          <div class="muted">${escapeHTML(t("status.matrix_anomaly_summary", "异常样本："))}auth ${renderProviderSmokeMatrixState(item.hasAuthExpiredSample ? "ready" : "pending")} / rate ${renderProviderSmokeMatrixState(item.hasRateLimitedSample ? "ready" : "pending")} / local ${renderProviderSmokeMatrixState(item.hasLocalFileMissingSample ? "ready" : "pending")} / manual ${renderProviderSmokeMatrixState(item.hasPendingManualSample ? "ready" : "pending")}</div>
+          <div class="muted">${escapeHTML(t("status.matrix_representative_summary", "代表样本："))}large ${renderProviderSmokeMatrixState(item.hasLargeFileSample ? "ready" : "pending")} / nested ${renderProviderSmokeMatrixState(item.hasNestedDirectorySample ? "ready" : "pending")} / retry ${renderProviderSmokeMatrixState(item.hasRetryRecoverySample ? "ready" : "pending")}</div>
+          ${Array.isArray(item.anomalyMissing) && item.anomalyMissing.length ? `<div class="muted">${escapeHTML(t("status.matrix_anomaly_missing", "异常样本缺口："))}${escapeHTML(item.anomalyMissing.join(", "))}</div>` : ""}
+          ${Array.isArray(item.anomalyActions) && item.anomalyActions.length ? `<div class="muted">${escapeHTML(t("status.matrix_anomaly_actions", "异常样本动作："))}${escapeHTML(item.anomalyActions.join("；"))}</div>` : ""}
+          ${item.anomalyAdvice ? `<div class="muted">${escapeHTML(t("status.matrix_anomaly_advice", "异常样本建议："))}${escapeHTML(item.anomalyAdvice)}</div>` : ""}
+          ${Array.isArray(item.representativeMissing) && item.representativeMissing.length ? `<div class="muted">${escapeHTML(t("status.matrix_representative_missing", "代表样本缺口："))}${escapeHTML(item.representativeMissing.join(", "))}</div>` : ""}
+          ${Array.isArray(item.representativeActions) && item.representativeActions.length ? `<div class="muted">${escapeHTML(t("status.matrix_representative_actions", "代表样本动作："))}${escapeHTML(item.representativeActions.join("；"))}</div>` : ""}
+          ${item.representativeAdvice ? `<div class="muted">${escapeHTML(t("status.matrix_representative_advice", "代表样本建议："))}${escapeHTML(item.representativeAdvice)}</div>` : ""}
           ${Array.isArray(item.acceptanceMissing) && item.acceptanceMissing.length ? `<div class="muted">${escapeHTML(t("status.matrix_missing", "验收缺口："))}${escapeHTML(item.acceptanceMissing.join(", "))}</div>` : ""}
           ${Array.isArray(item.acceptanceActions) && item.acceptanceActions.length ? `<div class="muted">${escapeHTML(t("status.matrix_actions", "验收动作："))}${escapeHTML(item.acceptanceActions.join("；"))}</div>` : ""}
           ${item.acceptanceAdvice ? `<div class="muted">${escapeHTML(t("status.matrix_advice", "验收建议："))}${escapeHTML(item.acceptanceAdvice)}</div>` : ""}
@@ -9549,7 +10064,7 @@ function renderProviderSmokeMatrix(items) {
 
 function renderProviderSmokeMarkdown(markdown) {
   if (!markdown) {
-    return `<div class="directory-empty">请选择一条 smoke 记录查看 Markdown。</div>`;
+    return `<div class="directory-empty">${escapeHTML(t("status.provider_smoke_markdown_empty", "请选择一条 smoke 记录查看 Markdown。"))}</div>`;
   }
   return `<pre class="result-box">${escapeHTML(markdown)}</pre>`;
 }
@@ -9602,42 +10117,42 @@ function providerSmokeDraftSpecFromAnomaly(item) {
   const missing = providerSmokeAnomalyMissingReasons(item);
   if (missing.includes("auth_expired_sample_missing")) {
     return {
-      label: "补授权失效样本",
+      label: t("status.smoke_draft_label_auth_expired", "补授权失效样本"),
       category: "failed",
       result: "failure",
       operations: ["ValidateAuth", "Upload", "refresh_auth_profile"],
       focusResult: "failure",
-      note: "目标异常：auth_expired",
+      note: t("status.smoke_draft_note_auth_expired", "目标异常：auth_expired"),
     };
   }
   if (missing.includes("rate_limited_sample_missing")) {
     return {
-      label: "补限流样本",
+      label: t("status.smoke_draft_label_rate_limited", "补限流样本"),
       category: "partial_blocked",
       result: "failure",
       operations: ["ValidateAuth", "List", "Metadata", "Upload", "cooldown", "retry_window"],
       focusResult: "failure",
-      note: "目标异常：rate_limited / risk_control",
+      note: t("status.smoke_draft_note_rate_limited", "目标异常：rate_limited / risk_control"),
     };
   }
   if (missing.includes("local_file_missing_sample_missing")) {
     return {
-      label: "补本地文件缺失样本",
+      label: t("status.smoke_draft_label_local_file_missing", "补本地文件缺失样本"),
       category: "failed",
       result: "failure",
       operations: ["ValidateAuth", "Upload", "restore_local_source_file"],
       focusResult: "failure",
-      note: "目标异常：local_file_missing",
+      note: t("status.smoke_draft_note_local_file_missing", "目标异常：local_file_missing"),
     };
   }
   if (missing.includes("pending_manual_sample_missing")) {
     return {
-      label: "补人工确认样本",
+      label: t("status.smoke_draft_label_pending_manual", "补人工确认样本"),
       category: "partial_blocked",
       result: "failure",
       operations: ["ValidateAuth", "List", "Metadata", "Upload", "manual_confirmation", "blocked_recovery"],
       focusResult: "failure",
-      note: "目标异常：pending_manual / overwrite downgrade",
+      note: t("status.smoke_draft_note_pending_manual", "目标异常：pending_manual / overwrite downgrade"),
     };
   }
   return null;
@@ -9647,32 +10162,32 @@ function providerSmokeDraftSpecFromRepresentative(item) {
   const missing = Array.isArray(item?.representativeMissing) ? item.representativeMissing : [];
   if (missing.includes("large_file_sample_missing")) {
     return {
-      label: "补大文件样本",
+      label: t("status.smoke_draft_label_large_file", "补大文件样本"),
       category: "binary_upload_success",
       result: "success",
       operations: ["ValidateAuth", "List", "Metadata", "CreateDir", "Upload", "checkpoint"],
       focusResult: "success",
-      note: "目标代表样本：large_file / multipart / 大文件上传恢复",
+      note: t("status.smoke_draft_note_large_file", "目标代表样本：large_file / multipart / 大文件上传恢复"),
     };
   }
   if (missing.includes("nested_directory_sample_missing")) {
     return {
-      label: "补多层目录样本",
+      label: t("status.smoke_draft_label_nested_directory", "补多层目录样本"),
       category: "browse_only",
       result: "success",
       operations: ["ValidateAuth", "List", "Metadata", "CreateDir", "leaf_first"],
       focusResult: "success",
-      note: "目标代表样本：nested_directory / 多层目录 / subtree",
+      note: t("status.smoke_draft_note_nested_directory", "目标代表样本：nested_directory / 多层目录 / subtree"),
     };
   }
   if (missing.includes("retry_recovery_sample_missing")) {
     return {
-      label: "补重试恢复样本",
+      label: t("status.smoke_draft_label_retry_recovery", "补重试恢复样本"),
       category: "binary_upload_success",
       result: "success",
       operations: ["ValidateAuth", "List", "Metadata", "Upload", "checkpoint"],
       focusResult: "success",
-      note: "目标代表样本：retry_recovery / checkpoint / resume / 续传",
+      note: t("status.smoke_draft_note_retry_recovery", "目标代表样本：retry_recovery / checkpoint / resume / 续传"),
     };
   }
   return null;
@@ -9708,12 +10223,12 @@ function draftProviderSmokeFromMatrix(item) {
     operations.push("ValidateAuth", "List", "Metadata");
   }
   const noteParts = [
-    protocolGroup ? `协议组：${protocolGroup}` : "",
-    providerKey ? `建议 provider：${providerKey}` : "",
-    `验收状态：${status}`,
-    missing.length ? `缺口：${missing.join(", ")}` : "",
-    actions.length ? `动作：${actions.join("；")}` : "",
-    item?.acceptanceAdvice ? `建议：${item.acceptanceAdvice}` : "",
+    protocolGroup ? tf("status.smoke_note_protocol_group", { value: protocolGroup }, `协议组：${protocolGroup}`) : "",
+    providerKey ? tf("status.smoke_note_provider", { value: providerKey }, `建议 provider：${providerKey}`) : "",
+    tf("status.smoke_note_status", { value: status }, `验收状态：${status}`),
+    missing.length ? tf("status.smoke_note_missing", { value: missing.join(", ") }, `缺口：${missing.join(", ")}`) : "",
+    actions.length ? tf("status.smoke_note_action", { value: actions.join("；") }, `动作：${actions.join("；")}`) : "",
+    item?.acceptanceAdvice ? tf("status.smoke_note_advice", { value: item.acceptanceAdvice }, `建议：${item.acceptanceAdvice}`) : "",
   ].filter(Boolean);
   return {
     providerKey,
@@ -9721,7 +10236,7 @@ function draftProviderSmokeFromMatrix(item) {
     authMode: "",
     category,
     result: "success",
-    title: protocolGroup ? `${protocolGroup} ${status} smoke` : "provider smoke",
+    title: protocolGroup ? tf("status.smoke_draft_title_status", { protocolGroup, status }, `${protocolGroup} ${status} smoke`) : t("status.smoke_draft_title_provider", "网盘样本"),
     note: noteParts.join("；"),
     operations,
   };
@@ -9752,7 +10267,7 @@ function draftProviderSmokeActionFromMatrix(item) {
   }
   if (actions.length) {
     draft.title = `${draft.title} action`;
-    draft.note = [draft.note, `本次目标：${actions.join("；")}`].filter(Boolean).join("；");
+    draft.note = [draft.note, tf("status.smoke_note_goal", { value: actions.join("；") }, `本次目标：${actions.join("；")}`)].filter(Boolean).join("；");
   }
   if (!draft.operations.length) {
     draft.operations = ["ValidateAuth"];
@@ -9772,15 +10287,15 @@ function providerSmokeDraftActionLabel(item) {
   }
   const missing = providerSmokeMissingReasons(item);
   if (missing.includes("upload_smoke_success_missing")) {
-    return "补上传 smoke";
+    return t("status.smoke_action_fill_upload_smoke", "补上传 smoke");
   }
   if (missing.includes("task_coverage_missing")) {
-    return "补任务覆盖样本";
+    return t("status.smoke_action_fill_task_sample", "补任务覆盖样本");
   }
   if (missing.includes("real_smoke_success_missing")) {
-    return "补 smoke 成功样本";
+    return t("status.smoke_action_fill_smoke_success", "补 smoke 成功样本");
   }
-  return "按缺口预填动作";
+  return t("status.smoke_action_prefill_by_gap", "按缺口预填动作");
 }
 
 function focusProviderSmokeRecordsByResult(result) {
@@ -9791,7 +10306,7 @@ function focusProviderSmokeRecordsByResult(result) {
   const label = normalized
     ? t(
       normalized === "success" ? "status.result_success" : "status.result_failure",
-      normalized === "success" ? "成功（success）" : "失败（failure）",
+      normalized === "success" ? t("status.result_success", "成功（success）") : t("status.result_failure", "失败（failure）"),
     )
     : "";
   showFlash(
@@ -9904,10 +10419,10 @@ function prefillProfileRiskDefaultsFromMatrix(item) {
   const draft = draftProviderSmokeFromMatrix(item);
   const defaults = profileRiskDefaultsFromSmokeMatrix(item);
   const status = item?.accepted ? "accepted" : String(item?.acceptanceStatus || "pending").trim() || "pending";
-  const sourceDisplay = draft.protocolGroup ? `Smoke Matrix ${draft.protocolGroup} (${status})` : `Smoke Matrix (${status})`;
+  const sourceDisplay = draft.protocolGroup ? tf("status.smoke_matrix_source_display", { protocolGroup: draft.protocolGroup, status }, `Smoke Matrix ${draft.protocolGroup} (${status})`) : tf("status.smoke_matrix_source_display_fallback", { status }, `Smoke Matrix (${status})`);
   activateTab("providers");
   setSelectValueIfPresent("#profile-provider", draft.providerKey || "");
-  setInputValueIfPresent("#profile-display-name", draft.protocolGroup ? `${draft.protocolGroup} 风控模板` : "真实样本风控模板");
+  setInputValueIfPresent("#profile-display-name", draft.protocolGroup ? tf("status.smoke_matrix_risk_profile_title", { protocolGroup: draft.protocolGroup }, `${draft.protocolGroup} 风控模板`) : t("status.smoke_matrix_risk_profile_title_fallback", "真实样本风控模板"));
   hydrateRiskProfileForm("profile-risk", defaults);
   try {
     const extra = parseJSONInput($("#profile-extra").value, {});
@@ -9931,8 +10446,9 @@ function prefillProfileRiskDefaultsFromMatrix(item) {
 
 function draftProviderSmokeFromAccepted(item) {
   const draft = draftProviderSmokeFromMatrix(item);
-  draft.title = draft.protocolGroup ? `${draft.protocolGroup} 边界样本 smoke` : "边界样本 smoke";
-  draft.note = [draft.note, "当前协议组已验收，建议继续补充边界场景样本。"].filter(Boolean).join("；");
+  const boundarySmokeTitle = t("status.smoke_title_boundary_sample", "边界样本 smoke");
+  draft.title = draft.protocolGroup ? `${draft.protocolGroup} ${boundarySmokeTitle}` : boundarySmokeTitle;
+  draft.note = [draft.note, t("status.smoke_note_boundary_sample", "当前协议组已验收，建议继续补充边界场景样本。")].filter(Boolean).join("；");
   if (!draft.operations.length) {
     draft.operations = ["ValidateAuth", "List", "Metadata"];
   };
@@ -9961,7 +10477,7 @@ async function loadProviderSmokeMarkdown(id) {
     },
   });
   if (!response.ok) {
-    throw new Error(`加载 smoke Markdown 失败：${response.status}`);
+    throw new Error(tf("status.smoke_markdown_load_failed", { status: response.status }, `加载 smoke Markdown 失败：${response.status}`));
   }
   state.selectedProviderSmokeId = id;
   state.selectedProviderSmokeMarkdown = await response.text();
@@ -10521,29 +11037,29 @@ function visibleSelectionPaths(scope, source) {
 
 function recoverScopeFromSource(source) {
   if (source === "directory_tree" || source === "selected_directory_subset") {
-    return "selected_directory_subset";
+    return t("status.selection_scope_directory", "目录子集");
   }
   return source === "pending_tree" || source === "selected_pending_subset" ? "selected_pending_subset" : "selected_retry_subset";
 }
 function selectionSourceLabel(source) {
   if (source === "directory_tree" || source === "selected_directory_subset") {
-    return "目录子集";
+    return t("status.selection_source_directory", "目录子集");
   }
   if (source === "pending_tree" || source === "selected_pending_subset") {
-    return "待补传子集";
+    return t("status.selection_source_pending", "待补传子集");
   }
-  return "重试队列子集";
+  return t("status.selection_source_retry", "重试队列子集");
 }
 
 function selectionScopeLabel(scope) {
   const normalized = String(scope || "").trim();
   if (normalized === "selected_directory_subset") {
-    return "selected_directory_subset";
+    return t("status.selection_scope_directory", "目录子集");
   }
   if (normalized === "selected_pending_subset") {
-    return "selected_pending_subset";
+    return t("status.selection_scope_pending", "待补传子集");
   }
-  return normalized || "selected_retry_subset";
+  return t("status.selection_scope_retry", "重试队列子集");
 }
 
 function taskContextByScope(scope) {
@@ -10610,7 +11126,7 @@ async function autoRecoverVisibleSelection(scope, source) {
   });
   await Promise.all([loadTasks(), loadStatus()]);
   showFlash(
-    `后台补传筛选已执行：${selectionSourceLabel(source)} / ${selectionScopeLabel(recoverScopeFromSource(source))} / paths ${paths.length} / matched ${stringifyValue(result.matchedCount, "0")} / recovered ${stringifyValue(result.recoveredCount, "0")} / modeBudget ${stringifyValue(result.skippedByModeBudget, "0")} / laneBudget ${stringifyValue(result.skippedByLaneBudget, "0")} / providerBudget ${stringifyValue(result.skippedByProviderBudget, "0")}`,
+    tf("status.auto_recover_selection_completed", { source: selectionSourceLabel(source), scope: selectionScopeLabel(recoverScopeFromSource(source)), paths: String(paths.length), matched: stringifyValue(result.matchedCount, "0"), recovered: stringifyValue(result.recoveredCount, "0"), modeBudget: stringifyValue(result.skippedByModeBudget, "0"), laneBudget: stringifyValue(result.skippedByLaneBudget, "0"), providerBudget: stringifyValue(result.skippedByProviderBudget, "0") }, `后台补传筛选已执行：${selectionSourceLabel(source)} / ${selectionScopeLabel(recoverScopeFromSource(source))} / 路径 ${paths.length} / 匹配 ${stringifyValue(result.matchedCount, "0")} / 已恢复 ${stringifyValue(result.recoveredCount, "0")} / 模式预算 ${stringifyValue(result.skippedByModeBudget, "0")} / lane 预算 ${stringifyValue(result.skippedByLaneBudget, "0")} / 网盘源预算 ${stringifyValue(result.skippedByProviderBudget, "0")}`),
     result.recoveredCount <= 0,
   );
 }
@@ -10888,7 +11404,7 @@ function wireStatus() {
           headers: { Accept: "text/plain" },
         });
         if (!response.ok) {
-          throw new Error(`下载 smoke Markdown 失败：${response.status}`);
+          throw new Error(tf("tasks.flash_smoke_markdown_download_failed", { status: response.status }, `下载 smoke Markdown 失败：${response.status}`));
         }
         const markdown = await response.text();
         const record = state.providerSmokes.find((item) => item.id === id);
@@ -10949,7 +11465,7 @@ function wireStatus() {
       const protocolGroup = prefillProfileRiskButton.dataset.providerSmokePrefillProfileRisk || "";
       const row = (state.providerSmokeMatrix || []).find((item) => item.protocolGroup === protocolGroup);
       if (!row) {
-        showFlash("未找到对应协议组的验收矩阵项", true);
+        showFlash(t("wizard.flash_smoke_matrix_group_missing", "未找到对应协议组的验收矩阵项"), true);
         return;
       }
       prefillProfileRiskDefaultsFromMatrix(row);
