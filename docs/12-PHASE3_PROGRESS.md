@@ -156,6 +156,8 @@
 - 已完成本轮回归验证，确认上述授权引导词典化后 `node --check web/static/app.js` 与 `go test ./internal/app -run "TestHandleIndexServesHTML|TestRoutesServeAppJSIncludesRetryEvidenceLabels|TestConsoleUISmokeMainline" -count=1` 通过，且未留下额外临时文件或后台进程残留。
 - 已继续把中文模式里一批仍显眼夹英文的展示词收口为中文优先表达，覆盖“支持验证与删除”“真实网盘样本记录”“样本文档”等文案，并保留 `Smoke Matrix` 等测试依赖锚点不回退主流程。
 - 已再次完成本轮主线回归验证，确认上述中文化收口后 `node --check web/static/app.js` 与 `go test ./internal/app -run "TestHandleIndexServesHTML|TestRoutesServeAppJSIncludesRetryEvidenceLabels|TestConsoleUISmokeMainline" -count=1` 通过，且未留下额外临时文件或后台进程残留。
+- 已继续把任务页和状态页一批长说明收口成“中文解释 + 必要技术词”格式，覆盖重试队列说明、自动补传通道提示、上传断点续跑提示、阻塞处理建议，以及网盘样本筛选占位提示，减少普通用户首屏仍要自己翻译 lane / provider / protocolGroup 等内部术语的问题。
+- 已再次完成本轮主线回归验证，确认上述说明文案收口后 `node --check web/static/app.js` 与 `go test ./internal/app -run "TestHandleIndexServesHTML|TestRoutesServeAppJSIncludesRetryEvidenceLabels|TestConsoleUISmokeMainline" -count=1` 通过，且未留下额外临时文件或后台进程残留。
 ## 正在推进
 
 - 继续清理 `web/static/app.js` 中仍暴露给用户的中英混合提示。
