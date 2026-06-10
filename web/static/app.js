@@ -5728,11 +5728,11 @@ function renderProviders() {
 function prefillWizardFromTaskPath(detail, path, options = {}) {
   const payload = buildCreatePayloadFromTaskPath(detail, path, options);
   if (!payload) {
-    showFlash("请先选择任务", true);
+    showFlash(t("wizard.flash_prefill_task_required", "请先选择任务"), true);
     return;
   }
   prefillWizardFromPayload(payload);
-  showFlash(`已按 ${path} 重建向导范围`);
+  showFlash(t("wizard.flash_prefill_task_range", "已按 {path} 重建向导范围").replace("{path}", path));
 }
 
 function prefillWizardFromPayload(payload) {
@@ -5761,11 +5761,11 @@ function prefillWizardFromPayload(payload) {
 function prefillWizardFromTaskPaths(detail, paths, label = "当前筛选", options = {}) {
   const payload = buildCreatePayloadFromTaskPaths(detail, paths, options);
   if (!payload) {
-    showFlash("请先选择任务", true);
+    showFlash(t("wizard.flash_prefill_task_required", "请先选择任务"), true);
     return;
   }
   prefillWizardFromPayload(payload);
-  showFlash(`已按${label}重建向导范围`);
+  showFlash(t("wizard.flash_prefill_label_range", "已按{label}重建向导范围").replace("{label}", label));
 }
 
 function prefillWizardFromPreviewPaths(paths, label = "全部删除记录") {
@@ -5773,11 +5773,14 @@ function prefillWizardFromPreviewPaths(paths, label = "全部删除记录") {
   try {
     payload = buildPlanPayload();
   } catch (error) {
-    showFlash(`当前向导参数无法解析：${error.message}`, true);
+    showFlash(
+      t("wizard.flash_prefill_payload_parse_error", "当前向导参数无法解析：{error}").replace("{error}", error.message),
+      true,
+    );
     return;
   }
   prefillWizardFromPayload(buildCreatePayloadFromPayloadPaths(payload, paths, { exactRoots: true }));
-  showFlash(`已按${label}重建向导范围`);
+  showFlash(t("wizard.flash_prefill_label_range", "已按{label}重建向导范围").replace("{label}", label));
 }
 
 function wireSourceDeletionSummary(scope, selector = null) {
@@ -5801,7 +5804,7 @@ function wireSourceDeletionSummary(scope, selector = null) {
     if (pathButton) {
       const path = pathButton.dataset.sourceDeletePrefillPath || "";
       if (!path) {
-        showFlash("缺少可重建路径", true);
+        showFlash(t("wizard.flash_prefill_missing_path", "缺少可重建路径"), true);
         return;
       }
       if (focusScope === "preview") {
@@ -5810,7 +5813,12 @@ function wireSourceDeletionSummary(scope, selector = null) {
       }
       const context = taskContextByScope(focusScope);
       if (!context?.detail) {
-        showFlash(focusScope === "task" ? "请先选择任务" : "当前状态样本没有可用任务", true);
+        showFlash(
+          focusScope === "task"
+            ? t("wizard.flash_prefill_task_required", "请先选择任务")
+            : t("wizard.flash_prefill_status_task_missing", "当前状态样本没有可用任务"),
+          true,
+        );
         return;
       }
       prefillWizardFromTaskPath(context.detail, path, { exactRoots: true });
@@ -5825,7 +5833,7 @@ function wireSourceDeletionSummary(scope, selector = null) {
     }
     const normalizedPaths = Array.isArray(paths) ? paths.map((path) => normalizeComparePath(path)).filter(Boolean) : [];
     if (!normalizedPaths.length) {
-      showFlash("当前没有可重建的删除记录", true);
+      showFlash(t("wizard.flash_prefill_missing_delete_paths", "当前没有可重建的删除记录"), true);
       return;
     }
     if (focusScope === "preview") {
