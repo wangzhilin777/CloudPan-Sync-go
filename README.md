@@ -467,8 +467,7 @@ http://127.0.0.1:18080/
 
 主要工作流：
 
-- `docker-package`：构建 Docker 镜像归档。
-- `release-package`：构建服务端多平台包、Docker 镜像归档，并发布到 GitHub Releases。
+- `release-package`：统一构建服务端多平台包、桌面客户端包、Docker 镜像归档，并发布到 GitHub Releases。
 
 触发方式：
 
