@@ -269,6 +269,25 @@ const translations = {
       flash_task_pending_filters_cleared: "已清空任务待补传筛选",
       flash_status_directory_filters_cleared: "已清空状态目录树筛选",
       flash_status_pending_filters_cleared: "已清空状态待补传筛选",
+      flash_no_visible_tree_paths: "当前{label}没有可复制的路径",
+      flash_copied_tree_paths: "已复制 {count} 条{label}路径",
+      flash_tree_subtree_not_found: "当前筛选结果里未找到对应子树",
+      flash_tree_subtree_empty: "当前子树没有可复制的路径",
+      flash_copied_tree_subtree_paths: "已复制 {count} 条{label}子树路径",
+      flash_tree_already_top: "当前已经是最上层路径",
+      flash_tree_focused_by_parent: "已按父级路径 {path} 收敛{label}",
+      flash_tree_focused_by_path: "已按 {path} 收敛{label}",
+      flash_task_pending_focused_by_retry: "已按当前重试项定位待补传树",
+      flash_status_pending_focused_by_retry: "已按当前重试项定位最近待补传树",
+      flash_task_retry_class_focused: "已收敛到当前同类重试队列",
+      flash_status_retry_class_focused: "已收敛到最近同类重试队列",
+      flash_task_retry_blocked_action_focused: "已按当前 blocked action 收敛任务重试队列",
+      flash_task_pending_not_found: "当前任务没有可定位的待补传路径",
+      flash_task_pending_focused: "已按当前任务定位待补传树",
+      flash_blocked_task_missing: "当前 blocked 摘要没有可用样本任务",
+      flash_blocked_task_not_found: "未找到对应样本任务，可能已被清理",
+      flash_blocked_task_opened: "已打开 blocked 摘要对应的样本任务",
+      flash_status_retry_blocked_action_focused: "已按 blocked action 收敛最近重试队列",
       focus_same_retry_class: "只看同类队列",
       result_count_compact: "done {done} / skipped {skipped} / failed {failed}",
       retry_queue_compact: "可重试 {retryable} / 阻塞 {blocked}",
@@ -1019,6 +1038,25 @@ const translations = {
       retry_queue_exhausted: "Exhausted",
       retry_queue_filtered_empty: "No retry queue items match the current filters.",
       focus_pending_tree: "Focus Pending Retry Tree",
+      flash_no_visible_tree_paths: "There are no visible paths to copy in {label}",
+      flash_copied_tree_paths: "Copied {count} {label} paths",
+      flash_tree_subtree_not_found: "The current filtered result does not contain the selected subtree",
+      flash_tree_subtree_empty: "The current subtree has no paths to copy",
+      flash_copied_tree_subtree_paths: "Copied {count} {label} subtree paths",
+      flash_tree_already_top: "The current path is already at the top level",
+      flash_tree_focused_by_parent: "Focused {label} by parent path {path}",
+      flash_tree_focused_by_path: "Focused {label} by {path}",
+      flash_task_pending_focused_by_retry: "Focused the task pending tree by the current retry item",
+      flash_status_pending_focused_by_retry: "Focused the recent pending tree by the current retry item",
+      flash_task_retry_class_focused: "Focused the current similar retry queue",
+      flash_status_retry_class_focused: "Focused the recent similar retry queue",
+      flash_task_retry_blocked_action_focused: "Focused the task retry queue by the current blocked action",
+      flash_task_pending_not_found: "The current task has no pending path to focus",
+      flash_task_pending_focused: "Focused the task pending tree by the current task",
+      flash_blocked_task_missing: "The current blocked summary does not contain a usable sample task",
+      flash_blocked_task_not_found: "The sample task was not found and may already have been cleaned up",
+      flash_blocked_task_opened: "Opened the sample task referenced by the blocked summary",
+      flash_status_retry_blocked_action_focused: "Focused the recent retry queue by blocked action",
       focus_same_retry_class: "Show Similar Queue",
       result_count_compact: "done {done} / skipped {skipped} / failed {failed}",
       retry_queue_compact: "retryable {retryable} / blocked {blocked}",
@@ -4190,37 +4228,62 @@ function flattenTreeNodePaths(node, mode = "directory") {
 async function copyVisibleTreePaths(scope, panel) {
   const paths = visibleTreePaths(scope, panel);
   if (!paths.length) {
-    showFlash(`当前${panel === "pending" ? "待补传树" : "目录树"}没有可复制的路径`, true);
+    showFlash(
+      tf(
+        "tasks.flash_no_visible_tree_paths",
+        { label: panel === "pending" ? t("tasks.sync_to_pending_tree", "待补传树") : t("tasks.sync_to_directory_tree", "目录树") },
+        `当前${panel === "pending" ? "待补传树" : "目录树"}没有可复制的路径`,
+      ),
+      true,
+    );
     return;
   }
   await copyTextToClipboard(paths.join("\n"));
-  showFlash(`已复制 ${paths.length} 条${panel === "pending" ? "待补传" : "目录"}路径`);
+  showFlash(
+    tf(
+      "tasks.flash_copied_tree_paths",
+      { count: paths.length, label: panel === "pending" ? "待补传" : "目录" },
+      `已复制 ${paths.length} 条${panel === "pending" ? "待补传" : "目录"}路径`,
+    ),
+  );
 }
 
 async function copyTreeNodePaths(scope, panel, path) {
   const nodes = currentVisibleTreeNodes(scope, panel);
   const node = findTreeNodeByPath(nodes, path);
   if (!node) {
-    showFlash("当前筛选结果里未找到对应子树", true);
+    showFlash(t("tasks.flash_tree_subtree_not_found", "当前筛选结果里未找到对应子树"), true);
     return;
   }
   const paths = flattenTreeNodePaths(node, panel === "pending" ? "pending" : "directory");
   if (!paths.length) {
-    showFlash("当前子树没有可复制的路径", true);
+    showFlash(t("tasks.flash_tree_subtree_empty", "当前子树没有可复制的路径"), true);
     return;
   }
   await copyTextToClipboard(paths.join("\n"));
-  showFlash(`已复制 ${paths.length} 条${panel === "pending" ? "待补传" : "目录"}子树路径`);
+  showFlash(
+    tf(
+      "tasks.flash_copied_tree_subtree_paths",
+      { count: paths.length, label: panel === "pending" ? "待补传" : "目录" },
+      `已复制 ${paths.length} 条${panel === "pending" ? "待补传" : "目录"}子树路径`,
+    ),
+  );
 }
 
 function focusTreeParentPath(scope, panel, path) {
   const parentPath = parentTreePath(path);
   if (!parentPath) {
-    showFlash("当前已经是最上层路径", true);
+    showFlash(t("tasks.flash_tree_already_top", "当前已经是最上层路径"), true);
     return;
   }
   focusTreePanelByPath(scope, panel, parentPath);
-  showFlash(`已按父级路径 ${parentPath} 收敛${panel === "pending" ? "待补传树" : "目录树"}`);
+  showFlash(
+    tf(
+      "tasks.flash_tree_focused_by_parent",
+      { path: parentPath, label: panel === "pending" ? t("tasks.sync_to_pending_tree", "待补传树") : t("tasks.sync_to_directory_tree", "目录树") },
+      `已按父级路径 ${parentPath} 收敛${panel === "pending" ? "待补传树" : "目录树"}`,
+    ),
+  );
 }
 
 function setFilterControlValue(selector, value) {
@@ -4263,7 +4326,13 @@ function focusTreePanelByPath(scope, panel, path) {
   }
   setFilterControlValue(selector, normalized);
   rerenderTreeScope(scope);
-  showFlash(`已按 ${normalized} 收敛${panel === "pending" ? "待补传树" : "目录树"}`);
+  showFlash(
+    tf(
+      "tasks.flash_tree_focused_by_path",
+      { path: normalized, label: panel === "pending" ? t("tasks.sync_to_pending_tree", "待补传树") : t("tasks.sync_to_directory_tree", "目录树") },
+      `已按 ${normalized} 收敛${panel === "pending" ? "待补传树" : "目录树"}`,
+    ),
+  );
 }
 
 function syncTreePanelPath(scope, fromPanel, path) {
@@ -4279,13 +4348,13 @@ function focusPendingTreeFromRetry(scope, path) {
     state.treeFilters.taskPending.query = path;
     setFilterControlValue("#task-pending-filter-query", path);
     updateTaskTreePanels(currentSelectedTaskDetail());
-    showFlash("已按当前重试项定位待补传树");
+    showFlash(t("tasks.flash_task_pending_focused_by_retry", "已按当前重试项定位待补传树"));
     return;
   }
   state.treeFilters.statusPending.query = path;
   setFilterControlValue("#status-pending-filter-query", path);
   updateStatusTreePanels(recentRuntimePayload());
-  showFlash("已按当前重试项定位最近待补传树");
+  showFlash(t("tasks.flash_status_pending_focused_by_retry", "已按当前重试项定位最近待补传树"));
 }
 
 function focusRetryClass(scope, retryClass, retryState) {
@@ -4295,7 +4364,7 @@ function focusRetryClass(scope, retryClass, retryState) {
     setFilterControlValue("#task-retry-filter-class", retryClass || "");
     setFilterControlValue("#task-retry-filter-state", retryState || "");
     updateTaskRetryQueue(currentSelectedTaskDetail());
-    showFlash("已收敛到当前同类重试队列");
+    showFlash(t("tasks.flash_task_retry_class_focused", "已收敛到当前同类重试队列"));
     return;
   }
   state.treeFilters.statusRetry.retryClass = retryClass || "";
@@ -4303,7 +4372,7 @@ function focusRetryClass(scope, retryClass, retryState) {
   setFilterControlValue("#status-retry-filter-class", retryClass || "");
   setFilterControlValue("#status-retry-filter-state", retryState || "");
   updateStatusRetryQueue(recentRuntimePayload());
-  showFlash("已收敛到最近同类重试队列");
+  showFlash(t("tasks.flash_status_retry_class_focused", "已收敛到最近同类重试队列"));
 }
 
 function focusTaskRetryByBlockedAction(action) {
@@ -4313,7 +4382,7 @@ function focusTaskRetryByBlockedAction(action) {
   setFilterControlValue("#task-retry-filter-class", preset.retryClass);
   setFilterControlValue("#task-retry-filter-state", preset.retryState);
   updateTaskRetryQueue(currentSelectedTaskDetail());
-  showFlash("已按当前 blocked action 收敛任务重试队列");
+  showFlash(t("tasks.flash_task_retry_blocked_action_focused", "已按当前 blocked action 收敛任务重试队列"));
 }
 
 function firstPendingFocusPath(detail) {
@@ -4339,13 +4408,13 @@ function firstPendingFocusPath(detail) {
 function focusTaskPendingByDetail(detail) {
   const path = firstPendingFocusPath(detail);
   if (!path) {
-    showFlash("当前任务没有可定位的待补传路径", true);
+    showFlash(t("tasks.flash_task_pending_not_found", "当前任务没有可定位的待补传路径"), true);
     return;
   }
   state.treeFilters.taskPending.query = path;
   setFilterControlValue("#task-pending-filter-query", path);
   updateTaskTreePanels(detail || currentSelectedTaskDetail());
-  showFlash("已按当前任务定位待补传树");
+  showFlash(t("tasks.flash_task_pending_focused", "已按当前任务定位待补传树"));
 }
 
 function blockedActionFilterPreset(action) {
@@ -4371,7 +4440,7 @@ function blockedActionFilterPreset(action) {
 
 async function openTaskByID(taskID) {
   if (!taskID) {
-    showFlash("当前 blocked 摘要没有可用样本任务", true);
+    showFlash(t("tasks.flash_blocked_task_missing", "当前 blocked 摘要没有可用样本任务"), true);
     return;
   }
   activateTab("tasks");
@@ -4379,13 +4448,13 @@ async function openTaskByID(taskID) {
     await loadTasks();
   }
   if (!state.tasks.some((item) => item.task.id === taskID)) {
-    showFlash("未找到对应样本任务，可能已被清理", true);
+    showFlash(t("tasks.flash_blocked_task_not_found", "未找到对应样本任务，可能已被清理"), true);
     return;
   }
   state.selectedTaskId = taskID;
   renderTasks();
   renderSelectedTask();
-  showFlash("已打开 blocked 摘要对应的样本任务");
+  showFlash(t("tasks.flash_blocked_task_opened", "已打开 blocked 摘要对应的样本任务"));
 }
 
 function focusBlockedActionSummary(action) {
@@ -4404,7 +4473,7 @@ function focusBlockedActionSummary(action) {
   );
   $("#auto-recover-summary").innerHTML = renderAutoRecoverSummary(state.evidence?.autoRecoverPool || []);
   wireAutoRecoverSummary();
-  showFlash("已按 blocked action 收敛最近重试队列");
+  showFlash(t("tasks.flash_status_retry_blocked_action_focused", "已按 blocked action 收敛最近重试队列"));
 }
 
 async function runBlockedActionRecovery(action) {
