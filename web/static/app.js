@@ -292,7 +292,7 @@ const translations = {
       flash_retry_single_path_rebuilt: "已按 {path}（{scope}）重建重试范围",
       flash_tasks_refreshed: "任务列表已刷新",
       flash_status_refreshed: "状态矩阵已刷新",
-      flash_provider_smoke_saved: "网盘样本 smoke 记录已保存",
+      flash_provider_smoke_saved: "网盘样本记录已保存",
       flash_report_refreshed: "验收报告已刷新",
       flash_report_saved: "验收报告已保存",
       flash_report_downloaded: "验收报告已下载",
@@ -605,7 +605,7 @@ const translations = {
       auto_recover_run_wait_other: "只执行其它等待",
       auto_recover_run_primary_retry: "执行主重试类型",
       auto_recover_run_primary_blocked: "执行主阻塞动作",
-      auto_recover_run_lane: "执行该 lane",
+      auto_recover_run_lane: "执行该通道",
       auto_recover_run_mode: "执行该模式",
       matrix_open_smoke_record: "打开样本记录",
       matrix_open_task_sample: "打开任务样本",
@@ -643,13 +643,13 @@ const translations = {
       matrix_filter_in_progress: "进行中",
       matrix_filter_pending: "待补齐",
       matrix_filter_empty: "当前筛选 {filter} 没有真实样本矩阵。",
-      flash_smoke_records_filtered: "已按 {label} 收敛 smoke 记录",
+      flash_smoke_records_filtered: "已按 {label} 收敛样本记录",
       flash_smoke_records_result_cleared: "已清空样本记录结果筛选",
       flash_smoke_records_group_cleared: "已清空样本记录协议组筛选",
       flash_smoke_records_cleared: "已清空样本记录筛选",
       flash_smoke_matrix_filtered: "已按 {label} 收敛验收矩阵",
       flash_smoke_record_opened: "已打开样本记录并回填表单",
-      flash_smoke_gap_prefilled: "已按验收缺口预填 smoke 动作",
+      flash_smoke_gap_prefilled: "已按验收缺口预填样本动作",
       flash_smoke_matrix_prefilled: "已按验收矩阵预填样本表单",
       flash_smoke_profile_risk_prefilled: "已按真实样本预填账号默认风控",
       smoke_note_protocol_group: "协议组：{value}",
@@ -663,7 +663,7 @@ const translations = {
       smoke_markdown_load_failed: "加载样本文档失败：{status}",
       smoke_action_fill_upload_success: "补 1 条真实上传成功样本",
       smoke_action_fill_task_coverage: "补 1 条真实任务覆盖样本",
-      smoke_action_fill_upload_smoke: "补上传 smoke",
+      smoke_action_fill_upload_smoke: "补上传成功样本",
       smoke_draft_title_provider: "网盘样本",
       smoke_draft_title_status: "{protocolGroup} {status} 样本",
       auto_recover_summary_title: "当前可见候选池摘要",
@@ -671,9 +671,9 @@ const translations = {
       auto_recover_ready_count: "可立即重试 {value}",
       auto_recover_cooldown_count: "冷却中 {value}",
       auto_recover_profile_counts: "授权档案 {value}",
-      auto_recover_summary_compact: "{lanes} 个 lane / {tasks} 个任务",
+      auto_recover_summary_compact: "{lanes} 个通道 / {tasks} 个任务",
       smoke_action_fill_task_sample: "补任务覆盖样本",
-      smoke_action_fill_smoke_success: "补 smoke 成功样本",
+      smoke_action_fill_smoke_success: "补成功样本",
       smoke_action_prefill_by_gap: "按缺口预填动作",
       smoke_draft_label_auth_expired: "补授权失效样本",
       smoke_draft_label_rate_limited: "补限流样本",
@@ -689,7 +689,7 @@ const translations = {
       smoke_draft_note_large_file: "目标代表样本：large_file / multipart / 大文件上传恢复",
       smoke_draft_note_nested_directory: "目标代表样本：nested_directory / 多层目录 / subtree",
       smoke_draft_note_retry_recovery: "目标代表样本：retry_recovery / checkpoint / resume / 续传",
-      smoke_title_boundary_sample: "边界样本",
+      smoke_title_boundary_sample: "边界场景样本",
       protocol_coverage_empty: "当前没有协议族覆盖数据。",
       upload_checkpoint_acceptance_title: "上传断点续传默认恢复验收",
       upload_checkpoint_readiness: "断点续传就绪度：{value}",
@@ -7836,7 +7836,7 @@ function renderAutoRecoverLastResultDetail() {
           <div class="muted">${escapeHTML(stringifyValue(item.message, "-"))}</div>
           <div class="tree-actions">
             <button type="button" class="link-button" data-auto-recover-decision-focus-state="${escapeHTML(stringifyValue(item.recoverState, ""))}">${escapeHTML(t("status.focus_current_state", "只看该状态"))}</button>
-            <button type="button" class="link-button" data-auto-recover-decision-focus-lane-mode="${escapeHTML(stringifyValue(item.mode, ""))}" data-auto-recover-decision-focus-lane-strategy="${escapeHTML(stringifyValue(item.strategy, ""))}" data-auto-recover-decision-focus-lane-retry-class="${escapeHTML(stringifyValue(item.retryClass, ""))}" data-auto-recover-decision-focus-lane-blocked-action="${escapeHTML(stringifyValue(item.blockedAction, ""))}">${escapeHTML(t("status.focus_current_lane", "只看该 lane"))}</button>
+            <button type="button" class="link-button" data-auto-recover-decision-focus-lane-mode="${escapeHTML(stringifyValue(item.mode, ""))}" data-auto-recover-decision-focus-lane-strategy="${escapeHTML(stringifyValue(item.strategy, ""))}" data-auto-recover-decision-focus-lane-retry-class="${escapeHTML(stringifyValue(item.retryClass, ""))}" data-auto-recover-decision-focus-lane-blocked-action="${escapeHTML(stringifyValue(item.blockedAction, ""))}">${escapeHTML(t("status.focus_current_lane", "只看该通道"))}</button>
             <button type="button" class="link-button" data-auto-recover-decision-apply-budgets="1" data-auto-recover-decision-apply-mode-budget="${escapeHTML(stringifyValue(item.suggestedModeBudget, ""))}" data-auto-recover-decision-apply-lane-budget="${escapeHTML(stringifyValue(item.suggestedLaneBudget, ""))}" data-auto-recover-decision-apply-group-budget="${escapeHTML(stringifyValue(item.suggestedProtocolGroupBudget, ""))}" data-auto-recover-decision-apply-provider-budget="${escapeHTML(stringifyValue(item.suggestedProviderBudget, ""))}" data-auto-recover-decision-apply-profile-budget="${escapeHTML(stringifyValue(item.suggestedProfileBudget, ""))}">${escapeHTML(t("status.apply_suggested_budgets", "采用建议预算"))}</button>
             <button type="button" class="link-button" data-auto-recover-decision-preview="1" data-auto-recover-decision-task-id="${escapeHTML(stringifyValue(item.taskId, ""))}" data-auto-recover-decision-mode="${escapeHTML(stringifyValue(item.mode, ""))}" data-auto-recover-decision-strategy="${escapeHTML(stringifyValue(item.strategy, ""))}" data-auto-recover-decision-protocol-group="${escapeHTML(stringifyValue(item.protocolGroup, ""))}" data-auto-recover-decision-provider="${escapeHTML(stringifyValue(item.providerKey, ""))}" data-auto-recover-decision-profile="${escapeHTML(stringifyValue(item.profileId, ""))}" data-auto-recover-decision-retry-class="${escapeHTML(stringifyValue(item.retryClass, ""))}" data-auto-recover-decision-blocked-action="${escapeHTML(stringifyValue(item.blockedAction, ""))}" data-auto-recover-decision-recover-state="${escapeHTML(stringifyValue(item.recoverState, ""))}" data-auto-recover-decision-mode-budget="${escapeHTML(stringifyValue(item.suggestedModeBudget, ""))}" data-auto-recover-decision-lane-budget="${escapeHTML(stringifyValue(item.suggestedLaneBudget, ""))}" data-auto-recover-decision-group-budget="${escapeHTML(stringifyValue(item.suggestedProtocolGroupBudget, ""))}" data-auto-recover-decision-provider-budget="${escapeHTML(stringifyValue(item.suggestedProviderBudget, ""))}" data-auto-recover-decision-profile-budget="${escapeHTML(stringifyValue(item.suggestedProfileBudget, ""))}">${escapeHTML(t("status.preview_current_decision", "预演该决策"))}</button>
             <button type="button" class="link-button" data-auto-recover-decision-run="1" data-auto-recover-decision-task-id="${escapeHTML(stringifyValue(item.taskId, ""))}" data-auto-recover-decision-mode="${escapeHTML(stringifyValue(item.mode, ""))}" data-auto-recover-decision-strategy="${escapeHTML(stringifyValue(item.strategy, ""))}" data-auto-recover-decision-protocol-group="${escapeHTML(stringifyValue(item.protocolGroup, ""))}" data-auto-recover-decision-provider="${escapeHTML(stringifyValue(item.providerKey, ""))}" data-auto-recover-decision-profile="${escapeHTML(stringifyValue(item.profileId, ""))}" data-auto-recover-decision-retry-class="${escapeHTML(stringifyValue(item.retryClass, ""))}" data-auto-recover-decision-blocked-action="${escapeHTML(stringifyValue(item.blockedAction, ""))}" data-auto-recover-decision-recover-state="${escapeHTML(stringifyValue(item.recoverState, ""))}" data-auto-recover-decision-mode-budget="${escapeHTML(stringifyValue(item.suggestedModeBudget, ""))}" data-auto-recover-decision-lane-budget="${escapeHTML(stringifyValue(item.suggestedLaneBudget, ""))}" data-auto-recover-decision-group-budget="${escapeHTML(stringifyValue(item.suggestedProtocolGroupBudget, ""))}" data-auto-recover-decision-provider-budget="${escapeHTML(stringifyValue(item.suggestedProviderBudget, ""))}" data-auto-recover-decision-profile-budget="${escapeHTML(stringifyValue(item.suggestedProfileBudget, ""))}">${escapeHTML(t("status.run_current_decision", "执行该决策"))}</button>
@@ -8295,7 +8295,7 @@ function renderAutoRecoverSummary(items) {
               data-auto-recover-focus-lane-strategy="${escapeHTML(stringifyValue(item.sampleStrategy, ""))}"
               data-auto-recover-focus-lane-retry-class="${escapeHTML(stringifyValue(item.primaryRetryClass, ""))}"
               data-auto-recover-focus-lane-blocked-action="${escapeHTML(stringifyValue(item.primaryBlockedAction, ""))}"
-            >只看该 lane</button>`
+            >只看该通道</button>`
                 : ""
             }
             <button
@@ -8320,7 +8320,7 @@ function renderAutoRecoverSummary(items) {
               data-auto-recover-preview-group-budget="${escapeHTML(stringifyValue(autoRecoverSuggestedBudgetValue(item.suggestedProtocolGroupBudget, autoRetryPolicy.limitPerProtocolGroup), ""))}"
               data-auto-recover-preview-provider-budget="${escapeHTML(stringifyValue(autoRecoverSuggestedBudgetValue(item.suggestedProviderBudget, autoRetryPolicy.limitPerProvider), ""))}"
               data-auto-recover-preview-profile-budget="${escapeHTML(stringifyValue(autoRecoverSuggestedBudgetValue(item.suggestedProfileBudget, autoRetryPolicy.limitPerProfile), ""))}"
-            >预演该 lane</button>
+            >预演该通道</button>
             ${
               Array.isArray(item.blockedActions) && item.blockedActions.length
                 ? `<button
@@ -8447,7 +8447,7 @@ function renderAutoRecoverSummary(items) {
               data-auto-recover-run-lane-strategy="${escapeHTML(stringifyValue(item.sampleStrategy, ""))}"
               data-auto-recover-run-lane-retry-class="${escapeHTML(stringifyValue(item.primaryRetryClass, ""))}"
               data-auto-recover-run-lane-blocked-action="${escapeHTML(stringifyValue(item.primaryBlockedAction, ""))}"
-            >${escapeHTML(t("status.auto_recover_run_lane", "执行该 lane"))}</button>`
+            >${escapeHTML(t("status.auto_recover_run_lane", "执行该通道"))}</button>`
                 : ""
             }
             <button
@@ -10064,7 +10064,7 @@ function renderProviderSmokeMatrix(items) {
 
 function renderProviderSmokeMarkdown(markdown) {
   if (!markdown) {
-    return `<div class="directory-empty">${escapeHTML(t("status.provider_smoke_markdown_empty", "请选择一条 smoke 记录查看 Markdown。"))}</div>`;
+    return `<div class="directory-empty">${escapeHTML(t("status.provider_smoke_markdown_empty", "请选择一条样本记录查看样本文档。"))}</div>`;
   }
   return `<pre class="result-box">${escapeHTML(markdown)}</pre>`;
 }
@@ -10287,13 +10287,13 @@ function providerSmokeDraftActionLabel(item) {
   }
   const missing = providerSmokeMissingReasons(item);
   if (missing.includes("upload_smoke_success_missing")) {
-    return t("status.smoke_action_fill_upload_smoke", "补上传 smoke");
+    return t("status.smoke_action_fill_upload_smoke", "补上传成功样本");
   }
   if (missing.includes("task_coverage_missing")) {
     return t("status.smoke_action_fill_task_sample", "补任务覆盖样本");
   }
   if (missing.includes("real_smoke_success_missing")) {
-    return t("status.smoke_action_fill_smoke_success", "补 smoke 成功样本");
+    return t("status.smoke_action_fill_smoke_success", "补成功样本");
   }
   return t("status.smoke_action_prefill_by_gap", "按缺口预填动作");
 }
@@ -10311,7 +10311,7 @@ function focusProviderSmokeRecordsByResult(result) {
     : "";
   showFlash(
     normalized
-      ? tf("status.flash_smoke_records_filtered", { label }, `已按 ${label} 收敛 smoke 记录`)
+      ? tf("status.flash_smoke_records_filtered", { label }, `已按 ${label} 收敛样本记录`)
       : t("status.flash_smoke_records_result_cleared", "已清空样本记录结果筛选"),
   );
 }
@@ -10356,7 +10356,7 @@ function draftProviderSmokeAndFocus(item, { fromGap = false } = {}) {
     focusProviderSmokeRecordsByResult(draft.focusResult || draft.result || "");
   }
   if (fromGap) {
-    showFlash(t("status.flash_smoke_gap_prefilled", "已按验收缺口预填 smoke 动作"));
+    showFlash(t("status.flash_smoke_gap_prefilled", "已按验收缺口预填样本动作"));
     return;
   }
   showFlash(t("status.flash_smoke_matrix_prefilled", "已按验收矩阵预填样本表单"));
@@ -10446,7 +10446,7 @@ function prefillProfileRiskDefaultsFromMatrix(item) {
 
 function draftProviderSmokeFromAccepted(item) {
   const draft = draftProviderSmokeFromMatrix(item);
-  const boundarySmokeTitle = t("status.smoke_title_boundary_sample", "边界样本 smoke");
+  const boundarySmokeTitle = t("status.smoke_title_boundary_sample", "边界场景样本");
   draft.title = draft.protocolGroup ? `${draft.protocolGroup} ${boundarySmokeTitle}` : boundarySmokeTitle;
   draft.note = [draft.note, t("status.smoke_note_boundary_sample", "当前协议组已验收，建议继续补充边界场景样本。")].filter(Boolean).join("；");
   if (!draft.operations.length) {
@@ -10462,7 +10462,7 @@ function focusProviderSmokeRecordsByGroup(protocolGroup) {
   renderStatus();
   showFlash(
     normalized
-      ? tf("status.flash_smoke_records_filtered", { label: normalized }, `已按 ${normalized} 收敛 smoke 记录`)
+      ? tf("status.flash_smoke_records_filtered", { label: normalized }, `已按 ${normalized} 收敛样本记录`)
       : t("status.flash_smoke_records_group_cleared", "已清空样本记录协议组筛选"),
   );
 }
@@ -10477,7 +10477,7 @@ async function loadProviderSmokeMarkdown(id) {
     },
   });
   if (!response.ok) {
-    throw new Error(tf("status.smoke_markdown_load_failed", { status: response.status }, `加载 smoke Markdown 失败：${response.status}`));
+    throw new Error(tf("status.smoke_markdown_load_failed", { status: response.status }, `加载样本文档失败：${response.status}`));
   }
   state.selectedProviderSmokeId = id;
   state.selectedProviderSmokeMarkdown = await response.text();
@@ -11313,7 +11313,7 @@ function wireStatus() {
       hydrateProviderSmokeForm(record);
       state.selectedProviderSmokeId = record.id || "";
       state.selectedProviderSmokeMarkdown = record.markdown || "";
-      showFlash(t("tasks.flash_provider_smoke_saved", "网盘样本 smoke 记录已保存"));
+      showFlash(t("tasks.flash_provider_smoke_saved", "网盘样本记录已保存"));
       await loadStatus();
     } catch (error) {
       showFlash(error.message, true);
@@ -11387,7 +11387,7 @@ function wireStatus() {
     if (viewButton) {
       try {
         await loadProviderSmokeMarkdown(viewButton.dataset.providerSmokeView || "");
-        showFlash(t("tasks.flash_smoke_markdown_switched", "已切换 smoke Markdown"));
+        showFlash(t("tasks.flash_smoke_markdown_switched", "已切换样本文档"));
       } catch (error) {
         showFlash(error.message, true);
       }
@@ -11404,7 +11404,7 @@ function wireStatus() {
           headers: { Accept: "text/plain" },
         });
         if (!response.ok) {
-          throw new Error(tf("tasks.flash_smoke_markdown_download_failed", { status: response.status }, `下载 smoke Markdown 失败：${response.status}`));
+          throw new Error(tf("tasks.flash_smoke_markdown_download_failed", { status: response.status }, `下载样本文档失败：${response.status}`));
         }
         const markdown = await response.text();
         const record = state.providerSmokes.find((item) => item.id === id);
@@ -11418,7 +11418,7 @@ function wireStatus() {
         anchor.click();
         anchor.remove();
         URL.revokeObjectURL(url);
-        showFlash(t("tasks.flash_smoke_markdown_downloaded", "smoke Markdown 已下载"));
+        showFlash(t("tasks.flash_smoke_markdown_downloaded", "样本文档已下载"));
       } catch (error) {
         showFlash(error.message, true);
       }

@@ -160,6 +160,7 @@
 - 已再次完成本轮主线回归验证，确认上述说明文案收口后 `node --check web/static/app.js` 与 `go test ./internal/app -run "TestHandleIndexServesHTML|TestRoutesServeAppJSIncludesRetryEvidenceLabels|TestConsoleUISmokeMainline" -count=1` 通过，且未留下额外临时文件或后台进程残留。
 - 已继续把状态页首屏几处仍显眼的英文术语收口为中文优先表达，覆盖“最近探测 / 快照”“阻塞汇总项”“只看该通道”“网盘源默认风控校准”“待补齐（待补真实网盘样本）”“样本记录”等文案，减少中文界面下 probe / lane / provider / smoke 等词在首屏和验收矩阵里继续裸露的问题。
 - 已继续把状态页样本记录区一批高频 `smoke` 展示词收口成中文优先表达，覆盖“当前没有样本记录”“显示全部/当前显示样本记录”“打开样本记录”“预填样本表单”“最近样本时间”等文案，并同步更新相关 smoke/web 断言，减少中文界面下样本区仍持续暴露 `smoke` 混合提示的问题。
+- 已继续把状态页样本补齐流程里的保存提示、筛选提示、补样动作和样本文档空态收口成中文优先表达，覆盖“网盘样本记录已保存”“已按标签收敛样本记录”“已按验收缺口预填样本动作”“补成功样本”“请选择一条样本记录查看样本文档”等文案，并同步更新相关 smoke/web 断言，减少中文界面下样本补齐链路仍持续暴露 `smoke / Markdown / lane` 混合提示的问题。
 ## 正在推进
 
 - 继续清理 `web/static/app.js` 中仍暴露给用户的中英混合提示。

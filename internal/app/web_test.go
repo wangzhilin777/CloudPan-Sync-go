@@ -675,7 +675,7 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "只看该状态") {
 		t.Fatalf("expected auto recover decision focus-state label in app.js, got %q", body)
 	}
-	if !strings.Contains(body, "只看该 lane") {
+	if !strings.Contains(body, "只看该通道") {
 		t.Fatalf("expected auto recover decision focus lane label in app.js, got %q", body)
 	}
 	if !strings.Contains(body, "采用建议预算") {
@@ -912,7 +912,7 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "已按验收矩阵预填样本表单") {
 		t.Fatalf("expected provider smoke matrix draft flash text in app.js, got %q", body)
 	}
-	if !strings.Contains(body, "已按验收缺口预填 smoke 动作") {
+	if !strings.Contains(body, "已按验收缺口预填样本动作") {
 		t.Fatalf("expected provider smoke matrix gap draft flash text in app.js, got %q", body)
 	}
 	if !strings.Contains(body, "已按真实样本预填账号默认风控") {
@@ -1059,7 +1059,7 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "验收报告已刷新") {
 		t.Fatalf("expected report refresh flash text in app.js, got %q", body)
 	}
-	if !strings.Contains(body, "网盘样本 smoke 记录已保存") {
+	if !strings.Contains(body, "网盘样本记录已保存") {
 		t.Fatalf("expected provider smoke save flash text in app.js, got %q", body)
 	}
 	if !strings.Contains(body, "状态矩阵已刷新") {
@@ -1203,10 +1203,10 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "auto recover focus:") {
 		t.Fatalf("expected provider smoke auto recover focus summary in app.js, got %q", body)
 	}
-	if !strings.Contains(body, "已切换 smoke Markdown") {
+	if !strings.Contains(body, "已切换样本文档") {
 		t.Fatalf("expected provider smoke markdown switch flash text in app.js, got %q", body)
 	}
-	if !strings.Contains(body, "smoke Markdown 已下载") {
+	if !strings.Contains(body, "样本文档已下载") {
 		t.Fatalf("expected provider smoke markdown download flash text in app.js, got %q", body)
 	}
 	if !strings.Contains(body, "已清空样本记录筛选") {
@@ -1374,7 +1374,7 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "采用建议预算") {
 		t.Fatalf("expected auto recover apply suggested budgets label in app.js, got %q", body)
 	}
-	if !strings.Contains(body, "预演该 lane") {
+	if !strings.Contains(body, "预演该通道") {
 		t.Fatalf("expected auto recover preview lane label in app.js, got %q", body)
 	}
 	if !strings.Contains(body, "执行该阻塞动作") {
@@ -1404,7 +1404,7 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "执行主阻塞动作") {
 		t.Fatalf("expected auto recover primary blocked action label in app.js, got %q", body)
 	}
-	if !strings.Contains(body, "执行该 lane") {
+	if !strings.Contains(body, "执行该通道") {
 		t.Fatalf("expected auto recover run lane label in app.js, got %q", body)
 	}
 	if !strings.Contains(body, "打开样本任务") {
