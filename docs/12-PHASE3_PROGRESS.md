@@ -104,6 +104,7 @@
 - 已继续补齐桌面模式的退出提示语义：独立窗口模式下，关闭窗口时会明确提示“正在退出本地服务”；系统浏览器兜底模式下，会直接提醒“关闭浏览器标签页不会自动退出服务，需要关闭终端或按 Ctrl+C”，减少桌面包在兜底模式下让用户误以为服务已经结束的情况。
 - 已把 README 里的桌面模式说明同步到最新行为：新增“启动后会看到哪些提示”、独立窗口模式与系统浏览器兜底模式的区别，以及 Windows / Linux / macOS 下分别如何退出服务，避免代码和文档对桌面模式退出方式描述不一致。
 - 已把 README 里的 GitHub 打包说明同步到仓库现状：去掉过时的 `docker-package` 表述，统一说明当前由 `release-package` 工作流负责服务端包、桌面包和 Docker 归档发布，避免用户按旧名字去 GitHub Actions 里找不存在的工作流。
+- 已把 Release 正文描述补成更面向小白的中文分组说明：现在会直接提示“普通电脑用户优先下桌面包、服务器/NAS 用户下服务端包、Docker 用户下镜像归档包”，并补上 `SHA256SUMS.txt` 的用途说明，减少用户打开发布页后还要自己猜每类资产适合谁。
 - 已把 Release 工作流补上产物白名单校验：发布前会显式校验服务端包、桌面包、Docker 归档和 `SHA256SUMS.txt` 是否与约定名单完全一致，并额外拦截 `cloud-clipboard / clipboard` 这类外部项目命名，减少 GitHub 打包阶段再次混入错误资产的风险。
 - 已把 Docker 归档标签校验补进 Release 工作流：GitHub 打包时会先加载生成出来的 Docker tar，再显式检查 `cloudpan-sync-go:release` 和 `cloudpan-sync-go:latest` 两个标签是否都存在，减少发布后导入镜像只能拿到单个标签、还要手动补 tag 的情况。
 - 已继续收紧 Docker 归档校验：GitHub 打包时在确认 `release/latest` 双标签存在后，还会检查仓库名只能是 `cloudpan-sync-go`，避免把其它镜像仓库名一起混进发布归档。

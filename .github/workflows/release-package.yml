@@ -345,11 +345,19 @@ jobs:
           body: |
             CloudPan Sync Go 正式发布版本。
 
+            下载建议：
+            - 普通 Windows / macOS / Linux 电脑用户：优先下载 `desktop` 桌面客户端包，启动后更像普通软件。
+            - 服务器 / NAS / 远程主机用户：下载对应平台的服务端包，启动后再用浏览器访问控制台。
+            - Docker / 容器部署用户：下载 Docker 镜像归档包，或按 README 自行构建镜像。
+
             本次发布包含：
             - Windows / Linux / macOS 服务端包
             - Windows / Linux / macOS 桌面客户端包
             - Docker 镜像归档包
             - SHA256 校验文件
+
+            使用前请先校验：
+            - `SHA256SUMS.txt` 可用于核对下载文件是否完整。
 
             使用说明请参考 README：
             https://github.com/wangzhilin777/CloudPan-Sync-go/blob/main/README.md
