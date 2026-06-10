@@ -798,7 +798,16 @@ const translations = {
       flash_task_created: "任务已创建",
       flash_task_required: "请先选择任务",
       flash_task_id_missing: "缺少任务标识",
-      flash_task_action_pending: "任务操作执行中，请稍候"
+      flash_task_action_pending: "任务操作执行中，请稍候",
+      flash_profile_missing_edit: "未找到要编辑的授权档案",
+      flash_profile_edit_loaded: "已载入授权档案编辑表单",
+      flash_profile_validate_done: "授权校验完成：{status}",
+      flash_profile_deleted: "授权档案已删除",
+      flash_prefill_task_required: "请先选择任务",
+      flash_prefill_task_loaded: "已按当前任务重建向导参数",
+      flash_copy_task_required: "请先选择任务",
+      flash_copy_task_payload_done: "任务创建参数已复制到剪贴板",
+      flash_copy_failed: "复制失败：{error}"
     }
   },
   "en-US": {
@@ -5338,24 +5347,24 @@ function wireTaskQuickActions(detail) {
   if (prefillButton) {
     prefillButton.disabled = disabled;
     prefillButton.onclick = disabled
-      ? () => showFlash("请先选择任务", true)
+      ? () => showFlash(t("wizard.flash_prefill_task_required", "请先选择任务"), true)
       : () => {
           activateTab("wizard");
           prefillWizardFromTask(detail);
-          showFlash("已按当前任务重建向导参数");
+          showFlash(t("wizard.flash_prefill_task_loaded", "已按当前任务重建向导参数"));
         };
   }
 
   if (copyButton) {
     copyButton.disabled = disabled;
     copyButton.onclick = disabled
-      ? () => showFlash("请先选择任务", true)
+      ? () => showFlash(t("wizard.flash_copy_task_required", "请先选择任务"), true)
       : async () => {
           try {
             await copyTextToClipboard(formatJSON(payload));
-            showFlash("任务创建参数已复制到剪贴板");
+            showFlash(t("wizard.flash_copy_task_payload_done", "任务创建参数已复制到剪贴板"));
           } catch (error) {
-            showFlash(`复制失败：${error.message}`, true);
+            showFlash(t("wizard.flash_copy_failed", "复制失败：{error}").replace("{error}", error.message), true);
           }
         };
   }
@@ -5907,12 +5916,12 @@ function renderProfiles() {
     button.addEventListener("click", () => {
       const profile = state.profiles.find((item) => item.id === button.dataset.profileEdit);
       if (!profile) {
-        showFlash("未找到要编辑的授权档案", true);
+        showFlash(t("wizard.flash_profile_missing_edit", "未找到要编辑的授权档案"), true);
         return;
       }
       setProfileFormEditing(profile);
       focusProfile(profile.id);
-      showFlash("已载入授权档案编辑表单");
+      showFlash(t("wizard.flash_profile_edit_loaded", "已载入授权档案编辑表单"));
     });
   });
 
@@ -5920,7 +5929,12 @@ function renderProfiles() {
     button.addEventListener("click", async () => {
       try {
         const result = await api(`/api/auth/profiles/${button.dataset.profileValidate}/validate`, { method: "POST" });
-        showFlash(`授权校验完成：${renderProfileStatusLabel(result.status)}`);
+        showFlash(
+          t("wizard.flash_profile_validate_done", "授权校验完成：{status}").replace(
+            "{status}",
+            renderProfileStatusLabel(result.status),
+          ),
+        );
         await loadProfiles();
       } catch (error) {
         showFlash(error.message, true);
@@ -5932,7 +5946,7 @@ function renderProfiles() {
     button.addEventListener("click", async () => {
       try {
         await api(`/api/auth/profiles/${button.dataset.profileDelete}`, { method: "DELETE" });
-        showFlash("授权档案已删除");
+        showFlash(t("wizard.flash_profile_deleted", "授权档案已删除"));
         await loadProfiles();
       } catch (error) {
         showFlash(error.message, true);
