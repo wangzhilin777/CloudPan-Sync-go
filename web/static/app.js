@@ -772,6 +772,7 @@ const translations = {
       flash_profile_no_default_risk: "当前授权档案没有账号默认风控可写入",
       flash_profile_risk_applied: "已将账号默认风控写入任务覆盖，可继续按任务单独微调",
       flash_profile_risk_cleared: "已清空任务覆盖，将回到账号默认 / 网盘源默认链路",
+      flash_extra_json_parse_error: "Extra JSON 无法解析：{error}",
       flash_risk_override_synced: "风控覆盖已同步到 JSON",
       flash_risk_override_cleared: "风控覆盖已清空，将使用默认档位和网盘源校准",
       flash_source_browser_refreshed: "源目录已刷新：{path}",
@@ -794,7 +795,10 @@ const translations = {
       flash_risk_applied: "已采用推荐风控档位：{mode}",
       flash_preview_generated: "计划预览已生成",
       flash_delete_only_blocked: "当前只有删除记录，没有可执行条目；请先恢复源文件并重新预览",
-      flash_task_created: "任务已创建"
+      flash_task_created: "任务已创建",
+      flash_task_required: "请先选择任务",
+      flash_task_id_missing: "缺少任务标识",
+      flash_task_action_pending: "任务操作执行中，请稍候"
     }
   },
   "en-US": {
@@ -1527,7 +1531,10 @@ const translations = {
       flash_risk_applied: "Applied the recommended risk mode: {mode}",
       flash_preview_generated: "Plan preview generated",
       flash_delete_only_blocked: "This payload only contains delete records and no runnable items. Restore the source files and regenerate the preview first.",
-      flash_task_created: "Task created"
+      flash_task_created: "Task created",
+      flash_task_required: "Please choose a task first",
+      flash_task_id_missing: "Missing task identifier",
+      flash_task_action_pending: "A task action is already running. Please wait."
     }
   }
 };
@@ -9969,7 +9976,10 @@ function wireProfiles() {
       $("#profile-extra").value = Object.keys(merged).length ? JSON.stringify(merged, null, 2) : "";
       showFlash(t("providers.flash_sync_risk", "账号默认风控已同步到 Extra JSON"));
     } catch (error) {
-      showFlash(`Extra JSON 无法解析：${error.message}`, true);
+      showFlash(
+        t("wizard.flash_extra_json_parse_error", "Extra JSON 无法解析：{error}").replace("{error}", error.message),
+        true,
+      );
     }
   });
 
@@ -9981,7 +9991,10 @@ function wireProfiles() {
       hydrateRiskProfileForm("profile-risk", null);
       showFlash(t("providers.flash_clear_risk", "账号默认风控已清空"));
     } catch (error) {
-      showFlash(`Extra JSON 无法解析：${error.message}`, true);
+      showFlash(
+        t("wizard.flash_extra_json_parse_error", "Extra JSON 无法解析：{error}").replace("{error}", error.message),
+        true,
+      );
     }
   });
 
@@ -10188,26 +10201,29 @@ function wirePlanner() {
     try {
       hydrateRiskOverrideForm(parseJSONInput($("#plan-risk-override").value, null));
     } catch (error) {
-      showFlash(`风控覆盖 JSON 无法解析：${error.message}`, true);
+      showFlash(
+        t("wizard.flash_risk_override_parse_error", "风控覆盖 JSON 无法解析：{error}").replace("{error}", error.message),
+        true,
+      );
     }
   });
   $("#apply-recommended-execution").addEventListener("click", () => {
     const recommended = state.preview?.metadata?.recommendedExecutionMode;
     if (!recommended) {
-      showFlash("请先生成计划预览", true);
+      showFlash(t("wizard.flash_preview_required_execution", "请先生成计划预览"), true);
       return;
     }
     setSelectValueIfPresent("#plan-execution-mode", recommended);
-    showFlash(`已采用推荐执行模式：${recommended}`);
+    showFlash(t("wizard.flash_execution_applied", "已采用推荐执行模式：{mode}").replace("{mode}", recommended));
   });
   $("#apply-recommended-risk").addEventListener("click", () => {
     const recommended = state.preview?.metadata?.recommendedRiskMode;
     if (!recommended) {
-      showFlash("请先生成计划预览", true);
+      showFlash(t("wizard.flash_preview_required_execution", "请先生成计划预览"), true);
       return;
     }
     setSelectValueIfPresent("#plan-risk-mode", recommended);
-    showFlash(`已采用推荐风控档位：${recommended}`);
+    showFlash(t("wizard.flash_risk_applied", "已采用推荐风控档位：{mode}").replace("{mode}", recommended));
   });
 
   $("#preview-plan").addEventListener("click", async () => {
@@ -10230,7 +10246,7 @@ function wirePlanner() {
         },
       });
       renderPreview();
-      showFlash("计划预览已生成");
+      showFlash(t("wizard.flash_preview_generated", "计划预览已生成"));
     } catch (error) {
       showFlash(error.message, true);
     }
@@ -10241,7 +10257,7 @@ function wirePlanner() {
     try {
       const payload = buildPlanPayload();
       if (payloadHasOnlyDeletedEntries(payload)) {
-        showFlash("当前只有删除记录，没有可执行条目；请先恢复源文件并重新预览", true);
+        showFlash(t("wizard.flash_delete_only_blocked", "当前只有删除记录，没有可执行条目；请先恢复源文件并重新预览"), true);
         return;
       }
       const detail = await api("/api/tasks", {
@@ -10249,7 +10265,7 @@ function wirePlanner() {
         body: payload,
       });
       state.selectedTaskId = detail.task.id;
-      showFlash("任务已创建");
+      showFlash(t("wizard.flash_task_created", "任务已创建"));
       await loadTasks();
       document.querySelector('[data-view="tasks"]').click();
     } catch (error) {
@@ -10260,7 +10276,7 @@ function wirePlanner() {
 
 async function runTaskAction(action, body = undefined) {
   if (!state.selectedTaskId) {
-    showFlash("请先选择任务", true);
+    showFlash(t("wizard.flash_task_required", "请先选择任务"), true);
     return false;
   }
   return runTaskActionForTask(state.selectedTaskId, action, body);
@@ -10269,11 +10285,11 @@ async function runTaskAction(action, body = undefined) {
 async function runTaskActionForTask(taskId, action, body = undefined) {
   const normalizedTaskId = String(taskId || "").trim();
   if (!normalizedTaskId) {
-    showFlash("缺少任务标识", true);
+    showFlash(t("wizard.flash_task_id_missing", "缺少任务标识"), true);
     return false;
   }
   if (state.taskActionPending) {
-    showFlash("任务操作执行中，请稍候", true);
+    showFlash(t("wizard.flash_task_action_pending", "任务操作执行中，请稍候"), true);
     return false;
   }
   state.taskActionPending = true;

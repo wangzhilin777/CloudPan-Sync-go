@@ -108,6 +108,7 @@
 - 已把 Release 工作流补上产物白名单校验：发布前会显式校验服务端包、桌面包、Docker 归档和 `SHA256SUMS.txt` 是否与约定名单完全一致，并额外拦截 `cloud-clipboard / clipboard` 这类外部项目命名，减少 GitHub 打包阶段再次混入错误资产的风险。
 - 已把 Docker 归档标签校验补进 Release 工作流：GitHub 打包时会先加载生成出来的 Docker tar，再显式检查 `cloudpan-sync-go:release` 和 `cloudpan-sync-go:latest` 两个标签是否都存在，减少发布后导入镜像只能拿到单个标签、还要手动补 tag 的情况。
 - 已继续收紧 Docker 归档校验：GitHub 打包时在确认 `release/latest` 双标签存在后，还会检查仓库名只能是 `cloudpan-sync-go`，避免把其它镜像仓库名一起混进发布归档。
+- 已继续把授权页与任务向导里一批高频前置提示接入双语词典，覆盖 `Extra JSON` 解析失败、任务风控覆盖 JSON 解析失败、推荐执行/风控采用、计划预览生成、删除记录拦截、任务创建，以及“请先选择任务 / 缺少任务标识 / 任务操作执行中”等提示，减少英文模式下这些前置反馈仍固定中文的问题。
 - 已把服务端包和桌面包的压缩内容校验补进 Release 工作流：GitHub 打包后会直接检查 zip / tar.gz 内部是否只包含约定的本项目二进制，例如 `cloudpan-sync` 或 `cloudpan-sync-desktop`，减少归档里混入其它文件、旧产物或错误项目文件的风险。
 - 已把 `SHA256SUMS.txt` 覆盖校验补进 Release 工作流：GitHub 打包后会显式检查校验文件里的条目是否与所有应发布资产一一对应，避免出现校验文件漏掉桌面包、Docker 包或平台包的情况。
 
