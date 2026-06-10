@@ -851,6 +851,7 @@ const translations = {
       flash_task_required: "请先选择任务",
       flash_task_id_missing: "缺少任务标识",
       flash_task_action_pending: "任务操作执行中，请稍候",
+      flash_task_action_executed: "任务{action}已执行",
       flash_profile_missing_edit: "未找到要编辑的授权档案",
       flash_profile_edit_loaded: "已载入授权档案编辑表单",
       flash_profile_validate_done: "授权校验完成：{status}",
@@ -1652,6 +1653,7 @@ const translations = {
       flash_task_required: "Please choose a task first",
       flash_task_id_missing: "Missing task identifier",
       flash_task_action_pending: "A task action is already running. Please wait.",
+      flash_task_action_executed: "Task action executed: {action}",
       flash_focus_profile: "Focused the current auth profile",
       flash_focus_auto_recover_mode: "Filtered background recovery candidates by {mode}",
       flash_open_status: "Opened the status matrix",
@@ -10448,6 +10450,21 @@ async function runTaskAction(action, body = undefined) {
   return runTaskActionForTask(state.selectedTaskId, action, body);
 }
 
+function taskActionFeedbackLabel(action) {
+  switch (String(action || "").trim()) {
+    case "run":
+      return t("tasks.run", "运行");
+    case "pause":
+      return t("tasks.pause", "暂停");
+    case "resume":
+      return t("tasks.resume", "继续");
+    case "retry":
+      return t("tasks.retry", "重试");
+    default:
+      return String(action || "").trim() || "-";
+  }
+}
+
 async function runTaskActionForTask(taskId, action, body = undefined) {
   const normalizedTaskId = String(taskId || "").trim();
   if (!normalizedTaskId) {
@@ -10462,7 +10479,7 @@ async function runTaskActionForTask(taskId, action, body = undefined) {
   syncTaskActionButtons();
   try {
     await api(`/api/tasks/${normalizedTaskId}/${action}`, { method: "POST", body });
-    showFlash(`任务 ${action} 已执行`);
+    showFlash(tf("wizard.flash_task_action_executed", { action: taskActionFeedbackLabel(action) }, `任务${taskActionFeedbackLabel(action)}已执行`));
     await Promise.all([loadTasks(), loadStatus()]);
     return true;
   } catch (error) {
