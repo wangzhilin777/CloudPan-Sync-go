@@ -219,6 +219,12 @@ jobs:
           docker load -i /tmp/cloudpan-sync-go-docker-image.tar >/tmp/cloudpan-docker-load.log
           docker image inspect cloudpan-sync-go:release >/dev/null
           docker image inspect cloudpan-sync-go:latest >/dev/null
+          mapfile -t repos < <(docker image ls --format '{{.Repository}}' | grep '^cloudpan-sync-go$' | sort -u)
+          if [ "${#repos[@]}" -ne 1 ] || [ "${repos[0]}" != "cloudpan-sync-go" ]; then
+            echo "Unexpected Docker repository names detected."
+            docker image ls
+            exit 1
+          fi
 
       - name: Upload Docker artifact
         uses: actions/upload-artifact@v4
