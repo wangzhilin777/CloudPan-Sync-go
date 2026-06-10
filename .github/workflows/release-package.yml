@@ -294,6 +294,41 @@ jobs:
             exit 1
           fi
 
+      - name: Verify SHA256SUMS coverage
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd dist
+
+          expected_hashed_assets=(
+            "cloudpan-sync-go-darwin-amd64.tar.gz"
+            "cloudpan-sync-go-darwin-arm64.tar.gz"
+            "cloudpan-sync-go-desktop-darwin-amd64.tar.gz"
+            "cloudpan-sync-go-desktop-darwin-arm64.tar.gz"
+            "cloudpan-sync-go-desktop-linux-amd64.tar.gz"
+            "cloudpan-sync-go-desktop-linux-arm64.tar.gz"
+            "cloudpan-sync-go-desktop-windows-amd64.zip"
+            "cloudpan-sync-go-docker-image.tar.gz"
+            "cloudpan-sync-go-linux-amd64.tar.gz"
+            "cloudpan-sync-go-linux-arm64.tar.gz"
+            "cloudpan-sync-go-windows-amd64.zip"
+          )
+
+          mapfile -t actual_hashed_assets < <(awk '{print $2}' SHA256SUMS.txt | sed 's#^\*##' | sort)
+          mapfile -t expected_hashed_sorted < <(printf '%s\n' "${expected_hashed_assets[@]}" | sort)
+
+          if [ "${#actual_hashed_assets[@]}" -ne "${#expected_hashed_sorted[@]}" ]; then
+            echo "SHA256SUMS entry count mismatch."
+            exit 1
+          fi
+
+          for i in "${!expected_hashed_sorted[@]}"; do
+            if [ "${actual_hashed_assets[$i]}" != "${expected_hashed_sorted[$i]}" ]; then
+              echo "Unexpected SHA256SUMS entry: expected ${expected_hashed_sorted[$i]}, got ${actual_hashed_assets[$i]}"
+              exit 1
+            fi
+          done
+
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
