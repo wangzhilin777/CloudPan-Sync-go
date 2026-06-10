@@ -299,6 +299,19 @@ const translations = {
       flash_report_switched: "已切换验收报告",
       flash_smoke_markdown_switched: "已切换 smoke Markdown",
       flash_smoke_markdown_downloaded: "smoke Markdown 已下载",
+      flash_auto_recover_decision_previewed: "已按决策预演后台补传：{taskId}",
+      flash_auto_recover_decision_executed: "已按决策执行后台补传：{taskId}",
+      flash_auto_recover_decision_state_focused: "已按决策状态 {state} 收敛后台补传候选",
+      flash_auto_recover_decision_lane_focused: "已按决策 lane 收敛后台补传候选：{lane}",
+      flash_auto_recover_decision_budgets_applied: "已按决策采用建议预算：mode {mode} / lane {lane} / group {group} / provider {provider} / profile {profile}",
+      flash_auto_recover_mode_focused: "已按 {mode} 收敛后台补传候选",
+      flash_auto_recover_protocol_group_focused: "已按协议族 {protocolGroup} 收敛后台补传候选",
+      flash_auto_recover_state_focused: "已按执行状态 {state} 收敛后台补传候选",
+      flash_auto_recover_retry_class_focused: "已按主失败类型 {retryClass} 收敛后台补传候选",
+      flash_auto_recover_primary_blocked_action_focused: "已按主阻塞动作 {blockedAction} 收敛后台补传候选",
+      flash_auto_recover_blocked_action_focused: "已按 {blockedAction} 收敛后台补传候选",
+      flash_auto_recover_lane_focused: "已按 lane 收敛后台补传候选：{lane}",
+      flash_auto_recover_budgets_applied: "已采用建议预算：mode {mode} / lane {lane} / group {group} / provider {provider} / profile {profile}",
       focus_same_retry_class: "只看同类队列",
       result_count_compact: "done {done} / skipped {skipped} / failed {failed}",
       retry_queue_compact: "可重试 {retryable} / 阻塞 {blocked}",
@@ -1079,6 +1092,19 @@ const translations = {
       flash_report_switched: "Acceptance report switched",
       flash_smoke_markdown_switched: "Smoke Markdown switched",
       flash_smoke_markdown_downloaded: "Smoke Markdown downloaded",
+      flash_auto_recover_decision_previewed: "Auto-recovery decision previewed for {taskId}",
+      flash_auto_recover_decision_executed: "Auto-recovery decision executed for {taskId}",
+      flash_auto_recover_decision_state_focused: "Auto-recovery candidates filtered by decision state {state}",
+      flash_auto_recover_decision_lane_focused: "Auto-recovery candidates filtered by decision lane: {lane}",
+      flash_auto_recover_decision_budgets_applied: "Suggested decision budgets applied: mode {mode} / lane {lane} / group {group} / provider {provider} / profile {profile}",
+      flash_auto_recover_mode_focused: "Auto-recovery candidates filtered by {mode}",
+      flash_auto_recover_protocol_group_focused: "Auto-recovery candidates filtered by protocol group {protocolGroup}",
+      flash_auto_recover_state_focused: "Auto-recovery candidates filtered by execution state {state}",
+      flash_auto_recover_retry_class_focused: "Auto-recovery candidates filtered by primary failure type {retryClass}",
+      flash_auto_recover_primary_blocked_action_focused: "Auto-recovery candidates filtered by primary blocked action {blockedAction}",
+      flash_auto_recover_blocked_action_focused: "Auto-recovery candidates filtered by {blockedAction}",
+      flash_auto_recover_lane_focused: "Auto-recovery candidates filtered by lane: {lane}",
+      flash_auto_recover_budgets_applied: "Suggested budgets applied: mode {mode} / lane {lane} / group {group} / provider {provider} / profile {profile}",
       focus_same_retry_class: "Show Similar Queue",
       result_count_compact: "done {done} / skipped {skipped} / failed {failed}",
       retry_queue_compact: "retryable {retryable} / blocked {blocked}",
@@ -7399,11 +7425,11 @@ async function triggerAutoRecoverDecision(button, options = {}) {
     $("#auto-recover-last-result-summary").textContent = renderAutoRecoverLastResultSummary();
     $("#auto-recover-last-result-detail").innerHTML = renderAutoRecoverLastResultDetail();
     wireAutoRecoverLastResultDetail();
-    showFlash(`已按决策预演后台补传：${stringifyValue(payload.taskId, "-")}`);
+    showFlash(tf("tasks.flash_auto_recover_decision_previewed", { taskId: stringifyValue(payload.taskId, "-") }, `已按决策预演后台补传：${stringifyValue(payload.taskId, "-")}`));
     return result;
   }
   await Promise.all([loadTasks(), loadStatus()]);
-  showFlash(`已按决策执行后台补传：${stringifyValue(payload.taskId, "-")}`);
+  showFlash(tf("tasks.flash_auto_recover_decision_executed", { taskId: stringifyValue(payload.taskId, "-") }, `已按决策执行后台补传：${stringifyValue(payload.taskId, "-")}`));
   return result;
 }
 
@@ -7416,7 +7442,7 @@ function wireAutoRecoverLastResultDetail() {
     button.addEventListener("click", () => {
       const recoverState = button.dataset.autoRecoverDecisionFocusState || "";
       applyAutoRecoverFilters({ recoverState });
-      showFlash(`已按决策状态 ${recoverState} 收敛后台补传候选`);
+      showFlash(tf("tasks.flash_auto_recover_decision_state_focused", { state: recoverState }, `已按决策状态 ${recoverState} 收敛后台补传候选`));
     });
   });
   wrap.querySelectorAll("[data-auto-recover-decision-focus-lane-mode]").forEach((button) => {
@@ -7426,7 +7452,7 @@ function wireAutoRecoverLastResultDetail() {
       const retryClass = button.dataset.autoRecoverDecisionFocusLaneRetryClass || "";
       const blockedAction = button.dataset.autoRecoverDecisionFocusLaneBlockedAction || "";
       applyAutoRecoverFilters({ mode, strategy, retryClass, blockedAction });
-      showFlash(`已按决策 lane 收敛后台补传候选：${[mode, strategy, retryClass, blockedAction].filter(Boolean).join(" / ")}`);
+      showFlash(tf("tasks.flash_auto_recover_decision_lane_focused", { lane: [mode, strategy, retryClass, blockedAction].filter(Boolean).join(" / ") }, `已按决策 lane 收敛后台补传候选：${[mode, strategy, retryClass, blockedAction].filter(Boolean).join(" / ")}`));
     });
   });
   wrap.querySelectorAll("[data-auto-recover-decision-apply-budgets]").forEach((button) => {
@@ -7443,7 +7469,7 @@ function wireAutoRecoverLastResultDetail() {
         limitPerProvider,
         limitPerProfile,
       });
-      showFlash(`已按决策采用建议预算：mode ${limitPerMode || "-"} / lane ${limitPerLane || "-"} / group ${limitPerProtocolGroup || "-"} / provider ${limitPerProvider || "-"} / profile ${limitPerProfile || "-"}`);
+      showFlash(tf("tasks.flash_auto_recover_decision_budgets_applied", { mode: limitPerMode || "-", lane: limitPerLane || "-", group: limitPerProtocolGroup || "-", provider: limitPerProvider || "-", profile: limitPerProfile || "-" }, `已按决策采用建议预算：mode ${limitPerMode || "-"} / lane ${limitPerLane || "-"} / group ${limitPerProtocolGroup || "-"} / provider ${limitPerProvider || "-"} / profile ${limitPerProfile || "-"}`));
     });
   });
   wrap.querySelectorAll("[data-auto-recover-decision-preview]").forEach((button) => {
@@ -8747,42 +8773,42 @@ function wireAutoRecoverSummary() {
     button.addEventListener("click", () => {
       const mode = button.dataset.autoRecoverFocusMode || "";
       applyAutoRecoverFilters({ mode });
-      showFlash(`已按 ${mode} 收敛后台补传候选`);
+      showFlash(tf("tasks.flash_auto_recover_mode_focused", { mode }, `已按 ${mode} 收敛后台补传候选`));
     });
   });
   wrap.querySelectorAll("[data-auto-recover-focus-protocol-group]").forEach((button) => {
     button.addEventListener("click", () => {
       const protocolGroup = button.dataset.autoRecoverFocusProtocolGroup || "";
       applyAutoRecoverFilters({ protocolGroup });
-      showFlash(`已按协议族 ${protocolGroup} 收敛后台补传候选`);
+      showFlash(tf("tasks.flash_auto_recover_protocol_group_focused", { protocolGroup }, `已按协议族 ${protocolGroup} 收敛后台补传候选`));
     });
   });
   wrap.querySelectorAll("[data-auto-recover-focus-state]").forEach((button) => {
     button.addEventListener("click", () => {
       const recoverState = button.dataset.autoRecoverFocusState || "";
       applyAutoRecoverFilters({ recoverState });
-      showFlash(`已按执行状态 ${recoverState} 收敛后台补传候选`);
+      showFlash(tf("tasks.flash_auto_recover_state_focused", { state: recoverState }, `已按执行状态 ${recoverState} 收敛后台补传候选`));
     });
   });
   wrap.querySelectorAll("[data-auto-recover-focus-retry-class]").forEach((button) => {
     button.addEventListener("click", () => {
       const retryClass = button.dataset.autoRecoverFocusRetryClass || "";
       applyAutoRecoverFilters({ retryClass });
-      showFlash(`已按主失败类型 ${retryClass} 收敛后台补传候选`);
+      showFlash(tf("tasks.flash_auto_recover_retry_class_focused", { retryClass }, `已按主失败类型 ${retryClass} 收敛后台补传候选`));
     });
   });
   wrap.querySelectorAll("[data-auto-recover-focus-primary-blocked-action]").forEach((button) => {
     button.addEventListener("click", () => {
       const blockedAction = button.dataset.autoRecoverFocusPrimaryBlockedAction || "";
       applyAutoRecoverFilters({ blockedAction });
-      showFlash(`已按主阻塞动作 ${blockedAction} 收敛后台补传候选`);
+      showFlash(tf("tasks.flash_auto_recover_primary_blocked_action_focused", { blockedAction }, `已按主阻塞动作 ${blockedAction} 收敛后台补传候选`));
     });
   });
   wrap.querySelectorAll("[data-auto-recover-focus-blocked-action]").forEach((button) => {
     button.addEventListener("click", () => {
       const blockedAction = button.dataset.autoRecoverFocusBlockedAction || "";
       applyAutoRecoverFilters({ blockedAction });
-      showFlash(`已按 ${blockedAction} 收敛后台补传候选`);
+      showFlash(tf("tasks.flash_auto_recover_blocked_action_focused", { blockedAction }, `已按 ${blockedAction} 收敛后台补传候选`));
     });
   });
   wrap.querySelectorAll("[data-auto-recover-focus-lane-mode]").forEach((button) => {
@@ -8792,7 +8818,7 @@ function wireAutoRecoverSummary() {
       const retryClass = button.dataset.autoRecoverFocusLaneRetryClass || "";
       const blockedAction = button.dataset.autoRecoverFocusLaneBlockedAction || "";
       applyAutoRecoverFilters({ mode, strategy, retryClass, blockedAction });
-      showFlash(`已按 lane 收敛后台补传候选：${[mode, strategy, retryClass, blockedAction].filter(Boolean).join(" / ")}`);
+      showFlash(tf("tasks.flash_auto_recover_lane_focused", { lane: [mode, strategy, retryClass, blockedAction].filter(Boolean).join(" / ") }, `已按 lane 收敛后台补传候选：${[mode, strategy, retryClass, blockedAction].filter(Boolean).join(" / ")}`));
     });
   });
   wrap.querySelectorAll("[data-auto-recover-apply-budgets]").forEach((button) => {
@@ -8809,7 +8835,7 @@ function wireAutoRecoverSummary() {
         limitPerProvider,
         limitPerProfile,
       });
-      showFlash(`已采用建议预算：mode ${limitPerMode || "-"} / lane ${limitPerLane || "-"} / group ${limitPerProtocolGroup || "-"} / provider ${limitPerProvider || "-"} / profile ${limitPerProfile || "-"}`);
+      showFlash(tf("tasks.flash_auto_recover_budgets_applied", { mode: limitPerMode || "-", lane: limitPerLane || "-", group: limitPerProtocolGroup || "-", provider: limitPerProvider || "-", profile: limitPerProfile || "-" }, `已采用建议预算：mode ${limitPerMode || "-"} / lane ${limitPerLane || "-"} / group ${limitPerProtocolGroup || "-"} / provider ${limitPerProvider || "-"} / profile ${limitPerProfile || "-"}`));
     });
   });
   wrap.querySelectorAll("[data-auto-recover-preview-lane-mode]").forEach((button) => {
