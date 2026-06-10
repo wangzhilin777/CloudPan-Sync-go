@@ -807,7 +807,11 @@ const translations = {
       flash_prefill_task_loaded: "已按当前任务重建向导参数",
       flash_copy_task_required: "请先选择任务",
       flash_copy_task_payload_done: "任务创建参数已复制到剪贴板",
-      flash_copy_failed: "复制失败：{error}"
+      flash_copy_failed: "复制失败：{error}",
+      flash_focus_profile: "已定位到当前授权档案",
+      flash_focus_auto_recover_mode: "已按 {mode} 收敛后台补传候选",
+      flash_open_status: "已打开状态矩阵",
+      flash_prefill_task_from_detail: "已按当前任务预填任务向导参数"
     }
   },
   "en-US": {
@@ -1543,7 +1547,11 @@ const translations = {
       flash_task_created: "Task created",
       flash_task_required: "Please choose a task first",
       flash_task_id_missing: "Missing task identifier",
-      flash_task_action_pending: "A task action is already running. Please wait."
+      flash_task_action_pending: "A task action is already running. Please wait.",
+      flash_focus_profile: "Focused the current auth profile",
+      flash_focus_auto_recover_mode: "Filtered background recovery candidates by {mode}",
+      flash_open_status: "Opened the status matrix",
+      flash_prefill_task_from_detail: "Prefilled the task wizard from the current task"
     }
   }
 };
@@ -5577,7 +5585,7 @@ function wireTaskResolutionGuide(detail) {
         setSelectValueIfPresent("#profile-provider", button.dataset.taskGuideProvider);
         if (intent === "focus_profile") {
           focusProfile(button.dataset.taskGuideProfile);
-          showFlash("已定位到当前授权档案");
+          showFlash(t("wizard.flash_focus_profile", "已定位到当前授权档案"));
         }
       }
       if (view === "tasks") {
@@ -5607,17 +5615,17 @@ function wireTaskResolutionGuide(detail) {
           );
           $("#auto-recover-summary").innerHTML = renderAutoRecoverSummary(state.evidence?.autoRecoverPool || []);
           wireAutoRecoverSummary();
-          showFlash(`已按 ${button.dataset.taskGuideMode || "-"} 收敛后台补传候选`);
+          showFlash(t("wizard.flash_focus_auto_recover_mode", "已按 {mode} 收敛后台补传候选").replace("{mode}", button.dataset.taskGuideMode || "-"));
         }
         if (intent === "focus_status_open") {
           activateTab("status");
-          showFlash("已打开状态矩阵");
+          showFlash(t("wizard.flash_open_status", "已打开状态矩阵"));
         }
       }
       if (view === "wizard") {
         if (intent === "prefill_wizard") {
           prefillWizardFromTask(detail);
-          showFlash("已按当前任务预填任务向导参数");
+          showFlash(t("wizard.flash_prefill_task_from_detail", "已按当前任务预填任务向导参数"));
         } else {
           setSelectValueIfPresent("#plan-target-provider", detail?.task?.targetProvider || button.dataset.taskGuideProvider);
           setSelectValueIfPresent("#plan-target-profile", detail?.targetProfileId || button.dataset.taskGuideProfile);
@@ -10951,6 +10959,7 @@ async function init() {
   }
 }
 window.addEventListener("DOMContentLoaded", init);
+
 
 
 
