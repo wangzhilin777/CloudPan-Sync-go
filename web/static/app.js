@@ -857,10 +857,19 @@ const translations = {
       flash_profile_validate_done: "授权校验完成：{status}",
       flash_profile_deleted: "授权档案已删除",
       flash_prefill_task_required: "请先选择任务",
+      flash_prefill_status_task_missing: "当前状态样本没有可用任务",
       flash_prefill_task_loaded: "已按当前任务重建向导参数",
+      flash_prefill_visible_path_missing: "当前筛选结果里没有可用于重建向导的路径",
+      flash_retry_visible_path_missing: "当前筛选结果里没有可重试的路径",
+      flash_auto_recover_visible_path_missing: "当前筛选结果里没有可后台补传的路径",
+      flash_retry_invalid_path: "当前路径无效，无法重试",
       flash_copy_task_required: "请先选择任务",
       flash_copy_task_payload_done: "任务创建参数已复制到剪贴板",
       flash_copy_failed: "复制失败：{error}",
+      flash_smoke_matrix_group_missing: "未找到对应协议组的验收矩阵项",
+      flash_smoke_matrix_task_missing: "当前验收矩阵项没有可打开的任务样本",
+      flash_copy_directory_path_failed: "复制目录路径失败：{error}",
+      flash_copy_pending_path_failed: "复制待补传路径失败：{error}",
       flash_focus_profile: "已定位到当前授权档案",
       flash_focus_auto_recover_mode: "已按 {mode} 收敛后台补传候选",
       flash_open_status: "已打开状态矩阵",
@@ -1654,10 +1663,19 @@ const translations = {
       flash_task_id_missing: "Missing task identifier",
       flash_task_action_pending: "A task action is already running. Please wait.",
       flash_task_action_executed: "Task action executed: {action}",
+      flash_prefill_status_task_missing: "The current status sample does not have a usable task",
+      flash_prefill_visible_path_missing: "The current filtered result does not contain paths that can rebuild the wizard",
+      flash_retry_visible_path_missing: "The current filtered result does not contain retryable paths",
+      flash_auto_recover_visible_path_missing: "The current filtered result does not contain paths that can enter auto-recovery",
+      flash_retry_invalid_path: "The current path is invalid and cannot be retried",
       flash_focus_profile: "Focused the current auth profile",
       flash_focus_auto_recover_mode: "Filtered background recovery candidates by {mode}",
       flash_open_status: "Opened the status matrix",
-      flash_prefill_task_from_detail: "Prefilled the task wizard from the current task"
+      flash_prefill_task_from_detail: "Prefilled the task wizard from the current task",
+      flash_smoke_matrix_group_missing: "The matching protocol-group acceptance matrix entry was not found",
+      flash_smoke_matrix_task_missing: "The current acceptance-matrix entry does not have a task sample to open",
+      flash_copy_directory_path_failed: "Copying directory paths failed: {error}",
+      flash_copy_pending_path_failed: "Copying pending paths failed: {error}"
     }
   }
 };
@@ -9832,7 +9850,7 @@ function draftProviderSmokeAndFocus(item, { fromGap = false } = {}) {
 function buildProviderSmokeDraftByProtocolGroup(protocolGroup, { fromGap = false } = {}) {
   const row = (state.providerSmokeMatrix || []).find((item) => item.protocolGroup === protocolGroup);
   if (!row) {
-    showFlash("未找到对应协议组的验收矩阵项", true);
+    showFlash(t("wizard.flash_smoke_matrix_group_missing", "未找到对应协议组的验收矩阵项"), true);
     return false;
   }
   draftProviderSmokeAndFocus(row, { fromGap });
@@ -9841,7 +9859,7 @@ function buildProviderSmokeDraftByProtocolGroup(protocolGroup, { fromGap = false
 
 function draftProviderSmokeAndOpenTask(taskID) {
   if (!taskID) {
-    showFlash("当前验收矩阵项没有可打开的任务样本", true);
+    showFlash(t("wizard.flash_smoke_matrix_task_missing", "当前验收矩阵项没有可打开的任务样本"), true);
     return;
   }
   openTaskByID(taskID).catch((error) => {
@@ -10541,12 +10559,12 @@ function taskContextByScope(scope) {
 function prefillWizardFromVisibleSelection(scope, source) {
   const context = taskContextByScope(scope);
   if (!context?.detail) {
-    showFlash(scope === "task" ? "请先选择任务" : "当前状态样本没有可用任务", true);
+    showFlash(scope === "task" ? t("wizard.flash_prefill_task_required", "请先选择任务") : t("wizard.flash_prefill_status_task_missing", "当前状态样本没有可用任务"), true);
     return;
   }
   const paths = visibleSelectionPaths(scope, source);
   if (!paths.length) {
-    showFlash("当前筛选结果里没有可用于重建向导的路径", true);
+    showFlash(t("wizard.flash_prefill_visible_path_missing", "当前筛选结果里没有可用于重建向导的路径"), true);
     return;
   }
   prefillWizardFromTaskPaths(context.detail, paths, `${selectionSourceLabel(source)} / ${selectionScopeLabel(recoverScopeFromSource(source))}`);
@@ -10555,12 +10573,12 @@ function prefillWizardFromVisibleSelection(scope, source) {
 async function retryVisibleSelection(scope, source) {
   const context = taskContextByScope(scope);
   if (!context?.taskId) {
-    showFlash(scope === "task" ? "请先选择任务" : "当前状态样本没有可用任务", true);
+    showFlash(scope === "task" ? t("wizard.flash_task_required", "请先选择任务") : t("wizard.flash_prefill_status_task_missing", "当前状态样本没有可用任务"), true);
     return;
   }
   const paths = visibleSelectionPaths(scope, source);
   if (!paths.length) {
-    showFlash("当前筛选结果里没有可重试的路径", true);
+    showFlash(t("wizard.flash_retry_visible_path_missing", "当前筛选结果里没有可重试的路径"), true);
     return;
   }
   const ok = await runTaskActionForTask(context.taskId, "retry", { paths, scope: recoverScopeFromSource(source) });
@@ -10572,12 +10590,12 @@ async function retryVisibleSelection(scope, source) {
 async function autoRecoverVisibleSelection(scope, source) {
   const context = taskContextByScope(scope);
   if (!context || !context.taskId) {
-    showFlash(scope === "task" ? "请先选择任务" : "当前状态样本没有可用任务", true);
+    showFlash(scope === "task" ? t("wizard.flash_task_required", "请先选择任务") : t("wizard.flash_prefill_status_task_missing", "当前状态样本没有可用任务"), true);
     return;
   }
   const paths = visibleSelectionPaths(scope, source);
   if (!paths.length) {
-    showFlash("当前筛选结果里没有可后台补传的路径", true);
+    showFlash(t("wizard.flash_auto_recover_visible_path_missing", "当前筛选结果里没有可后台补传的路径"), true);
     return;
   }
   applyAutoRecoverFilters({}, { render: false });
@@ -10601,11 +10619,11 @@ async function retryTaskPath(scope, path) {
   const normalizedPath = normalizeComparePath(path);
   const taskId = scope === "task" ? state.selectedTaskId : currentStatusTaskContext()?.taskId;
   if (!taskId) {
-    showFlash(scope === "task" ? "请先选择任务" : "当前状态样本没有可用任务", true);
+    showFlash(scope === "task" ? t("wizard.flash_task_required", "请先选择任务") : t("wizard.flash_prefill_status_task_missing", "当前状态样本没有可用任务"), true);
     return false;
   }
   if (!normalizedPath) {
-    showFlash("当前路径无效，无法重试", true);
+    showFlash(t("wizard.flash_retry_invalid_path", "当前路径无效，无法重试"), true);
     return false;
   }
   const ok = await runTaskActionForTask(taskId, "retry", {
@@ -11053,28 +11071,28 @@ function wireTreeFilters() {
     try {
       await copyVisibleTreePaths("task", "directory");
     } catch (error) {
-      showFlash(`复制目录路径失败：${error.message}`, true);
+      showFlash(t("wizard.flash_copy_directory_path_failed", "复制目录路径失败：{error}").replace("{error}", error.message), true);
     }
   });
   $("#task-pending-copy-visible").addEventListener("click", async () => {
     try {
       await copyVisibleTreePaths("task", "pending");
     } catch (error) {
-      showFlash(`复制待补传路径失败：${error.message}`, true);
+      showFlash(t("wizard.flash_copy_pending_path_failed", "复制待补传路径失败：{error}").replace("{error}", error.message), true);
     }
   });
   $("#status-directory-copy-visible").addEventListener("click", async () => {
     try {
       await copyVisibleTreePaths("status", "directory");
     } catch (error) {
-      showFlash(`复制目录路径失败：${error.message}`, true);
+      showFlash(t("wizard.flash_copy_directory_path_failed", "复制目录路径失败：{error}").replace("{error}", error.message), true);
     }
   });
   $("#status-pending-copy-visible").addEventListener("click", async () => {
     try {
       await copyVisibleTreePaths("status", "pending");
     } catch (error) {
-      showFlash(`复制待补传路径失败：${error.message}`, true);
+      showFlash(t("wizard.flash_copy_pending_path_failed", "复制待补传路径失败：{error}").replace("{error}", error.message), true);
     }
   });
 }
@@ -11111,4 +11129,5 @@ async function init() {
   }
 }
 window.addEventListener("DOMContentLoaded", init);
+
 
