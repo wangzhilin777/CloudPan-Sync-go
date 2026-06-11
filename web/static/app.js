@@ -5999,8 +5999,8 @@ function renderTaskResolutionGuide(detail) {
           </div>
           <ol class="checklist">
             <li>${escapeHTML(retrySummary.autoRecoverMode === "retry_queue_auto_retry" ? t("tasks.auto_recover_takeover_step_1", "当前队列满足后台自动补传条件，系统随后会自动尝试继续执行。") : t("tasks.upload_checkpoint_resume_step_1", "当前失败队列携带可恢复的 upload checkpoint，单机执行进程会优先尝试恢复上传会话。"))}</li>
-            <li>${escapeHTML(retrySummary.autoRecoverMode === "retry_queue_auto_retry" ? t("tasks.auto_recover_takeover_step_2", "先到状态矩阵查看后台补传候选池，确认该任务是否已经进入 retry_queue_auto_retry 通道。") : t("tasks.upload_checkpoint_resume_step_2", "先到状态矩阵查看后台补传候选池，确认该任务是否已经进入 upload checkpoint 自动续跑通道。"))}</li>
-            <li>${escapeHTML(retrySummary.autoRecoverMode === "retry_queue_auto_retry" ? t("tasks.auto_recover_takeover_step_3", "如果长时间未自动推进，再检查 retrySummary、provider 返回状态和风险窗口是否把它留在等待态。") : t("tasks.upload_checkpoint_resume_step_3", "如果长时间未自动推进，再检查 providerData / uploadId / nextPartNumber 等恢复线索是否完整。"))}</li>
+            <li>${escapeHTML(retrySummary.autoRecoverMode === "retry_queue_auto_retry" ? t("tasks.auto_recover_takeover_step_2", "先到状态矩阵查看后台补传候选池，确认该任务是否已经进入重试队列自动补传通道（retry_queue_auto_retry）。") : t("tasks.upload_checkpoint_resume_step_2", "先到状态矩阵查看后台补传候选池，确认该任务是否已经进入上传断点自动续跑通道（upload checkpoint auto-resume）。"))}</li>
+            <li>${escapeHTML(retrySummary.autoRecoverMode === "retry_queue_auto_retry" ? t("tasks.auto_recover_takeover_step_3", "如果长时间未自动推进，再检查重试摘要（retrySummary）、网盘返回状态和风险时间窗是否把它留在等待态。") : t("tasks.upload_checkpoint_resume_step_3", "如果长时间未自动推进，再检查 providerData / uploadId / nextPartNumber 等恢复线索是否完整。"))}</li>
           </ol>
           <div class="muted">${escapeHTML(retrySummary.autoRecoverAdvice || t("tasks.auto_recover_takeover_default_advice", "当前失败队列都带可恢复的 upload checkpoint，单机执行进程会优先尝试恢复上传会话。"))}</div>
           <div class="actions compact">
@@ -6028,7 +6028,7 @@ function renderTaskResolutionGuide(detail) {
     return `
       <div class="insight-card">
         <strong>${escapeHTML(t("tasks.task_next_steps_title", "下一步处理"))}</strong>
-        <span>${escapeHTML(t("tasks.task_next_steps_idle", "当前任务没有 blocked 人工处理动作，可直接继续运行或观察状态矩阵。"))}</span>
+        <span>${escapeHTML(t("tasks.task_next_steps_idle", "当前任务没有需要人工处理的阻塞动作（blocked），可直接继续运行或观察状态矩阵。"))}</span>
       </div>
     `;
   }
@@ -6079,7 +6079,7 @@ function renderTaskResolutionGuide(detail) {
       steps: [
         nextRetryAt ? tf("tasks.guide_wait_cooldown_step_1", { time: nextRetryAt }, `当前最早自动补传时间是 ${nextRetryAt}。`) : t("tasks.guide_wait_cooldown_step_1_fallback", "当前处于风控冷却窗口。"),
         t("tasks.guide_wait_cooldown_step_2", "冷却期间无需手动重试，系统会在窗口结束后自动尝试补传。"),
-        t("tasks.guide_wait_cooldown_step_3", "如果想确认整体阻塞分布，可切到状态矩阵查看 blocked 聚合看板。"),
+        t("tasks.guide_wait_cooldown_step_3", "如果想确认整体阻塞分布，可切到状态矩阵查看阻塞聚合看板。"),
       ],
       buttons: [
         { label: t("tasks.guide_focus_cooldown", "只看冷却队列"), view: "tasks", intent: "focus_task_retry" },
@@ -6090,8 +6090,8 @@ function renderTaskResolutionGuide(detail) {
       title: t("tasks.guide_wait_window_title", "等待自动补传时间窗"),
       steps: [
         nextRetryAt ? tf("tasks.guide_wait_window_step_1", { time: nextRetryAt }, `当前下一次允许自动补传的时间是 ${nextRetryAt}。`) : t("tasks.guide_wait_window_step_1_fallback", "当前不在允许的自动补传时间窗内。"),
-        t("tasks.guide_wait_window_step_2", "这类任务仍会留在自动补传候选池里，但在时间窗开始前不会被 worker 实际执行。"),
-        t("tasks.guide_wait_window_step_3", "如果需要排查影响范围，可切到状态矩阵按 blocked action 或 lane 直接聚焦。"),
+        t("tasks.guide_wait_window_step_2", "这类任务仍会留在自动补传候选池里，但在时间窗开始前不会被后台执行进程实际执行。"),
+        t("tasks.guide_wait_window_step_3", "如果需要排查影响范围，可切到状态矩阵按阻塞动作（blocked action）或通道（lane）直接聚焦。"),
       ],
       buttons: [
         { label: t("tasks.guide_focus_window", "只看时间窗等待态"), view: "status" },
@@ -6101,7 +6101,7 @@ function renderTaskResolutionGuide(detail) {
     manual_confirmation_required: {
       title: t("tasks.guide_manual_confirmation_title", "等待人工确认"),
       steps: [
-        t("tasks.guide_manual_confirmation_step_1", "当前任务存在 pending_manual 项，说明 provider 仍需要人工确认或后续 fallback 运行时能力。"),
+        t("tasks.guide_manual_confirmation_step_1", "当前任务存在 pending_manual 项，说明网盘仍需要人工确认，或要等待后续兜底运行能力补齐。"),
         t("tasks.guide_manual_confirmation_step_2", "先在状态矩阵和待补传树里确认影响范围，再决定是否拆分任务或等待后续链路补齐。"),
         t("tasks.guide_manual_confirmation_step_3", "确认后再回到任务详情执行重试。"),
       ],
@@ -6117,10 +6117,10 @@ function renderTaskResolutionGuide(detail) {
       steps: [
         t("tasks.guide_review_retry_step_1", "当前任务已经达到重试上限（retryLimit），继续原样重试也不会再推进。"),
         t("tasks.guide_review_retry_step_2", "建议回到任务向导调整 riskOverride / retryLimit / 执行策略，必要时拆成更小任务。"),
-        t("tasks.guide_review_retry_step_3", "创建新任务后，用状态矩阵对比新的 blocked 分布是否收敛。"),
+        t("tasks.guide_review_retry_step_3", "创建新任务后，用状态矩阵对比新的阻塞分布是否收敛。"),
       ],
       buttons: [
-        { label: t("tasks.guide_focus_exhausted", "只看 exhausted 队列"), view: "tasks", intent: "focus_task_retry" },
+        { label: t("tasks.guide_focus_exhausted", "只看已耗尽队列"), view: "tasks", intent: "focus_task_retry" },
         { label: t("tasks.guide_open_wizard", "打开任务向导"), view: "wizard", providerKey, intent: "prefill_wizard" },
         { label: t("tasks.guide_open_status_blocked", "按当前阻塞打开状态矩阵"), view: "status", intent: "focus_status_blocked" },
       ],
@@ -6129,7 +6129,7 @@ function renderTaskResolutionGuide(detail) {
 
   const config = stepsByAction[action] || {
     title: t("tasks.guide_manual_fallback_title", "人工处理建议"),
-    steps: [advice || t("tasks.guide_manual_fallback_step", "请根据 blocked 原因检查授权、源文件和 provider 返回状态。")],
+    steps: [advice || t("tasks.guide_manual_fallback_step", "请根据阻塞原因检查授权、源文件和网盘返回状态。")],
     buttons: [{ label: t("tasks.open_status_matrix", "打开状态矩阵"), view: "status" }],
   };
 
