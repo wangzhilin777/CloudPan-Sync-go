@@ -7791,7 +7791,7 @@ function renderAutoRecoverDecisionBudgetHints(item) {
   }
   const hints = [
     renderAutoRecoverDecisionBudgetHint(t("status.auto_recover_budget_hint_label_mode", "模式预算"), item.currentModeBudget, item.suggestedModeBudget),
-    renderAutoRecoverDecisionBudgetHint(t("status.auto_recover_budget_hint_label_lane", "lane 预算"), item.currentLaneBudget, item.suggestedLaneBudget),
+    renderAutoRecoverDecisionBudgetHint(t("status.auto_recover_budget_hint_label_lane", "通道预算（lane）"), item.currentLaneBudget, item.suggestedLaneBudget),
     renderAutoRecoverDecisionBudgetHint(t("status.auto_recover_budget_hint_label_group", "协议组预算"), item.currentProtocolGroupBudget, item.suggestedProtocolGroupBudget),
     renderAutoRecoverDecisionBudgetHint(t("status.auto_recover_budget_hint_label_provider", "网盘源预算"), item.currentProviderBudget, item.suggestedProviderBudget),
     renderAutoRecoverDecisionBudgetHint(t("status.auto_recover_budget_hint_label_profile", "授权档案预算"), item.currentProfileBudget, item.suggestedProfileBudget),

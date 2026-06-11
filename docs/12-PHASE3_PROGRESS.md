@@ -192,3 +192,5 @@
 
 - 已继续把任务详情重试范围摘要里 `pending_only (N items)` / `full_task` 这两条 fallback 默认值对齐到 zh-CN 字典本体的`仅待处理项 ({count} 项)` / `整个任务`，减少中文模式下任务详情顶部仍直接暴露英文运营字段的问题。
 
+
+- 已把状态矩阵决策预算提示里第 7794 行的 fallback 默认值「lane 预算」改成「通道预算（lane）」，跟邻居「模式预算 / 协议组预算 / 网盘源预算 / 授权档案预算」保持一致的中文优先表达，避免单条混排英文运营词。zh-CN 字典里 status.auto_recover_budget_hint_label_* 系列尚未单独定义，目前 fallback 就是实际渲染文案。
