@@ -467,7 +467,7 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 	)
 
 	runStep(t, runCtx, "status snapshot panels",
-		waitForText("body", "Provider 状态矩阵"),
+		waitForText("body", "网盘源状态矩阵"),
 		waitForText("body", "最近探测"),
 		waitForText("body", "最近结果"),
 		waitForText("body", "最近目录状态"),
@@ -478,7 +478,7 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 
 	runStep(t, runCtx, "status report panels",
 		waitForText(`body`, "验收报告"),
-		waitForText(`body`, "下载 Markdown"),
+		waitForText(`body`, "下载样本文档"),
 		waitForText(`body`, "报告标题"),
 	)
 
@@ -741,7 +741,7 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 		waitForValue(`#provider-smoke-category`, "binary_upload_success"),
 		waitForValueContains(`#provider-smoke-operations`, "Upload"),
 		waitForValueContains(`#provider-smoke-title`, "aliyun_123_open"),
-		waitForValueContains(`#provider-smoke-note`, "协议组：aliyun_123_open"),
+		waitForValueContains(`#provider-smoke-note`, "协议族：aliyun_123_open"),
 		chromedp.Evaluate(`(() => document.querySelector('#provider-smoke-matrix [data-provider-smoke-focus-group="aliyun_123_open"]')?.click())()`, nil),
 		waitForValue(`#provider-smoke-records-filter-group`, "aliyun_123_open"),
 		waitForText(`#provider-smoke-records-filter-summary`, "当前没有样本记录。"),

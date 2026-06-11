@@ -189,12 +189,12 @@ const translations = {
       auto_recover_takeover_title: "等待后台自动补传接管",
       upload_checkpoint_resume_title: "等待上传会话自动续跑",
       auto_recover_takeover_step_1: "当前队列满足后台自动补传条件，系统会在后续 tick 中自动尝试继续执行。",
-      auto_recover_takeover_step_2: "先到状态矩阵查看后台补传候选池，确认该任务是否已经进入重试队列自动补传通道（retry_queue_auto_retry lane）。",
+      auto_recover_takeover_step_2: "先到状态矩阵查看后台补传候选池，确认该任务是否已经进入重试队列自动补传通道（retry_queue_auto_retry 通道）。",
       auto_recover_takeover_step_3: "如果长时间未自动推进，再检查重试摘要（retrySummary）、网盘返回状态和风险时间窗是否把它留在等待态。",
-      upload_checkpoint_resume_step_1: "当前失败队列携带可恢复的上传断点（upload checkpoint），单机执行进程会优先尝试续跑上传会话。",
-      upload_checkpoint_resume_step_2: "先到状态矩阵查看后台补传候选池，确认该任务是否已经进入上传断点自动续跑通道（upload checkpoint auto-resume lane）。",
+      upload_checkpoint_resume_step_1: "当前失败队列携带可恢复的上传断点（upload checkpoint），单机执行进程会优先尝试恢复上传会话。",
+      upload_checkpoint_resume_step_2: "先到状态矩阵查看后台补传候选池，确认该任务是否已经进入上传断点自动续跑通道（upload checkpoint auto-resume 通道）。",
       upload_checkpoint_resume_step_3: "如果长时间未自动推进，再检查 providerData、uploadId、nextPartNumber 等恢复线索是否完整。",
-      auto_recover_takeover_default_advice: "当前失败队列都带可恢复的上传断点（upload checkpoint），单机执行进程会优先尝试续跑上传会话。",
+      auto_recover_takeover_default_advice: "当前失败队列都带可恢复的上传断点（upload checkpoint），单机执行进程会优先尝试恢复上传会话。",
       focus_auto_recover_only: "只看自动补传候选",
       focus_checkpoint_only: "只看自动续跑候选",
       open_status_matrix: "打开状态矩阵"
@@ -407,9 +407,9 @@ const translations = {
       state_waiting_other: "其它等待（waiting_other）",
       auto_recover_limit_placeholder: "本轮上限，例如 3",
       auto_recover_limit_per_mode_placeholder: "模式预算，例如 1",
-      auto_recover_limit_per_lane_placeholder: "通道预算（lane），例如 1",
+      auto_recover_limit_per_lane_placeholder: "通道预算，例如 1",
       auto_recover_limit_per_protocol_group_placeholder: "协议族预算，例如 1",
-      auto_recover_limit_per_provider_placeholder: "网盘源预算（provider），例如 1",
+      auto_recover_limit_per_provider_placeholder: "网盘源预算，例如 1",
       auto_recover_limit_per_profile_placeholder: "账号预算，例如 1",
       preview_filtered: "预演当前筛选",
       run_filtered: "执行当前筛选",
@@ -418,24 +418,24 @@ const translations = {
       waiting_budget_summary: "等待当前补传预算摘要...",
       no_auto_recover_result: "尚未执行后台补传预演或实际放行。",
       protocol_coverage: "协议族覆盖",
-      protocol_coverage_desc: "按协议族（protocol group）聚合真实成功样本",
+      protocol_coverage_desc: "按协议族聚合真实成功样本",
       report_title: "验收报告",
       report_title_placeholder: "报告标题，默认使用标准标题",
       report_note_placeholder: "报告备注，写交接要点或里程碑说明",
       waiting_report_data: "等待报告数据...",
       save: "保存",
-      download_markdown: "下载 Markdown",
+      download_markdown: "下载样本文档",
       provider_smoke_title: "真实网盘样本",
-      provider_smoke_summary_desc: "按协议族（protocol group）聚合真实样本",
+      provider_smoke_summary_desc: "按协议族聚合真实样本",
       provider_smoke_matrix_desc: "真实样本矩阵，合并样本记录与协议族覆盖情况。",
       provider_smoke_filter_query_placeholder: "筛选记录标题 / 网盘源 / 备注",
-      provider_smoke_filter_group_placeholder: "筛选协议族（protocolGroup）",
+      provider_smoke_filter_group_placeholder: "筛选协议族",
       provider_smoke_filter_sample_placeholder: "筛选样本类型 / 复用优先级",
       all_results: "全部结果",
       waiting_smoke_records: "等待样本记录...",
-      provider_smoke_provider_key_placeholder: "网盘源标识（providerKey），例如 123_open",
-      provider_smoke_protocol_group_placeholder: "协议族（protocolGroup），例如 aliyun_123_open",
-      provider_smoke_auth_mode_placeholder: "授权方式（authMode），例如 manual_token",
+      provider_smoke_provider_key_placeholder: "网盘源标识，例如 123_open",
+      provider_smoke_protocol_group_placeholder: "协议族，例如 aliyun_123_open",
+      provider_smoke_auth_mode_placeholder: "授权方式，例如 manual_token",
       provider_smoke_title_placeholder: "记录标题，默认使用网盘源名称",
       provider_smoke_note_placeholder: "备注，例如 已验证 ValidateAuth / List / Metadata",
       provider_smoke_operations_placeholder: "操作清单，用逗号分隔，例如 ValidateAuth, List, Upload",
@@ -448,8 +448,8 @@ const translations = {
       smoke_category_failed: "失败（failed）",
       result_success: "成功（success）",
       result_failure: "失败（failure）",
-      provider_matrix: "Provider 状态矩阵",
-      provider_matrix_title: "Provider 状态矩阵",
+      provider_matrix: "网盘源状态矩阵",
+      provider_matrix_title: "网盘源状态矩阵",
       runtime_checkpoints: "运行检查点概览",
       runtime_overview_title: "运行检查点概览",
       from_recent_probe: "来自最近探测 / 快照",
@@ -652,8 +652,8 @@ const translations = {
       flash_smoke_gap_prefilled: "已按验收缺口预填样本动作",
       flash_smoke_matrix_prefilled: "已按验收矩阵预填样本表单",
       flash_smoke_profile_risk_prefilled: "已按真实样本预填账号默认风控",
-      smoke_note_protocol_group: "协议组：{value}",
-      smoke_note_provider: "建议 provider：{value}",
+      smoke_note_protocol_group: "协议族：{value}",
+      smoke_note_provider: "建议网盘源：{value}",
       smoke_note_status: "验收状态：{value}",
       smoke_note_missing: "缺口：{value}",
       smoke_note_action: "动作：{value}",
@@ -708,7 +708,7 @@ const translations = {
       sample_context_protocol_group: "协议组 {value}",
       sample_context_task: "任务 {value}",
       sample_context_profile: "授权档案 {value}",
-      matrix_smoke_count: "smoke",
+      matrix_smoke_count: "样本",
       matrix_upload_smoke: "上传样本",
       matrix_coverage: "任务覆盖",
       matrix_smoke_sample: "样本记录：",
@@ -5259,7 +5259,7 @@ function renderRiskDefaultsSourceBadge(source) {
 function renderProfileRiskDefaultSourceAdvice(source) {
   const normalized = String(source || "").trim();
   if (!normalized) {
-    return "当前未附带真实样本来源说明，将沿用 provider 默认模板。";
+    return "当前未附带真实样本来源说明，将沿用网盘源默认模板。";
   }
   const match = normalized.match(/^Smoke Matrix\s+(.+?)\s+\((accepted|in_progress|pending)\)$/i);
   if (!match) {
@@ -5998,11 +5998,11 @@ function renderTaskResolutionGuide(detail) {
             ${nextRetryAt ? `<span class="pill">${escapeHTML(nextRetryAt)}</span>` : ""}
           </div>
           <ol class="checklist">
-            <li>${escapeHTML(retrySummary.autoRecoverMode === "retry_queue_auto_retry" ? t("tasks.auto_recover_takeover_step_1", "当前队列满足后台自动补传条件，系统会在后续 tick 中自动尝试继续执行。") : t("tasks.upload_checkpoint_resume_step_1", "当前失败队列携带可恢复的 upload checkpoint，单机 worker 会优先尝试续跑上传会话。"))}</li>
-            <li>${escapeHTML(retrySummary.autoRecoverMode === "retry_queue_auto_retry" ? t("tasks.auto_recover_takeover_step_2", "先到状态矩阵查看后台补传候选池，确认该任务是否已经进入 retry_queue_auto_retry lane。") : t("tasks.upload_checkpoint_resume_step_2", "先到状态矩阵查看后台补传候选池，确认该任务是否已经进入 upload checkpoint 自动续跑 lane。"))}</li>
+            <li>${escapeHTML(retrySummary.autoRecoverMode === "retry_queue_auto_retry" ? t("tasks.auto_recover_takeover_step_1", "当前队列满足后台自动补传条件，系统会在后续 tick 中自动尝试继续执行。") : t("tasks.upload_checkpoint_resume_step_1", "当前失败队列携带可恢复的 upload checkpoint，单机执行进程会优先尝试恢复上传会话。"))}</li>
+            <li>${escapeHTML(retrySummary.autoRecoverMode === "retry_queue_auto_retry" ? t("tasks.auto_recover_takeover_step_2", "先到状态矩阵查看后台补传候选池，确认该任务是否已经进入 retry_queue_auto_retry 通道。") : t("tasks.upload_checkpoint_resume_step_2", "先到状态矩阵查看后台补传候选池，确认该任务是否已经进入 upload checkpoint 自动续跑通道。"))}</li>
             <li>${escapeHTML(retrySummary.autoRecoverMode === "retry_queue_auto_retry" ? t("tasks.auto_recover_takeover_step_3", "如果长时间未自动推进，再检查 retrySummary、provider 返回状态和风险窗口是否把它留在等待态。") : t("tasks.upload_checkpoint_resume_step_3", "如果长时间未自动推进，再检查 providerData / uploadId / nextPartNumber 等恢复线索是否完整。"))}</li>
           </ol>
-          <div class="muted">${escapeHTML(retrySummary.autoRecoverAdvice || t("tasks.auto_recover_takeover_default_advice", "当前失败队列都带可恢复的 upload checkpoint，单机 worker 会优先尝试续跑上传会话。"))}</div>
+          <div class="muted">${escapeHTML(retrySummary.autoRecoverAdvice || t("tasks.auto_recover_takeover_default_advice", "当前失败队列都带可恢复的 upload checkpoint，单机执行进程会优先尝试恢复上传会话。"))}</div>
           <div class="actions compact">
             <button
               type="button"
@@ -8702,7 +8702,7 @@ function renderRecentProbesTable(items) {
   // <th>载荷</th>
   // <th>创建时间</th>
   if (!items.length) {
-    return `<div class="provider-card">${escapeHTML(t("status.recent_probes_empty", "暂无 probe 证据。"))}</div>`;
+    return `<div class="provider-card">${escapeHTML(t("status.recent_probes_empty", "暂无探测证据。"))}</div>`;
   }
   return `
     <table>
@@ -8890,7 +8890,7 @@ function renderProviderSmokeProviderReadinessLabel(value) {
   // Static test anchors:
   // ready（基础、上传、异常、代表性样本齐）
   // partial（已有样本，仍缺验收项）
-  // pending（待补 provider 真实样本）
+  // pending（待补真实网盘样本）
   const readiness = String(value || "").trim().toLowerCase();
   if (readiness === "ready") {
     return t("status.provider_smoke_readiness_ready", "已就绪（基础、上传、异常、代表样本齐）");
@@ -8898,7 +8898,7 @@ function renderProviderSmokeProviderReadinessLabel(value) {
   if (readiness === "partial") {
     return t("status.provider_smoke_readiness_partial", "进行中（已有样本，仍缺验收项）");
   }
-  return t("status.provider_smoke_readiness_pending", "待补齐（待补 provider 真实样本）");
+  return t("status.provider_smoke_readiness_pending", "待补齐（待补真实网盘样本）");
 }
 
 function renderEvidenceProviderSmokeProviders(report) {
@@ -9701,7 +9701,7 @@ function focusRuntimeTreeByPath(scope, path, kind = "roots") {
 function renderProviderSmokeRecords(items) {
   const result = filterProviderSmokeRecords(items, state.providerSmokeRecordFilters);
   if (!result.totalItems) {
-    return `<div class="directory-empty">${escapeHTML(t("status.sample_record_empty", "暂无真实 provider smoke 记录。"))}</div>`;
+    return `<div class="directory-empty">${escapeHTML(t("status.sample_record_empty", "暂无真实网盘样本记录。"))}</div>`;
   }
   return result.items
     .map(
@@ -9726,8 +9726,8 @@ function renderProviderSmokeRecords(items) {
           <div class="muted">${escapeHTML(tf("status.provider_smoke_record_operations", { value: (item.operations || []).join(", ") || "-" }, `操作：${(item.operations || []).join(", ") || "-"}`))}</div>
           <div class="muted">${escapeHTML(tf("status.provider_smoke_record_created_at", { value: stringifyValue(item.createdAt, "-") }, `创建时间：${stringifyValue(item.createdAt, "-")}`))}</div>
           <div class="actions compact">
-            <button type="button" class="ghost" data-provider-smoke-view="${escapeHTML(item.id || "")}">${escapeHTML(t("status.smoke_view_markdown", "查看 Markdown"))}</button>
-            <button type="button" class="ghost" data-provider-smoke-download="${escapeHTML(item.id || "")}">${escapeHTML(t("status.smoke_download_markdown", "下载 Markdown"))}</button>
+            <button type="button" class="ghost" data-provider-smoke-view="${escapeHTML(item.id || "")}">${escapeHTML(t("status.smoke_view_markdown", "查看样本文档"))}</button>
+            <button type="button" class="ghost" data-provider-smoke-download="${escapeHTML(item.id || "")}">${escapeHTML(t("status.smoke_download_markdown", "下载样本文档"))}</button>
           </div>
         </div>
       `,
@@ -10004,13 +10004,13 @@ function renderProviderSmokeMatrix(items) {
   // ready / pending
   // 异常样本：auth / rate / local / manual
   // 代表样本：large / nested / retry
-  // 当前筛选 全部 没有真实样本矩阵。
+  // 当前筛选 全部 没有真实样本验收矩阵。
   if (!Array.isArray(visibleItems) || !visibleItems.length) {
     return `<div class="directory-empty">${escapeHTML(
       tf(
         "status.matrix_filter_empty",
         { filter: providerSmokeMatrixFilterLabel(state.providerSmokeMatrixFilter) },
-        `当前筛选 ${providerSmokeMatrixFilterLabel(state.providerSmokeMatrixFilter)} 没有真实样本矩阵。`,
+        `当前筛选 ${providerSmokeMatrixFilterLabel(state.providerSmokeMatrixFilter)} 没有真实样本验收矩阵。`,
       ),
     )}</div>`;
   }
@@ -10023,12 +10023,12 @@ function renderProviderSmokeMatrix(items) {
             <code>${escapeHTML(stringifyValue(item.sampleRecordId || item.coverageSampleTaskId, "-"))}</code>
           </div>
           <div class="directory-metrics">
-            <span class="pill">${escapeHTML(t("status.matrix_smoke_count", "smoke"))} ${stringifyValue(item.smokeCount, "0")}</span>
+            <span class="pill">${escapeHTML(t("status.matrix_smoke_count", "样本"))} ${stringifyValue(item.smokeCount, "0")}</span>
             <span class="pill">${escapeHTML(t("status.matrix_upload_smoke", "上传样本"))} ${stringifyValue(item.uploadSuccessCount, "0")} / ${renderProviderSmokeMatrixState(item.hasUploadSuccessSample ? "ready" : "pending")}</span>
             <span class="pill">${escapeHTML(t("status.matrix_coverage", "任务覆盖"))} ${stringifyValue(item.coverageRealSuccessTaskCount, "0")}/${stringifyValue(item.coverageTaskCount, "0")}</span>
             <span class="pill">${renderProviderSmokeMatrixState(item.accepted ? "accepted" : item.acceptanceStatus || "pending")}</span>
           </div>
-          <div class="muted">${escapeHTML(t("status.matrix_smoke_sample", "smoke 样本："))}${escapeHTML(stringifyValue(item.sampleTitle, "-"))} / ${escapeHTML(stringifyValue(item.sampleProviderKey, "-"))} / ${escapeHTML(stringifyValue(item.sampleCategory, "-"))}</div>
+          <div class="muted">${escapeHTML(t("status.matrix_smoke_sample", "样本记录："))}${escapeHTML(stringifyValue(item.sampleTitle, "-"))} / ${escapeHTML(stringifyValue(item.sampleProviderKey, "-"))} / ${escapeHTML(stringifyValue(item.sampleCategory, "-"))}</div>
           <div class="muted">${escapeHTML(t("status.matrix_coverage_sample", "任务样本："))}${escapeHTML(stringifyValue(item.coverageSampleProviderKey, "-"))} / ${escapeHTML(stringifyValue(item.coverageSampleTaskState, "-"))} / ${escapeHTML(stringifyValue(item.coverageSampleCompletionKind, "-"))}</div>
           <div class="muted">${escapeHTML(t("status.matrix_readiness", "就绪度："))}${escapeHTML(renderProviderSmokeReadiness(item))}</div>
           <div class="muted">${escapeHTML(t("status.matrix_checklist", "验收清单："))}${escapeHTML(renderProviderSmokeChecklist(item))}</div>
@@ -10055,7 +10055,7 @@ function renderProviderSmokeMatrix(items) {
             <button type="button" class="ghost" data-provider-smoke-focus-group="${escapeHTML(stringifyValue(item.protocolGroup))}">${escapeHTML(t("status.matrix_focus_group_records", "只看该组记录"))}</button>
             <button type="button" class="ghost" data-provider-smoke-filter-status="${escapeHTML(item.accepted ? "accepted" : item.acceptanceStatus || "pending")}">${escapeHTML(t("status.matrix_focus_acceptance_type", "只看此类"))}</button>
           </div>
-          <div class="muted">${escapeHTML(t("status.matrix_latest_observed", "最近 smoke / 覆盖观察："))}<code>${escapeHTML(stringifyValue(item.latestSmokeAt, "-"))}</code> / <code>${escapeHTML(stringifyValue(item.coverageLastObservedAt, "-"))}</code></div>
+          <div class="muted">${escapeHTML(t("status.matrix_latest_observed", "最近样本 / 覆盖观察："))}<code>${escapeHTML(stringifyValue(item.latestSmokeAt, "-"))}</code> / <code>${escapeHTML(stringifyValue(item.coverageLastObservedAt, "-"))}</code></div>
         </div>
       `,
     )
@@ -10223,7 +10223,7 @@ function draftProviderSmokeFromMatrix(item) {
     operations.push("ValidateAuth", "List", "Metadata");
   }
   const noteParts = [
-    protocolGroup ? tf("status.smoke_note_protocol_group", { value: protocolGroup }, `协议组：${protocolGroup}`) : "",
+    protocolGroup ? tf("status.smoke_note_protocol_group", { value: protocolGroup }, `协议族：${protocolGroup}`) : "",
     providerKey ? tf("status.smoke_note_provider", { value: providerKey }, `建议 provider：${providerKey}`) : "",
     tf("status.smoke_note_status", { value: status }, `验收状态：${status}`),
     missing.length ? tf("status.smoke_note_missing", { value: missing.join(", ") }, `缺口：${missing.join(", ")}`) : "",
