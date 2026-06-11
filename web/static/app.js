@@ -6893,7 +6893,7 @@ function renderSelectedTask() {
     </div>
     <div class="insight-card">
       <strong>${escapeHTML(t("tasks.retry_scope", "重试范围"))}</strong>
-      <span>${metadata.retryPendingOnly ? tf("tasks.pending_only_with_count", { count: Array.isArray(metadata.retryPendingPaths) ? metadata.retryPendingPaths.length : 0 }, `pending_only (${Array.isArray(metadata.retryPendingPaths) ? metadata.retryPendingPaths.length : 0} items)`) : t("tasks.full_task", "full_task")}</span>
+      <span>${metadata.retryPendingOnly ? tf("tasks.pending_only_with_count", { count: Array.isArray(metadata.retryPendingPaths) ? metadata.retryPendingPaths.length : 0 }, `仅待处理项 (${Array.isArray(metadata.retryPendingPaths) ? metadata.retryPendingPaths.length : 0} 项)`) : t("tasks.full_task", "整个任务")}</span>
     </div>
     <div class="insight-card">
       <strong>${escapeHTML(t("tasks.retry_mode", "重试模式"))}</strong>
