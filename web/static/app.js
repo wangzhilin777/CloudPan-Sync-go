@@ -3924,7 +3924,7 @@ function renderRuntimeCheckpoint(runtime, metadata = null, scope = "task") {
             <span>${stringifyValue(metadata.retrySummary.autoRecoverWaitingLocalRestoreTasks, "0")}</span>
           </div>
           <div class="insight-card checkpoint-card">
-            <strong>${escapeHTML(t("tasks.wait_provider_session", "恢复等待 - Provider 会话"))}</strong>
+            <strong>${escapeHTML(t("tasks.wait_provider_session", "恢复等待 - 网盘会话"))}</strong>
             <span>${stringifyValue(metadata.retrySummary.autoRecoverWaitingProviderSessionTasks, "0")}</span>
           </div>
           <div class="insight-card checkpoint-card">
@@ -6050,7 +6050,7 @@ function renderTaskResolutionGuide(detail) {
     restore_local_source_file: {
       title: t("tasks.guide_restore_local_title", "补回本地回退文件"),
       steps: [
-        t("tasks.guide_restore_local_step_1", "先补回源文件或校正本地 fallback 路径，确保 localPath 对应文件真实存在。"),
+        t("tasks.guide_restore_local_step_1", "先补回源文件或校正本地兜底路径，确保 localPath 对应文件真实存在。"),
         t("tasks.guide_restore_local_step_2", "如果路径配置有误，建议回到任务向导核对 entries / selectedRoots。"),
         t("tasks.guide_restore_local_step_3", "补齐后返回任务详情页重新重试。"),
       ],
@@ -6064,8 +6064,8 @@ function renderTaskResolutionGuide(detail) {
     manual_intervention_required: {
       title: t("tasks.guide_manual_intervention_title", "修复 provider 会话缺口"),
       steps: [
-        t("tasks.guide_manual_intervention_step_1", "当前 retryClass 是 provider_session_missing，说明 provider 返回体缺少 uploadid / upload session 这类关键会话字段。"),
-        t("tasks.guide_manual_intervention_step_2", "先核对 provider 返回体、上传会话构建逻辑和目标端授权档案，确认是否需要重新生成会话或刷新授权。"),
+        t("tasks.guide_manual_intervention_step_1", "当前重试分类（retryClass）是 provider_session_missing，说明网盘返回体缺少 uploadid、upload session 这类关键会话字段。"),
+        t("tasks.guide_manual_intervention_step_2", "先核对网盘返回体、上传会话构建逻辑和目标端授权档案，确认是否需要重新生成会话或刷新授权。"),
         t("tasks.guide_manual_intervention_step_3", "修复后回到状态矩阵，确认这类阻塞项已经收敛，再执行重试。"),
       ],
       buttons: [
@@ -9082,7 +9082,7 @@ function renderEvidenceRiskCalibrationSummary(report) {
     return `
       <div class="insight-card">
         <strong>${escapeHTML(t("status.risk_calibration_title", "Provider 默认风控校准"))}</strong>
-        <span>${escapeHTML(t("status.risk_calibration_empty", "暂无 provider 默认模板校准数据，请先刷新 provider 列表。"))}</span>
+        <span>${escapeHTML(t("status.risk_calibration_empty", "暂无网盘源默认模板校准数据，请先刷新网盘源列表。"))}</span>
       </div>
     `;
   }
