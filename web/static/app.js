@@ -189,7 +189,7 @@ const translations = {
       auto_recover_takeover_title: "等待后台自动补传接管",
       upload_checkpoint_resume_title: "等待上传会话自动续跑",
       auto_recover_takeover_step_1: "当前队列满足后台自动补传条件，系统会在后续 tick 中自动尝试继续执行。",
-      auto_recover_takeover_step_2: "先到状态矩阵查看后台补传候选池，确认该任务是否已经进入重试队列自动补传通道（retry_queue_auto_retry 通道）。",
+      auto_recover_takeover_step_2: "先到状态矩阵查看后台补传候选池，确认该任务是否已经进入重试队列自动补传通道（retry_queue_auto_retry）。",
       auto_recover_takeover_step_3: "如果长时间未自动推进，再检查重试摘要（retrySummary）、网盘返回状态和风险时间窗是否把它留在等待态。",
       upload_checkpoint_resume_step_1: "当前失败队列携带可恢复的上传断点（upload checkpoint），单机执行进程会优先尝试恢复上传会话。",
       upload_checkpoint_resume_step_2: "先到状态矩阵查看后台补传候选池，确认该任务是否已经进入上传断点自动续跑通道（upload checkpoint auto-resume）。",

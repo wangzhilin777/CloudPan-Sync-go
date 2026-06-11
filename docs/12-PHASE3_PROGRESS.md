@@ -165,6 +165,7 @@
 - 已继续把任务下一步空态、网盘源级真实样本验收空态收口为中文优先表达，覆盖“当前任务没有需要人工处理的阻塞动作（blocked）”“暂无网盘源级验收数据（providerSmokeProviders）”等提示，减少中文模式下仍直接暴露 `blocked / providerSmokeProviders` 字段名的问题。
 
 - 已继续把任务处理建议里两处仍含英文括注的引导提示收口为中文优先表达，去掉 `upload checkpoint auto-resume 通道` 重复词，并清理 `阻塞聚合看板（blocked summary）` 末尾的英文括注，减少中文模式下重复词与冗余英文同时出现的问题。
+- 已继续把任务处理建议里 `retry_queue_auto_retry 通道` 这条提示中重复的 `通道` 词去掉，与 `upload checkpoint auto-resume` 同步保持中文先行、英文括注收尾的写法，减少中文模式下两条接管引导出现重复用词的问题。
 ## 正在推进
 
 - 继续清理 `web/static/app.js` 中仍暴露给用户的中英混合提示。
