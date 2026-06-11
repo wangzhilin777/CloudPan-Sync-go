@@ -6038,8 +6038,8 @@ function renderTaskResolutionGuide(detail) {
       title: t("tasks.guide_refresh_auth_title", "刷新授权档案"),
       steps: [
         t("tasks.guide_refresh_auth_step_1", "切到“网盘源 / 授权”面板，定位当前目标端授权档案。"),
-        t("tasks.guide_refresh_auth_step_2", "更新 token/cookie 后先执行 Validate，确认授权恢复正常。"),
-        t("tasks.guide_refresh_auth_step_3", "回到任务详情页，再执行 Resume 或 Retry。"),
+        t("tasks.guide_refresh_auth_step_2", "更新 token / cookie 后先执行授权验证，确认授权恢复正常。"),
+        t("tasks.guide_refresh_auth_step_3", "回到任务详情页，再执行继续或重试。"),
       ],
       buttons: [
         { label: t("tasks.guide_open_providers", "打开授权面板"), view: "providers", providerKey, profileId, intent: "focus_profile" },
@@ -6052,7 +6052,7 @@ function renderTaskResolutionGuide(detail) {
       steps: [
         t("tasks.guide_restore_local_step_1", "先补回源文件或校正本地 fallback 路径，确保 localPath 对应文件真实存在。"),
         t("tasks.guide_restore_local_step_2", "如果路径配置有误，建议回到任务向导核对 entries / selectedRoots。"),
-        t("tasks.guide_restore_local_step_3", "补齐后返回任务详情页重新 Retry。"),
+        t("tasks.guide_restore_local_step_3", "补齐后返回任务详情页重新重试。"),
       ],
       buttons: [
         { label: t("tasks.focus_pending_tree", "定位待补传树"), view: "tasks", intent: "focus_task_pending" },
@@ -6066,7 +6066,7 @@ function renderTaskResolutionGuide(detail) {
       steps: [
         t("tasks.guide_manual_intervention_step_1", "当前 retryClass 是 provider_session_missing，说明 provider 返回体缺少 uploadid / upload session 这类关键会话字段。"),
         t("tasks.guide_manual_intervention_step_2", "先核对 provider 返回体、上传会话构建逻辑和目标端授权档案，确认是否需要重新生成会话或刷新授权。"),
-        t("tasks.guide_manual_intervention_step_3", "修复后回到状态矩阵，确认该类 blocked 项已经收敛，再执行 Retry。"),
+        t("tasks.guide_manual_intervention_step_3", "修复后回到状态矩阵，确认这类阻塞项已经收敛，再执行重试。"),
       ],
       buttons: [
         { label: t("tasks.guide_focus_session_missing", "只看会话缺口队列"), view: "tasks", intent: "focus_task_retry" },
@@ -6103,7 +6103,7 @@ function renderTaskResolutionGuide(detail) {
       steps: [
         t("tasks.guide_manual_confirmation_step_1", "当前任务存在 pending_manual 项，说明 provider 仍需要人工确认或后续 fallback 运行时能力。"),
         t("tasks.guide_manual_confirmation_step_2", "先在状态矩阵和待补传树里确认影响范围，再决定是否拆分任务或等待后续链路补齐。"),
-        t("tasks.guide_manual_confirmation_step_3", "确认后再回到任务详情执行 Retry。"),
+        t("tasks.guide_manual_confirmation_step_3", "确认后再回到任务详情执行重试。"),
       ],
       buttons: [
         { label: t("tasks.focus_pending_tree", "定位待补传树"), view: "tasks", intent: "focus_task_pending" },
@@ -6115,7 +6115,7 @@ function renderTaskResolutionGuide(detail) {
     review_and_reset_retry_strategy: {
       title: t("tasks.guide_review_retry_title", "调整重试策略"),
       steps: [
-        t("tasks.guide_review_retry_step_1", "当前任务已经达到 retryLimit，继续原样 Retry 不会再推进。"),
+        t("tasks.guide_review_retry_step_1", "当前任务已经达到重试上限（retryLimit），继续原样重试也不会再推进。"),
         t("tasks.guide_review_retry_step_2", "建议回到任务向导调整 riskOverride / retryLimit / 执行策略，必要时拆成更小任务。"),
         t("tasks.guide_review_retry_step_3", "创建新任务后，用状态矩阵对比新的 blocked 分布是否收敛。"),
       ],
