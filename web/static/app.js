@@ -113,7 +113,6 @@ const translations = {
       prefill_wizard: "按当前任务重建向导",
       copy_payload: "复制任务创建参数",
       runtime_checkpoint: "运行检查点",
-      flash_auto_recover_filters_cleared: "后台补传筛选已清空",
       retry_queue: "重试队列",
       retry_queue_desc: "按失败分类查看可重试、阻塞中、已耗尽的队列项。",
       retry_current_filter: "重试当前筛选",
@@ -371,6 +370,7 @@ const translations = {
       guide_manual_fallback_step: "请根据阻塞原因检查授权、源文件和网盘返回状态。"
     },
     status: {
+      flash_auto_recover_filters_cleared: "后台补传筛选已清空",
       summary_title: "运行证据摘要",
       waiting_retry_policy: "等待自动补传调度策略...",
       auto_recover_pool: "自动补传候选池",
@@ -1135,6 +1135,14 @@ const translations = {
       prefill_wizard: "Rebuild Wizard from Task",
       copy_payload: "Copy Task Payload",
       runtime_checkpoint: "Runtime Checkpoints",
+      flash_task_tree_focused_by_scan: "Task directory tree focused by the latest scan trail",
+      flash_task_tree_focused_by_root: "Task directory tree focused by the selected root",
+      flash_status_tree_focused_by_scan: "Status directory tree focused by the latest scan trail",
+      flash_status_tree_focused_by_root: "Status directory tree focused by the selected root",
+      flash_task_directory_filters_cleared: "Task directory-tree filters cleared",
+      flash_task_pending_filters_cleared: "Task pending-tree filters cleared",
+      flash_status_directory_filters_cleared: "Status directory-tree filters cleared",
+      flash_status_pending_filters_cleared: "Status pending-tree filters cleared",
       retry_queue: "Retry Queue",
       retry_queue_desc: "Review retryable / blocked / exhausted items by failure class",
       retry_current_filter: "Retry Current Filter",
@@ -1327,7 +1335,7 @@ const translations = {
       flash_auto_recover_lane_focused: "Auto-recovery candidates filtered by lane: {lane}",
       flash_auto_recover_budgets_applied: "Suggested budgets applied: mode {mode} / lane {lane} / group {group} / provider {provider} / profile {profile}",
       focus_same_retry_class: "Show Similar Queue",
-      result_count_compact: "完成 {done} / 跳过 {skipped} / 失败 {failed}",
+      result_count_compact: "done {done} / skipped {skipped} / failed {failed}",
       retry_queue_compact: "retryable {retryable} / blocked {blocked}",
       action_refresh_auth_profile: "Continue after refreshing auth",
       action_restore_local_source_file: "Continue after restoring local files",
@@ -1692,7 +1700,7 @@ const translations = {
       smoke_action_fill_task_coverage: "Add 1 real task-coverage sample",
       smoke_action_fill_upload_smoke: "Add upload smoke",
       smoke_draft_title_provider: "Provider Smoke",
-      smoke_draft_title_status: "{protocolGroup} {status} 样本",
+      smoke_draft_title_status: "{protocolGroup} {status} sample",
       auto_recover_summary_title: "Visible Candidate Summary",
       auto_recover_queue_count: "queue {value}",
       auto_recover_ready_count: "ready {value}",
@@ -2105,7 +2113,17 @@ const translations = {
       flash_smoke_matrix_group_missing: "The matching protocol-group acceptance matrix entry was not found",
       flash_smoke_matrix_task_missing: "The current acceptance-matrix entry does not have a task sample to open",
       flash_copy_directory_path_failed: "Copying directory paths failed: {error}",
-      flash_copy_pending_path_failed: "Copying pending paths failed: {error}"
+      flash_copy_pending_path_failed: "Copying pending paths failed: {error}",
+      flash_extra_json_parse_error: "Extra JSON cannot be parsed: {error}",
+      flash_profile_missing_edit: "Could not find the auth profile to edit",
+      flash_profile_edit_loaded: "Loaded the auth profile into the edit form",
+      flash_profile_validate_done: "Auth validation finished: {status}",
+      flash_profile_deleted: "Auth profile deleted",
+      flash_prefill_task_required: "Please choose a task first",
+      flash_prefill_task_loaded: "Rebuilt the wizard parameters from the current task",
+      flash_copy_task_required: "Please choose a task first",
+      flash_copy_task_payload_done: "Task creation parameters copied to clipboard",
+      flash_copy_failed: "Copy failed: {error}"
     }
   }
 };

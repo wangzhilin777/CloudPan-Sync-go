@@ -195,6 +195,13 @@
 
 - 已把状态矩阵决策预算提示里第 7794 行的 fallback 默认值「lane 预算」改成「通道预算（lane）」，跟邻居「模式预算 / 协议组预算 / 网盘源预算 / 授权档案预算」保持一致的中文优先表达，避免单条混排英文运营词。zh-CN 字典里 status.auto_recover_budget_hint_label_* 系列尚未单独定义，目前 fallback 就是实际渲染文案。
 
+- 已修复一批双语字典覆盖缺口（主线二）：用脚本对比 `zh-CN / en-US` 两套字典后发现 18 个 key 只在中文侧定义、英文模式会漏翻成中文，包括 10 个 `wizard.flash_*`（Extra JSON 解析失败、授权档案编辑/校验/删除、按任务重建向导、复制创建参数等）和 8 个 `tasks.flash_*`（目录树/待补传树按扫描轨迹或选定根目录定位、清空目录树/待补传筛选）。已为这些 key 补齐英文译文，让英文模式不再夹中文提示。
+- 已修复 2 处 en-US 字典里仍残留中文的值（`tasks.result_count_compact`、`status.smoke_draft_title_status`），改成英文模板，避免英文模式下结果计数和样本标题仍显示中文。
+- 已修复一处命名空间错位：`flash_auto_recover_filters_cleared` 运行时按 `status.` 前缀调用，但 zh-CN 只在 `tasks` 命名空间定义、en-US 只在 `status` 命名空间定义，两端都靠 fallback 兜底。已统一把 zh-CN 该 key 移到 `status` 命名空间并删掉 `tasks` 下的死副本，让中英两侧都能真正命中字典。
+- 已把若干内联 fallback 与字典本体对齐，消除“缓存命中显示一种文案、缓存未命中显示另一种文案”的漂移，覆盖「provider 会话→网盘会话」「恢复等待 - Auth 刷新→恢复等待 - 刷新授权」「重试当前 root→重试当前根目录」「重试 checkpoint 数→重试断点数（checkpoint）」「全部 provider→全部网盘源」等。
+- 已为 `status.auto_recover_budget_hint_label_*` 系列 5 个预算标签补齐 zh-CN / en-US 双语定义，之前只有内联 fallback、英文模式会显示中文预算标签。
+- 上述双语收口后确认 `node --check web/static/app.js` 通过，`go test ./internal/app -count=1` 全量通过，未留下额外临时文件或后台进程残留。
+
 - 已把 `action_manual_intervention_required` 与 `guide_manual_intervention_title` 里残留的「provider 会话」对齐为「网盘会话」，与已收口的 `wait_provider_session` 保持一致，并同步更新 `internal/app/ui_smoke_test.go` 里依赖的「修复 provider 会话缺口 / 修复 provider 会话后继续」锚点，让任务处理建议卡里这类引导在中文模式下不再单独暴露英文术语。
 - 已把恢复等待提示 `wait_auth_refresh` / `wait_local_restore` 的内联 fallback 从「恢复等待 - Auth 刷新 / 恢复等待 - 本地恢复」对齐到 zh-CN 字典本体的「恢复等待 - 刷新授权 / 恢复等待 - 补回本地文件」，消除缓存未命中时 fallback 与字典两套文案不一致的问题。
 - 已把目录树面板里 `rebuild_from_root / retry_current_root / auto_recover_current_root / focus_root` 这组按钮文案从直接暴露英文 `root` 改成「根目录」，覆盖 zh-CN 字典和内联 fallback，与界面其它「根目录」表达保持一致。
