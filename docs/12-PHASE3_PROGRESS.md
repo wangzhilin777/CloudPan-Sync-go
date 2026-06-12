@@ -219,3 +219,6 @@
 - 已修复 API 错误本地化函数 `localizeAPIError` 一直只返回中文的问题：原本内联一张固定中文错误 map（`provider_not_found / missing_access_token / invalid_json` 等 12 条）加 `请求失败：{status}` 兜底，英文模式下授权创建、校验、删除等失败提示仍是中文。现在新增顶层 `errors` 命名空间，补齐这 12 条错误说明与 `request_failed` 兜底的 zh-CN / en-US 双语译文，并把函数改成 `t()` / `tf()` 查表，让英文模式下这些前置错误提示真正切英文。
 - 上述错误与状态标签词典化后确认 `node --check web/static/app.js` 通过、`go test ./internal/app -count=1` 全量通过，未留下额外临时文件或后台进程残留。
 - 已把 `renderSourceDeletePolicy` 的 `record_only` 标签从硬编码中文「record_only（只记录，不删目标端）」改成走字典 `wizard.source_delete_policy_record_only`（zh「仅记录，不删目标端（record_only）」/ en「Record only, keep target files (record_only)」），该字典 key 此前已存在却没被消费，函数仍直接返回固定中文、英文模式不切换。已同步更新 `internal/app/web_test.go` 的源端删除策略锚点到新文案，让英文模式下任务详情、预览、状态页的源端删除策略说明不再夹中文。
+
+- 已修复状态页后台补传摘要里四个枚举标签函数一直硬编码中文、英文模式仍显示中文的问题：`autoRecoverStateLabel`（恢复态）、`autoRecoverOutcomeLabel`（决策结果）、`retryClassSummaryLabel`（重试分类）、`blockedActionSummaryLabel`（阻塞动作）原本都是固定中文 `switch` 返回，英文模式下候选池状态计数、结果计数、分类计数、动作计数仍是中文。现在为这四组分别新增 `status.recover_state_label_* / recover_outcome_label_* / retry_class_label_* / blocked_action_label_*` 共 33 条 zh-CN / en-US 双语 key，并把函数改成 `t()` 查表，让英文模式下这四组摘要标签真正切英文。顺手把其中「等待重建 Provider 会话」「被 lane 预算挡住」「被 provider 预算挡住」对齐为「等待重建网盘会话」「被通道预算挡住（lane）」「被网盘源预算挡住」，保持中文优先表达。
+- 上述四组枚举标签词典化后确认 `node --check web/static/app.js` 通过、`go test ./internal/app -count=1` 全量通过，未留下额外临时文件或后台进程残留。

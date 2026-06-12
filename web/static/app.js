@@ -420,6 +420,39 @@ const translations = {
       state_waiting_manual_confirmation: "等待人工确认（waiting_manual_confirmation）",
       state_waiting_retry_limit: "等待重试上限（waiting_retry_limit）",
       state_waiting_other: "其它等待（waiting_other）",
+      recover_state_label_runnable_now: "可立即执行",
+      recover_state_label_waiting_cooldown: "等待冷却",
+      recover_state_label_waiting_retry_window: "等待自动补传时间窗",
+      recover_state_label_waiting_auth_refresh: "等待授权刷新",
+      recover_state_label_waiting_local_restore: "等待补回本地文件",
+      recover_state_label_waiting_provider_session: "等待重建网盘会话",
+      recover_state_label_waiting_manual_confirmation: "等待人工确认",
+      recover_state_label_waiting_retry_limit: "等待重置重试策略",
+      recover_state_label_waiting_other: "其它等待",
+      recover_outcome_label_recovered: "已放行执行",
+      recover_outcome_label_dry_run_recoverable: "预演可放行",
+      recover_outcome_label_skipped_by_limit: "被批次上限挡住",
+      recover_outcome_label_skipped_by_mode_budget: "被模式预算挡住",
+      recover_outcome_label_skipped_by_lane_budget: "被通道预算挡住（lane）",
+      recover_outcome_label_skipped_by_protocol_group_budget: "被协议族预算挡住",
+      recover_outcome_label_skipped_by_provider_budget: "被网盘源预算挡住",
+      recover_outcome_label_skipped_by_profile_budget: "被账号预算挡住",
+      recover_outcome_label_waiting_cooldown: "等待冷却",
+      recover_outcome_label_waiting_retry_window: "等待时间窗",
+      recover_outcome_label_blocked: "仍被阻塞",
+      retry_class_label_retry_failed: "普通重试失败",
+      retry_class_label_rate_limited: "限流冷却",
+      retry_class_label_pending_manual: "人工确认",
+      retry_class_label_provider_session_missing: "会话缺口",
+      retry_class_label_auth_expired: "授权过期",
+      retry_class_label_local_file_missing: "本地文件缺失",
+      blocked_action_label_wait_for_cooldown: "等待冷却",
+      blocked_action_label_wait_for_retry_window: "等待时间窗",
+      blocked_action_label_refresh_auth_profile: "刷新授权",
+      blocked_action_label_restore_local_source_file: "补回本地文件",
+      blocked_action_label_manual_confirmation_required: "人工确认",
+      blocked_action_label_manual_intervention_required: "人工介入",
+      blocked_action_label_review_and_reset_retry_strategy: "重置重试策略",
       auto_recover_limit_placeholder: "本轮上限，例如 3",
       auto_recover_limit_per_mode_placeholder: "模式预算，例如 1",
       auto_recover_limit_per_lane_placeholder: "通道预算，例如 1",
@@ -1465,6 +1498,39 @@ const translations = {
       state_waiting_manual_confirmation: "Waiting manual confirmation (waiting_manual_confirmation)",
       state_waiting_retry_limit: "Waiting retry limit (waiting_retry_limit)",
       state_waiting_other: "Other waiting (waiting_other)",
+      recover_state_label_runnable_now: "Runnable now",
+      recover_state_label_waiting_cooldown: "Waiting cooldown",
+      recover_state_label_waiting_retry_window: "Waiting auto-recovery window",
+      recover_state_label_waiting_auth_refresh: "Waiting auth refresh",
+      recover_state_label_waiting_local_restore: "Waiting local restore",
+      recover_state_label_waiting_provider_session: "Waiting provider session rebuild",
+      recover_state_label_waiting_manual_confirmation: "Waiting manual confirmation",
+      recover_state_label_waiting_retry_limit: "Waiting retry-policy reset",
+      recover_state_label_waiting_other: "Other waiting",
+      recover_outcome_label_recovered: "Released for execution",
+      recover_outcome_label_dry_run_recoverable: "Releasable in dry run",
+      recover_outcome_label_skipped_by_limit: "Blocked by run limit",
+      recover_outcome_label_skipped_by_mode_budget: "Blocked by mode budget",
+      recover_outcome_label_skipped_by_lane_budget: "Blocked by lane budget",
+      recover_outcome_label_skipped_by_protocol_group_budget: "Blocked by protocol-group budget",
+      recover_outcome_label_skipped_by_provider_budget: "Blocked by provider budget",
+      recover_outcome_label_skipped_by_profile_budget: "Blocked by account budget",
+      recover_outcome_label_waiting_cooldown: "Waiting cooldown",
+      recover_outcome_label_waiting_retry_window: "Waiting retry window",
+      recover_outcome_label_blocked: "Still blocked",
+      retry_class_label_retry_failed: "Retry failed",
+      retry_class_label_rate_limited: "Rate-limit cooldown",
+      retry_class_label_pending_manual: "Manual confirmation",
+      retry_class_label_provider_session_missing: "Session gap",
+      retry_class_label_auth_expired: "Auth expired",
+      retry_class_label_local_file_missing: "Local file missing",
+      blocked_action_label_wait_for_cooldown: "Wait cooldown",
+      blocked_action_label_wait_for_retry_window: "Wait retry window",
+      blocked_action_label_refresh_auth_profile: "Refresh auth",
+      blocked_action_label_restore_local_source_file: "Restore local file",
+      blocked_action_label_manual_confirmation_required: "Manual confirmation",
+      blocked_action_label_manual_intervention_required: "Manual intervention",
+      blocked_action_label_review_and_reset_retry_strategy: "Reset retry policy",
       auto_recover_limit_placeholder: "Run limit, for example 3",
       auto_recover_limit_per_mode_placeholder: "Mode budget, for example 1",
       auto_recover_limit_per_lane_placeholder: "Lane budget, for example 1",
@@ -7478,23 +7544,23 @@ function renderAutoRecoverBudgetSummary(autoRetryPolicy) {
 function autoRecoverStateLabel(recoverState) {
   switch (String(recoverState || "").trim()) {
     case "runnable_now":
-      return "可立即执行";
+      return t("status.recover_state_label_runnable_now", "可立即执行");
     case "waiting_cooldown":
-      return "等待冷却";
+      return t("status.recover_state_label_waiting_cooldown", "等待冷却");
     case "waiting_retry_window":
-      return "等待自动补传时间窗";
+      return t("status.recover_state_label_waiting_retry_window", "等待自动补传时间窗");
     case "waiting_auth_refresh":
-      return "等待授权刷新";
+      return t("status.recover_state_label_waiting_auth_refresh", "等待授权刷新");
     case "waiting_local_restore":
-      return "等待补回本地文件";
+      return t("status.recover_state_label_waiting_local_restore", "等待补回本地文件");
     case "waiting_provider_session":
-      return "等待重建 Provider 会话";
+      return t("status.recover_state_label_waiting_provider_session", "等待重建网盘会话");
     case "waiting_manual_confirmation":
-      return "等待人工确认";
+      return t("status.recover_state_label_waiting_manual_confirmation", "等待人工确认");
     case "waiting_retry_limit":
-      return "等待重置重试策略";
+      return t("status.recover_state_label_waiting_retry_limit", "等待重置重试策略");
     case "waiting_other":
-      return "其它等待";
+      return t("status.recover_state_label_waiting_other", "其它等待");
     default:
       return stringifyValue(recoverState, "-");
   }
@@ -7546,27 +7612,27 @@ function autoRecoverDecisionAdvice(decision) {
 function autoRecoverOutcomeLabel(outcome) {
   switch (String(outcome || "").trim()) {
     case "recovered":
-      return "已放行执行";
+      return t("status.recover_outcome_label_recovered", "已放行执行");
     case "dry_run_recoverable":
-      return "预演可放行";
+      return t("status.recover_outcome_label_dry_run_recoverable", "预演可放行");
     case "skipped_by_limit":
-      return "被批次上限挡住";
+      return t("status.recover_outcome_label_skipped_by_limit", "被批次上限挡住");
     case "skipped_by_mode_budget":
-      return "被模式预算挡住";
+      return t("status.recover_outcome_label_skipped_by_mode_budget", "被模式预算挡住");
     case "skipped_by_lane_budget":
-      return "被 lane 预算挡住";
+      return t("status.recover_outcome_label_skipped_by_lane_budget", "被通道预算挡住（lane）");
     case "skipped_by_protocol_group_budget":
-      return "被协议族预算挡住";
+      return t("status.recover_outcome_label_skipped_by_protocol_group_budget", "被协议族预算挡住");
     case "skipped_by_provider_budget":
-      return "被 provider 预算挡住";
+      return t("status.recover_outcome_label_skipped_by_provider_budget", "被网盘源预算挡住");
     case "skipped_by_profile_budget":
-      return "被账号预算挡住";
+      return t("status.recover_outcome_label_skipped_by_profile_budget", "被账号预算挡住");
     case "waiting_cooldown":
-      return "等待冷却";
+      return t("status.recover_outcome_label_waiting_cooldown", "等待冷却");
     case "waiting_retry_window":
-      return "等待时间窗";
+      return t("status.recover_outcome_label_waiting_retry_window", "等待时间窗");
     case "blocked":
-      return "仍被阻塞";
+      return t("status.recover_outcome_label_blocked", "仍被阻塞");
     default:
       return stringifyValue(outcome, "-");
   }
@@ -7602,17 +7668,17 @@ function retryClassSummaryLabel(retryClass) {
   const key = String(retryClass || "").trim();
   switch (key) {
     case "retry_failed":
-      return "普通重试失败";
+      return t("status.retry_class_summary_label_retry_failed", "普通重试失败");
     case "rate_limited":
-      return "限流冷却";
+      return t("status.retry_class_summary_label_rate_limited", "限流冷却");
     case "pending_manual":
-      return "人工确认";
+      return t("status.retry_class_summary_label_pending_manual", "人工确认");
     case "provider_session_missing":
-      return "会话缺口";
+      return t("status.retry_class_summary_label_provider_session_missing", "会话缺口");
     case "auth_expired":
-      return "授权过期";
+      return t("status.retry_class_summary_label_auth_expired", "授权过期");
     case "local_file_missing":
-      return "本地文件缺失";
+      return t("status.retry_class_summary_label_local_file_missing", "本地文件缺失");
     default:
       return key || "-";
   }
@@ -7663,19 +7729,19 @@ function blockedActionSummaryLabel(action) {
   const key = String(action || "").trim();
   switch (key) {
     case "wait_for_cooldown":
-      return "等待冷却";
+      return t("status.blocked_action_label_wait_for_cooldown", "等待冷却");
     case "wait_for_retry_window":
-      return "等待时间窗";
+      return t("status.blocked_action_label_wait_for_retry_window", "等待时间窗");
     case "refresh_auth_profile":
-      return "刷新授权";
+      return t("status.blocked_action_label_refresh_auth_profile", "刷新授权");
     case "restore_local_source_file":
-      return "补回本地文件";
+      return t("status.blocked_action_label_restore_local_source_file", "补回本地文件");
     case "manual_confirmation_required":
-      return "人工确认";
+      return t("status.blocked_action_label_manual_confirmation_required", "人工确认");
     case "manual_intervention_required":
-      return "人工介入";
+      return t("status.blocked_action_label_manual_intervention_required", "人工介入");
     case "review_and_reset_retry_strategy":
-      return "重置重试策略";
+      return t("status.blocked_action_label_review_and_reset_retry_strategy", "重置重试策略");
     default:
       return key || "-";
   }
