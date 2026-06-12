@@ -898,6 +898,14 @@ const translations = {
       provider_label: "网盘源",
       auth_mode_label: "授权方式",
       display_name_label: "显示名称",
+      profile_table_empty: "暂无授权档案。",
+      profile_table_status: "状态",
+      profile_table_actions: "操作",
+      profile_table_account_default_source: "账号默认来源",
+      profile_table_account_default_advice: "账号默认建议",
+      profile_table_edit: "编辑",
+      profile_table_validate: "验证授权",
+      profile_table_delete: "删除",
       display_name_placeholder: "例如：189Cloud 主账号",
       token_label: "令牌 Token",
       cookie_label: "Cookie",
@@ -2067,6 +2075,14 @@ const translations = {
       provider_label: "Provider",
       auth_mode_label: "Auth Mode",
       display_name_label: "Display Name",
+      profile_table_empty: "No auth profiles yet.",
+      profile_table_status: "Status",
+      profile_table_actions: "Actions",
+      profile_table_account_default_source: "Account Default Source",
+      profile_table_account_default_advice: "Account Default Advice",
+      profile_table_edit: "Edit",
+      profile_table_validate: "Validate",
+      profile_table_delete: "Delete",
       display_name_placeholder: "Example: 189Cloud Primary Account",
       token_label: "Token",
       cookie_label: "Cookie",
@@ -6883,7 +6899,7 @@ function syncAuthModes() {
 function renderProfiles() {
   const wrap = $("#profiles-table");
   if (!state.profiles.length) {
-    wrap.innerHTML = `<div class="provider-card">暂无授权档案。</div>`;
+    wrap.innerHTML = `<div class="provider-card">${escapeHTML(t("providers.profile_table_empty", "暂无授权档案。"))}</div>`;
     syncSourceProfiles();
     syncTargetProfiles();
     syncTargetProfileInsight();
@@ -6894,12 +6910,12 @@ function renderProfiles() {
     <table>
       <thead>
         <tr>
-          <th>显示名称</th>
-          <th>网盘源</th>
-          <th>授权方式</th>
-          <th>账号默认风控</th>
-          <th>状态</th>
-          <th>操作</th>
+          <th>${escapeHTML(t("providers.display_name_label", "显示名称"))}</th>
+          <th>${escapeHTML(t("providers.provider_label", "网盘源"))}</th>
+          <th>${escapeHTML(t("providers.auth_mode_label", "授权方式"))}</th>
+          <th>${escapeHTML(t("wizard.profile_default_risk", "账号默认风控"))}</th>
+          <th>${escapeHTML(t("providers.profile_table_status", "状态"))}</th>
+          <th>${escapeHTML(t("providers.profile_table_actions", "操作"))}</th>
         </tr>
       </thead>
       <tbody>
@@ -6916,15 +6932,15 @@ function renderProfiles() {
                 <td>${escapeHTML(renderAuthModeLabel(profile.authMode))}</td>
                 <td>
                   <div>${escapeHTML(profileRisk)}</div>
-                  <div class="muted">账号默认来源: ${escapeHTML(renderRiskDefaultsSourceBadge(profileSource))}</div>
-                  <div class="muted">账号默认建议: ${escapeHTML(profileAdvice)}</div>
+                  <div class="muted">${escapeHTML(t("providers.profile_table_account_default_source", "账号默认来源"))}: ${escapeHTML(renderRiskDefaultsSourceBadge(profileSource))}</div>
+                  <div class="muted">${escapeHTML(t("providers.profile_table_account_default_advice", "账号默认建议"))}: ${escapeHTML(profileAdvice)}</div>
                 </td>
                 <td>${escapeHTML(renderProfileStatusLabel(profile.status))}</td>
                 <td>
                   <div class="actions compact">
-                    <button type="button" class="ghost" data-profile-edit="${profile.id}">编辑</button>
-                    <button type="button" class="ghost" data-profile-validate="${profile.id}">验证授权</button>
-                    <button type="button" class="ghost" data-profile-delete="${profile.id}">删除</button>
+                    <button type="button" class="ghost" data-profile-edit="${profile.id}">${escapeHTML(t("providers.profile_table_edit", "编辑"))}</button>
+                    <button type="button" class="ghost" data-profile-validate="${profile.id}">${escapeHTML(t("providers.profile_table_validate", "验证授权"))}</button>
+                    <button type="button" class="ghost" data-profile-delete="${profile.id}">${escapeHTML(t("providers.profile_table_delete", "删除"))}</button>
                   </div>
                 </td>
               </tr>
