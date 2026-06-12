@@ -114,6 +114,14 @@ const translations = {
       invalid_json: "输入内容不是合法 JSON，请检查括号、引号和逗号后重试。",
       profile_not_found: "没有找到对应授权档案，可能已被删除，请刷新后重试。",
       invalid_password: "管理员密码不正确，请确认后重新输入。",
+      assist_kind_required: "请先选择 OpenList 或 Alist 引导入口，再发起检测。",
+      assist_url_required: "请先填写 OpenList / Alist 服务地址，再发起检测。",
+      assist_request_build_failed: "构建检测请求失败，请稍后重试。",
+      assist_url_invalid: "OpenList / Alist 地址格式不正确，请检查是否填写完整的 http(s) 地址。",
+      assist_connect_failed: "连接 OpenList / Alist 失败，请确认服务是否启动、地址和端口是否可达。",
+      invalid_assist_token: "OpenList / Alist 访问令牌无效或权限不足，请重新获取令牌后再试。",
+      assist_storage_list_failed: "OpenList / Alist 已连通，但拉取存储列表失败，请确认令牌是否有管理权限。",
+      assist_storage_parse_failed: "OpenList / Alist 返回的存储列表无法解析，请确认服务版本是否兼容。",
       request_failed: "请求失败：{status}"
     },
     tasks: {
@@ -453,6 +461,18 @@ const translations = {
       blocked_action_label_manual_confirmation_required: "人工确认",
       blocked_action_label_manual_intervention_required: "人工介入",
       blocked_action_label_review_and_reset_retry_strategy: "重置重试策略",
+      recover_advice_runnable_now: "当前通道（lane）已满足预算与时间条件，可以直接预演或执行。",
+      recover_advice_waiting_cooldown: "先等待冷却到期，再观察 nextRetryAt 或下一轮自动补传调度。",
+      recover_advice_waiting_retry_window: "当前不在允许的自动补传时间窗内，需等待窗口开放或手动调整风险配置。",
+      recover_advice_waiting_auth_refresh: "优先刷新或重新验证授权档案，再回到状态矩阵放行。",
+      recover_advice_waiting_local_restore: "源文件缺失或本地路径不可读，需先补回源文件后再继续补传。",
+      recover_advice_waiting_provider_session: "网盘返回体缺少 uploadid / upload session 等关键恢复线索，需先补齐会话信息。",
+      recover_advice_waiting_manual_confirmation: "该类失败需要先人工确认，再按子集 retry 或后台补传继续处理。",
+      recover_advice_waiting_retry_limit: "当前任务已达到重试上限，先检查失败原因与重试策略，再决定是否重置额度。",
+      recover_advice_waiting_other: "当前通道（lane）仍有未细分等待条件，建议结合决策明细（decisions）和阻塞动作（blocked action）继续排查。",
+      recover_advice_decision_empty: "当前决策没有额外等待态说明。",
+      recover_advice_retry_window_blocked: "当前已满足自动补传条件，但不在允许的自动补传时间窗内，等待 nextRetryAt 后系统会自动接管。",
+      recover_advice_cooldown_blocked: "当前处于风控冷却窗口，等待 nextRetryAt 后系统会尝试自动补传。",
       auto_recover_limit_placeholder: "本轮上限，例如 3",
       auto_recover_limit_per_mode_placeholder: "模式预算，例如 1",
       auto_recover_limit_per_lane_placeholder: "通道预算，例如 1",
@@ -1193,6 +1213,14 @@ const translations = {
       invalid_json: "The input is not valid JSON. Check the brackets, quotes, and commas, then try again.",
       profile_not_found: "The auth profile was not found. It may have been deleted. Refresh and try again.",
       invalid_password: "The admin password is incorrect. Please confirm and re-enter it.",
+      assist_kind_required: "Choose OpenList or Alist first, then detect again.",
+      assist_url_required: "Fill in the OpenList / Alist URL before detecting.",
+      assist_request_build_failed: "Failed to build the detection request. Please retry.",
+      assist_url_invalid: "The OpenList / Alist URL is malformed. Check the protocol and host, then retry.",
+      assist_connect_failed: "Could not reach OpenList / Alist. Confirm the URL is correct and the service is running.",
+      invalid_assist_token: "The OpenList / Alist token is invalid or lacks permission. Refresh the token or log in again.",
+      assist_storage_list_failed: "OpenList / Alist returned the storage list with an error. Confirm the token has admin/storage-list permission.",
+      assist_storage_parse_failed: "The OpenList / Alist storage list response could not be parsed. Confirm the service version is compatible, or fall back to manual mode.",
       request_failed: "Request failed: {status}"
     },
     tasks: {
@@ -1531,6 +1559,18 @@ const translations = {
       blocked_action_label_manual_confirmation_required: "Manual confirmation",
       blocked_action_label_manual_intervention_required: "Manual intervention",
       blocked_action_label_review_and_reset_retry_strategy: "Reset retry policy",
+      recover_advice_runnable_now: "This lane already meets the budget and timing conditions. You can dry-run or execute it directly.",
+      recover_advice_waiting_cooldown: "Wait for the cooldown to expire first, then watch nextRetryAt or the next auto-recovery tick.",
+      recover_advice_waiting_retry_window: "This is outside the allowed auto-recovery window. Wait for the window to open or adjust the risk configuration manually.",
+      recover_advice_waiting_auth_refresh: "Refresh or re-validate the auth profile first, then return to the status matrix to release it.",
+      recover_advice_waiting_local_restore: "The source file is missing or the local path is unreadable. Restore the source file before continuing recovery.",
+      recover_advice_waiting_provider_session: "The provider response is missing key recovery hints such as uploadid / upload session. Rebuild the session information first.",
+      recover_advice_waiting_manual_confirmation: "This failure class needs manual confirmation first, then continue via subset retry or auto-recovery.",
+      recover_advice_waiting_retry_limit: "This task has reached the retry limit. Check the failure cause and retry policy before deciding whether to reset the quota.",
+      recover_advice_waiting_other: "This lane still has unclassified waiting conditions. Inspect the decision details and blocked action to continue troubleshooting.",
+      recover_advice_decision_empty: "This decision has no additional waiting-state notes.",
+      recover_advice_retry_window_blocked: "This already meets the auto-recovery conditions but is outside the allowed window. The system will take over automatically after nextRetryAt.",
+      recover_advice_cooldown_blocked: "This is in a risk-control cooldown window. The system will attempt auto-recovery after nextRetryAt.",
       auto_recover_limit_placeholder: "Run limit, for example 3",
       auto_recover_limit_per_mode_placeholder: "Mode budget, for example 1",
       auto_recover_limit_per_lane_placeholder: "Lane budget, for example 1",
@@ -2832,6 +2872,14 @@ function localizeAPIError(error, status) {
     invalid_json: t("errors.invalid_json", "输入内容不是合法 JSON，请检查括号、引号和逗号后重试。"),
     profile_not_found: t("errors.profile_not_found", "没有找到对应授权档案，可能已被删除，请刷新后重试。"),
     invalid_password: t("errors.invalid_password", "管理员密码不正确，请确认后重新输入。"),
+    assist_kind_required: t("errors.assist_kind_required", "请先选择 OpenList 或 Alist 引导入口，再发起检测。"),
+    assist_url_required: t("errors.assist_url_required", "请先填写 OpenList / Alist 服务地址，再发起检测。"),
+    assist_request_build_failed: t("errors.assist_request_build_failed", "构建检测请求失败，请稍后重试。"),
+    assist_url_invalid: t("errors.assist_url_invalid", "OpenList / Alist 地址格式不正确，请检查是否填写完整的 http(s) 地址。"),
+    assist_connect_failed: t("errors.assist_connect_failed", "连接 OpenList / Alist 失败，请确认服务是否启动、地址和端口是否可达。"),
+    invalid_assist_token: t("errors.invalid_assist_token", "OpenList / Alist 访问令牌无效或权限不足，请重新获取令牌后再试。"),
+    assist_storage_list_failed: t("errors.assist_storage_list_failed", "OpenList / Alist 已连通，但拉取存储列表失败，请确认令牌是否有管理权限。"),
+    assist_storage_parse_failed: t("errors.assist_storage_parse_failed", "OpenList / Alist 返回的存储列表无法解析，请确认服务版本是否兼容。"),
   };
   if (code && knownMessages[code]) {
     return knownMessages[code];
@@ -7569,23 +7617,23 @@ function autoRecoverStateLabel(recoverState) {
 function autoRecoverStateAdvice(recoverState) {
   switch (String(recoverState || "").trim()) {
     case "runnable_now":
-      return "当前 lane 已满足预算与时间条件，可以直接预演或执行。";
+      return t("status.recover_advice_runnable_now", "当前 lane 已满足预算与时间条件，可以直接预演或执行。");
     case "waiting_cooldown":
-      return "先等待冷却到期，再观察 nextRetryAt 或下次自动补传 tick。";
+      return t("status.recover_advice_waiting_cooldown", "先等待冷却到期，再观察 nextRetryAt 或下次自动补传 tick。");
     case "waiting_retry_window":
-      return "当前不在允许的自动补传时间窗内，需等待窗口开放或手动调整风险配置。";
+      return t("status.recover_advice_waiting_retry_window", "当前不在允许的自动补传时间窗内，需等待窗口开放或手动调整风险配置。");
     case "waiting_auth_refresh":
-      return "优先刷新或重新验证授权档案，再回到状态矩阵放行。";
+      return t("status.recover_advice_waiting_auth_refresh", "优先刷新或重新验证授权档案，再回到状态矩阵放行。");
     case "waiting_local_restore":
-      return "源文件缺失或本地路径不可读，需先补回源文件后再继续补传。";
+      return t("status.recover_advice_waiting_local_restore", "源文件缺失或本地路径不可读，需先补回源文件后再继续补传。");
     case "waiting_provider_session":
-      return "provider 返回体缺少 uploadid / upload session 等关键恢复线索，需先补齐会话信息。";
+      return t("status.recover_advice_waiting_provider_session", "网盘返回体缺少 uploadid / upload session 等关键恢复线索，需先补齐会话信息。");
     case "waiting_manual_confirmation":
-      return "该类失败需要先人工确认，再按子集 retry 或后台补传继续处理。";
+      return t("status.recover_advice_waiting_manual_confirmation", "该类失败需要先人工确认，再按子集 retry 或后台补传继续处理。");
     case "waiting_retry_limit":
-      return "当前任务已达到重试上限，先检查失败原因与重试策略，再决定是否重置额度。";
+      return t("status.recover_advice_waiting_retry_limit", "当前任务已达到重试上限，先检查失败原因与重试策略，再决定是否重置额度。");
     case "waiting_other":
-      return "当前 lane 仍有未细分等待条件，建议结合 decisions 明细和 blocked action 继续排查。";
+      return t("status.recover_advice_waiting_other", "当前 lane 仍有未细分等待条件，建议结合 decisions 明细和 blocked action 继续排查。");
     default:
       return "";
   }
@@ -7593,7 +7641,7 @@ function autoRecoverStateAdvice(recoverState) {
 
 function autoRecoverDecisionAdvice(decision) {
   if (!decision || typeof decision !== "object") {
-    return "当前决策没有额外等待态说明。";
+    return t("status.recover_advice_decision_empty", "当前决策没有额外等待态说明。");
   }
   const directAdvice = String(decision.advice || "").trim();
   if (directAdvice) {
@@ -7601,12 +7649,12 @@ function autoRecoverDecisionAdvice(decision) {
   }
   const blockedReason = String(decision.blockedReason || "").trim();
   if (blockedReason === "retry_queue_waiting_for_retry_window") {
-    return "当前已满足自动补传条件，但不在允许的自动补传时间窗内，等待 nextRetryAt 后系统会自动接管。";
+    return t("status.recover_advice_retry_window_blocked", "当前已满足自动补传条件，但不在允许的自动补传时间窗内，等待 nextRetryAt 后系统会自动接管。");
   }
   if (blockedReason === "retry_queue_waiting_for_cooldown") {
-    return "当前处于风控冷却窗口，等待 nextRetryAt 后系统会尝试自动补传。";
+    return t("status.recover_advice_cooldown_blocked", "当前处于风控冷却窗口，等待 nextRetryAt 后系统会尝试自动补传。");
   }
-  return autoRecoverStateAdvice(decision.recoverState) || "当前决策没有额外等待态说明。";
+  return autoRecoverStateAdvice(decision.recoverState) || t("status.recover_advice_decision_empty", "当前决策没有额外等待态说明。");
 }
 
 function autoRecoverOutcomeLabel(outcome) {

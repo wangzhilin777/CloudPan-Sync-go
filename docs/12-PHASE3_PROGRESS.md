@@ -222,3 +222,6 @@
 
 - 已修复状态页后台补传摘要里四个枚举标签函数一直硬编码中文、英文模式仍显示中文的问题：`autoRecoverStateLabel`（恢复态）、`autoRecoverOutcomeLabel`（决策结果）、`retryClassSummaryLabel`（重试分类）、`blockedActionSummaryLabel`（阻塞动作）原本都是固定中文 `switch` 返回，英文模式下候选池状态计数、结果计数、分类计数、动作计数仍是中文。现在为这四组分别新增 `status.recover_state_label_* / recover_outcome_label_* / retry_class_label_* / blocked_action_label_*` 共 33 条 zh-CN / en-US 双语 key，并把函数改成 `t()` 查表，让英文模式下这四组摘要标签真正切英文。顺手把其中「等待重建 Provider 会话」「被 lane 预算挡住」「被 provider 预算挡住」对齐为「等待重建网盘会话」「被通道预算挡住（lane）」「被网盘源预算挡住」，保持中文优先表达。
 - 上述四组枚举标签词典化后确认 `node --check web/static/app.js` 通过、`go test ./internal/app -count=1` 全量通过，未留下额外临时文件或后台进程残留。
+
+- 已推进主线三授权引导的中文可理解错误（里程碑6）：后端 `assist/discover` 连通检测失败时会返回 `assist_kind_required / assist_url_required / assist_request_build_failed / assist_url_invalid / assist_connect_failed / invalid_assist_token / assist_storage_list_failed / assist_storage_parse_failed` 等错误码，但 `localizeAPIError` 之前只映射了授权创建相关的 12 条错误码，OpenList / Alist 检测失败仍直接抛后端英文。现已把这 8 条 assist 错误码补进顶层 `errors` 命名空间的 zh-CN / en-US 双语译文，并接入 `localizeAPIError` 查表，让用户在检测失败时直接看到「连接 OpenList / Alist 失败，请确认服务是否启动」「访问令牌无效或权限不足」这类可理解中文原因，而不是 provider 原始英文错误。已在 `internal/app/web_test.go` 补 `assist_connect_failed` 中文锚点防回归。
+- 上述 assist 错误中文化后确认 `node --check web/static/app.js` 通过、`go test ./internal/app ./internal/desktop -count=1` 全量通过，未留下额外临时文件或后台进程残留。

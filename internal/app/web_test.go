@@ -1572,6 +1572,12 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "已检测 Alist，可见存储") {
 		t.Fatalf("expected auth assist Alist discover flash text in app.js, got %q", body)
 	}
+	if !strings.Contains(body, "连接 OpenList / Alist 失败") {
+		t.Fatalf("expected localized auth assist connect error in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "访问令牌无效或权限不足") {
+		t.Fatalf("expected localized auth assist invalid token error in app.js, got %q", body)
+	}
 	if !strings.Contains(body, "data-assist-select-index") {
 		t.Fatalf("expected auth assist discovery selection button in app.js, got %q", body)
 	}
