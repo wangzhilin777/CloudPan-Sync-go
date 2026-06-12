@@ -101,6 +101,21 @@ const translations = {
     common: {
       refresh: "刷新"
     },
+    errors: {
+      provider_not_found: "未找到对应网盘源，请先确认当前网盘源是否存在。",
+      auth_mode_not_supported: "当前网盘源不支持这种授权方式，请切换到列表中可选的授权方式。",
+      display_name_required: "显示名称不能为空，请先给这个授权档案起一个容易识别的名字。",
+      provider_key_required: "请先选择网盘源，再创建授权档案。",
+      missing_access_token: "当前授权方式需要填写令牌 Token，请先补全后再保存。",
+      missing_domain_or_drive_id: "当前 Open 接口还需要在附加配置(JSON)里填写 domainId 和 driveId。",
+      missing_cookie: "当前授权方式需要填写 Cookie，请先补全后再保存。",
+      missing_pwd_id: "当前网盘源还需要在附加配置(JSON)里填写 pwdId，例如分享口令。",
+      missing_access_token_or_cookie: "当前网盘源至少需要填写 Token 或 Cookie 其中一项。",
+      invalid_json: "输入内容不是合法 JSON，请检查括号、引号和逗号后重试。",
+      profile_not_found: "没有找到对应授权档案，可能已被删除，请刷新后重试。",
+      invalid_password: "管理员密码不正确，请确认后重新输入。",
+      request_failed: "请求失败：{status}"
+    },
     tasks: {
       list_title: "任务列表",
       detail_title: "任务详情",
@@ -801,6 +816,11 @@ const translations = {
       catalog_detail_default: "点击任一网盘卡片，查看能力说明、默认风控模板和恢复预算。",
       saved_profiles_title: "已保存授权档案",
       saved_profiles_hint: "支持验证与删除",
+      profile_status_saved: "已保存（saved）",
+      profile_status_verified: "已校验（verified）",
+      profile_status_pending: "待校验（pending）",
+      profile_status_failed: "校验失败（failed）",
+      profile_status_invalid: "已失效（invalid）",
       flash_use_openlist: "已切换为 OpenList 优先引导",
       flash_use_alist: "已切换为 Alist 兜底引导",
       flash_use_manual: "已切换为手动高级模式",
@@ -1126,6 +1146,21 @@ const translations = {
     },
     common: {
       refresh: "Refresh"
+    },
+    errors: {
+      provider_not_found: "The provider was not found. Please confirm whether it still exists.",
+      auth_mode_not_supported: "This provider does not support this auth mode. Switch to one of the selectable modes in the list.",
+      display_name_required: "Display name cannot be empty. Give this auth profile an easily recognizable name first.",
+      provider_key_required: "Choose a provider before creating an auth profile.",
+      missing_access_token: "This auth mode requires a token. Please fill it in before saving.",
+      missing_domain_or_drive_id: "This Open API also needs domainId and driveId in Extra JSON.",
+      missing_cookie: "This auth mode requires a Cookie. Please fill it in before saving.",
+      missing_pwd_id: "This provider also needs pwdId in Extra JSON, for example the share code.",
+      missing_access_token_or_cookie: "This provider needs at least one of token or Cookie.",
+      invalid_json: "The input is not valid JSON. Check the brackets, quotes, and commas, then try again.",
+      profile_not_found: "The auth profile was not found. It may have been deleted. Refresh and try again.",
+      invalid_password: "The admin password is incorrect. Please confirm and re-enter it.",
+      request_failed: "Request failed: {status}"
     },
     tasks: {
       list_title: "Task List",
@@ -1835,6 +1870,11 @@ const translations = {
       catalog_detail_default: "Click any provider card to inspect capabilities, default risk templates, and recovery budgets.",
       saved_profiles_title: "Saved Auth Profiles",
       saved_profiles_hint: "Supports validate and delete",
+      profile_status_saved: "Saved (saved)",
+      profile_status_verified: "Verified (verified)",
+      profile_status_pending: "Pending (pending)",
+      profile_status_failed: "Validation Failed (failed)",
+      profile_status_invalid: "Invalid (invalid)",
       flash_use_openlist: "Switched to OpenList-first guidance",
       flash_use_alist: "Switched to Alist fallback guidance",
       flash_use_manual: "Switched to manual advanced mode",
@@ -2714,33 +2754,33 @@ function localizeAPIError(error, status) {
   const code = String(error?.code || "").trim();
   const message = String(error?.message || "").trim();
   const knownMessages = {
-    provider_not_found: "未找到对应网盘源，请先确认当前网盘源是否存在。",
-    auth_mode_not_supported: "当前网盘源不支持这种授权方式，请切换到列表中可选的授权方式。",
-    display_name_required: "显示名称不能为空，请先给这个授权档案起一个容易识别的名字。",
-    provider_key_required: "请先选择网盘源，再创建授权档案。",
-    missing_access_token: "当前授权方式需要填写令牌 Token，请先补全后再保存。",
-    missing_domain_or_drive_id: "当前 Open 接口还需要在附加配置(JSON)里填写 domainId 和 driveId。",
-    missing_cookie: "当前授权方式需要填写 Cookie，请先补全后再保存。",
-    missing_pwd_id: "当前网盘源还需要在附加配置(JSON)里填写 pwdId，例如分享口令。",
-    missing_access_token_or_cookie: "当前网盘源至少需要填写 Token 或 Cookie 其中一项。",
-    invalid_json: "输入内容不是合法 JSON，请检查括号、引号和逗号后重试。",
-    profile_not_found: "没有找到对应授权档案，可能已被删除，请刷新后重试。",
-    invalid_password: "管理员密码不正确，请确认后重新输入。",
+    provider_not_found: t("errors.provider_not_found", "未找到对应网盘源，请先确认当前网盘源是否存在。"),
+    auth_mode_not_supported: t("errors.auth_mode_not_supported", "当前网盘源不支持这种授权方式，请切换到列表中可选的授权方式。"),
+    display_name_required: t("errors.display_name_required", "显示名称不能为空，请先给这个授权档案起一个容易识别的名字。"),
+    provider_key_required: t("errors.provider_key_required", "请先选择网盘源，再创建授权档案。"),
+    missing_access_token: t("errors.missing_access_token", "当前授权方式需要填写令牌 Token，请先补全后再保存。"),
+    missing_domain_or_drive_id: t("errors.missing_domain_or_drive_id", "当前 Open 接口还需要在附加配置(JSON)里填写 domainId 和 driveId。"),
+    missing_cookie: t("errors.missing_cookie", "当前授权方式需要填写 Cookie，请先补全后再保存。"),
+    missing_pwd_id: t("errors.missing_pwd_id", "当前网盘源还需要在附加配置(JSON)里填写 pwdId，例如分享口令。"),
+    missing_access_token_or_cookie: t("errors.missing_access_token_or_cookie", "当前网盘源至少需要填写 Token 或 Cookie 其中一项。"),
+    invalid_json: t("errors.invalid_json", "输入内容不是合法 JSON，请检查括号、引号和逗号后重试。"),
+    profile_not_found: t("errors.profile_not_found", "没有找到对应授权档案，可能已被删除，请刷新后重试。"),
+    invalid_password: t("errors.invalid_password", "管理员密码不正确，请确认后重新输入。"),
   };
   if (code && knownMessages[code]) {
     return knownMessages[code];
   }
-  return message || `请求失败：${status}`;
+  return message || tf("errors.request_failed", { status }, `请求失败：${status}`);
 }
 
 function renderProfileStatusLabel(status) {
   const normalized = stringifyValue(status, "-");
   const labels = {
-    saved: "已保存（saved）",
-    verified: "已校验（verified）",
-    pending: "待校验（pending）",
-    failed: "校验失败（failed）",
-    invalid: "已失效（invalid）",
+    saved: t("providers.profile_status_saved", "已保存（saved）"),
+    verified: t("providers.profile_status_verified", "已校验（verified）"),
+    pending: t("providers.profile_status_pending", "待校验（pending）"),
+    failed: t("providers.profile_status_failed", "校验失败（failed）"),
+    invalid: t("providers.profile_status_invalid", "已失效（invalid）"),
   };
   return labels[normalized] || normalized;
 }

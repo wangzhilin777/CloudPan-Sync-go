@@ -214,3 +214,7 @@
 - 已把恢复等待提示里两条 fallback 与字典对齐：`wait_auth_refresh` 渲染 fallback 从「恢复等待 - Auth 刷新」改成「恢复等待 - 刷新授权」，`wait_local_restore` 从「恢复等待 - 本地恢复」改成「恢复等待 - 补回本地文件」，让缓存未命中时的 fallback 与字典本体一致，避免同一标签出现两套中文表述。
 - 已把目录树/待补传树面板里直接暴露英文 `root` 的四个按钮 fallback 与字典统一收口成「根目录」表达，覆盖 `rebuild_from_root`（按当前根目录重建向导）、`retry_current_root`（重试当前根目录）、`auto_recover_current_root`（后台补传当前根目录）、`focus_root`（只看根目录），减少中文模式下树面板按钮仍裸露 `root` 的问题。
 - 已完成本轮回归验证，确认 `node --check web/static/app.js` 与 `go test ./internal/app -run "TestHandleIndexServesHTML|TestRoutesServeAppJSIncludesRetryEvidenceLabels|TestConsoleUISmokeMainline" -count=1` 通过，且未留下额外临时文件或后台进程残留。
+
+- 已修复授权档案状态标签函数 `renderProfileStatusLabel` 一直硬编码中文、英文模式仍显示中文的问题：原本直接返回 `saved/verified/pending/failed/invalid` 的固定中文 map，现在改走 `t()` 词典，新增 `providers.profile_status_*` 五条 zh-CN / en-US 双语 key（中文保留「已保存（saved）」等技术值括注、英文用「Saved (saved)」等表达），该标签被授权档案表格和 Provider 洞察卡复用，切到英文后状态列不再夹中文。
+- 已修复 API 错误本地化函数 `localizeAPIError` 一直只返回中文的问题：原本内联一张固定中文错误 map（`provider_not_found / missing_access_token / invalid_json` 等 12 条）加 `请求失败：{status}` 兜底，英文模式下授权创建、校验、删除等失败提示仍是中文。现在新增顶层 `errors` 命名空间，补齐这 12 条错误说明与 `request_failed` 兜底的 zh-CN / en-US 双语译文，并把函数改成 `t()` / `tf()` 查表，让英文模式下这些前置错误提示真正切英文。
+- 上述错误与状态标签词典化后确认 `node --check web/static/app.js` 通过、`go test ./internal/app -count=1` 全量通过，未留下额外临时文件或后台进程残留。
