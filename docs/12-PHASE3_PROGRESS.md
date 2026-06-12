@@ -207,6 +207,8 @@
 - 已把目录树面板里 `rebuild_from_root / retry_current_root / auto_recover_current_root / focus_root` 这组按钮文案从直接暴露英文 `root` 改成「根目录」，覆盖 zh-CN 字典和内联 fallback，与界面其它「根目录」表达保持一致。
 - 已把 `status.blocked_empty`、`status.all_providers`、`status.provider_smoke_acceptance_empty`、`tasks.retry_checkpoint_count` 这几条的内联 fallback 对齐到 zh-CN 字典本体（阻塞汇总项 / 全部网盘源 / 网盘源级验收数据 / 重试断点数），消除 fallback 仍残留 `blocked / provider / checkpoint` 而字典已收口的不一致。
 - 已为状态矩阵决策预算提示补齐 `status.auto_recover_budget_hint_label_*`（mode / lane / group / provider / profile）五条 zh-CN 与 en-US 字典项，让英文模式下这组预算标签不再回退中文，同时保留中文模式既有「通道预算（lane）」等表达。
+- 已修复执行模式 / 风控档位 / 授权方式三个标签渲染函数（`renderExecutionModeLabel / renderRiskModeLabel / renderAuthModeLabel`）一直硬编码中文、英文模式仍显示中文的问题：这三个函数原本直接返回固定中文 map，现在改走 `t()` 词典，命中 `wizard.execution_mode_* / wizard.risk_mode_* / wizard.auth_mode_*`。其中 `auth_mode_*` 四条 key 之前两套字典都没有，已补齐 zh-CN / en-US 双语；`risk_mode_balanced/safe` 的字典 zh 文案与实际渲染并测试依赖的「平衡 / 稳妥」不一致（字典写的是「均衡 / 保守」），已统一对齐到「平衡 / 稳妥」。这三个标签函数被授权档案表格、Provider 卡、目标洞察卡、授权方式下拉等多处复用，切到英文后这些位置不再夹中文枚举说明。
+- 上述标签函数词典化后确认 `node --check web/static/app.js` 通过、`go test ./internal/app -count=1` 全量通过，未留下额外临时文件或后台进程残留。
 
 - 已把任务处理建议卡的「provider 会话」相关 fallback 与 zh-CN 字典对齐成「网盘会话」，覆盖 `action_manual_intervention_required`（修复网盘会话后继续）与 `guide_manual_intervention_title`（修复网盘会话缺口），跟早先已收口的 `wait_provider_session`（恢复等待 - 网盘会话）保持一致，并同步更新 `ui_smoke_test.go` 里依赖这两条文案的断言锚点，避免中文模式下同类术语一处「网盘会话」、一处「provider 会话」混排。
 - 已把恢复等待提示里两条 fallback 与字典对齐：`wait_auth_refresh` 渲染 fallback 从「恢复等待 - Auth 刷新」改成「恢复等待 - 刷新授权」，`wait_local_restore` 从「恢复等待 - 本地恢复」改成「恢复等待 - 补回本地文件」，让缓存未命中时的 fallback 与字典本体一致，避免同一标签出现两套中文表述。

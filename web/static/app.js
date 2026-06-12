@@ -869,10 +869,14 @@ const translations = {
       target_browser_create_placeholder: "新建子目录名称，例如 archive-2026",
       target_browser_create: "在当前目录新建文件夹",
       risk_mode: "风控档位",
-      risk_mode_balanced: "均衡（balanced）",
-      risk_mode_safe: "保守（safe）",
+      risk_mode_balanced: "平衡（balanced）",
+      risk_mode_safe: "稳妥（safe）",
       risk_mode_fast: "快速（fast）",
       risk_mode_custom: "自定义（custom）",
+      auth_mode_manual_token: "手动令牌（manual_token）",
+      auth_mode_manual_cookie: "手动 Cookie（manual_cookie）",
+      auth_mode_official_oauth: "官方 OAuth（official_oauth）",
+      auth_mode_web_login_capture: "网页登录采集（web_login_capture）",
       risk_override_title: "任务级风控覆盖",
       risk_override_desc: "可选。留空时使用当前档位 + 网盘源默认校准。",
       risk_request_interval: "请求间隔(ms)",
@@ -1911,6 +1915,10 @@ const translations = {
       risk_mode_safe: "Safe (safe)",
       risk_mode_fast: "Fast (fast)",
       risk_mode_custom: "Custom (custom)",
+      auth_mode_manual_token: "Manual Token (manual_token)",
+      auth_mode_manual_cookie: "Manual Cookie (manual_cookie)",
+      auth_mode_official_oauth: "Official OAuth (official_oauth)",
+      auth_mode_web_login_capture: "Web Login Capture (web_login_capture)",
       risk_override_title: "Task-Level Risk Override",
       risk_override_desc: "Optional. Leave it empty to use the current mode plus provider-default calibration.",
       risk_request_interval: "Request Interval (ms)",
@@ -2299,8 +2307,8 @@ function localizeRecommendationReason(reason, fallback) {
 function renderExecutionModeLabel(mode) {
   const normalized = stringifyValue(mode, "-");
   const labels = {
-    pre_scan_flat: "先完整扫描再执行（pre_scan_flat）",
-    leaf_first_lazy: "按目录逐棵推进（leaf_first_lazy）",
+    pre_scan_flat: t("wizard.execution_mode_pre_scan_flat", "先完整扫描再执行（pre_scan_flat）"),
+    leaf_first_lazy: t("wizard.execution_mode_leaf_first_lazy", "按目录逐棵推进（leaf_first_lazy）"),
   };
   return labels[normalized] || normalized;
 }
@@ -2308,10 +2316,10 @@ function renderExecutionModeLabel(mode) {
 function renderRiskModeLabel(mode) {
   const normalized = stringifyValue(mode, "-");
   const labels = {
-    safe: "稳妥（safe）",
-    balanced: "平衡（balanced）",
-    fast: "快速（fast）",
-    custom: "自定义（custom）",
+    safe: t("wizard.risk_mode_safe", "稳妥（safe）"),
+    balanced: t("wizard.risk_mode_balanced", "平衡（balanced）"),
+    fast: t("wizard.risk_mode_fast", "快速（fast）"),
+    custom: t("wizard.risk_mode_custom", "自定义（custom）"),
   };
   return labels[normalized] || normalized;
 }
@@ -2319,10 +2327,10 @@ function renderRiskModeLabel(mode) {
 function renderAuthModeLabel(mode) {
   const normalized = stringifyValue(mode, "-");
   const labels = {
-    manual_token: "手动令牌（manual_token）",
-    manual_cookie: "手动 Cookie（manual_cookie）",
-    official_oauth: "官方 OAuth（official_oauth）",
-    web_login_capture: "网页登录采集（web_login_capture）",
+    manual_token: t("wizard.auth_mode_manual_token", "手动令牌（manual_token）"),
+    manual_cookie: t("wizard.auth_mode_manual_cookie", "手动 Cookie（manual_cookie）"),
+    official_oauth: t("wizard.auth_mode_official_oauth", "官方 OAuth（official_oauth）"),
+    web_login_capture: t("wizard.auth_mode_web_login_capture", "网页登录采集（web_login_capture）"),
   };
   return labels[normalized] || normalized;
 }
