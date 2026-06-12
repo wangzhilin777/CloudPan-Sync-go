@@ -233,3 +233,7 @@
 - 已推进主线三里程碑2（创建授权档案时优先借 OpenList / Alist 拉取信息）的关键一步：之前从发现结果点选存储只回填显示名和 `assistKind / assistStorageId / assistStorageDriver` 等 Extra JSON 字段，用户仍要自己在网盘源下拉里猜该选哪个。现在新增 `matchProviderKeyFromAssistDriver`，按存储 `driver` 名做关键字匹配（aliyundrive_open / 123_open / quark / uc / 115_open / 189cloud / baidu_netdisk / xunlei / pikpak），点选存储时如果命中且该网盘源在下拉里存在，就自动选中对应网盘源并触发授权方式 / 授权说明联动，减少用户「拉到了存储却不知道对应哪个网盘源」的猜测。
 - 已为自动匹配补上更明确的中文 / 英文反馈：匹配成功时改用新提示 `providers.assist_discovery_applied_matched`（已回填存储并自动选中匹配网盘源 {provider}），未命中时保留原有 `assist_discovery_applied` 文案，并补齐 zh-CN / en-US 双语，driver 名不规范或无法识别时安全退回原有「只回填、不自动选网盘源」行为。
 - 已为该匹配逻辑补 `internal/app/web_test.go` 静态锚点（`matchProviderKeyFromAssistDriver` 与匹配成功提示文案），确认 `node --check web/static/app.js`、`go test ./internal/app -count=1`（含 UI smoke 与 assist 发现链路）全量通过，未留下额外临时文件或后台进程残留。
+
+- 已把状态页自动补传就绪度函数 `renderAutoRecoverReadiness` / `renderAutoRecoverFairnessReadiness` 里直接返回的 `ready / pending / partial` 原始英文状态码改成走 `status.matrix_state_*` 词典（已就绪 / 待补齐 / 进行中），并补上 token→label 映射处理后端直接下发就绪度字段的早返回路径，让恢复就绪、公平性就绪在中英两种模式下都显示一致的本地化状态，而不是有时中文有时裸 `ready`。
+- 说明：状态页 `优先...` 系列优先动作文案（`renderUploadCheckpointPriorityAction` / `renderAutoRecoverPriorityAction` / `renderAutoRecoverFairnessPriorityAction`）实际由后端 `internal/task/service.go` 计算并通过 API 下发，前端仅在缺省时回退，且 `internal/task` 与 `internal/app` 多处 Go 测试锚定这些中文原文；只词典化前端回退会造成「后端中文、前端英文」的不一致，且涉及后端改造与验收报告文案，属计划里不优先的深层诊断串，本轮按方案暂不动，保持中英表现一致。
+- 上述就绪度词典化后确认 `node --check web/static/app.js` 通过、`go test ./internal/app ./internal/task -count=1` 全量通过，未留下额外临时文件或后台进程残留。

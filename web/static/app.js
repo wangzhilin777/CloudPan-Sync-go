@@ -4356,32 +4356,47 @@ function renderAutoRecoverReadiness(evidence) {
     return t("status.matrix_state_ready", "已就绪");
   }
   if (hasRunnable && !hasBlockingWait && !hasEvidenceGap) {
-    return "ready";
+    return t("status.matrix_state_ready", "已就绪");
   }
   if (hasBlockingWait || hasEvidenceGap) {
-    return "pending";
+    return t("status.matrix_state_pending", "待补齐");
   }
-  return "partial";
+  return t("status.matrix_state_partial", "进行中");
+}
+
+function localizeReadinessStateToken(token) {
+  switch (String(token || "").trim()) {
+    case "ready":
+      return t("status.matrix_state_ready", "已就绪");
+    case "pending":
+      return t("status.matrix_state_pending", "待补齐");
+    case "partial":
+      return t("status.matrix_state_partial", "进行中");
+    case "complete":
+      return t("status.matrix_state_complete", "已完成");
+    default:
+      return String(token || "");
+  }
 }
 
 function renderAutoRecoverFairnessReadiness(evidence) {
   if (evidence?.autoRecoverFairnessReadiness) {
-    return evidence.autoRecoverFairnessReadiness;
+    return localizeReadinessStateToken(evidence.autoRecoverFairnessReadiness);
   }
   const pool = Array.isArray(evidence?.autoRecoverPool) ? evidence.autoRecoverPool : [];
   if (!pool.length) {
-    return "pending";
+    return t("status.matrix_state_pending", "待补齐");
   }
   const hasMultiProvider = pool.some((item) => Number(item?.providerCount || 0) > 1);
   const hasMultiProfile = pool.some((item) => Number(item?.profileCount || 0) > 1);
   const hasMultiProtocolGroup = pool.some((item) => Array.isArray(item?.protocolGroups) && item.protocolGroups.length > 1);
   if (hasMultiProvider && hasMultiProfile) {
-    return "ready";
+    return t("status.matrix_state_ready", "已就绪");
   }
   if (hasMultiProvider || hasMultiProfile || hasMultiProtocolGroup) {
     return t("status.matrix_state_partial", "进行中");
   }
-  return "pending";
+  return t("status.matrix_state_pending", "待补齐");
 }
 function renderAutoRecoverFairnessPriorityAction(evidence) {
   if (evidence?.autoRecoverFairnessPriorityAction) {
