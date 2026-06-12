@@ -1085,6 +1085,12 @@ const translations = {
       preview_waiting_text: "等待预览...",
       provider_recommended_risk: "推荐风控档位",
       provider_capability_summary: "能力摘要",
+      cap_auth_validation: "授权校验",
+      cap_list: "目录浏览",
+      cap_metadata: "详情读取",
+      cap_create_dir: "创建目录",
+      cap_fast_upload: "秒传预检",
+      cap_upload: "上传",
       provider_default_template: "网盘源默认模板",
       card_core_capability: "核心能力",
       card_recommended_risk: "推荐风控",
@@ -2298,6 +2304,12 @@ const translations = {
       provider_recommended_risk: "Recommended Risk Mode",
       provider_capability_summary: "Capability Summary",
       provider_default_template: "Provider Default Template",
+      cap_auth_validation: "Auth Validation",
+      cap_list: "Directory Browsing",
+      cap_metadata: "Metadata Read",
+      cap_create_dir: "Create Directory",
+      cap_fast_upload: "Fast-Upload Precheck",
+      cap_upload: "Upload",
       card_core_capability: "Core Capabilities",
       card_recommended_risk: "Recommended Risk",
       card_auth_entry: "Authorization: create an auth profile first, then continue with directory selection and task creation.",
@@ -3346,12 +3358,12 @@ function renderProviderCapabilityCompact(capability) {
     return "-";
   }
   const enabled = [];
-  if (capability.supportsAuthValidation) enabled.push("授权校验");
-  if (capability.supportsList) enabled.push("目录浏览");
-  if (capability.supportsMetadata) enabled.push("详情读取");
-  if (capability.supportsCreateDir) enabled.push("创建目录");
-  if (capability.supportsFastUpload) enabled.push("秒传预检");
-  if (capability.supportsUpload) enabled.push("上传");
+  if (capability.supportsAuthValidation) enabled.push(t("providers.cap_auth_validation", "授权校验"));
+  if (capability.supportsList) enabled.push(t("providers.cap_list", "目录浏览"));
+  if (capability.supportsMetadata) enabled.push(t("providers.cap_metadata", "详情读取"));
+  if (capability.supportsCreateDir) enabled.push(t("providers.cap_create_dir", "创建目录"));
+  if (capability.supportsFastUpload) enabled.push(t("providers.cap_fast_upload", "秒传预检"));
+  if (capability.supportsUpload) enabled.push(t("providers.cap_upload", "上传"));
   return enabled.length ? enabled.join(", ") : "-";
 }
 

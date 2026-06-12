@@ -256,3 +256,6 @@
 - 上述状态矩阵表头词典化后确认 `node --check web/static/app.js` 通过、`go test ./internal/app ./internal/task -count=1` 全量通过，未留下额外临时文件或后台进程残留。
 
 - 已修复上传断点续传检查点卡里 `status.checkpoint_card_provider_clue` 中文模式仍显示英文 `Provider 恢复线索` 的问题，把 zh 文案、内联 fallback 和 `internal/app/web_test.go` 锚点统一收口成「网盘源恢复线索」，与界面其它「网盘源」表达保持一致；英文模式继续显示 `Provider Recovery Clue`。
+
+- 已把 Provider 卡核心能力摘要 `renderProviderCapabilityCompact` 的六个能力标签（授权校验 / 目录浏览 / 详情读取 / 创建目录 / 秒传预检 / 上传）从硬编码中文改成词典驱动，新增 `providers.cap_*` 六条 zh-CN / en-US 双语 key，让英文模式下 Provider 卡首屏能力摘要不再夹中文。
+- 上述能力标签词典化后确认 `node --check web/static/app.js`、`go test ./internal/app ./internal/task -count=1` 通过，未留下额外临时文件或后台进程残留。
