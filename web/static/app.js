@@ -488,6 +488,11 @@ const translations = {
       auto_recover_decision_empty: "最近一次后台补传预演或执行暂无决策明细。",
       auto_recover_budget_hint_empty: "预算占用：当前决策未返回可复用的预算占用信息。",
       auto_recover_budget_hint_prefix: "预算占用",
+      auto_recover_budget_hint_label_mode: "模式预算",
+      auto_recover_budget_hint_label_lane: "通道预算（lane）",
+      auto_recover_budget_hint_label_group: "协议组预算",
+      auto_recover_budget_hint_label_provider: "网盘源预算",
+      auto_recover_budget_hint_label_profile: "授权档案预算",
       auto_recover_waiting_advice: "等待态说明",
       focus_current_state: "只看该状态",
       focus_current_lane: "只看该通道",
@@ -1497,6 +1502,11 @@ const translations = {
       auto_recover_decision_empty: "The latest auto-recovery preview or run does not contain decision details.",
       auto_recover_budget_hint_empty: "Budget usage: the current decision did not return reusable budget hints.",
       auto_recover_budget_hint_prefix: "Budget usage",
+      auto_recover_budget_hint_label_mode: "Mode Budget",
+      auto_recover_budget_hint_label_lane: "Lane Budget",
+      auto_recover_budget_hint_label_group: "Protocol Group Budget",
+      auto_recover_budget_hint_label_provider: "Provider Budget",
+      auto_recover_budget_hint_label_profile: "Auth Profile Budget",
       auto_recover_waiting_advice: "Waiting-state note",
       focus_current_state: "Show This State",
       focus_current_lane: "Show This Lane",
@@ -6602,7 +6612,7 @@ function syncAutoRecoverProviders() {
   }
   const current = state.autoRecoverFilters.providerKey || select.value || "";
   const providerKeys = Array.from(new Set((state.providers || []).map((item) => item?.meta?.key).filter(Boolean))).sort();
-  select.innerHTML = `<option value="">${escapeHTML(t("status.all_providers", "全部 provider"))}</option>${providerKeys
+  select.innerHTML = `<option value="">${escapeHTML(t("status.all_providers", "全部网盘源"))}</option>${providerKeys
     .map((key) => `<option value="${key}">${key}</option>`)
     .join("")}`;
   setSelectValueIfPresent("#auto-recover-provider", current);
@@ -6912,7 +6922,7 @@ function renderSelectedTask() {
       <span>${stringifyValue(metadata.retrySelectedPathCount, Array.isArray(metadata.retrySelectedPaths) ? metadata.retrySelectedPaths.length : 0)}</span>
     </div>
     <div class="insight-card">
-      <strong>${escapeHTML(t("tasks.retry_checkpoint_count", "重试 checkpoint 数"))}</strong>
+      <strong>${escapeHTML(t("tasks.retry_checkpoint_count", "重试断点数（checkpoint）"))}</strong>
       <span>${stringifyValue(metadata.retryUploadCheckpointCount, "0")}</span>
     </div>
     <div class="insight-card">
@@ -7251,7 +7261,7 @@ function renderStatus() {
 
 function renderBlockedActionsSummary(items) {
   if (!Array.isArray(items) || !items.length) {
-    return `<div class="directory-empty">${escapeHTML(t("status.blocked_empty", "当前没有需要人工处理的 blocked 聚合项。"))}</div>`;
+    return `<div class="directory-empty">${escapeHTML(t("status.blocked_empty", "当前没有需要人工处理的阻塞汇总项。"))}</div>`;
   }
   return items
     .map(
@@ -8907,7 +8917,7 @@ function renderEvidenceProviderSmokeProviders(report) {
     return `
       <div class="insight-card">
         <strong>${escapeHTML(t("status.provider_smoke_acceptance_title", "网盘源级真实样本验收"))}</strong>
-        <span>${escapeHTML(t("status.provider_smoke_acceptance_empty", "暂无 providerSmokeProviders 数据，请先刷新或保存新版验收报告。"))}</span>
+        <span>${escapeHTML(t("status.provider_smoke_acceptance_empty", "暂无网盘源级验收数据（providerSmokeProviders），请先刷新或保存新版验收报告。"))}</span>
       </div>
     `;
   }

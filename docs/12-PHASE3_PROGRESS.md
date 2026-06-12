@@ -195,6 +195,12 @@
 
 - 已把状态矩阵决策预算提示里第 7794 行的 fallback 默认值「lane 预算」改成「通道预算（lane）」，跟邻居「模式预算 / 协议组预算 / 网盘源预算 / 授权档案预算」保持一致的中文优先表达，避免单条混排英文运营词。zh-CN 字典里 status.auto_recover_budget_hint_label_* 系列尚未单独定义，目前 fallback 就是实际渲染文案。
 
+- 已把 `action_manual_intervention_required` 与 `guide_manual_intervention_title` 里残留的「provider 会话」对齐为「网盘会话」，与已收口的 `wait_provider_session` 保持一致，并同步更新 `internal/app/ui_smoke_test.go` 里依赖的「修复 provider 会话缺口 / 修复 provider 会话后继续」锚点，让任务处理建议卡里这类引导在中文模式下不再单独暴露英文术语。
+- 已把恢复等待提示 `wait_auth_refresh` / `wait_local_restore` 的内联 fallback 从「恢复等待 - Auth 刷新 / 恢复等待 - 本地恢复」对齐到 zh-CN 字典本体的「恢复等待 - 刷新授权 / 恢复等待 - 补回本地文件」，消除缓存未命中时 fallback 与字典两套文案不一致的问题。
+- 已把目录树面板里 `rebuild_from_root / retry_current_root / auto_recover_current_root / focus_root` 这组按钮文案从直接暴露英文 `root` 改成「根目录」，覆盖 zh-CN 字典和内联 fallback，与界面其它「根目录」表达保持一致。
+- 已把 `status.blocked_empty`、`status.all_providers`、`status.provider_smoke_acceptance_empty`、`tasks.retry_checkpoint_count` 这几条的内联 fallback 对齐到 zh-CN 字典本体（阻塞汇总项 / 全部网盘源 / 网盘源级验收数据 / 重试断点数），消除 fallback 仍残留 `blocked / provider / checkpoint` 而字典已收口的不一致。
+- 已为状态矩阵决策预算提示补齐 `status.auto_recover_budget_hint_label_*`（mode / lane / group / provider / profile）五条 zh-CN 与 en-US 字典项，让英文模式下这组预算标签不再回退中文，同时保留中文模式既有「通道预算（lane）」等表达。
+
 - 已把任务处理建议卡的「provider 会话」相关 fallback 与 zh-CN 字典对齐成「网盘会话」，覆盖 `action_manual_intervention_required`（修复网盘会话后继续）与 `guide_manual_intervention_title`（修复网盘会话缺口），跟早先已收口的 `wait_provider_session`（恢复等待 - 网盘会话）保持一致，并同步更新 `ui_smoke_test.go` 里依赖这两条文案的断言锚点，避免中文模式下同类术语一处「网盘会话」、一处「provider 会话」混排。
 - 已把恢复等待提示里两条 fallback 与字典对齐：`wait_auth_refresh` 渲染 fallback 从「恢复等待 - Auth 刷新」改成「恢复等待 - 刷新授权」，`wait_local_restore` 从「恢复等待 - 本地恢复」改成「恢复等待 - 补回本地文件」，让缓存未命中时的 fallback 与字典本体一致，避免同一标签出现两套中文表述。
 - 已把目录树/待补传树面板里直接暴露英文 `root` 的四个按钮 fallback 与字典统一收口成「根目录」表达，覆盖 `rebuild_from_root`（按当前根目录重建向导）、`retry_current_root`（重试当前根目录）、`auto_recover_current_root`（后台补传当前根目录）、`focus_root`（只看根目录），减少中文模式下树面板按钮仍裸露 `root` 的问题。
