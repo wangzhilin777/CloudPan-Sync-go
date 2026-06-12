@@ -24,3 +24,6 @@ Thumbs.db
 
 # Local data
 .cloudpan-sync-go/
+
+# phase3 local scan helpers
+_phase3_*.mjs
