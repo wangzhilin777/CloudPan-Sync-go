@@ -513,7 +513,7 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "授权档案已更新") {
 		t.Fatalf("expected profile updated flash text in app.js, got %q", body)
 	}
-	if !strings.Contains(body, "record_only（只记录，不删目标端）") {
+	if !strings.Contains(body, "仅记录，不删目标端（record_only）") {
 		t.Fatalf("expected source delete policy label in app.js, got %q", body)
 	}
 	if !strings.Contains(body, "选定根目录") {

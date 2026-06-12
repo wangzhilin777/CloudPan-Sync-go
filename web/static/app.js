@@ -2788,7 +2788,7 @@ function renderProfileStatusLabel(status) {
 function renderSourceDeletePolicy(value, fallback = "record_only") {
   const policy = stringifyValue(value, fallback);
   if (policy === "record_only") {
-    return "record_only（只记录，不删目标端）";
+    return t("wizard.source_delete_policy_record_only", "仅记录，不删目标端（record_only）");
   }
   return policy;
 }
