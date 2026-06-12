@@ -11001,6 +11001,8 @@ function wireLanguage() {
     syncSessionState();
     syncAuthAssistInputs();
     syncProfileAuthGuide();
+    renderProviders();
+    renderProfiles();
     renderPreview();
     renderTasks();
     renderStatus();

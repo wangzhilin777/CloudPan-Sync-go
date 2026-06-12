@@ -259,3 +259,5 @@
 
 - 已把 Provider 卡核心能力摘要 `renderProviderCapabilityCompact` 的六个能力标签（授权校验 / 目录浏览 / 详情读取 / 创建目录 / 秒传预检 / 上传）从硬编码中文改成词典驱动，新增 `providers.cap_*` 六条 zh-CN / en-US 双语 key，让英文模式下 Provider 卡首屏能力摘要不再夹中文。
 - 上述能力标签词典化后确认 `node --check web/static/app.js`、`go test ./internal/app ./internal/task -count=1` 通过，未留下额外临时文件或后台进程残留。
+
+- 已修复一处语言切换不联动的真实 bug：`wireLanguage` 的 `change` 处理器原本只重渲染会话、授权引导、预览、任务、状态和目录浏览器，漏掉了 `renderProviders()` 与 `renderProfiles()`，导致切到英文后 Provider 能力卡和已保存授权档案表格仍停留在切换前的语言，必须等下次数据刷新才更新。现在切换语言会一并重渲染这两块，让 Provider 卡（核心能力、推荐风控、高级信息）和授权档案表格（表头、状态、操作按钮）随语言即时联动。本轮确认 `node --check web/static/app.js`、`go test ./internal/app ./internal/task -count=1`（含真实浏览器 mainline smoke）通过，未留下额外临时文件或后台进程残留。
