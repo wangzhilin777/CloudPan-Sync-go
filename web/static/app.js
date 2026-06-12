@@ -1051,6 +1051,23 @@ const translations = {
       provider_recommended_risk: "推荐风控档位",
       provider_capability_summary: "能力摘要",
       provider_default_template: "网盘源默认模板",
+      card_core_capability: "核心能力",
+      card_recommended_risk: "推荐风控",
+      card_auth_entry: "授权入口：先创建授权档案，再继续目录选择与任务创建。",
+      card_advanced_summary: "展开高级信息",
+      card_fallback_modes: "兜底策略",
+      card_conflict_policies: "冲突策略",
+      card_risk_traits: "风控特征",
+      card_risk_hints: "风控提示",
+      card_default_risk: "默认风控",
+      card_recommended_tier: "推荐档位",
+      card_calibration_reasons: "校准依据",
+      card_calibration_readiness: "校准就绪度",
+      card_calibration_priority: "优先校准动作",
+      card_recover_budget: "恢复预算",
+      card_profile_source: "账号默认来源",
+      card_profile_source_advice: "账号默认建议",
+      card_view_detail: "查看能力详情",
       risk_chain_title: "风控链路",
       risk_base_template_title: "基础模板",
       risk_calibrated_result_title: "校准结果",
@@ -2211,6 +2228,23 @@ const translations = {
       provider_recommended_risk: "Recommended Risk Mode",
       provider_capability_summary: "Capability Summary",
       provider_default_template: "Provider Default Template",
+      card_core_capability: "Core Capabilities",
+      card_recommended_risk: "Recommended Risk",
+      card_auth_entry: "Authorization: create an auth profile first, then continue with directory selection and task creation.",
+      card_advanced_summary: "Show Advanced Info",
+      card_fallback_modes: "Fallback Modes",
+      card_conflict_policies: "Conflict Policies",
+      card_risk_traits: "Risk Traits",
+      card_risk_hints: "Risk Hints",
+      card_default_risk: "Default Risk",
+      card_recommended_tier: "Recommended Tier",
+      card_calibration_reasons: "Calibration Basis",
+      card_calibration_readiness: "Calibration Readiness",
+      card_calibration_priority: "Calibration Priority Action",
+      card_recover_budget: "Recovery Budget",
+      card_profile_source: "Account Default Source",
+      card_profile_source_advice: "Account Default Advice",
+      card_view_detail: "View Capability Detail",
       risk_chain_title: "Risk Flow",
       risk_base_template_title: "Base Template",
       risk_calibrated_result_title: "Calibrated Result",
@@ -6660,29 +6694,29 @@ function renderProviders() {
             ${entry.meta.authModes.map((mode) => `<span class="pill">${escapeHTML(renderAuthModeLabel(mode))}</span>`).join("")}
           </div>
           <div class="provider-card-summary">
-            <div class="muted">核心能力：${escapeHTML(renderProviderCapabilityCompact(entry.capability))}</div>
-            <div class="muted">推荐风控：${escapeHTML(renderRiskModeLabel(defaultRiskTemplate?.recommendedMode))}</div>
-            <div class="muted">授权入口：先创建授权档案，再继续目录选择与任务创建。</div>
+            <div class="muted">${escapeHTML(t("providers.card_core_capability", "核心能力"))}：${escapeHTML(renderProviderCapabilityCompact(entry.capability))}</div>
+            <div class="muted">${escapeHTML(t("providers.card_recommended_risk", "推荐风控"))}：${escapeHTML(renderRiskModeLabel(defaultRiskTemplate?.recommendedMode))}</div>
+            <div class="muted">${escapeHTML(t("providers.card_auth_entry", "授权入口：先创建授权档案，再继续目录选择与任务创建。"))}</div>
           </div>
           <details class="provider-card-advanced">
-            <summary>展开高级信息</summary>
+            <summary>${escapeHTML(t("providers.card_advanced_summary", "展开高级信息"))}</summary>
             <div class="provider-card-advanced-body">
-              <div class="muted">兜底策略：${escapeHTML(fallbackModes.join(", ") || "-")}</div>
-              <div class="muted">冲突策略：${escapeHTML(conflictPolicies.join(", ") || "-")}</div>
-              <div class="muted">风控特征：${escapeHTML(riskTraits.join(", ") || "-")}</div>
-              <div class="muted">风控提示：${escapeHTML(riskHints.join(" / ") || "-")}</div>
-              <div class="muted">默认风控：${escapeHTML(renderRiskProfileCompact(defaultRiskTemplate?.calibrated))}</div>
-              <div class="muted">推荐档位：${escapeHTML(renderRiskModeLabel(defaultRiskTemplate?.recommendedMode))}</div>
-              <div class="muted">校准依据：${escapeHTML((defaultRiskTemplate?.calibrationReasons || []).join(" / ") || "-")}</div>
-              <div class="muted">校准就绪度：${escapeHTML(stringifyValue(defaultRiskTemplate?.calibrationReadiness, "-"))}</div>
-              <div class="muted">优先校准动作：${escapeHTML(stringifyValue(defaultRiskTemplate?.calibrationPriorityAction, "-"))}</div>
-              <div class="muted">恢复预算：${escapeHTML(renderRecoverBudgetCompact(defaultRiskTemplate?.recoverBudget))}</div>
-              <div class="muted">账号默认来源：${escapeHTML(renderRiskDefaultsSourceBadge(profileSource))}</div>
-              <div class="muted">账号默认建议：${escapeHTML(renderProfileRiskDefaultSourceAdvice(profileSource))}</div>
+              <div class="muted">${escapeHTML(t("providers.card_fallback_modes", "兜底策略"))}：${escapeHTML(fallbackModes.join(", ") || "-")}</div>
+              <div class="muted">${escapeHTML(t("providers.card_conflict_policies", "冲突策略"))}：${escapeHTML(conflictPolicies.join(", ") || "-")}</div>
+              <div class="muted">${escapeHTML(t("providers.card_risk_traits", "风控特征"))}：${escapeHTML(riskTraits.join(", ") || "-")}</div>
+              <div class="muted">${escapeHTML(t("providers.card_risk_hints", "风控提示"))}：${escapeHTML(riskHints.join(" / ") || "-")}</div>
+              <div class="muted">${escapeHTML(t("providers.card_default_risk", "默认风控"))}：${escapeHTML(renderRiskProfileCompact(defaultRiskTemplate?.calibrated))}</div>
+              <div class="muted">${escapeHTML(t("providers.card_recommended_tier", "推荐档位"))}：${escapeHTML(renderRiskModeLabel(defaultRiskTemplate?.recommendedMode))}</div>
+              <div class="muted">${escapeHTML(t("providers.card_calibration_reasons", "校准依据"))}：${escapeHTML((defaultRiskTemplate?.calibrationReasons || []).join(" / ") || "-")}</div>
+              <div class="muted">${escapeHTML(t("providers.card_calibration_readiness", "校准就绪度"))}：${escapeHTML(stringifyValue(defaultRiskTemplate?.calibrationReadiness, "-"))}</div>
+              <div class="muted">${escapeHTML(t("providers.card_calibration_priority", "优先校准动作"))}：${escapeHTML(stringifyValue(defaultRiskTemplate?.calibrationPriorityAction, "-"))}</div>
+              <div class="muted">${escapeHTML(t("providers.card_recover_budget", "恢复预算"))}：${escapeHTML(renderRecoverBudgetCompact(defaultRiskTemplate?.recoverBudget))}</div>
+              <div class="muted">${escapeHTML(t("providers.card_profile_source", "账号默认来源"))}：${escapeHTML(renderRiskDefaultsSourceBadge(profileSource))}</div>
+              <div class="muted">${escapeHTML(t("providers.card_profile_source_advice", "账号默认建议"))}：${escapeHTML(renderProfileRiskDefaultSourceAdvice(profileSource))}</div>
             </div>
           </details>
           <div class="actions compact">
-            <button type="button" class="ghost" data-provider-detail-open="${escapeHTML(entry.meta.key)}">查看能力详情</button>
+            <button type="button" class="ghost" data-provider-detail-open="${escapeHTML(entry.meta.key)}">${escapeHTML(t("providers.card_view_detail", "查看能力详情"))}</button>
           </div>
         </article>
       `;

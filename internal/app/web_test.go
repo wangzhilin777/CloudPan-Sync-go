@@ -1485,20 +1485,26 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "providers ") {
 		t.Fatalf("expected provider summary text in app.js, got %q", body)
 	}
-	if !strings.Contains(body, "风控提示：") {
+	if !strings.Contains(body, "风控提示") {
 		t.Fatalf("expected provider risk hints text in app.js, got %q", body)
 	}
-	if !strings.Contains(body, "风控特征：") {
+	if !strings.Contains(body, "风控特征") {
 		t.Fatalf("expected provider risk traits text in app.js, got %q", body)
 	}
-	if !strings.Contains(body, "默认风控：") {
+	if !strings.Contains(body, "默认风控") {
 		t.Fatalf("expected provider default risk text in app.js, got %q", body)
 	}
 	if !strings.Contains(body, "推荐档位") {
 		t.Fatalf("expected provider recommended risk text in app.js, got %q", body)
 	}
-	if !strings.Contains(body, "核心能力：") {
+	if !strings.Contains(body, "核心能力") {
 		t.Fatalf("expected provider compact capability summary in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "Core Capabilities") {
+		t.Fatalf("expected English provider card capability label in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "providers.card_core_capability") {
+		t.Fatalf("expected provider card dictionary key wiring in app.js, got %q", body)
 	}
 	if !strings.Contains(body, "授权入口：先创建授权档案，再继续目录选择与任务创建。") {
 		t.Fatalf("expected provider auth-entry guidance in app.js, got %q", body)
@@ -1530,10 +1536,10 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "恢复预算") {
 		t.Fatalf("expected provider recover budget text in app.js, got %q", body)
 	}
-	if !strings.Contains(body, "账号默认来源：") {
+	if !strings.Contains(body, "账号默认来源") {
 		t.Fatalf("expected provider profile risk source text in app.js, got %q", body)
 	}
-	if !strings.Contains(body, "账号默认建议：") {
+	if !strings.Contains(body, "账号默认建议") {
 		t.Fatalf("expected provider profile risk advice text in app.js, got %q", body)
 	}
 	if !strings.Contains(body, "renderProfileAuthGuide") {
@@ -1650,10 +1656,10 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "账号恢复预算建议") {
 		t.Fatalf("expected profile recover budget advice text in app.js, got %q", body)
 	}
-	if !strings.Contains(body, "兜底策略：") {
+	if !strings.Contains(body, "兜底策略") {
 		t.Fatalf("expected provider fallback text in app.js, got %q", body)
 	}
-	if !strings.Contains(body, "冲突策略：") {
+	if !strings.Contains(body, "冲突策略") {
 		t.Fatalf("expected provider conflict text in app.js, got %q", body)
 	}
 	if !strings.Contains(body, "renderProviderCapabilityDetail") {
