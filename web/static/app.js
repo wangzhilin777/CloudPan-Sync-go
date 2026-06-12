@@ -850,6 +850,8 @@ const translations = {
       checkpoint_card_provider_clue: "网盘源恢复线索",
       checkpoint_card_upload_status: "上传状态",
       checkpoint_card_updated_at: "检查点时间",
+      checkpoint_resume_state_resumable: "可继续续传",
+      checkpoint_resume_state_rebuild: "仍需重新建会话",
       waiting_reason_summary_detail: "冷却 {cooldown} / 时间窗 {retryWindow} / 授权 {authRefresh} / 本地文件 {localRestore} / 人工处理 {manual}",
       lane_summary_detail: "网盘源 {provider} / 协议组 {protocolGroup} / 授权档案 {profileId} / 网盘源数 {providerCount} / 授权档案数 {profileCount}",
       sample_context_provider: "网盘源 {value}",
@@ -2060,6 +2062,8 @@ const translations = {
       checkpoint_card_provider_clue: "Provider Recovery Clue",
       checkpoint_card_upload_status: "Upload Status",
       checkpoint_card_updated_at: "Checkpoint Time",
+      checkpoint_resume_state_resumable: "Resumable",
+      checkpoint_resume_state_rebuild: "Session rebuild required",
       waiting_reason_summary_detail: "cooldown {cooldown} / retry window {retryWindow} / auth {authRefresh} / local file {localRestore} / manual {manual}",
       lane_summary_detail: "provider {provider} / protocol group {protocolGroup} / auth profile {profileId} / providers {providerCount} / profiles {profileCount}",
       sample_context_provider: "Provider {value}",
@@ -4507,7 +4511,9 @@ function renderUploadCheckpointResumeState(checkpoint) {
     Number(checkpoint.uploadedPartCount || 0) > 0 ||
     (Array.isArray(checkpoint.uploadedParts) && checkpoint.uploadedParts.length > 0) ||
     (checkpoint.providerData && Object.keys(checkpoint.providerData).length > 0);
-  return resumable ? "可继续续传" : "仍需重新建会话";
+  return resumable
+    ? t("status.checkpoint_resume_state_resumable", "可继续续传")
+    : t("status.checkpoint_resume_state_rebuild", "仍需重新建会话");
 }
 
 function renderUploadCheckpointReadiness(evidence) {
