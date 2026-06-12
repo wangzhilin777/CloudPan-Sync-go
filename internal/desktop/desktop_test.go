@@ -50,6 +50,7 @@ func TestChromeCandidatesContainKnownBrowserNames(t *testing.T) {
 }
 
 func TestBuildDesktopWindowOpenError(t *testing.T) {
+	t.Setenv("CLOUDPAN_LANG", "zh")
 	url := "http://127.0.0.1:18080/"
 
 	testCases := []struct {
@@ -94,6 +95,7 @@ func TestChromeCandidatesIncludeLocalEdgePathOnWindows(t *testing.T) {
 }
 
 func TestDesktopLaunchMessage(t *testing.T) {
+	t.Setenv("CLOUDPAN_LANG", "zh")
 	url := "http://127.0.0.1:18080/"
 
 	testCases := []struct {
@@ -124,5 +126,53 @@ func TestDesktopLaunchMessage(t *testing.T) {
 				t.Fatalf("desktopLaunchMessage() = %q, want %q", got, tc.want)
 			}
 		})
+	}
+}
+
+func TestDesktopLangParsing(t *testing.T) {
+	testCases := []struct {
+		name string
+		env  string
+		want string
+	}{
+		{name: "default empty is zh", env: "", want: "zh"},
+		{name: "en short", env: "en", want: "en"},
+		{name: "en-US", env: "en-US", want: "en"},
+		{name: "English mixed case", env: "EN_us", want: "en"},
+		{name: "zh-CN", env: "zh-CN", want: "zh"},
+		{name: "unknown falls back to zh", env: "fr", want: "zh"},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Setenv("CLOUDPAN_LANG", tc.env)
+			if got := desktopLang(); got != tc.want {
+				t.Fatalf("desktopLang() with CLOUDPAN_LANG=%q = %q, want %q", tc.env, got, tc.want)
+			}
+		})
+	}
+}
+
+func TestDesktopMessagesEnglish(t *testing.T) {
+	t.Setenv("CLOUDPAN_LANG", "en-US")
+	url := "http://127.0.0.1:18080/"
+
+	if got := desktopReadyMessage(url); !strings.Contains(got, "ready") || !strings.Contains(got, url) {
+		t.Fatalf("desktopReadyMessage() = %q, want English ready text with url", got)
+	}
+	if got := desktopWindowClosedMessage(); !strings.Contains(got, "closed") {
+		t.Fatalf("desktopWindowClosedMessage() = %q, want English closed text", got)
+	}
+	if got := desktopLaunchMessage(desktopLaunchModeApp, url); !strings.Contains(got, "dedicated window") {
+		t.Fatalf("desktopLaunchMessage(app) = %q, want English dedicated-window text", got)
+	}
+	if got := desktopLaunchMessage(desktopLaunchModeBrowser, url); !strings.Contains(got, "system default browser") {
+		t.Fatalf("desktopLaunchMessage(browser) = %q, want English fallback text", got)
+	}
+	if got := buildDesktopWindowOpenError(errNoDesktopBrowser, url).Error(); !strings.Contains(got, "system browser fallback also failed") {
+		t.Fatalf("buildDesktopWindowOpenError(noBrowser) = %q, want English error text", got)
+	}
+	if got := buildDesktopWindowOpenError(nil, url).Error(); !strings.Contains(got, "could not open the console window") {
+		t.Fatalf("buildDesktopWindowOpenError(nil) = %q, want English error text", got)
 	}
 }

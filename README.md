@@ -113,6 +113,17 @@ chmod +x ./cloudpan-sync-desktop
 - 独立窗口模式：关闭窗口即可自动退出。
 - 系统浏览器兜底模式：关闭浏览器标签页不会自动停服务，需要回到终端按 `Ctrl+C`。
 
+桌面模式的启动、退出和报错提示默认输出中文。如果需要英文提示（例如对外演示或英文环境），可在启动前设置 `CLOUDPAN_LANG=en`：
+
+```powershell
+$env:CLOUDPAN_LANG="en"
+.\cloudpan-sync-desktop.exe
+```
+
+```bash
+CLOUDPAN_LANG=en ./cloudpan-sync-desktop
+```
+
 ## 最快启动
 
 ### Windows 服务端

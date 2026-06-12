@@ -239,3 +239,5 @@
 - 上述就绪度词典化后确认 `node --check web/static/app.js` 通过、`go test ./internal/app ./internal/task -count=1` 全量通过，未留下额外临时文件或后台进程残留。
 
 - 已把状态页 16 条「优先…」恢复/公平性/断点续传优先动作标签做成显示侧词典化：新增 `PRIORITY_ACTION_LABEL_MAP` + `localizePriorityAction` / `localizePriorityActionCounts`，把后端返回的中文优先动作串（如「优先重建网盘会话缺口」「优先补多 provider 自动补传候选池样本」等）在渲染时映射到 `status.priority_action_*` 双语词典，英文模式下证据摘要、断点续传卡、恢复优先动作统计都改显英文。后端 `internal/task/service.go` 仍返回原中文串作为统计 map key，数据结构与现有 Go 断言不变，避免「后端中文 key / 前端英文」打架。已补齐 16 条 zh-CN / en-US 字典与 `web_test.go` 锚点，确认 `node --check web/static/app.js`、`go test ./internal/app ./internal/task -count=1` 全量通过，未留临时文件或后台进程残留。
+
+- 已把桌面模式（internal/desktop）的启动、退出和错误提示从固定中文升级为双语，对齐 011 计划主线五里程碑6「桌面端启动、错误和退出提示走同一套双语文案」：新增 internal/desktop/i18n.go，按 `CLOUDPAN_LANG`（默认 zh，设为 en / en-US 切英文）输出「服务已就绪 / 独立窗口已关闭 / 启动模式说明 / 打开窗口失败」等提示；`buildDesktopWindowOpenError` 与 `desktopLaunchMessage` 改为委托双语层，默认中文保持既有文案与测试锚点不变。补 `TestDesktopLangParsing`、`TestDesktopMessagesEnglish` 覆盖英文分支与语言解析，并给既有中文断言测试 pin 上 `CLOUDPAN_LANG=zh` 避免开发环境变量串台。README 桌面模式段补上 `CLOUDPAN_LANG=en` 的英文提示用法。确认 `go test ./internal/desktop -count=1` 通过。
