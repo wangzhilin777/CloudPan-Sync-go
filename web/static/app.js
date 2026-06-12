@@ -395,6 +395,37 @@ const translations = {
     status: {
       flash_auto_recover_filters_cleared: "后台补传筛选已清空",
       summary_title: "运行证据摘要",
+      evidence_metric_done_result: "成功结果",
+      evidence_metric_skipped_result: "跳过结果",
+      evidence_metric_pending_result: "待人工处理",
+      evidence_metric_source_deletion: "源端删除记录",
+      evidence_metric_failed_result: "失败结果",
+      evidence_metric_risk_hit: "风控命中",
+      evidence_metric_auto_recover_tick: "自动补传周期",
+      evidence_metric_auto_recover_batch: "自动补传批量",
+      evidence_metric_lane_limit: "单通道限额（lane）",
+      evidence_metric_protocol_group_count: "协议组数量",
+      evidence_metric_protocol_group_sampled: "已取样协议组",
+      evidence_metric_protocol_group_accepted: "已验收协议组",
+      evidence_metric_protocol_group_in_progress: "进行中协议组",
+      evidence_metric_protocol_group_pending: "待验收协议组",
+      evidence_metric_upload_success_groups: "已有上传成功协议组",
+      evidence_metric_upload_success_samples: "上传成功样本",
+      evidence_metric_missing_upload_groups: "缺上传样本协议组",
+      evidence_metric_missing_coverage_groups: "缺覆盖样本协议组",
+      evidence_metric_missing_anomaly_groups: "缺异常样本协议组",
+      evidence_metric_missing_representative_groups: "缺代表性样本协议组",
+      evidence_metric_acceptance_priority_action: "验收优先动作",
+      evidence_metric_checkpoint_readiness: "断点续传就绪度",
+      evidence_metric_checkpoint_priority_action: "断点续传优先动作",
+      evidence_metric_recover_priority_action: "补传优先动作",
+      evidence_metric_recover_readiness: "补传就绪度",
+      evidence_metric_fairness_readiness: "公平性就绪度",
+      evidence_metric_fairness_missing: "公平性缺口",
+      evidence_metric_fairness_priority_action: "公平性优先动作",
+      evidence_metric_acceptance_action_summary: "验收动作汇总",
+      evidence_metric_recover_ready_label: "恢复就绪",
+      evidence_metric_fairness_ready_label: "公平性就绪",
       waiting_retry_policy: "等待自动补传调度策略...",
       auto_recover_pool: "自动补传候选池",
       auto_recover_pool_desc: "按后台补传模式聚合当前可自动接管或等待窗口的任务",
@@ -604,6 +635,23 @@ const translations = {
       auto_recover_fairness_summary: "自动补传恢复与公平性摘要",
       recovery_priority_action: "恢复优先动作",
       recovery_priority_action_counts: "恢复优先动作统计:",
+      priority_action_upload_checkpoint_form_failure_sample: "优先形成 1 条上传断点（checkpoint）失败样本",
+      priority_action_upload_checkpoint_resume_success_sample: "优先补 1 条上传断点（checkpoint）自动续传成功样本",
+      priority_action_upload_checkpoint_evidence_uploadid: "优先补 uploadId / 上传会话证据",
+      priority_action_upload_checkpoint_evidence_parts: "优先补 nextPart / 已传分片进度证据",
+      priority_action_fairness_form_pool_sample: "优先形成 1 条自动补传候选池样本",
+      priority_action_fairness_multi_provider: "优先补多网盘源自动补传候选池样本",
+      priority_action_fairness_multi_profile: "优先补多账号自动补传候选池样本",
+      priority_action_fairness_multi_protocol_group: "优先补多协议组自动补传候选池样本",
+      priority_action_recover_rebuild_provider_session: "优先重建网盘会话缺口",
+      priority_action_recover_refresh_auth: "优先刷新授权档案后再恢复任务",
+      priority_action_recover_restore_local: "优先补回本地缺失文件",
+      priority_action_recover_pending_manual: "优先处理待人工确认任务",
+      priority_action_recover_retry_limit: "优先处理重试耗尽任务",
+      priority_action_recover_review_window: "优先评估自动补传时间窗是否需要放宽",
+      priority_action_recover_wait_cooldown: "优先等待冷却结束后继续自动重试",
+      priority_action_recover_release_runnable: "优先放行当前可立即自动补传的任务",
+      priority_action_recover_continue_fairness: "优先继续补多网盘源 / 多账号公平性样本",
       fairness_gap: "公平性缺口",
       fairness_priority_action: "公平性优先动作",
       waiting_reason_summary: "等待原因",
@@ -1494,6 +1542,33 @@ const translations = {
     },
     status: {
       summary_title: "Runtime Evidence Summary",
+      evidence_metric_done_results: "Successful Results",
+      evidence_metric_skipped_results: "Skipped Results",
+      evidence_metric_pending_results: "Pending Manual Handling",
+      evidence_metric_failed_results: "Failed Results",
+      evidence_metric_auto_recover_tick: "Auto-Recovery Tick",
+      evidence_metric_auto_recover_batch: "Auto-Recovery Batch",
+      evidence_metric_limit_per_lane: "Per-Lane Limit (lane)",
+      evidence_metric_protocol_group_count: "Protocol Groups",
+      evidence_metric_sampled_groups: "Sampled Protocol Groups",
+      evidence_metric_accepted_groups: "Accepted Protocol Groups",
+      evidence_metric_in_progress_groups: "In-Progress Protocol Groups",
+      evidence_metric_pending_groups: "Pending Protocol Groups",
+      evidence_metric_upload_success_groups: "Upload-Success Protocol Groups",
+      evidence_metric_upload_success_samples: "Upload-Success Samples",
+      evidence_metric_missing_upload_groups: "Groups Missing Upload Samples",
+      evidence_metric_missing_coverage_groups: "Groups Missing Coverage Samples",
+      evidence_metric_missing_anomaly_groups: "Groups Missing Anomaly Samples",
+      evidence_metric_missing_representative_groups: "Groups Missing Representative Samples",
+      evidence_metric_acceptance_priority_action: "Acceptance Priority Action",
+      evidence_metric_upload_checkpoint_readiness: "Upload-Resume Readiness",
+      evidence_metric_upload_checkpoint_priority_action: "Upload-Resume Priority Action",
+      evidence_metric_auto_recover_priority_action: "Auto-Recovery Priority Action",
+      evidence_metric_auto_recover_readiness: "Auto-Recovery Readiness",
+      evidence_metric_fairness_readiness: "Fairness Readiness",
+      evidence_metric_fairness_missing: "Fairness Gap",
+      evidence_metric_fairness_priority_action: "Fairness Priority Action",
+      evidence_metric_acceptance_action_summary: "Acceptance Action Summary",
       waiting_retry_policy: "Waiting for the auto-recovery scheduling policy...",
       auto_recover_pool: "Auto-Recovery Pool",
       auto_recover_pool_desc: "Group tasks that can be auto-taken-over or are waiting for a recovery window",
@@ -1704,6 +1779,23 @@ const translations = {
       auto_recover_fairness_summary: "Auto-Recovery and Fairness Summary",
       recovery_priority_action: "Recovery Priority Action",
       recovery_priority_action_counts: "Recovery Priority Action Counts",
+      priority_action_upload_checkpoint_form_failure_sample: "First capture 1 upload-checkpoint failure sample",
+      priority_action_upload_checkpoint_resume_success_sample: "First add 1 upload-checkpoint auto-resume success sample",
+      priority_action_upload_checkpoint_evidence_uploadid: "First add uploadId / upload session evidence",
+      priority_action_upload_checkpoint_evidence_parts: "First add nextPart / uploadedParts progress evidence",
+      priority_action_fairness_form_pool_sample: "First form 1 auto-recovery candidate-pool sample",
+      priority_action_fairness_multi_provider: "First add multi-provider auto-recovery pool samples",
+      priority_action_fairness_multi_profile: "First add multi-account auto-recovery pool samples",
+      priority_action_fairness_multi_protocol_group: "First add multi-protocol-group auto-recovery pool samples",
+      priority_action_recover_rebuild_provider_session: "First rebuild the cloud session gap",
+      priority_action_recover_refresh_auth: "First refresh the auth profile, then resume tasks",
+      priority_action_recover_restore_local: "First restore the missing local files",
+      priority_action_recover_pending_manual: "First handle pending_manual / manual-confirmation tasks",
+      priority_action_recover_retry_limit: "First handle retry-exhausted tasks",
+      priority_action_recover_review_window: "First assess whether the auto-recovery window needs widening",
+      priority_action_recover_wait_cooldown: "First wait for cooldown to end, then auto-retry",
+      priority_action_recover_release_runnable: "First release tasks that can auto-recover right now",
+      priority_action_recover_continue_fairness: "First keep adding multi-provider / multi-account fairness samples",
       fairness_gap: "Fairness Gap",
       fairness_priority_action: "Fairness Priority Action",
       flash_task_tree_focused_by_scan: "Task directory tree focused by the latest scan trail",
@@ -4377,6 +4469,49 @@ function localizeReadinessStateToken(token) {
     default:
       return String(token || "");
   }
+}
+
+const PRIORITY_ACTION_LABEL_MAP = {
+  "优先形成 1 条 upload checkpoint 失败样本": "status.priority_action_upload_checkpoint_form_failure_sample",
+  "优先补 1 条 upload checkpoint 自动续传成功样本": "status.priority_action_upload_checkpoint_resume_success_sample",
+  "优先补 uploadId / upload session 证据": "status.priority_action_upload_checkpoint_evidence_uploadid",
+  "优先补 nextPart / uploadedParts 分片进度证据": "status.priority_action_upload_checkpoint_evidence_parts",
+  "优先形成 1 条自动补传候选池样本": "status.priority_action_fairness_form_pool_sample",
+  "优先补多 provider 自动补传候选池样本": "status.priority_action_fairness_multi_provider",
+  "优先补多账号自动补传候选池样本": "status.priority_action_fairness_multi_profile",
+  "优先补多协议组自动补传候选池样本": "status.priority_action_fairness_multi_protocol_group",
+  "优先重建 provider 会话缺口": "status.priority_action_recover_rebuild_provider_session",
+  "优先刷新授权档案后再恢复任务": "status.priority_action_recover_refresh_auth",
+  "优先补回本地缺失文件": "status.priority_action_recover_restore_local",
+  "优先处理 pending_manual / 人工确认任务": "status.priority_action_recover_pending_manual",
+  "优先处理重试耗尽任务": "status.priority_action_recover_retry_limit",
+  "优先评估自动补传时间窗是否需要放宽": "status.priority_action_recover_review_window",
+  "优先等待冷却结束后继续自动重试": "status.priority_action_recover_wait_cooldown",
+  "优先放行当前可立即自动补传的任务": "status.priority_action_recover_release_runnable",
+  "优先继续补多 provider / 多账号公平性样本": "status.priority_action_recover_continue_fairness",
+};
+
+function localizePriorityAction(label) {
+  if (label === undefined || label === null) {
+    return "";
+  }
+  const text = String(label);
+  if (text === "complete") {
+    return t("status.matrix_state_complete", "已完成");
+  }
+  const key = PRIORITY_ACTION_LABEL_MAP[text];
+  return key ? t(key, text) : text;
+}
+
+function localizePriorityActionCounts(counts) {
+  if (!counts || typeof counts !== "object") {
+    return "";
+  }
+  return Object.entries(counts)
+    .sort((left, right) => Number(right[1] || 0) - Number(left[1] || 0) || String(left[0]).localeCompare(String(right[0])))
+    .slice(0, 8)
+    .map(([label, count]) => `${localizePriorityAction(label)} x${count}`)
+    .join(" / ");
 }
 
 function renderAutoRecoverFairnessReadiness(evidence) {
@@ -7367,35 +7502,35 @@ function renderStatus() {
     <div class="metric"><span>${escapeHTML(t("status.waiting_manual_confirmation", "等待人工确认"))}</span><strong>${stringifyValue(evidence.autoRecoverWaitingManualTasks, "0")}</strong></div>
     <div class="metric"><span>${escapeHTML(t("status.waiting_retry_limit", "等待重试上限"))}</span><strong>${stringifyValue(evidence.autoRecoverWaitingRetryLimitTasks, "0")}</strong></div>
     <div class="metric"><span>${escapeHTML(t("status.waiting_other", "其它等待"))}</span><strong>${stringifyValue(evidence.autoRecoverWaitingOtherTasks, "0")}</strong></div>
-    <div class="metric"><span>成功结果</span><strong>${evidence.doneResultCount}</strong></div>
-    <div class="metric"><span>跳过结果</span><strong>${evidence.skippedResultCount}</strong></div>
-    <div class="metric"><span>待人工处理</span><strong>${evidence.pendingResultCount}</strong></div>
-    <div class="metric"><span>源端删除记录</span><strong>${stringifyValue(evidence.sourceDeletionCount, "0")}</strong></div>
-    <div class="metric"><span>失败结果</span><strong>${evidence.failedResultCount}</strong></div>
-    <div class="metric"><span>风控命中</span><strong>${evidence.riskHitCount}</strong></div>
-    <div class="metric"><span>自动补传周期</span><strong>${escapeHTML(stringifyValue(autoRetryPolicy.tick, "-"))}</strong></div>
-    <div class="metric"><span>自动补传批量</span><strong>${stringifyValue(autoRetryPolicy.batchLimit, "-")}</strong></div>
-    <div class="metric"><span>单 lane 限额</span><strong>${stringifyValue(autoRetryPolicy.limitPerLane, "-")}</strong></div>
-    <div class="metric"><span>协议组数量</span><strong>${protocolCoverage.length}</strong></div>
-    <div class="metric"><span>已取样协议组</span><strong>${protocolCoverageWithSamples}</strong></div>
-    <div class="metric"><span>已验收协议组</span><strong>${acceptedSmokeGroups}</strong></div>
-    <div class="metric"><span>进行中协议组</span><strong>${inProgressSmokeGroups}</strong></div>
-    <div class="metric"><span>待验收协议组</span><strong>${pendingSmokeGroups}</strong></div>
-    <div class="metric"><span>已有上传成功协议组</span><strong>${stringifyValue(evidence.uploadSuccessGroups, String(uploadSuccessSmokeGroups))}</strong></div>
-    <div class="metric"><span>上传成功样本</span><strong>${stringifyValue(evidence.uploadSuccessSamples, "0")}</strong></div>
-    <div class="metric"><span>缺上传样本协议组</span><strong>${escapeHTML(summarizePathList(evidence.smokeMatrixMissingUploadGroups, 4))}</strong></div>
-    <div class="metric"><span>缺覆盖样本协议组</span><strong>${escapeHTML(summarizePathList(evidence.smokeMatrixMissingCoverageGroups, 4))}</strong></div>
-    <div class="metric"><span>缺异常样本协议组</span><strong>${escapeHTML(summarizePathList(evidence.smokeMatrixMissingAnomalyGroups, 4))}</strong></div>
-    <div class="metric"><span>缺代表性样本协议组</span><strong>${escapeHTML(summarizePathList(evidence.smokeMatrixMissingRepresentativeGroups, 4))}</strong></div>
-    <div class="metric"><span>验收优先动作</span><strong>${escapeHTML(smokePriorityActionSummary || "-")}</strong></div>
-    <div class="metric"><span>断点续传就绪度</span><strong>${escapeHTML(renderUploadCheckpointReadiness(evidence))}</strong></div>
-    <div class="metric"><span>断点续传优先动作</span><strong>${escapeHTML(renderUploadCheckpointPriorityAction(evidence))}</strong></div>
-    <div class="metric"><span>补传优先动作</span><strong>${escapeHTML(renderAutoRecoverPriorityAction(evidence))}</strong></div>
-    <div class="metric"><span>补传就绪度</span><strong>${escapeHTML(renderAutoRecoverReadiness(evidence))}</strong></div>
-    <div class="metric"><span>公平性就绪度</span><strong>${escapeHTML(renderAutoRecoverFairnessReadiness(evidence))}</strong></div>
-    <div class="metric"><span>公平性缺口</span><strong>${escapeHTML(renderAutoRecoverFairnessMissing(evidence))}</strong></div>
-    <div class="metric"><span>公平性优先动作</span><strong>${escapeHTML(renderAutoRecoverFairnessPriorityAction(evidence))}</strong></div>
-    <div class="metric"><span>验收动作汇总</span><strong>${escapeHTML(acceptanceActionSummary || "-")}</strong></div>
+    <div class="metric"><span>${escapeHTML(t("status.evidence_metric_done_result", "成功结果"))}</span><strong>${evidence.doneResultCount}</strong></div>
+    <div class="metric"><span>${escapeHTML(t("status.evidence_metric_skipped_result", "跳过结果"))}</span><strong>${evidence.skippedResultCount}</strong></div>
+    <div class="metric"><span>${escapeHTML(t("status.evidence_metric_pending_result", "待人工处理"))}</span><strong>${evidence.pendingResultCount}</strong></div>
+    <div class="metric"><span>${escapeHTML(t("status.evidence_metric_source_deletion", "源端删除记录"))}</span><strong>${stringifyValue(evidence.sourceDeletionCount, "0")}</strong></div>
+    <div class="metric"><span>${escapeHTML(t("status.evidence_metric_failed_result", "失败结果"))}</span><strong>${evidence.failedResultCount}</strong></div>
+    <div class="metric"><span>${escapeHTML(t("status.evidence_metric_risk_hit", "风控命中"))}</span><strong>${evidence.riskHitCount}</strong></div>
+    <div class="metric"><span>${escapeHTML(t("status.evidence_metric_auto_recover_tick", "自动补传周期"))}</span><strong>${escapeHTML(stringifyValue(autoRetryPolicy.tick, "-"))}</strong></div>
+    <div class="metric"><span>${escapeHTML(t("status.evidence_metric_auto_recover_batch", "自动补传批量"))}</span><strong>${stringifyValue(autoRetryPolicy.batchLimit, "-")}</strong></div>
+    <div class="metric"><span>${escapeHTML(t("status.evidence_metric_lane_limit", "单通道限额（lane）"))}</span><strong>${stringifyValue(autoRetryPolicy.limitPerLane, "-")}</strong></div>
+    <div class="metric"><span>${escapeHTML(t("status.evidence_metric_protocol_group_count", "协议组数量"))}</span><strong>${protocolCoverage.length}</strong></div>
+    <div class="metric"><span>${escapeHTML(t("status.evidence_metric_protocol_group_sampled", "已取样协议组"))}</span><strong>${protocolCoverageWithSamples}</strong></div>
+    <div class="metric"><span>${escapeHTML(t("status.evidence_metric_protocol_group_accepted", "已验收协议组"))}</span><strong>${acceptedSmokeGroups}</strong></div>
+    <div class="metric"><span>${escapeHTML(t("status.evidence_metric_protocol_group_in_progress", "进行中协议组"))}</span><strong>${inProgressSmokeGroups}</strong></div>
+    <div class="metric"><span>${escapeHTML(t("status.evidence_metric_protocol_group_pending", "待验收协议组"))}</span><strong>${pendingSmokeGroups}</strong></div>
+    <div class="metric"><span>${escapeHTML(t("status.evidence_metric_upload_success_groups", "已有上传成功协议组"))}</span><strong>${stringifyValue(evidence.uploadSuccessGroups, String(uploadSuccessSmokeGroups))}</strong></div>
+    <div class="metric"><span>${escapeHTML(t("status.evidence_metric_upload_success_samples", "上传成功样本"))}</span><strong>${stringifyValue(evidence.uploadSuccessSamples, "0")}</strong></div>
+    <div class="metric"><span>${escapeHTML(t("status.evidence_metric_missing_upload_groups", "缺上传样本协议组"))}</span><strong>${escapeHTML(summarizePathList(evidence.smokeMatrixMissingUploadGroups, 4))}</strong></div>
+    <div class="metric"><span>${escapeHTML(t("status.evidence_metric_missing_coverage_groups", "缺覆盖样本协议组"))}</span><strong>${escapeHTML(summarizePathList(evidence.smokeMatrixMissingCoverageGroups, 4))}</strong></div>
+    <div class="metric"><span>${escapeHTML(t("status.evidence_metric_missing_anomaly_groups", "缺异常样本协议组"))}</span><strong>${escapeHTML(summarizePathList(evidence.smokeMatrixMissingAnomalyGroups, 4))}</strong></div>
+    <div class="metric"><span>${escapeHTML(t("status.evidence_metric_missing_representative_groups", "缺代表性样本协议组"))}</span><strong>${escapeHTML(summarizePathList(evidence.smokeMatrixMissingRepresentativeGroups, 4))}</strong></div>
+    <div class="metric"><span>${escapeHTML(t("status.evidence_metric_acceptance_priority_action", "验收优先动作"))}</span><strong>${escapeHTML(smokePriorityActionSummary || "-")}</strong></div>
+    <div class="metric"><span>${escapeHTML(t("status.evidence_metric_checkpoint_readiness", "断点续传就绪度"))}</span><strong>${escapeHTML(renderUploadCheckpointReadiness(evidence))}</strong></div>
+    <div class="metric"><span>${escapeHTML(t("status.evidence_metric_checkpoint_priority_action", "断点续传优先动作"))}</span><strong>${escapeHTML(localizePriorityAction(renderUploadCheckpointPriorityAction(evidence)))}</strong></div>
+    <div class="metric"><span>${escapeHTML(t("status.evidence_metric_recover_priority_action", "补传优先动作"))}</span><strong>${escapeHTML(localizePriorityAction(renderAutoRecoverPriorityAction(evidence)))}</strong></div>
+    <div class="metric"><span>${escapeHTML(t("status.evidence_metric_recover_readiness", "补传就绪度"))}</span><strong>${escapeHTML(renderAutoRecoverReadiness(evidence))}</strong></div>
+    <div class="metric"><span>${escapeHTML(t("status.evidence_metric_fairness_readiness", "公平性就绪度"))}</span><strong>${escapeHTML(renderAutoRecoverFairnessReadiness(evidence))}</strong></div>
+    <div class="metric"><span>${escapeHTML(t("status.evidence_metric_fairness_missing", "公平性缺口"))}</span><strong>${escapeHTML(renderAutoRecoverFairnessMissing(evidence))}</strong></div>
+    <div class="metric"><span>${escapeHTML(t("status.evidence_metric_fairness_priority_action", "公平性优先动作"))}</span><strong>${escapeHTML(renderAutoRecoverFairnessPriorityAction(evidence))}</strong></div>
+    <div class="metric"><span>${escapeHTML(t("status.evidence_metric_acceptance_action_summary", "验收动作汇总"))}</span><strong>${escapeHTML(acceptanceActionSummary || "-")}</strong></div>
   `;
   $("#blocked-actions-summary").innerHTML = renderBlockedActionsSummary(evidence.blockedActions || []);
   wireBlockedActionsSummary();
@@ -9273,7 +9408,7 @@ function renderEvidenceUploadCheckpointSummary(report) {
     ? summary.uploadCheckpointResumeSamplePaths.filter(Boolean)
     : [];
   const readiness = renderUploadCheckpointReadiness(summary);
-  const priorityAction = renderUploadCheckpointPriorityAction(summary);
+  const priorityAction = localizePriorityAction(renderUploadCheckpointPriorityAction(summary));
   return `
     <div class="insight-card">
       <strong>${escapeHTML(t("status.upload_checkpoint_acceptance_title", "上传断点续传默认恢复验收"))}</strong>
@@ -9429,17 +9564,13 @@ function renderEvidenceAutoRecoverSummary(report) {
   const fairnessPool = Array.isArray(summary.autoRecoverPool) ? summary.autoRecoverPool : [];
   const recoveryReadiness = renderAutoRecoverReadiness(summary);
   const fairnessReadiness = renderAutoRecoverFairnessReadiness(summary);
-  const recoveryPriorityAction = renderAutoRecoverPriorityAction(summary);
-  const fairnessPriorityAction = renderAutoRecoverFairnessPriorityAction(summary);
+  const recoveryPriorityAction = localizePriorityAction(renderAutoRecoverPriorityAction(summary));
+  const fairnessPriorityAction = localizePriorityAction(renderAutoRecoverFairnessPriorityAction(summary));
   const autoRecoverPriorityActionCounts =
     summary.autoRecoverPriorityActionCounts && typeof summary.autoRecoverPriorityActionCounts === "object"
       ? summary.autoRecoverPriorityActionCounts
       : {};
-  const autoRecoverPriorityActionSummary = Object.entries(autoRecoverPriorityActionCounts)
-    .sort((left, right) => Number(right[1] || 0) - Number(left[1] || 0) || String(left[0]).localeCompare(String(right[0])))
-    .slice(0, 8)
-    .map(([label, count]) => `${label} x${count}`)
-    .join(" / ");
+  const autoRecoverPriorityActionSummary = localizePriorityActionCounts(autoRecoverPriorityActionCounts);
   const focusLanes = fairnessPool.slice(0, 4);
   return `
     <div class="insight-card">

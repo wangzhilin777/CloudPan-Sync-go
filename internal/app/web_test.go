@@ -804,6 +804,12 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "renderAutoRecoverPriorityAction") {
 		t.Fatalf("expected auto recover priority-action helper in app.js, got %q", body)
 	}
+	if !strings.Contains(body, "localizePriorityAction") || !strings.Contains(body, "PRIORITY_ACTION_LABEL_MAP") {
+		t.Fatalf("expected priority-action localizer in app.js, got %q", body)
+	}
+	if !strings.Contains(body, "status.priority_action_recover_rebuild_provider_session") {
+		t.Fatalf("expected priority-action dictionary key in app.js, got %q", body)
+	}
 	if !strings.Contains(body, "补传优先动作") {
 		t.Fatalf("expected localized auto recover priority metric in app.js, got %q", body)
 	}
