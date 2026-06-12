@@ -194,3 +194,8 @@
 
 
 - 已把状态矩阵决策预算提示里第 7794 行的 fallback 默认值「lane 预算」改成「通道预算（lane）」，跟邻居「模式预算 / 协议组预算 / 网盘源预算 / 授权档案预算」保持一致的中文优先表达，避免单条混排英文运营词。zh-CN 字典里 status.auto_recover_budget_hint_label_* 系列尚未单独定义，目前 fallback 就是实际渲染文案。
+
+- 已把任务处理建议卡的「provider 会话」相关 fallback 与 zh-CN 字典对齐成「网盘会话」，覆盖 `action_manual_intervention_required`（修复网盘会话后继续）与 `guide_manual_intervention_title`（修复网盘会话缺口），跟早先已收口的 `wait_provider_session`（恢复等待 - 网盘会话）保持一致，并同步更新 `ui_smoke_test.go` 里依赖这两条文案的断言锚点，避免中文模式下同类术语一处「网盘会话」、一处「provider 会话」混排。
+- 已把恢复等待提示里两条 fallback 与字典对齐：`wait_auth_refresh` 渲染 fallback 从「恢复等待 - Auth 刷新」改成「恢复等待 - 刷新授权」，`wait_local_restore` 从「恢复等待 - 本地恢复」改成「恢复等待 - 补回本地文件」，让缓存未命中时的 fallback 与字典本体一致，避免同一标签出现两套中文表述。
+- 已把目录树/待补传树面板里直接暴露英文 `root` 的四个按钮 fallback 与字典统一收口成「根目录」表达，覆盖 `rebuild_from_root`（按当前根目录重建向导）、`retry_current_root`（重试当前根目录）、`auto_recover_current_root`（后台补传当前根目录）、`focus_root`（只看根目录），减少中文模式下树面板按钮仍裸露 `root` 的问题。
+- 已完成本轮回归验证，确认 `node --check web/static/app.js` 与 `go test ./internal/app -run "TestHandleIndexServesHTML|TestRoutesServeAppJSIncludesRetryEvidenceLabels|TestConsoleUISmokeMainline" -count=1` 通过，且未留下额外临时文件或后台进程残留。

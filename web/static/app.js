@@ -240,10 +240,10 @@ const translations = {
       sync_to_directory_tree: "目录树",
       expand_subtree: "展开子树",
       collapse_subtree: "收起子树",
-      rebuild_from_root: "按当前 root 重建向导",
-      retry_current_root: "重试当前 root",
-      auto_recover_current_root: "后台补传当前 root",
-      focus_root: "只看 root",
+      rebuild_from_root: "按当前根目录重建向导",
+      retry_current_root: "重试当前根目录",
+      auto_recover_current_root: "后台补传当前根目录",
+      focus_root: "只看根目录",
       sync_other_tree: "同步另一棵树",
       expand: "展开",
       collapse: "收起",
@@ -318,7 +318,7 @@ const translations = {
       retry_queue_compact: "可重试 {retryable} / 阻塞 {blocked}",
       action_refresh_auth_profile: "刷新授权后继续",
       action_restore_local_source_file: "补回本地文件后继续",
-      action_manual_intervention_required: "修复 provider 会话后继续",
+      action_manual_intervention_required: "修复网盘会话后继续",
       action_wait_for_cooldown: "等待冷却到 {time}",
       action_wait_for_cooldown_fallback: "等待冷却结束后继续",
       action_wait_for_retry_window: "等待时间窗到 {time}",
@@ -333,7 +333,7 @@ const translations = {
       guide_restore_local_step_1: "先补回源文件或校正本地兜底路径，确保 localPath 对应文件真实存在。",
       guide_restore_local_step_2: "如果路径配置有误，建议回到任务向导核对 entries / selectedRoots。",
       guide_restore_local_step_3: "补齐后返回任务详情页重新重试。",
-      guide_manual_intervention_title: "修复 provider 会话缺口",
+      guide_manual_intervention_title: "修复网盘会话缺口",
       guide_manual_intervention_step_1: "当前重试分类（retryClass）是 provider_session_missing，说明网盘返回体缺少 uploadid、upload session 这类关键会话字段。",
       guide_manual_intervention_step_2: "先核对网盘返回体、上传会话构建逻辑和目标端授权档案，确认是否需要重新生成会话或刷新授权。",
       guide_manual_intervention_step_3: "修复后回到状态矩阵，确认这类阻塞项已经收敛，再执行重试。",
@@ -3801,7 +3801,7 @@ function renderBlockedSummary(action, advice, nextRetryAt = "", autoRecoverAdvic
   const actionLabelMap = {
     refresh_auth_profile: t("tasks.action_refresh_auth_profile", "刷新授权后继续"),
     restore_local_source_file: t("tasks.action_restore_local_source_file", "补回本地文件后继续"),
-    manual_intervention_required: t("tasks.action_manual_intervention_required", "修复 provider 会话后继续"),
+    manual_intervention_required: t("tasks.action_manual_intervention_required", "修复网盘会话后继续"),
     wait_for_cooldown: normalizedNextRetryAt ? tf("tasks.action_wait_for_cooldown", { time: normalizedNextRetryAt }, `等待冷却到 ${normalizedNextRetryAt}`) : t("tasks.action_wait_for_cooldown_fallback", "等待冷却结束后继续"),
     wait_for_retry_window: normalizedNextRetryAt ? tf("tasks.action_wait_for_retry_window", { time: normalizedNextRetryAt }, `等待时间窗到 ${normalizedNextRetryAt}`) : t("tasks.action_wait_for_retry_window_fallback", "等待时间窗开放后继续"),
     manual_confirmation_required: t("tasks.action_manual_confirmation_required", "人工确认后继续"),
@@ -3916,11 +3916,11 @@ function renderRuntimeCheckpoint(runtime, metadata = null, scope = "task") {
             <span>${escapeHTML(stringifyValue(metadata.retrySummary.autoRecoverAdvice, "-"))}</span>
           </div>
           <div class="insight-card checkpoint-card">
-            <strong>${escapeHTML(t("tasks.wait_auth_refresh", "恢复等待 - Auth 刷新"))}</strong>
+            <strong>${escapeHTML(t("tasks.wait_auth_refresh", "恢复等待 - 刷新授权"))}</strong>
             <span>${stringifyValue(metadata.retrySummary.autoRecoverWaitingAuthRefreshTasks, "0")}</span>
           </div>
           <div class="insight-card checkpoint-card">
-            <strong>${escapeHTML(t("tasks.wait_local_restore", "恢复等待 - 本地恢复"))}</strong>
+            <strong>${escapeHTML(t("tasks.wait_local_restore", "恢复等待 - 补回本地文件"))}</strong>
             <span>${stringifyValue(metadata.retrySummary.autoRecoverWaitingLocalRestoreTasks, "0")}</span>
           </div>
           <div class="insight-card checkpoint-card">
@@ -4457,7 +4457,7 @@ function renderTreeNodes(nodes, options = {}) {
                         data-tree-prefill-path="${escapeHTML(rootPath)}"
                         data-tree-prefill-scope="${escapeHTML(scope)}"
                         data-tree-prefill-panel="${escapeHTML(panel)}"
-                      >${escapeHTML(t("tasks.rebuild_from_root", "按当前 root 重建向导"))}</button>
+                      >${escapeHTML(t("tasks.rebuild_from_root", "按当前根目录重建向导"))}</button>
                     `
                     : ""
                 }
@@ -4470,7 +4470,7 @@ function renderTreeNodes(nodes, options = {}) {
                         data-tree-retry-path="${escapeHTML(rootPath)}"
                         data-tree-retry-scope="${escapeHTML(scope)}"
                         data-tree-retry-panel="${escapeHTML(panel)}"
-                      >${escapeHTML(t("tasks.retry_current_root", "重试当前 root"))}</button>
+                      >${escapeHTML(t("tasks.retry_current_root", "重试当前根目录"))}</button>
                     `
                     : ""
                 }
@@ -4482,7 +4482,7 @@ function renderTreeNodes(nodes, options = {}) {
                         class="ghost"
                         data-tree-auto-recover-path="${escapeHTML(rootPath)}"
                         data-tree-auto-recover-panel="${escapeHTML(panel)}"
-                      >${escapeHTML(t("tasks.auto_recover_current_root", "后台补传当前 root"))}</button>
+                      >${escapeHTML(t("tasks.auto_recover_current_root", "后台补传当前根目录"))}</button>
                     `
                     : ""
                 }
@@ -4492,7 +4492,7 @@ function renderTreeNodes(nodes, options = {}) {
                   data-tree-focus-path="${escapeHTML(rootPath)}"
                   data-tree-focus-scope="${escapeHTML(scope)}"
                   data-tree-focus-panel="${escapeHTML(panel)}"
-                >${escapeHTML(t("tasks.focus_root", "只看 root"))}</button>
+                >${escapeHTML(t("tasks.focus_root", "只看根目录"))}</button>
                 <button
                   type="button"
                   class="ghost"
@@ -6062,7 +6062,7 @@ function renderTaskResolutionGuide(detail) {
       ],
     },
     manual_intervention_required: {
-      title: t("tasks.guide_manual_intervention_title", "修复 provider 会话缺口"),
+      title: t("tasks.guide_manual_intervention_title", "修复网盘会话缺口"),
       steps: [
         t("tasks.guide_manual_intervention_step_1", "当前重试分类（retryClass）是 provider_session_missing，说明网盘返回体缺少 uploadid、upload session 这类关键会话字段。"),
         t("tasks.guide_manual_intervention_step_2", "先核对网盘返回体、上传会话构建逻辑和目标端授权档案，确认是否需要重新生成会话或刷新授权。"),

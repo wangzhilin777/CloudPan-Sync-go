@@ -645,11 +645,11 @@ func TestConsoleUISmokeMainline(t *testing.T) {
 			}
 			return nil
 		}),
-		waitForText(`#task-resolution-guide`, "修复 provider 会话缺口"),
+		waitForText(`#task-resolution-guide`, "修复网盘会话缺口"),
 		chromedp.Evaluate(`(() => document.querySelector('#task-resolution-guide [data-task-guide-intent="focus_status_blocked"]')?.click())()`, nil),
 		waitForValue(`#auto-recover-blocked-action`, "manual_intervention_required"),
 		waitForText(`#flash`, "已按 blocked action 收敛最近重试队列"),
-		waitForText(`#blocked-actions-summary`, "next-step: 修复 provider 会话后继续"),
+		waitForText(`#blocked-actions-summary`, "next-step: 修复网盘会话后继续"),
 		waitForText(`#blocked-actions-summary`, "manual_intervention_required"),
 	)
 
