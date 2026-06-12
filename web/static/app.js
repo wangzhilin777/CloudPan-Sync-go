@@ -631,6 +631,22 @@ const translations = {
       recent_probes_col_risk_hit: "风控命中",
       recent_probes_col_payload: "载荷",
       recent_probes_col_created_at: "创建时间",
+      matrix_col_provider: "网盘源",
+      matrix_col_protocol_group: "协议组",
+      matrix_col_profile_count: "授权档案数",
+      matrix_col_task_count: "任务数",
+      matrix_col_completed: "已完成",
+      matrix_col_coverage: "覆盖情况",
+      matrix_col_execution_mode: "执行模式",
+      matrix_col_scan_mode: "扫描模式",
+      matrix_col_source_delete_policy: "源端删除策略",
+      matrix_col_risk_mode: "风控档位",
+      matrix_col_recent_probe: "最近 Probe",
+      matrix_col_recent_task_status: "最近任务状态",
+      matrix_col_blocked_count: "阻塞数",
+      matrix_col_auto_recover_count: "自动补传数",
+      matrix_col_primary_action: "当前主动作",
+      matrix_col_snapshot_summary: "快照摘要",
       auto_recover_acceptance: "自动补传验收",
       auto_recover_fairness_summary: "自动补传恢复与公平性摘要",
       recovery_priority_action: "恢复优先动作",
@@ -1811,6 +1827,22 @@ const translations = {
       recent_probes_col_risk_hit: "Risk Hit",
       recent_probes_col_payload: "Payload",
       recent_probes_col_created_at: "Created At",
+      matrix_col_provider: "Provider",
+      matrix_col_protocol_group: "Protocol Group",
+      matrix_col_profile_count: "Auth Profiles",
+      matrix_col_task_count: "Tasks",
+      matrix_col_completed: "Completed",
+      matrix_col_coverage: "Coverage",
+      matrix_col_execution_mode: "Execution Mode",
+      matrix_col_scan_mode: "Scan Mode",
+      matrix_col_source_delete_policy: "Source Delete Policy",
+      matrix_col_risk_mode: "Risk Tier",
+      matrix_col_recent_probe: "Recent Probe",
+      matrix_col_recent_task_status: "Recent Task Status",
+      matrix_col_blocked_count: "Blocked",
+      matrix_col_auto_recover_count: "Auto-Recovery",
+      matrix_col_primary_action: "Current Primary Action",
+      matrix_col_snapshot_summary: "Snapshot Summary",
       auto_recover_acceptance: "Auto-Recovery Acceptance",
       auto_recover_fairness_summary: "Auto-Recovery and Fairness Summary",
       recovery_priority_action: "Recovery Priority Action",
@@ -7645,22 +7677,22 @@ function renderStatus() {
     <table>
       <thead>
         <tr>
-          <th>网盘源</th>
-          <th>协议组</th>
-          <th>授权档案数</th>
-          <th>任务数</th>
-          <th>已完成</th>
-          <th>覆盖情况</th>
-          <th>执行模式</th>
-          <th>扫描模式</th>
-          <th>源端删除策略</th>
-          <th>风控档位</th>
-          <th>最近 Probe</th>
-          <th>最近任务状态</th>
-          <th>阻塞数</th>
-          <th>自动补传数</th>
-          <th>当前主动作</th>
-          <th>快照摘要</th>
+          <th>${escapeHTML(t("status.matrix_col_provider", "网盘源"))}</th>
+          <th>${escapeHTML(t("status.matrix_col_protocol_group", "协议组"))}</th>
+          <th>${escapeHTML(t("status.matrix_col_profile_count", "授权档案数"))}</th>
+          <th>${escapeHTML(t("status.matrix_col_task_count", "任务数"))}</th>
+          <th>${escapeHTML(t("status.matrix_col_completed", "已完成"))}</th>
+          <th>${escapeHTML(t("status.matrix_col_coverage", "覆盖情况"))}</th>
+          <th>${escapeHTML(t("status.matrix_col_execution_mode", "执行模式"))}</th>
+          <th>${escapeHTML(t("status.matrix_col_scan_mode", "扫描模式"))}</th>
+          <th>${escapeHTML(t("status.matrix_col_source_delete_policy", "源端删除策略"))}</th>
+          <th>${escapeHTML(t("status.matrix_col_risk_mode", "风控档位"))}</th>
+          <th>${escapeHTML(t("status.matrix_col_recent_probe", "最近 Probe"))}</th>
+          <th>${escapeHTML(t("status.matrix_col_recent_task_status", "最近任务状态"))}</th>
+          <th>${escapeHTML(t("status.matrix_col_blocked_count", "阻塞数"))}</th>
+          <th>${escapeHTML(t("status.matrix_col_auto_recover_count", "自动补传数"))}</th>
+          <th>${escapeHTML(t("status.matrix_col_primary_action", "当前主动作"))}</th>
+          <th>${escapeHTML(t("status.matrix_col_snapshot_summary", "快照摘要"))}</th>
         </tr>
       </thead>
       <tbody>

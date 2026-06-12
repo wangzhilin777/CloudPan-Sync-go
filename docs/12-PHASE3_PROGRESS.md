@@ -251,3 +251,6 @@
 
 - 已把上传断点续传卡（`renderUploadCheckpoint`）里 10 条一直内联硬编码中文的 `<strong>` 标签接入双语词典，覆盖「上传恢复文件 / 上传会话 / 续传就绪 / 上传分片进度 / 已传分片摘要 / 失败分片 / 下一个分片 / Provider 恢复线索 / 上传状态 / 检查点时间」，并把分片进度里「，证据 N 段」拆成带 `{count}` 占位的 `checkpoint_card_part_evidence`，新增 11 条 zh-CN / en-US 双语键。这块卡此前完全不走 `t()`，英文模式下整块仍是中文；现在切到英文会显示对应英文标签，同时保留「续传就绪 / 已传分片摘要 / Provider 恢复线索」等 `internal/app` 静态锚点（fallback 仍是中文原文）。
 - 上述断点续传卡词典化后确认 `node --check web/static/app.js` 通过、`go test ./internal/app ./internal/task -count=1` 全量通过，未留下额外临时文件或后台进程残留。
+
+- 已把状态页“网盘源状态矩阵”表格的 16 个表头从内联中文改成词典驱动（`status.matrix_col_*`），覆盖网盘源 / 协议组 / 授权档案数 / 任务数 / 已完成 / 覆盖情况 / 执行模式 / 扫描模式 / 源端删除策略 / 风控档位 / 最近 Probe / 最近任务状态 / 阻塞数 / 自动补传数 / 当前主动作 / 快照摘要，补齐 zh-CN / en-US 双语，英文模式下状态矩阵表头不再夹中文。同步把 `internal/app/web_test.go` 里依赖 `<th>网盘源</th> / <th>协议组</th> / <th>源端删除策略</th>` 整段 markup 的三个锚点改成校验词典 key（`status.matrix_col_provider / matrix_col_protocol_group / matrix_col_source_delete_policy`），避免词典化后整段 `<th>...</th>` 字面量不再连续导致断言失败。
+- 上述状态矩阵表头词典化后确认 `node --check web/static/app.js` 通过、`go test ./internal/app ./internal/task -count=1` 全量通过，未留下额外临时文件或后台进程残留。

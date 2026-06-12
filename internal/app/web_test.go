@@ -1713,13 +1713,13 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "<th>重试路径</th>") {
 		t.Fatalf("expected localized retry-paths column in app.js, got %q", body)
 	}
-	if !strings.Contains(body, "<th>网盘源</th>") {
+	if !strings.Contains(body, "status.matrix_col_provider") {
 		t.Fatalf("expected localized provider column in app.js, got %q", body)
 	}
-	if !strings.Contains(body, "<th>协议组</th>") {
+	if !strings.Contains(body, "status.matrix_col_protocol_group") {
 		t.Fatalf("expected localized protocol-group column in app.js, got %q", body)
 	}
-	if !strings.Contains(body, "<th>源端删除策略</th>") {
+	if !strings.Contains(body, "status.matrix_col_source_delete_policy") {
 		t.Fatalf("expected localized source-delete column in app.js, got %q", body)
 	}
 	if !strings.Contains(body, "涉及网盘源：") {
