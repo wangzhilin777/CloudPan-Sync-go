@@ -22,6 +22,10 @@ func TestBuildChromeAppArgs(t *testing.T) {
 	if args[2] != "--user-data-dir=/tmp/cloudpan-sync-desktop-profile" {
 		t.Fatalf("expected dedicated user-data-dir arg, got %v", args)
 	}
+	joined := strings.Join(args, " ")
+	if !strings.Contains(joined, "--window-size=") {
+		t.Fatalf("expected an explicit window size for an app-like window, got %v", args)
+	}
 }
 
 func TestWaitForReady(t *testing.T) {

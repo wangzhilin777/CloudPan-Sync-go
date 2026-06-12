@@ -140,6 +140,7 @@ func buildChromeAppArgs(url string, profileDir string) []string {
 		"--app=" + url,
 		"--new-window",
 		"--user-data-dir=" + profileDir,
+		"--window-size=1280,860",
 		"--no-first-run",
 		"--no-default-browser-check",
 		"--disable-features=Translate,msEdgeSidebarV2",
