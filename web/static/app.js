@@ -823,6 +823,17 @@ const translations = {
       upload_checkpoint_resume_detail: "续传详情：上传 {uploadId} / 下一分片 {nextPart} / 已上传 {uploaded}/{partCount}",
       upload_checkpoint_sample_paths: "样本路径：{value}",
       upload_checkpoint_priority_action_label: "恢复优先动作：{value}",
+      checkpoint_card_item_path: "上传恢复文件",
+      checkpoint_card_upload_session: "上传会话",
+      checkpoint_card_resume_ready: "续传就绪",
+      checkpoint_card_part_progress: "上传分片进度",
+      checkpoint_card_part_evidence: "，证据 {count} 段",
+      checkpoint_card_part_summary: "已传分片摘要",
+      checkpoint_card_failed_part: "失败分片",
+      checkpoint_card_next_part: "下一个分片",
+      checkpoint_card_provider_clue: "Provider 恢复线索",
+      checkpoint_card_upload_status: "上传状态",
+      checkpoint_card_updated_at: "检查点时间",
       waiting_reason_summary_detail: "冷却 {cooldown} / 时间窗 {retryWindow} / 授权 {authRefresh} / 本地文件 {localRestore} / 人工处理 {manual}",
       lane_summary_detail: "网盘源 {provider} / 协议组 {protocolGroup} / 授权档案 {profileId} / 网盘源数 {providerCount} / 授权档案数 {profileCount}",
       sample_context_provider: "网盘源 {value}",
@@ -2000,6 +2011,17 @@ const translations = {
       upload_checkpoint_resume_detail: "Resume details: upload {uploadId} / next part {nextPart} / uploaded {uploaded}/{partCount}",
       upload_checkpoint_sample_paths: "Sample paths: {value}",
       upload_checkpoint_priority_action_label: "Recovery priority action: {value}",
+      checkpoint_card_item_path: "Upload Recovery File",
+      checkpoint_card_upload_session: "Upload Session",
+      checkpoint_card_resume_ready: "Resume Ready",
+      checkpoint_card_part_progress: "Part Progress",
+      checkpoint_card_part_evidence: ", {count} evidence segments",
+      checkpoint_card_part_summary: "Uploaded Parts Summary",
+      checkpoint_card_failed_part: "Failed Part",
+      checkpoint_card_next_part: "Next Part",
+      checkpoint_card_provider_clue: "Provider Recovery Clue",
+      checkpoint_card_upload_status: "Upload Status",
+      checkpoint_card_updated_at: "Checkpoint Time",
       waiting_reason_summary_detail: "cooldown {cooldown} / retry window {retryWindow} / auth {authRefresh} / local file {localRestore} / manual {manual}",
       lane_summary_detail: "provider {provider} / protocol group {protocolGroup} / auth profile {profileId} / providers {providerCount} / profiles {profileCount}",
       sample_context_provider: "Provider {value}",
@@ -4653,43 +4675,43 @@ function renderUploadCheckpoint(checkpoint) {
   const uploadedPartsLen = Array.isArray(checkpoint.uploadedParts) ? checkpoint.uploadedParts.length : 0;
   return `
     <div class="insight-card checkpoint-card">
-      <strong>上传恢复文件</strong>
+      <strong>${escapeHTML(t("status.checkpoint_card_item_path", "上传恢复文件"))}</strong>
       <span><code>${escapeHTML(stringifyValue(checkpoint.itemPath, "-"))}</code></span>
     </div>
     <div class="insight-card checkpoint-card">
-      <strong>上传会话</strong>
+      <strong>${escapeHTML(t("status.checkpoint_card_upload_session", "上传会话"))}</strong>
       <span>${stringifyValue(checkpoint.uploadId, "-")}</span>
     </div>
     <div class="insight-card checkpoint-card">
-      <strong>续传就绪</strong>
+      <strong>${escapeHTML(t("status.checkpoint_card_resume_ready", "续传就绪"))}</strong>
       <span>${escapeHTML(renderUploadCheckpointResumeState(checkpoint))}</span>
     </div>
     <div class="insight-card checkpoint-card">
-      <strong>上传分片进度</strong>
-      <span>${uploadedPartCount} / ${partCount}，证据 ${uploadedPartsLen} 段</span>
+      <strong>${escapeHTML(t("status.checkpoint_card_part_progress", "上传分片进度"))}</strong>
+      <span>${uploadedPartCount} / ${partCount}${escapeHTML(tf("status.checkpoint_card_part_evidence", { count: uploadedPartsLen }, `，证据 ${uploadedPartsLen} 段`))}</span>
     </div>
     <div class="insight-card checkpoint-card">
-      <strong>已传分片摘要</strong>
+      <strong>${escapeHTML(t("status.checkpoint_card_part_summary", "已传分片摘要"))}</strong>
       <span>${escapeHTML(renderUploadCheckpointPartSummary(checkpoint.uploadedParts))}</span>
     </div>
     <div class="insight-card checkpoint-card">
-      <strong>失败分片</strong>
+      <strong>${escapeHTML(t("status.checkpoint_card_failed_part", "失败分片"))}</strong>
       <span>${stringifyValue(checkpoint.failedPartNumber, "-")}</span>
     </div>
     <div class="insight-card checkpoint-card">
-      <strong>下一个分片</strong>
+      <strong>${escapeHTML(t("status.checkpoint_card_next_part", "下一个分片"))}</strong>
       <span>${stringifyValue(checkpoint.nextPartNumber, "-")}</span>
     </div>
     <div class="insight-card checkpoint-card">
-      <strong>Provider 恢复线索</strong>
+      <strong>${escapeHTML(t("status.checkpoint_card_provider_clue", "Provider 恢复线索"))}</strong>
       <span>${escapeHTML(renderUploadCheckpointProviderDataSummary(checkpoint.providerData))}</span>
     </div>
     <div class="insight-card checkpoint-card">
-      <strong>上传状态</strong>
+      <strong>${escapeHTML(t("status.checkpoint_card_upload_status", "上传状态"))}</strong>
       <span>${stringifyValue(checkpoint.providerStatus, "-")}</span>
     </div>
     <div class="insight-card checkpoint-card">
-      <strong>检查点时间</strong>
+      <strong>${escapeHTML(t("status.checkpoint_card_updated_at", "检查点时间"))}</strong>
       <span>${stringifyValue(checkpoint.updatedAt, "-")}</span>
     </div>
   `;

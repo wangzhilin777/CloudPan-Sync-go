@@ -248,3 +248,6 @@
 
 - 已把授权档案列表表格从内联中文改成双语词典驱动：表头（显示名称 / 网盘源 / 授权方式 / 账号默认风控 / 状态 / 操作）、行内「账号默认来源 / 账号默认建议」标签、编辑 / 验证授权 / 删除按钮，以及「暂无授权档案」空态都接入 `providers.profile_table_*` 系列 key，补齐 zh-CN / en-US 双语；同步把 `web_test.go` 里依赖的「账号默认来源: / 账号默认建议:」锚点改成不含冒号的标签锚点（冒号已拆成独立字面量），让英文模式下授权档案列表不再夹中文表头与按钮。
 - 上述授权档案列表词典化后确认 `node --check web/static/app.js` 通过、`go test ./internal/app -count=1` 全量通过，未留下额外临时文件或后台进程残留。
+
+- 已把上传断点续传卡（`renderUploadCheckpoint`）里 10 条一直内联硬编码中文的 `<strong>` 标签接入双语词典，覆盖「上传恢复文件 / 上传会话 / 续传就绪 / 上传分片进度 / 已传分片摘要 / 失败分片 / 下一个分片 / Provider 恢复线索 / 上传状态 / 检查点时间」，并把分片进度里「，证据 N 段」拆成带 `{count}` 占位的 `checkpoint_card_part_evidence`，新增 11 条 zh-CN / en-US 双语键。这块卡此前完全不走 `t()`，英文模式下整块仍是中文；现在切到英文会显示对应英文标签，同时保留「续传就绪 / 已传分片摘要 / Provider 恢复线索」等 `internal/app` 静态锚点（fallback 仍是中文原文）。
+- 上述断点续传卡词典化后确认 `node --check web/static/app.js` 通过、`go test ./internal/app ./internal/task -count=1` 全量通过，未留下额外临时文件或后台进程残留。
