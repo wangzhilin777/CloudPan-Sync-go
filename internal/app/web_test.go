@@ -288,7 +288,7 @@ func TestRoutesServeAppJSIncludesRetryEvidenceLabels(t *testing.T) {
 	if !strings.Contains(body, "已传分片摘要") {
 		t.Fatalf("expected upload checkpoint part summary label in app.js, got %q", body)
 	}
-	if !strings.Contains(body, "Provider 恢复线索") {
+	if !strings.Contains(body, "网盘源恢复线索") {
 		t.Fatalf("expected upload checkpoint provider data label in app.js, got %q", body)
 	}
 	if !strings.Contains(body, "校准结果") {

@@ -254,3 +254,5 @@
 
 - 已把状态页“网盘源状态矩阵”表格的 16 个表头从内联中文改成词典驱动（`status.matrix_col_*`），覆盖网盘源 / 协议组 / 授权档案数 / 任务数 / 已完成 / 覆盖情况 / 执行模式 / 扫描模式 / 源端删除策略 / 风控档位 / 最近 Probe / 最近任务状态 / 阻塞数 / 自动补传数 / 当前主动作 / 快照摘要，补齐 zh-CN / en-US 双语，英文模式下状态矩阵表头不再夹中文。同步把 `internal/app/web_test.go` 里依赖 `<th>网盘源</th> / <th>协议组</th> / <th>源端删除策略</th>` 整段 markup 的三个锚点改成校验词典 key（`status.matrix_col_provider / matrix_col_protocol_group / matrix_col_source_delete_policy`），避免词典化后整段 `<th>...</th>` 字面量不再连续导致断言失败。
 - 上述状态矩阵表头词典化后确认 `node --check web/static/app.js` 通过、`go test ./internal/app ./internal/task -count=1` 全量通过，未留下额外临时文件或后台进程残留。
+
+- 已修复上传断点续传检查点卡里 `status.checkpoint_card_provider_clue` 中文模式仍显示英文 `Provider 恢复线索` 的问题，把 zh 文案、内联 fallback 和 `internal/app/web_test.go` 锚点统一收口成「网盘源恢复线索」，与界面其它「网盘源」表达保持一致；英文模式继续显示 `Provider Recovery Clue`。

@@ -847,7 +847,7 @@ const translations = {
       checkpoint_card_part_summary: "已传分片摘要",
       checkpoint_card_failed_part: "失败分片",
       checkpoint_card_next_part: "下一个分片",
-      checkpoint_card_provider_clue: "Provider 恢复线索",
+      checkpoint_card_provider_clue: "网盘源恢复线索",
       checkpoint_card_upload_status: "上传状态",
       checkpoint_card_updated_at: "检查点时间",
       waiting_reason_summary_detail: "冷却 {cooldown} / 时间窗 {retryWindow} / 授权 {authRefresh} / 本地文件 {localRestore} / 人工处理 {manual}",
@@ -4735,7 +4735,7 @@ function renderUploadCheckpoint(checkpoint) {
       <span>${stringifyValue(checkpoint.nextPartNumber, "-")}</span>
     </div>
     <div class="insight-card checkpoint-card">
-      <strong>${escapeHTML(t("status.checkpoint_card_provider_clue", "Provider 恢复线索"))}</strong>
+      <strong>${escapeHTML(t("status.checkpoint_card_provider_clue", "网盘源恢复线索"))}</strong>
       <span>${escapeHTML(renderUploadCheckpointProviderDataSummary(checkpoint.providerData))}</span>
     </div>
     <div class="insight-card checkpoint-card">
