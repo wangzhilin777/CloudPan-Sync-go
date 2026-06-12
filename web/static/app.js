@@ -889,6 +889,7 @@ const translations = {
       flash_profile_updated: "授权档案已更新",
       assist_discovery_not_found: "没有找到对应的发现结果，请重新检测一次",
       assist_discovery_applied: "已从 {kind} 回填存储“{name}”，可继续补当前网盘源需要的授权字段",
+      assist_discovery_applied_matched: "已从 {kind} 回填存储“{name}”，并自动选中匹配的网盘源 {provider}，请继续补 Token / Cookie 等授权字段",
       assist_discovery_apply_failed: "回填发现结果失败：{error}",
       assist_open_url_required: "请先填写 {display} 地址",
       assist_open_login_page: "已打开 {display} 登录页",
@@ -1996,6 +1997,7 @@ const translations = {
       flash_profile_updated: "Auth profile updated",
       assist_discovery_not_found: "No matching discovery result was found. Please detect again.",
       assist_discovery_applied: "Applied storage “{name}” from {kind}; you can continue filling the provider auth fields.",
+      assist_discovery_applied_matched: "Applied storage “{name}” from {kind} and auto-selected the matching provider {provider}. Continue filling token / cookie and other auth fields.",
       assist_discovery_apply_failed: "Failed to apply the discovery result: {error}",
       assist_open_url_required: "Please fill the {display} URL first",
       assist_discovery_invalid_address: "Please fill the {display} URL first",
@@ -2752,6 +2754,31 @@ function renderAuthAssistDiscoveryHTML(response) {
   `;
 }
 
+function matchProviderKeyFromAssistDriver(driver) {
+  const normalized = String(driver || "").toLowerCase().replace(/[\s_-]+/g, "");
+  if (!normalized) {
+    return "";
+  }
+  // 按 OpenList / Alist 常见 driver 命名做关键词匹配，特例优先、宽泛词兜底。
+  const rules = [
+    { key: "aliyundrive_open", keywords: ["aliyundriveopen", "aliyundriveshare", "aliyundrive", "aliyun", "alipan"] },
+    { key: "123_open", keywords: ["123panopen", "123panlink", "123pan", "123open", "123"] },
+    { key: "115_open", keywords: ["115open", "115cloud", "115share", "115"] },
+    { key: "quark", keywords: ["quarkopen", "quarktv", "quark"] },
+    { key: "uc", keywords: ["ucopen", "ucdrive", "ucpan"] },
+    { key: "189cloud", keywords: ["189cloudpc", "189cloud", "cloud189", "189", "tianyi"] },
+    { key: "baidu_netdisk", keywords: ["baidunetdisk", "baidushare", "baiduphoto", "baidu"] },
+    { key: "xunlei", keywords: ["thunderbrowser", "thunderx", "xunleiopen", "thunder", "xunlei"] },
+    { key: "pikpak", keywords: ["pikpakshare", "pikpak"] },
+  ];
+  for (const rule of rules) {
+    if (rule.keywords.some((keyword) => normalized.includes(keyword))) {
+      return rule.key;
+    }
+  }
+  return "";
+}
+
 function updateProfileExtraWithAssist(extra, payload) {
   const next = extra && typeof extra === "object" ? { ...extra } : {};
   Object.entries(payload || {}).forEach(([key, value]) => {
@@ -2778,6 +2805,15 @@ function applyAuthAssistDiscoverySelection(index) {
   if (displayName) {
     $("#profile-display-name").value = displayName;
   }
+  const matchedProviderKey = matchProviderKeyFromAssistDriver(item.driver);
+  let providerMatched = false;
+  if (matchedProviderKey) {
+    const providerSelect = $("#profile-provider");
+    if (providerSelect && [...providerSelect.options].some((option) => option.value === matchedProviderKey)) {
+      setSelectValueIfPresent("#profile-provider", matchedProviderKey);
+      providerMatched = true;
+    }
+  }
   const extra = parseJSONInput($("#profile-extra").value, {});
   const merged = updateProfileExtraWithAssist(extra, {
     assistKind: kind,
@@ -2790,6 +2826,15 @@ function applyAuthAssistDiscoverySelection(index) {
   });
   $("#profile-extra").value = Object.keys(merged).length ? JSON.stringify(merged, null, 2) : "";
   syncAuthAssistDiscovery(discovery);
+  if (providerMatched) {
+    showFlash(
+      t("providers.assist_discovery_applied_matched", "已从 {kind} 回填存储“{name}”，并自动选中匹配的网盘源 {provider}，请继续补 Token / Cookie 等授权字段")
+        .replace("{kind}", kindLabel)
+        .replace("{name}", stringifyValue(item.name, "未命名存储"))
+        .replace("{provider}", stringifyValue(findProviderEntry(matchedProviderKey)?.meta?.displayName, matchedProviderKey)),
+    );
+    return;
+  }
   showFlash(
     t("providers.assist_discovery_applied", "已从 {kind} 回填存储“{name}”，可继续补当前网盘源需要的授权字段")
       .replace("{kind}", kindLabel)
