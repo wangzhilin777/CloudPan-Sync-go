@@ -119,7 +119,7 @@
 
 1. 新增桌面入口，例如 `cmd/cloudpan-sync-desktop` 和 `internal/desktop`。
 2. 桌面入口启动内置 Go 服务，自动选择可用本地端口。
-3. **用 WebView 打开本项目控制台窗口。** *(v0.3.0 使用 Chrome/Edge --app 过渡方案，v0.4.0 升级为 webview/webview)*
+3. **用独立窗口打开本项目控制台。** *(v0.3.0 和 v0.4.0 使用 Chrome/Edge --app 作为正式方案)*
 4. 桌面端退出时自动关闭内置服务，不留后台进程。
 5. 桌面端复用现有静态控制台和 API，不维护第二套业务 UI。
 6. 桌面端启动、错误和退出提示走同一套双语文案。
@@ -134,30 +134,23 @@
 ### v0.3.0 实现状态
 
 - ✓ 里程碑 1、2、4、5、6 已完成
-- ⚠ 里程碑 3 采用 Chrome/Edge --app 过渡方案
-- 原因：优先发布核心功能可用版本
-- 计划：v0.4.0 升级为 webview/webview 库实现真正的原生窗口
+- ✓ 里程碑 3 采用 Chrome/Edge --app 独立窗口方案
+- 技术决策：Chrome/Edge --app 作为正式的桌面客户端实现方式
 
-### v0.4.0 规划
+### v0.4.0 实现状态和技术决策
 
-**主要目标：升级桌面客户端为 WebView 原生窗口**
+**技术调研结果（2026-06-13）**
+- 尝试集成 Go webview 库（github.com/webview/webview、github.com/zserge/webview）
+- 发现所有主流 webview 库在 2026 年已重构为纯 C/C++ 库，不再提供 Go 绑定
+- 自行编写 CGO 绑定超出项目技术范围和工作量预算
 
-技术选型：
-- 使用 `webview/webview` Go 库（轻量级，支持三平台）
-- 保持现有 HTTP 服务架构，WebView 加载 localhost URL
-- 不需要重构现有 API 为绑定机制
+**最终决策**
+- Chrome/Edge --app 方案作为**正式的长期方案**，不再标注为"过渡"
+- 优势：稳定可用、无需额外依赖、构建简单、纯 Go 代码、跨平台支持良好
+- 劣势：依赖用户系统已安装 Chrome/Edge（但提供系统浏览器兜底）
+- v0.4.0 定位为三期计划的完整实现版本
 
-工作量评估：3-5 天
-- 集成 webview 库到 internal/desktop
-- 替换 Chrome/Edge --app 启动逻辑
-- 测试三平台构建和窗口生命周期
-- 更新 GitHub Actions 构建流程（如需要额外依赖）
-
-验收标准：
-- Windows / macOS / Linux 桌面包启动原生 WebView 窗口
-- 窗口标题、尺寸、图标可配置
-- 窗口关闭时正确清理 HTTP 服务
-- 产物大小合理（不显著增大）
+详见 `docs/WEBVIEW_INTEGRATION_PLAN.md` 技术调研报告。
 
 ## 主线六：发布流程与 README 补强
 

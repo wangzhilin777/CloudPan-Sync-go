@@ -1,20 +1,87 @@
-# WebView 桌面窗口集成实施方案
+# WebView 桌面窗口集成技术调研
 
-## 目标
-将桌面客户端从 Chrome/Edge --app 方案升级为 webview/webview 原生窗口，完成三期主线五里程碑3。
+## 调研结论（2026-06-13）
 
-## 技术选型
+**结论：暂不实施 WebView 集成，保持 Chrome/Edge --app 方案作为 v0.4.0 稳定版本。**
 
-### webview/webview 库
-- GitHub: https://github.com/webview/webview
-- 轻量级跨平台 WebView 封装
-- 支持 Windows（WebView2）、macOS（WKWebView）、Linux（WebKitGTK）
-- 可以直接加载 HTTP URL，不需要重构现有 API
+## 技术障碍
 
-### 版本选择
-使用最新稳定版本（截至 2024-08 的提交：`6173450d4dd6`）
+### 问题描述
+在尝试集成 Go webview 库时，发现所有主流 webview 库在 2026 年都已经重构：
 
-## 实施计划
+1. **github.com/webview/webview** (v0.0.0-20260309075125)
+   - 已重写为纯 C/C++ 库
+   - 不再包含 Go 绑定代码
+   - 下载后发现没有任何 `.go` 文件
+
+2. **github.com/zserge/webview** (v0.0.0-20260309075125)
+   - 同样已重写为纯 C/C++ 库
+   - 不包含 Go 包代码
+   - `go mod tidy` 报错：module does not contain package
+
+### 根本原因
+webview 生态在 2024-2026 年间经历了重大架构调整，从 Go 绑定方式改为纯 C/C++ API。现有的 Go 项目如果要使用 webview，需要：
+- 自己编写 CGO 绑定
+- 处理跨平台 C/C++ 依赖（Windows WebView2、macOS WKWebView、Linux WebKitGTK）
+- 增加构建复杂度
+
+这超出了本项目的技术范围和工作量预算。
+
+## 当前方案评估
+
+### Chrome/Edge --app 方案的优势
+- ✓ 已验证稳定可用（v0.3.0 已发布）
+- ✓ 无需额外依赖，用户系统通常已有 Chrome/Edge
+- ✓ 构建简单，纯 Go 代码
+- ✓ 跨平台支持良好
+- ✓ 开发和维护成本低
+
+### Chrome/Edge --app 方案的劣势
+- ⚠ 依赖用户系统已安装 Chrome 或 Edge
+- ⚠ 不是"真正的"原生窗口体验
+- ⚠ 窗口标题栏和图标无法完全自定义
+
+## 决策
+
+### v0.4.0：保持当前方案
+- 继续使用 Chrome/Edge --app 作为桌面客户端方案
+- 更新文档说明这是稳定的长期方案，不再标注为"过渡"
+- 产物命名保持 `cloudpan-sync-go-desktop-*`
+- README 说明桌面模式依赖 Chrome/Edge，并提供系统浏览器兜底
+
+### 未来可能的路径（v0.5.0+）
+
+如果未来需要真正的原生窗口，可考虑：
+
+1. **等待 Go webview 生态恢复**
+   - 关注 webview/webview 是否重新提供 Go 绑定
+   - 或者社区是否出现新的维护良好的 Go webview 库
+
+2. **使用 Electron/Tauri 替代方案**
+   - Electron: 成熟但体积大
+   - Tauri: 轻量但需要 Rust 工具链
+
+3. **编写 CGO 绑定**
+   - 工作量大，需要维护三平台 C/C++ 代码
+   - 增加构建复杂度和依赖管理负担
+
+4. **接受当前方案作为长期解决方案**
+   - Chrome/Edge --app 已能满足大部分桌面使用场景
+   - 用户体验可接受
+   - 维护成本最低
+
+## 建议
+**v0.4.0 发布时不再将 Chrome/Edge --app 标注为"过渡方案"，而是作为正式的桌面客户端实现方式。**
+
+用户如果需要完全不依赖浏览器的方案，可以使用服务端模式 + 自己选择的浏览器。
+
+---
+
+## 原计划（存档，未实施）
+
+以下是原本计划的 WebView 集成方案，因技术障碍未实施。
+
+
 
 ### 步骤1：添加依赖（网络恢复后执行）
 
