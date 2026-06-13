@@ -119,7 +119,7 @@
 
 1. 新增桌面入口，例如 `cmd/cloudpan-sync-desktop` 和 `internal/desktop`。
 2. 桌面入口启动内置 Go 服务，自动选择可用本地端口。
-3. 用 Wails / WebView 打开本项目控制台窗口。
+3. **用 WebView 打开本项目控制台窗口。** *(v0.3.0 使用 Chrome/Edge --app 过渡方案，v0.4.0 升级为 webview/webview)*
 4. 桌面端退出时自动关闭内置服务，不留后台进程。
 5. 桌面端复用现有静态控制台和 API，不维护第二套业务 UI。
 6. 桌面端启动、错误和退出提示走同一套双语文案。
@@ -130,6 +130,34 @@
 - 用户无需手动访问 `127.0.0.1` 也能进入面板。
 - 退出桌面应用后，本地服务进程被清理。
 - 服务端包、Docker 包和桌面包互不污染。
+
+### v0.3.0 实现状态
+
+- ✓ 里程碑 1、2、4、5、6 已完成
+- ⚠ 里程碑 3 采用 Chrome/Edge --app 过渡方案
+- 原因：优先发布核心功能可用版本
+- 计划：v0.4.0 升级为 webview/webview 库实现真正的原生窗口
+
+### v0.4.0 规划
+
+**主要目标：升级桌面客户端为 WebView 原生窗口**
+
+技术选型：
+- 使用 `webview/webview` Go 库（轻量级，支持三平台）
+- 保持现有 HTTP 服务架构，WebView 加载 localhost URL
+- 不需要重构现有 API 为绑定机制
+
+工作量评估：3-5 天
+- 集成 webview 库到 internal/desktop
+- 替换 Chrome/Edge --app 启动逻辑
+- 测试三平台构建和窗口生命周期
+- 更新 GitHub Actions 构建流程（如需要额外依赖）
+
+验收标准：
+- Windows / macOS / Linux 桌面包启动原生 WebView 窗口
+- 窗口标题、尺寸、图标可配置
+- 窗口关闭时正确清理 HTTP 服务
+- 产物大小合理（不显著增大）
 
 ## 主线六：发布流程与 README 补强
 

@@ -169,6 +169,61 @@
 
 - 已完成三期核心功能验证（2026-06-13）：确认 `node --check web/static/app.js` 通过、`go test ./...` 全量通过（含 UI smoke、桌面双语、授权引导等关键测试），且未留下额外临时文件或后台进程残留。
 
+- **已发布 v0.3.0（2026-06-13）**：推送代码到 GitHub 并打标签触发 Release 构建，包含服务端包、桌面包（Chrome/Edge --app 方案）、Docker 镜像。
+
+## v0.3.0 发布总结
+
+按 `docs/11-PHASE3_UX_DESKTOP_PLAN.md` 验收标准对照，v0.3.0 完成情况：
+
+**完全达标（3条主线）**
+- ✓ 主线二：完整双语与中文友好提示
+- ✓ 主线四：源目录到目标目录的可视化选择
+- ✓ 主线六：发布流程与 README 补强
+
+**核心功能已完成（2条主线）**
+- ⚠ 主线一：控制台体验收口（Provider 卡压缩、信息密度减少已完成，窄屏控件变形专项测试未记录）
+- ⚠ 主线三：授权引导（OpenList/Alist 连接检测、存储发现、自动匹配 provider 已完成，OpenList→Alist 主动切换引导未实现且不需要）
+
+**使用过渡方案（1条主线）**
+- ⚠ 主线五：图形化桌面客户端（使用 Chrome/Edge --app 而非计划要求的 Wails/WebView 原生窗口）
+
+**v0.3.0 可交付性评估**
+- ✓ 满足"普通用户可用"的核心目标
+- ✓ 主流程完整：授权→选目录→创建任务→运行
+- ✓ 完整双语支持，中文模式下体验友好
+- ✓ 桌面客户端可用（过渡方案）
+- ✓ 发布流程完善，三平台包自动构建
+
+详见 `docs/PHASE3_COMPLETION_ANALYSIS.md`
+
+## v0.4.0 规划（进行中）
+
+### 主要目标
+升级桌面客户端为 WebView 原生窗口，完成主线五里程碑3的最终实现。
+
+### 技术选型
+- 使用 `webview/webview` Go 库（https://github.com/webview/webview）
+- 轻量级跨平台 WebView 封装，支持 Windows/macOS/Linux
+- 保持现有 HTTP 服务架构，WebView 加载 localhost URL
+- 不需要重构现有 API，复用 web/static 和 internal/app
+
+### 实现计划
+1. 添加 webview 依赖到 go.mod
+2. 重构 internal/desktop 启动逻辑，替换 Chrome/Edge --app
+3. 配置 WebView 窗口属性（标题、尺寸、生命周期）
+4. 测试三平台构建和窗口关闭时服务清理
+5. 更新 GitHub Actions 构建流程（如需平台特定依赖）
+6. 验证产物大小和用户体验
+
+### 验收标准
+- ✓ Windows / macOS / Linux 桌面包启动真正的原生 WebView 窗口
+- ✓ 窗口关闭时正确清理 HTTP 服务进程
+- ✓ 产物大小合理，构建流程稳定
+- ✓ 用户体验优于 Chrome/Edge --app 方案（无浏览器依赖）
+
+### 工作量评估
+3-5 天（集成、测试、构建流程更新）
+
 ## 三期核心功能完成情况总结
 
 按 `docs/11-PHASE3_UX_DESKTOP_PLAN.md` 验收标准对照：
@@ -218,7 +273,10 @@
 
 ## 正在推进
 
-- 继续清理 `web/static/app.js` 中仍暴露给用户的中英混合提示（深层诊断串、后端下发优先动作等）。
+- v0.4.0 WebView 桌面窗口集成（待网络恢复后添加依赖）
+  - 已完成：技术选型（webview/webview）、实施方案文档（docs/WEBVIEW_INTEGRATION_PLAN.md）
+  - 待完成：添加依赖、重构 internal/desktop、测试三平台构建
+  
 - 按三期计划继续收口普通用户主流程可理解性，而不是继续堆叠底层能力展示。
 - 继续把目录浏览器从”基础可用”推进到更完整的可视化选择器，例如多选/收藏和更广泛 smoke 验证。
 
