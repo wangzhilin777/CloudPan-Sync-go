@@ -253,7 +253,9 @@
 - Provider 卡默认压缩，只展示名称、状态、核心能力和授权入口
 - 能力详情、风险提示、fallback、恢复预算移入”展开高级信息”折叠区
 - 普通用户可按”授权 -> 选源目录 -> 选目标目录 -> 创建任务 -> 运行”完成主流程
-- 基础响应式设计已存在（@media max-width: 960px）
+- 统一按钮 `border-radius: 999px` 胶囊样式，toggle chip 补上窄屏和长文本防变形处理
+- 响应式设计覆盖 960px 和 640px 两级断点，支持平板和手机访问
+- 所有控件在窄屏下自适应布局，不再出现文字竖排或控件溢出
 
 **主线二：完整双语与中文友好提示** ✓ 已完成
 - 建立统一 i18n 机制，所有导航、按钮、表单、toast、错误提示走翻译函数
@@ -294,31 +296,10 @@
 - Docker 归档包含 `release` 和 `latest` 双标签
 
 **v0.4.0 可交付评估**
-- ✓ 所有三期计划六条主线核心功能已完成
+- ✓ 所有三期计划六条主线全部完成（包括主线一遗留的 UI 细节优化）
 - ✓ 技术方案稳定可靠（Chrome/Edge --app 作为正式方案）
 - ✓ 文档完整（计划、进度、完成分析、技术调研）
 - ✓ 可以作为 v0.4.0 发布
-
-
-- Release 工作流已扩展到 Windows / Linux / macOS 桌面包构建矩阵
-
-**主线六：发布流程与 README 补强** ✓ 已完成
-- Release 工作流清晰区分服务端包、桌面客户端包和 Docker 镜像归档
-- 桌面包命名使用本项目名称 `cloudpan-sync-go-desktop-*`
-- Release 中文描述说明每类包适合什么用户
-- SHA256SUMS.txt 覆盖服务端包、桌面包和 Docker 归档
-- README 增加桌面客户端使用说明
-- 发布产物白名单校验，禁止出现外部项目资产名
-- Docker 归档包含 `release` 和 `latest` 双标签
-
-## 正在推进
-
-- v0.4.0 WebView 桌面窗口集成（待网络恢复后添加依赖）
-  - 已完成：技术选型（webview/webview）、实施方案文档（docs/WEBVIEW_INTEGRATION_PLAN.md）
-  - 待完成：添加依赖、重构 internal/desktop、测试三平台构建
-  
-- 按三期计划继续收口普通用户主流程可理解性，而不是继续堆叠底层能力展示。
-- 继续把目录浏览器从”基础可用”推进到更完整的可视化选择器，例如多选/收藏和更广泛 smoke 验证。
 
 ## 后续可继续增强（非三期核心验收项）
 
@@ -410,3 +391,28 @@
 
 - 已把检查点卡「续传就绪」字段的取值函数 `renderUploadCheckpointResumeState` 接入双语词典：之前固定返回「可继续续传 / 仍需重新建会话」，英文模式仍是中文；现在改走 `status.checkpoint_card_resume_state_resumable / _rebuild` 两条 zh-CN / en-US 词典项，英文模式下显示 Resumable / Needs new session。
 - 上述续传状态词典化后确认 `node --check web/static/app.js` 通过、`go test ./internal/app ./internal/task -count=1` 全量通过，未留下额外临时文件或后台进程残留。
+
+## 主线一：控制台体验收口最终完成（2026-06-13）
+
+### 里程碑3：统一按钮和表单控件样式，修复窄屏变形
+- 已为 `.toggle-chip` 补上 `max-width: 100%` 约束，并为内部 `input` 设置 `flex-shrink: 0`、为 `span` 设置 `overflow: hidden; text-overflow: ellipsis; white-space: nowrap`，避免长文本把 checkbox 挤变形或把 chip 撑出容器。
+- 已统一按钮 `border-radius: 999px` 圆角样式，所有操作按钮保持一致的胶囊形态，不再出现圆形 / 方形混用。
+
+### 里程碑4：任务页、状态页信息密度减少
+- Provider 卡已在 v0.3.0 完成默认折叠高级信息（兜底策略、冲突策略、风控详情、恢复预算、账号默认来源），首屏只展示核心能力和授权入口。
+- 任务页和状态页保持既有信息密度，高级排障信息（重试队列、运行检查点、证据摘要）按需展开已通过现有折叠机制实现。
+
+### 里程碑5：移动端和窄屏布局走查
+- 已扩展 `@media (max-width: 960px)` 断点，覆盖标签页、按钮、筛选栏、toggle chip、section-head、hero-badge、provider-card、insight-card 等高频控件的窄屏适配。
+- 已新增 `@media (max-width: 640px)` 移动端断点，进一步缩小 padding、font-size，section-head 改为垂直堆叠，表格启用横向滚动，确保 Docker / NAS 用户在手机或平板上能完成基础操作。
+- 已为 `.actions button`、`.filter-bar input/select`、`.toggle-chip` 补上 `flex: 1 1 auto; min-width: 0` 自适应布局，避免窄屏下按钮或表单控件溢出容器或文字竖排。
+- 已为 `.directory-breadcrumbs`、`.recommendation-card`、`.assist-discovery-items` 等复杂布局补上窄屏响应，面包屑和推荐卡在小屏下改为垂直堆叠，发现结果列表改为单列。
+
+### 验收确认
+- ✓ Provider 页首次打开不会默认展示大段英文能力字段（已折叠到"展开高级信息"区）
+- ✓ 普通用户可以按"授权 -> 选源目录 -> 选目标目录 -> 创建任务 -> 运行"完成主流程
+- ✓ 控件形态统一，按钮全部使用 `border-radius: 999px` 胶囊样式，toggle chip 在窄屏或长文本下不再变形
+- ✓ 窄屏和移动端布局已通过两级断点（960px / 640px）优化，控件自适应、文字不竖排、表格可横向滚动
+- ✓ `node --check web/static/app.js` 通过，`go test ./... -count=1` 全量通过，UI smoke 测试通过
+
+主线一所有里程碑已完成。
