@@ -56,11 +56,10 @@ Release 页面：
 
 不知道下哪个时：
 
-- Windows、macOS、Linux 普通电脑优先下载对应的 `desktop` 桌面包。
-- Windows 普通用户下载 `cloudpan-sync-go-windows-amd64.zip`。
-- Linux 服务器常规 x64 下载 `cloudpan-sync-go-linux-amd64.tar.gz`。
-- NAS、树莓派、ARM 服务器优先看系统架构，通常可试 `linux-arm64`。
-- 只想用 Docker 时下载 `cloudpan-sync-go-docker-image.tar.gz`，或者直接本地构建镜像。
+- **个人电脑日常使用**：Windows、macOS、Linux 普通电脑优先下载对应的 `desktop` 桌面包。
+- **服务器/远程主机**：Windows 服务器或远程主机下载 `cloudpan-sync-go-windows-amd64.zip`，Linux 服务器常规 x64 下载 `cloudpan-sync-go-linux-amd64.tar.gz`。
+- **NAS / ARM 设备**：NAS、树莓派、ARM 服务器优先看系统架构，通常可试 `linux-arm64`。
+- **容器化部署**：只想用 Docker 时下载 `cloudpan-sync-go-docker-image.tar.gz`，或者直接本地构建镜像。
 
 怎么区分桌面包和服务端包：
 
@@ -70,7 +69,7 @@ Release 页面：
 
 ## 桌面模式
 
-桌面模式是三期正在推进的图形化客户端入口。当前实现会先启动本地服务，再优先用 Chrome / Edge 的独立 app 窗口打开控制台；如果没有找到兼容浏览器，再退回系统默认浏览器。
+桌面模式提供了完整的图形化客户端体验。启动后会自动运行本地服务，并优先使用 Chrome / Edge 的独立窗口打开控制台；如果系统没有安装这些浏览器，会自动回退到系统默认浏览器。
 
 启动后你会看到这些提示：
 
